@@ -1,21 +1,28 @@
 use crate::errors::TendermintError as Error;
 use alloc::borrow::ToOwned;
-use enclave_light_client::client::{gen_state_id_from_any, CreateClientResult, UpdateClientResult};
+use enclave_light_client::client::{
+    gen_state_id_from_any, CreateClientResult, UpdateClientResult, VerifyClientResult,
+};
 use enclave_light_client::errors::Result;
 use enclave_light_client::{LightClient, LightClientRegistry};
-use ibc::core::ics02_client::client_consensus::AnyConsensusState;
+use ibc::core::ics02_client::client_consensus::{AnyConsensusState, ConsensusState};
 use ibc::core::ics02_client::client_def::{AnyClient, ClientDef};
 use ibc::core::ics02_client::client_state::{AnyClientState, ClientState};
 use ibc::core::ics02_client::client_type::ClientType;
 use ibc::core::ics02_client::context::ClientReader;
 use ibc::core::ics02_client::error::Error as ICS02Error;
 use ibc::core::ics02_client::header::{AnyHeader, Header};
+use ibc::core::ics03_connection::context::ConnectionReader;
+use ibc::core::ics03_connection::error::Error as ICS03Error;
+use ibc::core::ics23_commitment::commitment::{CommitmentPrefix, CommitmentProofBytes};
 use ibc::core::ics24_host::identifier::ClientId;
+use ibc::Height;
 use log::*;
 use prost_types::Any;
 use serde_json::Value;
 use std::boxed::Box;
 use std::string::{String, ToString};
+use std::vec::Vec;
 
 #[derive(Default)]
 pub struct TendermintLightClient;
@@ -79,12 +86,16 @@ impl LightClient for TendermintLightClient {
         };
 
         // Read client type from the host chain store. The client should already exist.
-        let client_type = ctx.client_type(&client_id).unwrap();
+        let client_type = ctx
+            .client_type(&client_id)
+            .map_err(|e| Error::ICS02Error(e).into())?;
 
         let client_def = AnyClient::from_client_type(client_type);
 
         // Read client state from the host chain store.
-        let client_state = ctx.client_state(&client_id).unwrap();
+        let client_state = ctx
+            .client_state(&client_id)
+            .map_err(|e| Error::ICS02Error(e).into())?;
 
         if client_state.is_frozen() {
             return Err(Error::ICS02Error(ICS02Error::client_frozen(client_id)).into());
@@ -157,6 +168,63 @@ impl LightClient for TendermintLightClient {
             timestamp,
             processed_time: ctx.host_timestamp(),
             processed_height: ctx.host_height(),
+        })
+    }
+
+    fn verify_client(
+        &self,
+        ctx: &dyn ConnectionReader,
+        client_id: ClientId,
+        expected_client_state: Any,
+        counterparty_prefix: Vec<u8>,
+        counterparty_client_id: ClientId,
+        proof_height: Height,
+        proof: Vec<u8>,
+    ) -> Result<VerifyClientResult> {
+        // Read client state from the host chain store.
+        let client_state = ctx
+            .client_state(&client_id)
+            .map_err(|e| Error::ICS03Error(e).into())?;
+
+        if client_state.is_frozen() {
+            return Err(Error::ICS02Error(ICS02Error::client_frozen(client_id)).into());
+        }
+
+        let consensus_state = ctx
+            .client_consensus_state(&client_id, proof_height)
+            .map_err(|e| Error::ICS03Error(e).into())?;
+
+        let client_def = AnyClient::from_client_type(client_state.client_type());
+
+        let proof: CommitmentProofBytes = proof
+            .try_into()
+            .map_err(|e| Error::IBCProofError(e).into())?;
+
+        let prefix: CommitmentPrefix = counterparty_prefix
+            .try_into()
+            .map_err(|e| Error::ICS23Error(e).into())?;
+
+        // TODO replace the following verification logic with owned method
+        let expected_client_state = AnyClientState::try_from(expected_client_state.clone())
+            .map_err(|e| Error::ICS02Error(e).into())?;
+        client_def
+            .verify_client_full_state(
+                &client_state,
+                proof_height,
+                &prefix,
+                &proof,
+                consensus_state.root(),
+                &counterparty_client_id,
+                &expected_client_state,
+            )
+            .map_err(|e| {
+                Error::ICS03Error(ICS03Error::client_state_verification_failure(client_id, e))
+                    .into()
+            })?;
+
+        Ok(VerifyClientResult {
+            trusted_any_client_state: Any::from(client_state),
+            trusted_any_consensus_state: Any::from(consensus_state),
         })
     }
 }

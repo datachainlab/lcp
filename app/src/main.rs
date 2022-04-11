@@ -75,7 +75,7 @@ fn main() -> Result<(), anyhow::Error> {
         .init_client("07-tendermint", client_state, consensus_state)
         .unwrap()
     {
-        res.proof
+        res.0
     } else {
         panic!("unexpected result type")
     };

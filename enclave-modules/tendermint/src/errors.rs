@@ -1,5 +1,8 @@
 use enclave_light_client::errors::{LightClientError, LightClientInstanceError};
 use ibc::core::ics02_client::error::Error as ICS02Error;
+use ibc::core::ics03_connection::error::Error as ICS03Error;
+use ibc::core::ics23_commitment::error::Error as ICS23Error;
+use ibc::proofs::ProofError;
 use std::boxed::Box;
 use std::string::String;
 use std::sync::Arc;
@@ -10,6 +13,12 @@ pub enum TendermintError {
     UnexpectedClientTypeError(String),
     #[error("ICS02Error: {0}")]
     ICS02Error(ICS02Error),
+    #[error("ICS03Error: {0}")]
+    ICS03Error(ICS03Error),
+    #[error("ICS23Error: {0}")]
+    ICS23Error(ICS23Error),
+    #[error("IBCProofError: {0}")]
+    IBCProofError(ProofError),
     #[error(transparent)]
     OtherError(#[from] anyhow::Error),
 }

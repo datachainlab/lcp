@@ -49,5 +49,5 @@ pub fn init_client<'l, S: Store, L: LightClientSource<'l>>(
     ctx.store_update_height(res.client_id, res.height, res.processed_height)
         .map_err(Error::ICS02Error)?;
 
-    Ok(LightClientResult::InitClient(InitClientResult { proof }))
+    Ok(LightClientResult::InitClient(InitClientResult(proof)))
 }

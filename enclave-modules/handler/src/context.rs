@@ -7,8 +7,11 @@ use ibc::{
             client_consensus::AnyConsensusState, client_state::AnyClientState,
             client_type::ClientType, context::ClientReader, error::Error as ICS02Error,
         },
+        ics03_connection::context::ConnectionReader,
+        ics03_connection::error::Error as ICS03Error,
+        ics23_commitment::commitment::CommitmentPrefix,
         ics24_host::{
-            identifier::ClientId,
+            identifier::{ClientId, ConnectionId},
             path::{ClientConsensusStatePath, ClientStatePath, ClientTypePath},
         },
     },
@@ -170,6 +173,47 @@ impl<'a, 'e, S: Store> ClientReader for Context<'a, 'e, S> {
     }
 
     fn client_counter(&self) -> Result<u64, ICS02Error> {
+        todo!()
+    }
+}
+
+impl<'a, 'e, S: Store> ConnectionReader for Context<'a, 'e, S> {
+    fn connection_end(
+        &self,
+        conn_id: &ConnectionId,
+    ) -> Result<ibc::core::ics03_connection::connection::ConnectionEnd, ICS03Error> {
+        todo!()
+    }
+
+    fn client_state(&self, client_id: &ClientId) -> Result<AnyClientState, ICS03Error> {
+        todo!()
+    }
+
+    fn host_current_height(&self) -> Height {
+        todo!()
+    }
+
+    fn host_oldest_height(&self) -> Height {
+        todo!()
+    }
+
+    fn commitment_prefix(&self) -> CommitmentPrefix {
+        todo!()
+    }
+
+    fn client_consensus_state(
+        &self,
+        client_id: &ClientId,
+        height: Height,
+    ) -> Result<AnyConsensusState, ICS03Error> {
+        todo!()
+    }
+
+    fn host_consensus_state(&self, height: Height) -> Result<AnyConsensusState, ICS03Error> {
+        todo!()
+    }
+
+    fn connection_counter(&self) -> Result<u64, ICS03Error> {
         todo!()
     }
 }

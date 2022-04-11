@@ -7,8 +7,8 @@ pub use enclave_manage::{
     EnclaveManageCommand, EnclaveManageResult, InitEnclaveInput, InitEnclaveResult,
 };
 pub use light_client::{
-    InitClientInput, InitClientResult, LightClientCommand, LightClientResult, UpdateClientInput,
-    UpdateClientResult,
+    CommitmentProof, InitClientInput, InitClientResult, LightClientCommand, LightClientResult,
+    UpdateClientInput, UpdateClientResult, VerifyClientInput, VerifyClientResult,
 };
 
 mod enclave_manage;

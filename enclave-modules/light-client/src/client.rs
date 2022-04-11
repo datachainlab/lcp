@@ -6,6 +6,7 @@ use ibc::{
             client_consensus::AnyConsensusState, client_state::AnyClientState,
             context::ClientReader, height::Height,
         },
+        ics03_connection::context::ConnectionReader,
         ics24_host::identifier::ClientId,
     },
     timestamp::Timestamp,
@@ -15,6 +16,7 @@ use prost_types::Any;
 use sha2::{Digest, Sha256};
 use std::string::String;
 use std::vec;
+use std::vec::Vec;
 
 pub trait LightClient {
     fn create_client(
@@ -29,6 +31,16 @@ pub trait LightClient {
         client_id: ClientId,
         any_header: Any,
     ) -> Result<UpdateClientResult>;
+    fn verify_client(
+        &self,
+        ctx: &dyn ConnectionReader,
+        client_id: ClientId,
+        expected_client_state: Any,
+        counterparty_prefix: Vec<u8>,
+        counterparty_client_id: ClientId,
+        proof_height: Height,
+        proof: Vec<u8>,
+    ) -> Result<VerifyClientResult>;
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -55,6 +67,12 @@ pub struct UpdateClientResult {
     pub timestamp: Timestamp,
     pub processed_time: Timestamp,
     pub processed_height: Height,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct VerifyClientResult {
+    pub trusted_any_client_state: Any,
+    pub trusted_any_consensus_state: Any,
 }
 
 pub fn gen_state_id(
