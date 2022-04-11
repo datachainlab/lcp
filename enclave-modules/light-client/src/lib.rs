@@ -2,11 +2,10 @@
 #[cfg(not(target_env = "sgx"))]
 extern crate sgx_tstd as std;
 
-pub use client::LightClient;
-pub use errors::LightClientError;
+pub use client::{CreateClientResult, LightClient, UpdateClientResult, VerifyClientResult};
+pub use errors::{LightClientError, LightClientInstanceError, Result};
 pub use registry::{LightClientRegistry, LightClientSource};
 
-pub mod client;
-pub mod errors;
+mod client;
+mod errors;
 mod registry;
-pub mod utils;

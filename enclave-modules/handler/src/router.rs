@@ -3,10 +3,10 @@ use crate::enclave_manage;
 use crate::light_client;
 use crate::{HandlerError as Error, Result};
 use anyhow::anyhow;
+use enclave_commands::{Command, CommandResult};
 use enclave_crypto::EnclaveKey;
 use enclave_light_client::LightClientSource;
 use enclave_store::Store;
-use enclave_types::commands::{Command, CommandResult};
 use log::*;
 use std::format;
 

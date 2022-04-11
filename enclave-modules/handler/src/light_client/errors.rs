@@ -10,5 +10,5 @@ pub enum LightClientHandlerError {
     LightClientError(LightClientError),
 
     #[error(transparent)]
-    Error(#[from] anyhow::Error),
+    OtherError(#[from] anyhow::Error),
 }

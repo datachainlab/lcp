@@ -1,6 +1,6 @@
 use attestation_report::EndorsedAttestationReport;
 use enclave_api::{Enclave, EnclaveAPI};
-use enclave_types::commands::{CommandResult, LightClientResult};
+use enclave_commands::{CommandResult, LightClientResult};
 use ibc::core::ics02_client::height::Height;
 use log::*;
 use settings::ENDORSED_ATTESTATION_PATH;

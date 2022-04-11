@@ -16,6 +16,8 @@ pub enum LightClientError {
     InstanceError(Arc<Box<dyn LightClientInstanceError>>),
     #[error("ICS02Error: {0}")]
     ICS02Error(ICS02Error),
+    #[error(transparent)]
+    OtherError(anyhow::Error),
 }
 
 pub trait LightClientInstanceError: Display + Debug {}

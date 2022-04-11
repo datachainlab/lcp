@@ -1,7 +1,7 @@
-use crate::commands::AnyDef;
 #[cfg(feature = "sgx")]
 use crate::sgx_reexport_prelude::*;
-use crate::{StateID, ValidityProof};
+use crate::AnyDef;
+use commitments::{StateID, ValidityProof};
 use ibc::core::{ics02_client::height::Height, ics24_host::identifier::ClientId};
 use prost_types::Any;
 use serde::{Deserialize, Serialize};

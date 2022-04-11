@@ -329,6 +329,29 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
 
 [[package]]
+name = "commitments"
+version = "0.1.0"
+dependencies = [
+ "anyhow 1.0.28",
+ "anyhow 1.0.56",
+ "hex",
+ "ibc",
+ "log 0.4.16",
+ "prost",
+ "prost-types",
+ "rlp",
+ "rlp-derive",
+ "serde",
+ "serde_json",
+ "sgx_trts",
+ "sgx_tstd",
+ "sgx_types",
+ "sha2 0.8.2",
+ "thiserror 1.0.30",
+ "thiserror 1.0.9",
+]
+
+[[package]]
 name = "const-oid"
 version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -641,7 +664,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow 1.0.56",
  "bincode 1.3.3",
- "enclave-types",
+ "enclave-commands",
  "ibc",
  "log 0.4.16",
  "prost",
@@ -652,17 +675,40 @@ dependencies = [
 ]
 
 [[package]]
+name = "enclave-commands"
+version = "0.1.0"
+dependencies = [
+ "anyhow 1.0.28",
+ "anyhow 1.0.56",
+ "commitments",
+ "hex",
+ "ibc",
+ "log 0.4.16",
+ "prost-types",
+ "rlp",
+ "rlp-derive",
+ "serde",
+ "serde_json",
+ "sgx_trts",
+ "sgx_tstd",
+ "sgx_types",
+ "thiserror 1.0.30",
+ "thiserror 1.0.9",
+]
+
+[[package]]
 name = "enclave-handler"
 version = "0.1.0"
 dependencies = [
  "anyhow 1.0.28",
  "attestation-report",
  "bincode 1.3.1",
+ "commitments",
  "derive_more",
+ "enclave-commands",
  "enclave-light-client",
  "enclave-remote-attestation",
  "enclave-store",
- "enclave-types",
  "enclave_crypto",
  "enclave_utils",
  "hex",
@@ -682,7 +728,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow 1.0.28",
  "derive_more",
- "enclave-types",
+ "enclave-commands",
  "ibc",
  "log 0.4.16",
  "prost",
@@ -724,11 +770,11 @@ dependencies = [
  "bincode 1.3.1",
  "ctor",
  "derive_more",
+ "enclave-commands",
  "enclave-handler",
  "enclave-light-client",
  "enclave-store",
  "enclave-tendermint",
- "enclave-types",
  "enclave_crypto",
  "enclave_utils",
  "env_logger 0.7.1",
@@ -772,6 +818,7 @@ name = "enclave-tendermint"
 version = "0.1.0"
 dependencies = [
  "anyhow 1.0.28",
+ "commitments",
  "enclave-light-client",
  "ibc",
  "ibc-proto",
@@ -786,27 +833,6 @@ dependencies = [
  "tendermint-light-client-verifier",
  "thiserror 1.0.9",
  "time",
-]
-
-[[package]]
-name = "enclave-types"
-version = "0.1.0"
-dependencies = [
- "anyhow 1.0.28",
- "anyhow 1.0.56",
- "hex",
- "ibc",
- "log 0.4.16",
- "prost-types",
- "rlp",
- "rlp-derive",
- "serde",
- "serde_json",
- "sgx_trts",
- "sgx_tstd",
- "sgx_types",
- "thiserror 1.0.30",
- "thiserror 1.0.9",
 ]
 
 [[package]]
@@ -2541,7 +2567,7 @@ dependencies = [
  "anyhow 1.0.56",
  "attestation-report",
  "enclave-api",
- "enclave-types",
+ "enclave-commands",
  "env_logger 0.9.0",
  "ibc",
  "ibc-relayer",

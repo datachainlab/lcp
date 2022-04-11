@@ -14,4 +14,4 @@ anyhow = { version = "1.0.56" }
 thiserror = { version = "1.0.30" }
 log = "0.4.8"
 
-enclave-types = { path = "../enclave-types" }
+enclave-commands = { path = "../enclave-commands" }

@@ -1,9 +1,8 @@
 use crate::errors::TendermintError as Error;
 use alloc::borrow::ToOwned;
-use enclave_light_client::client::{
-    gen_state_id_from_any, CreateClientResult, UpdateClientResult, VerifyClientResult,
-};
-use enclave_light_client::errors::Result;
+use commitments::gen_state_id_from_any;
+use enclave_light_client::LightClientError;
+use enclave_light_client::{CreateClientResult, UpdateClientResult, VerifyClientResult};
 use enclave_light_client::{LightClient, LightClientRegistry};
 use ibc::core::ics02_client::client_consensus::{AnyConsensusState, ConsensusState};
 use ibc::core::ics02_client::client_def::{AnyClient, ClientDef};
@@ -33,7 +32,7 @@ impl LightClient for TendermintLightClient {
         ctx: &dyn ClientReader,
         any_client_state: Any,
         any_consensus_state: Any,
-    ) -> Result<CreateClientResult> {
+    ) -> Result<CreateClientResult, LightClientError> {
         let client_state = match AnyClientState::try_from(any_client_state.clone()) {
             Ok(AnyClientState::Tendermint(client_state)) => {
                 AnyClientState::Tendermint(client_state)
@@ -74,7 +73,7 @@ impl LightClient for TendermintLightClient {
         ctx: &dyn ClientReader,
         client_id: ClientId,
         any_header: Any,
-    ) -> Result<UpdateClientResult> {
+    ) -> Result<UpdateClientResult, LightClientError> {
         let (header, trusted_height) = match AnyHeader::try_from(any_header) {
             Ok(AnyHeader::Tendermint(header)) => {
                 let trusted_height = header.trusted_height;
@@ -180,7 +179,7 @@ impl LightClient for TendermintLightClient {
         counterparty_client_id: ClientId,
         proof_height: Height,
         proof: Vec<u8>,
-    ) -> Result<VerifyClientResult> {
+    ) -> Result<VerifyClientResult, LightClientError> {
         // Read client state from the host chain store.
         let client_state = ctx
             .client_state(&client_id)
@@ -238,7 +237,11 @@ pub fn register_implementations(registry: &mut LightClientRegistry) {
         .unwrap()
 }
 
-pub fn gen_client_id(any_client_state: &Any, any_consensus_state: &Any) -> Result<ClientId> {
-    let state_id = gen_state_id_from_any(any_client_state, any_consensus_state)?;
+pub fn gen_client_id(
+    any_client_state: &Any,
+    any_consensus_state: &Any,
+) -> Result<ClientId, LightClientError> {
+    let state_id = gen_state_id_from_any(any_client_state, any_consensus_state)
+        .map_err(LightClientError::OtherError)?;
     Ok(serde_json::from_value::<ClientId>(Value::String(state_id.to_string())).unwrap())
 }

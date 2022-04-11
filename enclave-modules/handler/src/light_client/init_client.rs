@@ -1,10 +1,9 @@
 use crate::context::{Context, LightClientKeeper};
 use crate::light_client::LightClientHandlerError as Error;
-use enclave_light_client::client::gen_state_id_from_any;
+use commitments::{gen_state_id_from_any, ClientCommitment, ValidityProof};
+use enclave_commands::{InitClientInput, InitClientResult, LightClientResult};
 use enclave_light_client::LightClientSource;
 use enclave_store::Store;
-use enclave_types::commands::{InitClientInput, InitClientResult, LightClientResult};
-use enclave_types::{ClientCommitment, ValidityProof};
 
 pub fn init_client<'l, S: Store, L: LightClientSource<'l>>(
     ctx: &mut Context<S>,
@@ -18,7 +17,7 @@ pub fn init_client<'l, S: Store, L: LightClientSource<'l>>(
         .create_client(ctx, input.any_client_state, input.any_consensus_state)
         .map_err(Error::LightClientError)?;
     let state_id = gen_state_id_from_any(&res.any_client_state, &res.any_consensus_state)
-        .map_err(Error::LightClientError)?;
+        .map_err(Error::OtherError)?;
     let commitment = ClientCommitment {
         client_id: res.client_id.clone(),
         prev_state_id: None,

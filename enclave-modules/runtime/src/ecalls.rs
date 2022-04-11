@@ -1,8 +1,8 @@
 use crate::get_store;
 use crate::key_manager::KEY_MANAGER;
 use crate::light_client::GlobalLightClientRegistry;
+use enclave_commands::{Command, CommandResult, EnclaveManageResult};
 use enclave_handler::router::dispatch;
-use enclave_types::commands::{Command, CommandResult, EnclaveManageResult};
 use enclave_utils::validate_const_ptr;
 use sgx_types::sgx_status_t;
 use std::slice;

@@ -20,3 +20,4 @@ serde_json = { version = "1.0", default-features = false, features = ["alloc"] }
 log = "0.4.8"
 
 enclave-light-client = { path = "../light-client" }
+commitments = { path = "../../modules/commitments", default-features = false, features = ["sgx"] }

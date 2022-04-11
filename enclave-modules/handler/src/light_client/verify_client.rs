@@ -1,11 +1,9 @@
 use crate::context::{Context, LightClientReader};
 use crate::light_client::LightClientHandlerError as Error;
-use enclave_light_client::client::gen_state_id_from_any;
+use commitments::gen_state_id_from_any;
+use enclave_commands::{CommitmentProof, LightClientResult, VerifyClientInput, VerifyClientResult};
 use enclave_light_client::LightClientSource;
 use enclave_store::Store;
-use enclave_types::commands::{
-    CommitmentProof, LightClientResult, VerifyClientInput, VerifyClientResult,
-};
 
 pub fn verify_client<'l, S: Store, L: LightClientSource<'l>>(
     ctx: &mut Context<S>,
@@ -32,7 +30,7 @@ pub fn verify_client<'l, S: Store, L: LightClientSource<'l>>(
         &res.trusted_any_client_state,
         &res.trusted_any_consensus_state,
     )
-    .map_err(Error::LightClientError)?;
+    .map_err(Error::OtherError)?;
 
     // TODO build a proof
     let commitment_proof = CommitmentProof::default();

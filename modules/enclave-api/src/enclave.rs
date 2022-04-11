@@ -1,7 +1,7 @@
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::{ffi, EnclaveAPIError as Error, Result};
-use enclave_types::commands::{
+use enclave_commands::{
     Command, CommandResult, EnclaveManageCommand, InitClientInput, InitEnclaveInput,
     LightClientCommand, UpdateClientInput,
 };

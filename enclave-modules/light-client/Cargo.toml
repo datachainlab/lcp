@@ -14,4 +14,4 @@ sha2 = { version = "0.8", default-features = false }
 log = "0.4.8"
 derive_more = { version = "0.99.17", default-features = false, features = ["from", "display"] }
 
-enclave-types = { path = "../../modules/enclave-types", default-features = false, features = ["sgx"] }
+enclave-commands = { path = "../../modules/enclave-commands", default-features = false, features = ["sgx"] }

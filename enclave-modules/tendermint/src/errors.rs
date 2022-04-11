@@ -1,4 +1,4 @@
-use enclave_light_client::errors::{LightClientError, LightClientInstanceError};
+use enclave_light_client::{LightClientError, LightClientInstanceError};
 use ibc::core::ics02_client::error::Error as ICS02Error;
 use ibc::core::ics03_connection::error::Error as ICS03Error;
 use ibc::core::ics23_commitment::error::Error as ICS23Error;

@@ -1,6 +1,6 @@
 use crate::enclave_manage::init_enclave;
 use anyhow::Result;
-use enclave_types::commands::{CommandResult, EnclaveManageCommand, EnclaveManageResult};
+use enclave_commands::{CommandResult, EnclaveManageCommand, EnclaveManageResult};
 
 pub fn dispatch(command: EnclaveManageCommand) -> Result<CommandResult> {
     let res = match command {

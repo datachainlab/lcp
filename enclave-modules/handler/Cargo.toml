@@ -25,5 +25,6 @@ enclave-light-client = { path = "../light-client" }
 enclave-remote-attestation = { path = "../remote-attestation" }
 
 settings = { path = "../../modules/settings", default-features = false, features = ["sgx"] }
-enclave-types = { path = "../../modules/enclave-types", default-features = false, features = ["sgx"] }
+enclave-commands = { path = "../../modules/enclave-commands", default-features = false, features = ["sgx"] }
+commitments = { path = "../../modules/commitments", default-features = false, features = ["sgx"] }
 attestation-report = { path = "../../modules/attestation-report", default-features = false, features = ["sgx"] }

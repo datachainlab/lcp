@@ -31,5 +31,5 @@ enclave-store = { path = "../store" }
 enclave-light-client = { path = "../light-client" }
 enclave-tendermint = { path = "../tendermint" }
 
-enclave-types = { path = "../../modules/enclave-types", default-features = false, features = ["sgx"] }
+enclave-commands = { path = "../../modules/enclave-commands", default-features = false, features = ["sgx"] }
 settings = { path = "../../modules/settings", default-features = false, features = ["sgx"] }

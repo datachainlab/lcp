@@ -18,7 +18,7 @@ log = "0.4.8"
 env_logger = "0.9.0"
 
 enclave-api = { path = "../modules/enclave-api" }
-enclave-types = { path = "../modules/enclave-types" }
+enclave-commands = { path = "../modules/enclave-commands" }
 attestation-report = { path = "../modules/attestation-report" }
 settings = { path = "../modules/settings" }
 relay-tendermint = { path = "../modules/relay/tendermint" }

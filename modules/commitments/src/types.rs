@@ -1,6 +1,6 @@
-use crate::anyhow::{anyhow, Result};
 #[cfg(feature = "sgx")]
 use crate::sgx_reexport_prelude::*;
+use anyhow::{anyhow, Result};
 use ibc::core::ics02_client::height::Height;
 use ibc::core::ics24_host::identifier::ClientId;
 use serde::{Deserialize, Serialize};

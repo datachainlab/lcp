@@ -1,6 +1,6 @@
 use crate::enclave_manage::errors::EnclaveManageError as Error;
 use anyhow::anyhow;
-use enclave_types::commands::{InitEnclaveInput, InitEnclaveResult};
+use enclave_commands::{InitEnclaveInput, InitEnclaveResult};
 use log::*;
 use sgx_types::{sgx_quote_sign_type_t, sgx_spid_t};
 use std::format;
