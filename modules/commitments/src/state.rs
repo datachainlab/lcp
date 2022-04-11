@@ -1,12 +1,33 @@
 #[cfg(feature = "sgx")]
 use crate::sgx_reexport_prelude::*;
-use crate::types::{StateID, STATE_ID_SIZE};
 use anyhow::Result;
 use ibc::core::ics02_client::{client_consensus::AnyConsensusState, client_state::AnyClientState};
 use prost::Message;
 use prost_types::Any;
+use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
+use std::string::String;
 use std::vec;
+use std::vec::Vec;
+
+pub const STATE_ID_SIZE: usize = 32;
+
+#[derive(Debug, Default, Clone, Serialize, Deserialize, PartialEq)]
+pub struct StateID([u8; STATE_ID_SIZE]);
+
+impl StateID {
+    pub fn from_bytes_array(bytes: [u8; STATE_ID_SIZE]) -> Self {
+        StateID(bytes)
+    }
+
+    pub fn to_string(&self) -> String {
+        hex::encode(self.0)
+    }
+
+    pub fn to_vec(&self) -> Vec<u8> {
+        self.0.to_vec()
+    }
+}
 
 // TODO define owned error types
 

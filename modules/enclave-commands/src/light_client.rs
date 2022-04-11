@@ -1,7 +1,7 @@
 #[cfg(feature = "sgx")]
 use crate::sgx_reexport_prelude::*;
 use crate::AnyDef;
-use commitments::{StateID, ValidityProof};
+use commitments::{StateCommitmentProof, UpdateClientCommitmentProof};
 use ibc::core::{ics02_client::height::Height, ics24_host::identifier::ClientId};
 use prost_types::Any;
 use serde::{Deserialize, Serialize};
@@ -55,19 +55,11 @@ pub enum LightClientResult {
 
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(transparent)]
-pub struct InitClientResult(pub ValidityProof);
+pub struct InitClientResult(pub UpdateClientCommitmentProof);
 
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(transparent)]
-pub struct UpdateClientResult(pub ValidityProof);
+pub struct UpdateClientResult(pub UpdateClientCommitmentProof);
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct VerifyClientResult(pub CommitmentProof);
-
-#[derive(Serialize, Deserialize, Debug, Default)]
-pub struct CommitmentProof {
-    pub height: Height,
-    pub state_id: StateID,
-    pub signer: [u8; 20],
-    pub signature: Vec<u8>,
-}
+pub struct VerifyClientResult(pub StateCommitmentProof);

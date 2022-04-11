@@ -8,6 +8,7 @@ sgx_tstd = { git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 ibc = { git = "https://github.com/bluele/ibc-rs", branch = "sgx", default-features = false }
 ibc-proto = { git = "https://github.com/bluele/ibc-rs", branch = "sgx", default-features = false }
 tendermint-light-client-verifier = { git = "https://github.com/informalsystems/tendermint-rs", rev = "235480171081fed74de7b3d3c19911304df29831", default-features = false }
+tendermint-proto = { git = "https://github.com/informalsystems/tendermint-rs", rev = "235480171081fed74de7b3d3c19911304df29831", default-features = false }
 prost = { version = "0.9", default-features = false }
 prost-types = { version = "0.9", default-features = false }
 sha2 = { version = "0.8", default-features = false }

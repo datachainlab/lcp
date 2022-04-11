@@ -1,4 +1,5 @@
 use crate::errors::Result;
+use commitments::StateCommitment;
 use ibc::{
     core::{
         ics02_client::{context::ClientReader, height::Height},
@@ -64,6 +65,5 @@ pub struct UpdateClientResult {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct VerifyClientResult {
-    pub trusted_any_client_state: Any,
-    pub trusted_any_consensus_state: Any,
+    pub state_commitment: StateCommitment,
 }

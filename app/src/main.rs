@@ -79,7 +79,7 @@ fn main() -> Result<(), anyhow::Error> {
     } else {
         panic!("unexpected result type")
     };
-    let commitment = proof.client_commitment();
+    let commitment = proof.commitment();
 
     info!(
         "generated client id is {}",

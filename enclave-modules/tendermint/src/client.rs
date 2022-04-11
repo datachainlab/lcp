@@ -1,6 +1,6 @@
 use crate::errors::TendermintError as Error;
 use alloc::borrow::ToOwned;
-use commitments::gen_state_id_from_any;
+use commitments::{gen_state_id_from_any, StateCommitment};
 use enclave_light_client::LightClientError;
 use enclave_light_client::{CreateClientResult, UpdateClientResult, VerifyClientResult};
 use enclave_light_client::{LightClient, LightClientRegistry};
@@ -15,6 +15,8 @@ use ibc::core::ics03_connection::context::ConnectionReader;
 use ibc::core::ics03_connection::error::Error as ICS03Error;
 use ibc::core::ics23_commitment::commitment::{CommitmentPrefix, CommitmentProofBytes};
 use ibc::core::ics24_host::identifier::ClientId;
+use ibc::core::ics24_host::path::ClientStatePath;
+use ibc::core::ics24_host::Path;
 use ibc::Height;
 use log::*;
 use prost_types::Any;
@@ -22,6 +24,7 @@ use serde_json::Value;
 use std::boxed::Box;
 use std::string::{String, ToString};
 use std::vec::Vec;
+use tendermint_proto::Protobuf;
 
 #[derive(Default)]
 pub struct TendermintLightClient;
@@ -217,13 +220,23 @@ impl LightClient for TendermintLightClient {
                 &expected_client_state,
             )
             .map_err(|e| {
-                Error::ICS03Error(ICS03Error::client_state_verification_failure(client_id, e))
-                    .into()
+                Error::ICS03Error(ICS03Error::client_state_verification_failure(
+                    client_id.clone(),
+                    e,
+                ))
+                .into()
             })?;
 
+        let sc = StateCommitment {
+            path: Path::ClientState(ClientStatePath(client_id)),
+            value: expected_client_state.encode_vec().unwrap(),
+            height: proof_height,
+            state_id: gen_state_id_from_any(&Any::from(client_state), &Any::from(consensus_state))
+                .map_err(|e| Error::OtherError(e).into())?,
+        };
+
         Ok(VerifyClientResult {
-            trusted_any_client_state: Any::from(client_state),
-            trusted_any_consensus_state: Any::from(consensus_state),
+            state_commitment: sc,
         })
     }
 }

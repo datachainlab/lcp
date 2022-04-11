@@ -11,8 +11,14 @@ pub mod sgx_reexport_prelude {
     pub use thiserror_sgx as thiserror;
 }
 
-pub use state::{gen_state_id, gen_state_id_from_any};
-pub use types::{ClientCommitment, StateID, ValidityProof};
+pub use commitment::{StateCommitment, UpdateClientCommitment};
+pub use errors::CommitmentError;
+pub use proof::{StateCommitmentProof, UpdateClientCommitmentProof};
+pub use state::{gen_state_id, gen_state_id_from_any, StateID, STATE_ID_SIZE};
 
+mod commitment;
+mod errors;
+mod proof;
+#[cfg(feature = "sgx")]
+pub mod prover;
 mod state;
-mod types;

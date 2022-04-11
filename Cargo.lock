@@ -334,6 +334,8 @@ version = "0.1.0"
 dependencies = [
  "anyhow 1.0.28",
  "anyhow 1.0.56",
+ "derive_more",
+ "enclave_crypto",
  "hex",
  "ibc",
  "log 0.4.16",
@@ -727,6 +729,7 @@ name = "enclave-light-client"
 version = "0.1.0"
 dependencies = [
  "anyhow 1.0.28",
+ "commitments",
  "derive_more",
  "enclave-commands",
  "ibc",
@@ -831,6 +834,7 @@ dependencies = [
  "sgx_tstd",
  "sha2 0.8.2",
  "tendermint-light-client-verifier",
+ "tendermint-proto",
  "thiserror 1.0.9",
  "time",
 ]

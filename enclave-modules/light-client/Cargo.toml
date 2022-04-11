@@ -15,3 +15,4 @@ log = "0.4.8"
 derive_more = { version = "0.99.17", default-features = false, features = ["from", "display"] }
 
 enclave-commands = { path = "../../modules/enclave-commands", default-features = false, features = ["sgx"] }
+commitments = { path = "../../modules/commitments", default-features = false, features = ["sgx"] }
