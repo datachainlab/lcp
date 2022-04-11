@@ -1,0 +1,28 @@
+[package]
+name = "sgxrars"
+version = "0.0.1"
+edition = "2021"
+build = "build.rs"
+
+[dependencies]
+sgx_types = { git = "https://github.com/apache/teaclave-sgx-sdk.git" }
+sgx_urts = { git = "https://github.com/apache/teaclave-sgx-sdk.git" }
+ibc = {git = "https://github.com/bluele/ibc-rs", branch = "sgx", default-features = false }
+ibc-relayer = {git = "https://github.com/bluele/ibc-rs", branch = "sgx", default-features = false }
+tendermint-rpc  = { git = "https://github.com/informalsystems/tendermint-rs", rev = "235480171081fed74de7b3d3c19911304df29831", features = ["http-client", "websocket-client"] }
+
+anyhow = { version = "1.0.56" }
+thiserror = { version = "1.0.30" }
+tokio = { version = "1.0" }
+log = "0.4.8"
+env_logger = "0.9.0"
+
+enclave-api = { path = "../modules/enclave-api" }
+enclave-types = { path = "../modules/enclave-types" }
+attestation-report = { path = "../modules/attestation-report" }
+settings = { path = "../modules/settings" }
+relay-tendermint = { path = "../modules/relay/tendermint" }
+
+
+[features]
+default = []

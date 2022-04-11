@@ -1,0 +1,49 @@
+[package]
+name = "enclave"
+version = "0.1.0"
+edition = "2021"
+resolver = "2"
+
+[lib]
+name = "proxy_enclave"
+crate-type = ["staticlib"]
+
+[features]
+default = []
+
+[dependencies]
+sgx_types = { git = "https://github.com/apache/teaclave-sgx-sdk.git" }
+sgx_tstd = { git = "https://github.com/apache/teaclave-sgx-sdk.git", features = ["net"] }
+enclave-runtime = { path = "../enclave-modules/runtime" }
+
+[patch."https://github.com/apache/teaclave-sgx-sdk.git"]
+sgx_tstd = { version = "1.1.4", git = "https://github.com/bluele/incubator-teaclave-sgx-sdk", branch = "master"}
+sgx_urts = { version = "1.1.4", git = "https://github.com/bluele/incubator-teaclave-sgx-sdk", branch = "master"}
+sgx_tse = { version = "1.1.4", git = "https://github.com/bluele/incubator-teaclave-sgx-sdk", branch = "master"}
+sgx_alloc = { version = "1.1.4", git = "https://github.com/bluele/incubator-teaclave-sgx-sdk", branch = "master"}
+sgx_libc = { version = "1.1.4", git = "https://github.com/bluele/incubator-teaclave-sgx-sdk", branch = "master"}
+sgx_serialize = { version = "1.1.4", git = "https://github.com/bluele/incubator-teaclave-sgx-sdk", branch = "master"}
+sgx_serialize_derive = { version = "1.1.4", git = "https://github.com/bluele/incubator-teaclave-sgx-sdk", branch = "master"}
+sgx_serialize_derive_internals = { version = "1.1.4", git = "https://github.com/bluele/incubator-teaclave-sgx-sdk", branch = "master"}
+sgx_trts = { version = "1.1.4", git = "https://github.com/bluele/incubator-teaclave-sgx-sdk", branch = "master"}
+sgx_types = { version = "1.1.4", git = "https://github.com/bluele/incubator-teaclave-sgx-sdk", branch = "master"}
+sgx_tcrypto = { version = "1.1.4", git = "https://github.com/bluele/incubator-teaclave-sgx-sdk", branch = "master"}
+sgx_tcrypto_helper = { version = "1.1.4", git = "https://github.com/bluele/incubator-teaclave-sgx-sdk", branch = "master"}
+sgx_crypto_helper = { version = "1.1.4", git = "https://github.com/bluele/incubator-teaclave-sgx-sdk", branch = "master"}
+sgx_rand = { version = "1.1.4", git = "https://github.com/bluele/incubator-teaclave-sgx-sdk", branch = "master"}
+
+[patch."https://github.com/informalsystems/tendermint-rs.git"]
+tendermint = { git = "https://github.com/bluele/tendermint-rs", branch = "sgx", default-features = false }
+tendermint-proto = { git = "https://github.com/bluele/tendermint-rs", branch = "sgx", default-features = false }
+tendermint-light-client-verifier = { git = "https://github.com/bluele/tendermint-rs", branch = "sgx", default-features = false }
+
+[profile.release]
+opt-level = 3
+debug = false
+debug-assertions = false
+overflow-checks = false
+lto = false
+panic = 'unwind'
+incremental = false
+codegen-units = 16
+rpath = false

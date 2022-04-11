@@ -1,0 +1,15 @@
+[package]
+name = "relay-tendermint"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+tendermint      = { git = "https://github.com/informalsystems/tendermint-rs", rev = "235480171081fed74de7b3d3c19911304df29831" }
+tendermint-rpc  = { git = "https://github.com/informalsystems/tendermint-rs", rev = "235480171081fed74de7b3d3c19911304df29831", features = ["http-client", "websocket-client"] }
+tendermint-light-client-verifier = { git = "https://github.com/informalsystems/tendermint-rs", rev = "235480171081fed74de7b3d3c19911304df29831", default-features = false }
+prost-types = { version = "0.9", default-features = false }
+ibc = {git = "https://github.com/bluele/ibc-rs", branch = "sgx", default-features = false }
+ibc-relayer = {git = "https://github.com/bluele/ibc-rs", branch = "sgx" }
+anyhow = { version = "1.0.56" }
+thiserror = { version = "1.0.30" }
+tokio = { version = "1.0" }

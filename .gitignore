@@ -1,0 +1,21 @@
+bin/
+
+#object file
+*.o
+
+#library
+*.a
+
+#share object
+*.so
+*.so.*
+
+#generated proxy
+*_u.c
+*_u.h
+*_t.c
+*_t.h
+
+incubator-teaclave-sgx-sdk
+
+target/
