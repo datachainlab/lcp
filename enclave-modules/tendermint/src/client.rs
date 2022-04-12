@@ -1,6 +1,6 @@
 use crate::errors::TendermintError as Error;
 use alloc::borrow::ToOwned;
-use commitments::{gen_state_id_from_any, StateCommitment};
+use commitments::{gen_state_id, gen_state_id_from_any, StateCommitment, UpdateClientCommitment};
 use enclave_light_client::LightClientError;
 use enclave_light_client::{CreateClientResult, UpdateClientResult, VerifyClientResult};
 use enclave_light_client::{LightClient, LightClientRegistry};
@@ -59,15 +59,24 @@ impl LightClient for TendermintLightClient {
         let height = client_state.latest_height();
         let timestamp = consensus_state.timestamp();
 
+        let state_id = gen_state_id_from_any(&any_client_state, &any_consensus_state)
+            .map_err(|e| Error::OtherError(e).into())?;
+
         Ok(CreateClientResult {
-            client_id,
+            client_id: client_id.clone(),
             client_type: ClientType::Tendermint.as_str().to_owned(),
             any_client_state,
             any_consensus_state,
             height,
             timestamp,
-            processed_time: ctx.host_timestamp(),
-            processed_height: ctx.host_height(),
+            commitment: UpdateClientCommitment {
+                client_id,
+                prev_state_id: None,
+                new_state_id: state_id,
+                prev_height: None,
+                new_height: height,
+                timestamp: timestamp.nanoseconds(),
+            },
         })
     }
 
@@ -159,17 +168,25 @@ impl LightClient for TendermintLightClient {
                 Error::ICS02Error(ICS02Error::header_verification_failure(e.to_string())).into()
             })?;
 
+        let prev_state_id = gen_state_id(client_state, trusted_consensus_state)
+            .map_err(|e| Error::OtherError(e).into())?;
+        let new_state_id = gen_state_id(new_client_state.clone(), new_consensus_state.clone())
+            .map_err(|e| Error::OtherError(e).into())?;
+
         Ok(UpdateClientResult {
-            client_id,
-            trusted_any_client_state: Any::from(client_state),
-            trusted_any_consensus_state: Any::from(trusted_consensus_state),
+            client_id: client_id.clone(),
             new_any_client_state: Any::from(new_client_state),
             new_any_consensus_state: Any::from(new_consensus_state),
-            trusted_height,
             height,
             timestamp,
-            processed_time: ctx.host_timestamp(),
-            processed_height: ctx.host_height(),
+            commitment: UpdateClientCommitment {
+                client_id,
+                prev_state_id: Some(prev_state_id),
+                new_state_id,
+                prev_height: Some(trusted_height),
+                new_height: height,
+                timestamp: timestamp.nanoseconds(),
+            },
         })
     }
 

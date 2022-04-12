@@ -16,7 +16,7 @@ use std::vec::Vec;
 
 use rlp_derive::{RlpDecodable, RlpEncodable};
 
-#[derive(Debug, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 pub struct UpdateClientCommitment {
     pub client_id: ClientId,
     pub prev_state_id: Option<StateID>,

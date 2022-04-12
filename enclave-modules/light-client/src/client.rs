@@ -1,5 +1,5 @@
 use crate::errors::Result;
-use commitments::StateCommitment;
+use commitments::{StateCommitment, UpdateClientCommitment};
 use ibc::{
     core::{
         ics02_client::{context::ClientReader, height::Height},
@@ -45,22 +45,17 @@ pub struct CreateClientResult {
     pub any_consensus_state: Any,
     pub height: Height,
     pub timestamp: Timestamp,
-    pub processed_time: Timestamp,
-    pub processed_height: Height,
+    pub commitment: UpdateClientCommitment,
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct UpdateClientResult {
     pub client_id: ClientId,
-    pub trusted_any_client_state: Any,
-    pub trusted_any_consensus_state: Any,
     pub new_any_client_state: Any,
     pub new_any_consensus_state: Any,
-    pub trusted_height: Height,
     pub height: Height,
     pub timestamp: Timestamp,
-    pub processed_time: Timestamp,
-    pub processed_height: Height,
+    pub commitment: UpdateClientCommitment,
 }
 
 #[derive(Clone, Debug, PartialEq)]

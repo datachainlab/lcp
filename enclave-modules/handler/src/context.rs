@@ -53,6 +53,7 @@ pub trait LightClientReader {
     fn client_type(&self, client_id: &ClientId) -> Result<String, ICS02Error>;
     fn client_state(&self, client_id: &ClientId) -> Result<Any, ICS02Error>;
     fn consensus_state(&self, client_id: &ClientId, height: Height) -> Result<Any, ICS02Error>;
+    fn host_height(&self) -> Height;
     fn host_timestamp(&self) -> Timestamp;
 }
 
@@ -94,6 +95,11 @@ impl<'a, 'e, S: Store> LightClientReader for Context<'a, 'e, S> {
         Ok(any.into())
     }
 
+    fn host_height(&self) -> Height {
+        // always return zero
+        Default::default()
+    }
+
     fn host_timestamp(&self) -> Timestamp {
         Timestamp::from_nanoseconds(self.current_timestamp.unwrap()).unwrap()
     }
@@ -113,7 +119,7 @@ impl<'a, 'e, S: Store> ClientReader for Context<'a, 'e, S> {
     fn consensus_state(
         &self,
         client_id: &ClientId,
-        height: ibc::Height,
+        height: Height,
     ) -> Result<AnyConsensusState, ICS02Error> {
         let consensus_state =
             <Self as LightClientReader>::consensus_state(&self, client_id, height)?;
@@ -141,7 +147,7 @@ impl<'a, 'e, S: Store> ClientReader for Context<'a, 'e, S> {
     fn next_consensus_state(
         &self,
         client_id: &ClientId,
-        height: ibc::Height,
+        height: Height,
     ) -> Result<Option<AnyConsensusState>, ICS02Error> {
         todo!()
     }
@@ -149,22 +155,21 @@ impl<'a, 'e, S: Store> ClientReader for Context<'a, 'e, S> {
     fn prev_consensus_state(
         &self,
         client_id: &ClientId,
-        height: ibc::Height,
+        height: Height,
     ) -> Result<Option<AnyConsensusState>, ICS02Error> {
         // TODO implement this
         Ok(None)
     }
 
-    fn host_height(&self) -> ibc::Height {
-        // always return zero
-        Default::default()
+    fn host_height(&self) -> Height {
+        <Self as LightClientReader>::host_height(&self)
     }
 
     fn host_timestamp(&self) -> Timestamp {
         <Self as LightClientReader>::host_timestamp(&self)
     }
 
-    fn host_consensus_state(&self, height: ibc::Height) -> Result<AnyConsensusState, ICS02Error> {
+    fn host_consensus_state(&self, height: Height) -> Result<AnyConsensusState, ICS02Error> {
         todo!()
     }
 
