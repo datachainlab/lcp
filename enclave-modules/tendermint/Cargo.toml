@@ -22,3 +22,4 @@ log = "0.4.8"
 
 enclave-light-client = { path = "../light-client" }
 commitments = { path = "../../modules/commitments", default-features = false, features = ["sgx"] }
+validation-context = { path = "../../modules/validation-context", default-features = false, features = ["sgx"] }

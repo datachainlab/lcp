@@ -42,15 +42,19 @@ impl LCPClient {
         // check if the specified signer exists in the client state
         assert!(client_state.contains(&header.signer()));
 
+        // check if the `header.signer` matches the commitment prover
         let signer = verify_signature(&header.0.commitment_bytes, &header.0.signature).unwrap();
         assert!(header.signer() == signer);
 
+        // TODO check if header.timestamp is valid in our context
+
+        let new_client_state = client_state.with_header(&header);
         let new_consensus_state = ConsensusState {
             state_id: header.state_id(),
             timestamp: header.timestamp_as_u64(),
         };
 
-        Ok((client_state.with_header(&header), new_consensus_state))
+        Ok((new_client_state, new_consensus_state))
     }
 
     pub fn verify_upgrade_and_update_state(

@@ -351,6 +351,7 @@ dependencies = [
  "sha2 0.8.2",
  "thiserror 1.0.30",
  "thiserror 1.0.9",
+ "validation-context",
 ]
 
 [[package]]
@@ -857,6 +858,7 @@ dependencies = [
  "tendermint-proto",
  "thiserror 1.0.9",
  "time",
+ "validation-context",
 ]
 
 [[package]]
@@ -3390,6 +3392,17 @@ name = "uuid"
 version = "0.8.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bc5cf98d8186244414c848017f0e2676b3fcb46807f6668a97dfe67359a3c4b7"
+
+[[package]]
+name = "validation-context"
+version = "0.1.0"
+dependencies = [
+ "rlp",
+ "rlp-derive",
+ "serde",
+ "sgx_tstd",
+ "tendermint-light-client-verifier",
+]
 
 [[package]]
 name = "version_check"

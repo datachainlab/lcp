@@ -8,7 +8,7 @@ use ibc::timestamp::Timestamp;
 use ibc::Height;
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Default, Clone, PartialEq, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub struct Header(
     pub UpdateClientCommitmentProof,
     #[serde(skip_serializing)] pub UpdateClientCommitment,

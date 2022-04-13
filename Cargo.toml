@@ -8,6 +8,7 @@ members = [
     "modules/context",
     "modules/settings",
     "modules/ibc-client",
+    "modules/validation-context",
     "modules/relay/tendermint",
     "enclave-modules/runtime",
     "enclave-modules/crypto",

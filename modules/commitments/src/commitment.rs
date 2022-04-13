@@ -13,10 +13,11 @@ use std::format;
 use std::string::{String, ToString};
 use std::vec;
 use std::vec::Vec;
+use validation_context::ValidationParams;
 
 use rlp_derive::{RlpDecodable, RlpEncodable};
 
-#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct UpdateClientCommitment {
     pub client_id: ClientId,
     pub prev_state_id: Option<StateID>,
@@ -24,6 +25,7 @@ pub struct UpdateClientCommitment {
     pub prev_height: Option<Height>,
     pub new_height: Height,
     pub timestamp: u64,
+    pub validation_params: ValidationParams,
 }
 
 // TODO can we avoid to define a substitute struct for RLP serialization?
@@ -35,6 +37,7 @@ pub struct RLPUpdateClientCommitment {
     prev_height: Vec<u8>,
     new_height: Vec<u8>,
     timestamp: u64,
+    validation_params: Vec<u8>,
 }
 
 impl UpdateClientCommitment {
@@ -52,6 +55,7 @@ impl UpdateClientCommitment {
             },
             new_height: height_to_bytes(self.new_height),
             timestamp: self.timestamp,
+            validation_params: self.validation_params.to_vec(),
         };
         rlp::encode(&c).to_vec()
     }
@@ -71,6 +75,7 @@ impl UpdateClientCommitment {
             },
             new_height: bytes_to_height(&rc.new_height)?,
             timestamp: rc.timestamp,
+            validation_params: ValidationParams::from_bytes(&rc.validation_params),
         })
     }
 }

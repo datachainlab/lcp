@@ -11,7 +11,7 @@ use prost_types::Any;
 #[derive(Clone, Default, Debug, PartialEq, Eq)]
 pub struct ConsensusState {
     pub state_id: StateID,
-    pub timestamp: u64,
+    pub timestamp: u64, // means upstream's timestamp
 }
 
 impl ibc::core::ics02_client::client_consensus::ConsensusState for ConsensusState {

@@ -24,7 +24,10 @@ use serde_json::Value;
 use std::boxed::Box;
 use std::string::{String, ToString};
 use std::vec::Vec;
+use tendermint_light_client_verifier::options::Options;
 use tendermint_proto::Protobuf;
+use validation_context::tendermint::{TendermintValidationParams, TendermintValidationPredicate};
+use validation_context::ValidationParams;
 
 #[derive(Default)]
 pub struct TendermintLightClient;
@@ -76,6 +79,7 @@ impl LightClient for TendermintLightClient {
                 prev_height: None,
                 new_height: height,
                 timestamp: timestamp.nanoseconds(),
+                validation_params: ValidationParams::Empty,
             },
         })
     }
@@ -168,6 +172,19 @@ impl LightClient for TendermintLightClient {
                 Error::ICS02Error(ICS02Error::header_verification_failure(e.to_string())).into()
             })?;
 
+        let trusted_consensus_state_timestamp = trusted_consensus_state.timestamp().nanoseconds();
+        let options = match client_state {
+            AnyClientState::Tendermint(ref client_state) => Options {
+                trust_threshold: client_state
+                    .trust_level
+                    .try_into()
+                    .map_err(|e| Error::ICS02Error(e).into())?,
+                trusting_period: client_state.trusting_period,
+                clock_drift: client_state.max_clock_drift,
+            },
+            _ => unreachable!(),
+        };
+
         let prev_state_id = gen_state_id(client_state, trusted_consensus_state)
             .map_err(|e| Error::OtherError(e).into())?;
         let new_state_id = gen_state_id(new_client_state.clone(), new_consensus_state.clone())
@@ -186,6 +203,11 @@ impl LightClient for TendermintLightClient {
                 prev_height: Some(trusted_height),
                 new_height: height,
                 timestamp: timestamp.nanoseconds(),
+                validation_params: ValidationParams::Tendermint(TendermintValidationParams {
+                    options,
+                    header_timestamp: timestamp.nanoseconds(),
+                    trusted_consensus_state_timestamp,
+                }),
             },
         })
     }

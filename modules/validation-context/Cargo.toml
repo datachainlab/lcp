@@ -1,0 +1,18 @@
+[package]
+name = "validation-context"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+sgx_tstd = { git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
+serde = { version = "1.0", default-features = false, features = ["alloc"] }
+tendermint-light-client-verifier = { git = "https://github.com/informalsystems/tendermint-rs", rev = "235480171081fed74de7b3d3c19911304df29831", default-features = false }
+rlp = { version = "0.5.1", default-features = false }
+rlp-derive = { version = "0.1.0" }
+
+[features]
+default = ["std"]
+std = []
+sgx = [
+    "sgx_tstd",
+]
