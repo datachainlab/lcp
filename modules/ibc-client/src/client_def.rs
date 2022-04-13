@@ -1,7 +1,7 @@
+use context::LightClientReader as ClientReader;
 use ibc::core::ics02_client::client_consensus::AnyConsensusState;
 use ibc::core::ics02_client::client_state::AnyClientState;
 use ibc::core::ics02_client::client_type::ClientType;
-use ibc::core::ics02_client::context::ClientReader;
 use ibc::core::ics02_client::error::Error;
 use ibc::core::ics03_connection::connection::ConnectionEnd;
 use ibc::core::ics04_channel::channel::ChannelEnd;

@@ -1594,6 +1594,7 @@ name = "lcp-ibc-client"
 version = "0.1.0"
 dependencies = [
  "commitments",
+ "context",
  "ibc",
  "ibc-proto",
  "libsecp256k1 0.3.5 (registry+https://github.com/rust-lang/crates.io-index)",
