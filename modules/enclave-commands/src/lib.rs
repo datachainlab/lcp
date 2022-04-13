@@ -6,7 +6,6 @@ extern crate sgx_types;
 // re-export module to properly feature gate sgx and regular std environment
 #[cfg(feature = "sgx")]
 pub mod sgx_reexport_prelude {
-    pub use commitments_sgx as commitments;
     pub use sgx_tstd as std;
     pub use thiserror_sgx as thiserror;
 }
