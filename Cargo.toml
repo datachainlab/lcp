@@ -5,6 +5,7 @@ members = [
     "modules/enclave-api",
     "modules/enclave-commands",
     "modules/commitments",
+    "modules/context",
     "modules/settings",
     "modules/ibc-client",
     "modules/relay/tendermint",

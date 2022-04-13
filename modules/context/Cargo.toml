@@ -1,0 +1,18 @@
+[package]
+name = "context"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+sgx_tstd = { git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
+ibc = {git = "https://github.com/bluele/ibc-rs", branch = "sgx", default-features = false }
+prost-types = { version = "0.9", default-features = false }
+
+[features]
+default = ["std"]
+std = []
+sgx = [
+    "sgx_tstd"
+]

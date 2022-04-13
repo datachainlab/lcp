@@ -1,6 +1,7 @@
-use crate::context::{Context, LightClientKeeper, LightClientReader};
+use crate::context::Context;
 use crate::light_client::LightClientHandlerError as Error;
 use commitments::prover::UpdateClientCommitmentProver;
+use context::{LightClientKeeper, LightClientReader};
 use enclave_commands::{InitClientInput, InitClientResult, LightClientResult};
 use enclave_light_client::LightClientSource;
 use enclave_store::Store;

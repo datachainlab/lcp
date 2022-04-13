@@ -1,7 +1,7 @@
 use attestation_report::EndorsedAttestationReport;
 use enclave_api::{Enclave, EnclaveAPI};
 use enclave_commands::{CommandResult, LightClientResult};
-use ibc::core::ics02_client::height::Height;
+use ibc::core::ics02_client::{client_def::ClientDef, height::Height};
 use log::*;
 use settings::ENDORSED_ATTESTATION_PATH;
 use sgx_types::*;
@@ -91,6 +91,9 @@ fn main() -> Result<(), anyhow::Error> {
     let res = enclave.update_client(commitment.client_id, target_header.into())?;
 
     info!("update_client's result is {:?}", res);
+
+    let cs = lcp_ibc_client::client_state::ClientState::default();
+    let client = lcp_ibc_client::client_def::LCPClient {};
 
     enclave.destroy();
 

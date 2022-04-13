@@ -28,3 +28,4 @@ settings = { path = "../../modules/settings", default-features = false, features
 enclave-commands = { path = "../../modules/enclave-commands", default-features = false, features = ["sgx"] }
 commitments = { path = "../../modules/commitments", default-features = false, features = ["sgx"] }
 attestation-report = { path = "../../modules/attestation-report", default-features = false, features = ["sgx"] }
+context = { path = "../../modules/context", default-features = false, features = ["sgx"] }

@@ -22,7 +22,7 @@ use crate::header::Header;
 pub struct LCPClient {}
 
 impl LCPClient {
-    fn check_header_and_update_state(
+    pub fn check_header_and_update_state(
         &self,
         ctx: &dyn ClientReader,
         client_id: ClientId,
@@ -32,7 +32,7 @@ impl LCPClient {
         todo!()
     }
 
-    fn verify_upgrade_and_update_state(
+    pub fn verify_upgrade_and_update_state(
         &self,
         client_state: &ClientState,
         consensus_state: &ConsensusState,
@@ -50,7 +50,7 @@ impl LCPClient {
     /// height of the counterparty chain that this proof assumes (i.e., the height at which this
     /// proof was computed).
     #[allow(clippy::too_many_arguments)]
-    fn verify_client_consensus_state(
+    pub fn verify_client_consensus_state(
         &self,
         client_state: &ClientState,
         height: Height,
@@ -66,7 +66,7 @@ impl LCPClient {
 
     /// Verify a `proof` that a connection state matches that of the input `connection_end`.
     #[allow(clippy::too_many_arguments)]
-    fn verify_connection_state(
+    pub fn verify_connection_state(
         &self,
         client_state: &ClientState,
         height: Height,
@@ -81,7 +81,7 @@ impl LCPClient {
 
     /// Verify a `proof` that a channel state matches that of the input `channel_end`.
     #[allow(clippy::too_many_arguments)]
-    fn verify_channel_state(
+    pub fn verify_channel_state(
         &self,
         client_state: &ClientState,
         height: Height,
@@ -97,7 +97,7 @@ impl LCPClient {
 
     /// Verify the client state for this chain that it is stored on the counterparty chain.
     #[allow(clippy::too_many_arguments)]
-    fn verify_client_full_state(
+    pub fn verify_client_full_state(
         &self,
         client_state: &ClientState,
         height: Height,
@@ -112,7 +112,7 @@ impl LCPClient {
 
     /// Verify a `proof` that a packet has been commited.
     #[allow(clippy::too_many_arguments)]
-    fn verify_packet_data(
+    pub fn verify_packet_data(
         &self,
         ctx: &dyn ChannelReader,
         client_state: &ClientState,
@@ -130,7 +130,7 @@ impl LCPClient {
 
     /// Verify a `proof` that a packet has been commited.
     #[allow(clippy::too_many_arguments)]
-    fn verify_packet_acknowledgement(
+    pub fn verify_packet_acknowledgement(
         &self,
         ctx: &dyn ChannelReader,
         client_state: &ClientState,
@@ -148,7 +148,7 @@ impl LCPClient {
 
     /// Verify a `proof` that of the next_seq_received.
     #[allow(clippy::too_many_arguments)]
-    fn verify_next_sequence_recv(
+    pub fn verify_next_sequence_recv(
         &self,
         ctx: &dyn ChannelReader,
         client_state: &ClientState,
@@ -165,7 +165,7 @@ impl LCPClient {
 
     /// Verify a `proof` that a packet has not been received.
     #[allow(clippy::too_many_arguments)]
-    fn verify_packet_receipt_absence(
+    pub fn verify_packet_receipt_absence(
         &self,
         ctx: &dyn ChannelReader,
         client_state: &ClientState,
