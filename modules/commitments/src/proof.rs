@@ -4,7 +4,7 @@ use crate::sgx_reexport_prelude::*;
 use serde::{Deserialize, Serialize};
 use std::vec::Vec;
 
-#[derive(Debug, Default, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct UpdateClientCommitmentProof {
     pub commitment_bytes: Vec<u8>,
     pub signer: Vec<u8>,
