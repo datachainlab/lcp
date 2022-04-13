@@ -6,6 +6,7 @@ use ibc::core::{
     ics02_client::{client_consensus::AnyConsensusState, client_type::ClientType},
     ics23_commitment::commitment::CommitmentRoot,
 };
+use prost_types::Any;
 
 #[derive(Clone, Default, Debug, PartialEq, Eq)]
 pub struct ConsensusState {
@@ -26,5 +27,11 @@ impl ibc::core::ics02_client::client_consensus::ConsensusState for ConsensusStat
 
     fn wrap_any(self) -> AnyConsensusState {
         panic!("not supported")
+    }
+}
+
+impl From<Any> for ConsensusState {
+    fn from(value: Any) -> Self {
+        Default::default()
     }
 }

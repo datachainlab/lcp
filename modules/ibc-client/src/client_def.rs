@@ -2,7 +2,8 @@ use context::LightClientReader as ClientReader;
 use ibc::core::ics02_client::client_consensus::AnyConsensusState;
 use ibc::core::ics02_client::client_state::AnyClientState;
 use ibc::core::ics02_client::client_type::ClientType;
-use ibc::core::ics02_client::error::Error;
+use ibc::core::ics02_client::error::Error as Ics02Error;
+use ibc::core::ics02_client::header::Header as Ics02Header;
 use ibc::core::ics03_connection::connection::ConnectionEnd;
 use ibc::core::ics04_channel::channel::ChannelEnd;
 use ibc::core::ics04_channel::context::ChannelReader;
@@ -16,6 +17,7 @@ use ibc_proto::ibc::core::commitment::v1::MerkleProof;
 
 use crate::client_state::ClientState;
 use crate::consensus_state::ConsensusState;
+use crate::crypto::verify_signature;
 use crate::header::Header;
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
@@ -28,8 +30,27 @@ impl LCPClient {
         client_id: ClientId,
         client_state: ClientState,
         header: Header,
-    ) -> Result<(ClientState, ConsensusState), Error> {
-        todo!()
+    ) -> Result<(ClientState, ConsensusState), Ics02Error> {
+        // header validation
+        assert!(header.prev_height().is_some() && header.prev_state_id().is_some());
+
+        let prev_consensus_state: ConsensusState = ctx
+            .consensus_state(&client_id, header.prev_height().unwrap())?
+            .into();
+        assert!(prev_consensus_state.state_id == header.prev_state_id().unwrap());
+
+        // check if the specified signer exists in the client state
+        assert!(client_state.contains(&header.signer()));
+
+        let signer = verify_signature(&header.0.commitment_bytes, &header.0.signature).unwrap();
+        assert!(header.signer() == signer);
+
+        let new_consensus_state = ConsensusState {
+            state_id: header.state_id(),
+            timestamp: header.timestamp_as_u64(),
+        };
+
+        Ok((client_state.with_header(&header), new_consensus_state))
     }
 
     pub fn verify_upgrade_and_update_state(
@@ -38,7 +59,7 @@ impl LCPClient {
         consensus_state: &ConsensusState,
         proof_upgrade_client: MerkleProof,
         proof_upgrade_consensus_state: MerkleProof,
-    ) -> Result<(ClientState, ConsensusState), Error> {
+    ) -> Result<(ClientState, ConsensusState), Ics02Error> {
         todo!()
     }
 
@@ -60,7 +81,7 @@ impl LCPClient {
         client_id: &ClientId,
         consensus_height: Height,
         expected_consensus_state: &AnyConsensusState,
-    ) -> Result<(), Error> {
+    ) -> Result<(), Ics02Error> {
         todo!()
     }
 
@@ -75,7 +96,7 @@ impl LCPClient {
         root: &CommitmentRoot,
         connection_id: &ConnectionId,
         expected_connection_end: &ConnectionEnd,
-    ) -> Result<(), Error> {
+    ) -> Result<(), Ics02Error> {
         todo!()
     }
 
@@ -91,7 +112,7 @@ impl LCPClient {
         port_id: &PortId,
         channel_id: &ChannelId,
         expected_channel_end: &ChannelEnd,
-    ) -> Result<(), Error> {
+    ) -> Result<(), Ics02Error> {
         todo!()
     }
 
@@ -106,7 +127,7 @@ impl LCPClient {
         root: &CommitmentRoot,
         client_id: &ClientId,
         expected_client_state: &AnyClientState,
-    ) -> Result<(), Error> {
+    ) -> Result<(), Ics02Error> {
         todo!()
     }
 
@@ -124,7 +145,7 @@ impl LCPClient {
         channel_id: &ChannelId,
         sequence: Sequence,
         commitment: String,
-    ) -> Result<(), Error> {
+    ) -> Result<(), Ics02Error> {
         todo!()
     }
 
@@ -142,7 +163,7 @@ impl LCPClient {
         channel_id: &ChannelId,
         sequence: Sequence,
         ack: Vec<u8>,
-    ) -> Result<(), Error> {
+    ) -> Result<(), Ics02Error> {
         todo!()
     }
 
@@ -159,7 +180,7 @@ impl LCPClient {
         port_id: &PortId,
         channel_id: &ChannelId,
         sequence: Sequence,
-    ) -> Result<(), Error> {
+    ) -> Result<(), Ics02Error> {
         todo!()
     }
 
@@ -176,7 +197,7 @@ impl LCPClient {
         port_id: &PortId,
         channel_id: &ChannelId,
         sequence: Sequence,
-    ) -> Result<(), Error> {
+    ) -> Result<(), Ics02Error> {
         todo!()
     }
 }

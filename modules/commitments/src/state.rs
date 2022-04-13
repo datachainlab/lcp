@@ -12,7 +12,7 @@ use std::vec::Vec;
 
 pub const STATE_ID_SIZE: usize = 32;
 
-#[derive(Debug, Default, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Default, Copy, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct StateID([u8; STATE_ID_SIZE]);
 
 impl StateID {

@@ -1,7 +1,9 @@
-use crate::public_key::Address;
+use crate::crypto::Address;
+use crate::header::Header;
 #[cfg(feature = "sgx")]
 use crate::sgx_reexport_prelude::*;
 use ibc::core::ics02_client::client_type::ClientType;
+use ibc::core::ics02_client::header::Header as Ics02Header;
 use ibc::core::{ics02_client::client_state::AnyClientState, ics24_host::identifier::ChainId};
 use ibc::Height;
 use serde::{Deserialize, Serialize};
@@ -12,6 +14,19 @@ pub struct ClientState {
     pub latest_height: Height,
     pub mrenclave: Vec<u8>,
     pub keys: Vec<Address>,
+}
+
+impl ClientState {
+    pub fn contains(&self, key: &Address) -> bool {
+        self.keys.contains(key)
+    }
+
+    pub fn with_header(mut self, header: &Header) -> Self {
+        if self.latest_height < header.height() {
+            self.latest_height = header.height();
+        }
+        self
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -25,11 +40,12 @@ impl ibc::core::ics02_client::client_state::ClientState for ClientState {
     }
 
     fn client_type(&self) -> ClientType {
+        // NOTE: ClientType is defined as enum in ibc-rs, so we cannot support an additional type
         todo!()
     }
 
     fn latest_height(&self) -> Height {
-        todo!()
+        self.latest_height
     }
 
     fn frozen_height(&self) -> Option<Height> {
