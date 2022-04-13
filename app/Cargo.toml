@@ -22,7 +22,7 @@ enclave-commands = { path = "../modules/enclave-commands" }
 attestation-report = { path = "../modules/attestation-report" }
 settings = { path = "../modules/settings" }
 relay-tendermint = { path = "../modules/relay/tendermint" }
-
+lcp-ibc-client = { path = "../modules/ibc-client" }
 
 [features]
 default = []
