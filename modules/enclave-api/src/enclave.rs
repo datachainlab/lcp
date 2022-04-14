@@ -40,9 +40,9 @@ impl Enclave {
         self.sgx_enclave.destroy()
     }
 
-    pub fn current_timestamp() -> u64 {
+    pub fn current_timestamp() -> u128 {
         let current_timestamp = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
-        current_timestamp.as_nanos() as u64
+        current_timestamp.as_nanos()
     }
 }
 

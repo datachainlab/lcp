@@ -80,7 +80,12 @@ impl LightClient for TendermintLightClient {
                 new_state_id: state_id,
                 prev_height: None,
                 new_height: height,
-                timestamp: timestamp.nanoseconds(),
+                timestamp: timestamp
+                    .into_datetime()
+                    .unwrap()
+                    .unix_timestamp_nanos()
+                    .try_into()
+                    .unwrap(),
                 validation_params: ValidationParams::Empty,
             },
         })
@@ -173,8 +178,13 @@ impl LightClient for TendermintLightClient {
             .map_err(|e| {
                 Error::ICS02Error(ICS02Error::header_verification_failure(e.to_string())).into()
             })?;
-
-        let trusted_consensus_state_timestamp = trusted_consensus_state.timestamp().nanoseconds();
+        let trusted_consensus_state_timestamp = trusted_consensus_state
+            .timestamp()
+            .into_datetime()
+            .unwrap()
+            .unix_timestamp_nanos()
+            .try_into()
+            .unwrap();
         let options = match client_state {
             AnyClientState::Tendermint(ref client_state) => Options {
                 trust_threshold: client_state
@@ -191,7 +201,12 @@ impl LightClient for TendermintLightClient {
             .map_err(|e| Error::OtherError(e).into())?;
         let new_state_id = gen_state_id(new_client_state.clone(), new_consensus_state.clone())
             .map_err(|e| Error::OtherError(e).into())?;
-
+        let header_timestamp_nanos = header_timestamp
+            .into_datetime()
+            .unwrap()
+            .unix_timestamp_nanos()
+            .try_into()
+            .unwrap();
         Ok(UpdateClientResult {
             client_id: client_id.clone(),
             new_any_client_state: Any::from(new_client_state),
@@ -204,13 +219,13 @@ impl LightClient for TendermintLightClient {
                 new_state_id,
                 prev_height: Some(trusted_height),
                 new_height: height,
-                timestamp: header_timestamp.nanoseconds(),
+                timestamp: header_timestamp_nanos,
                 validation_params: ValidationParams::Tendermint(TendermintValidationParams {
                     options: TendermintValidationOptions {
                         trusting_period: options.trusting_period,
                         clock_drift: options.clock_drift,
                     },
-                    untrusted_header_timestamp: header_timestamp.nanoseconds(),
+                    untrusted_header_timestamp: header_timestamp_nanos,
                     trusted_consensus_state_timestamp,
                 }),
             },

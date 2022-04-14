@@ -29,7 +29,7 @@ use std::vec::Vec;
 pub struct Context<'a, 'e, S> {
     store: &'a mut S,
     ek: &'e EnclaveKey,
-    current_timestamp: Option<u64>,
+    current_timestamp: Option<u128>,
 }
 
 impl<'a, 'e, S> Context<'a, 'e, S> {
@@ -41,7 +41,7 @@ impl<'a, 'e, S> Context<'a, 'e, S> {
         }
     }
 
-    pub fn set_timestmap(&mut self, timestamp: u64) {
+    pub fn set_timestmap(&mut self, timestamp: u128) {
         self.current_timestamp = Some(timestamp);
     }
 
@@ -94,7 +94,7 @@ impl<'a, 'e, S: Store> LightClientReader for Context<'a, 'e, S> {
     }
 
     fn host_timestamp(&self) -> Timestamp {
-        Timestamp::from_nanoseconds(self.current_timestamp.unwrap()).unwrap()
+        Timestamp::from_nanoseconds(self.current_timestamp.unwrap() as u64).unwrap()
     }
 }
 

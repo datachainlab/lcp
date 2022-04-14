@@ -24,7 +24,7 @@ pub struct UpdateClientCommitment {
     pub new_state_id: StateID,
     pub prev_height: Option<Height>,
     pub new_height: Height,
-    pub timestamp: u64,
+    pub timestamp: u128,
     pub validation_params: ValidationParams,
 }
 
@@ -36,7 +36,7 @@ pub struct RLPUpdateClientCommitment {
     new_state_id: Vec<u8>,
     prev_height: Vec<u8>,
     new_height: Vec<u8>,
-    timestamp: u64,
+    timestamp: u128,
     validation_params: Vec<u8>,
 }
 

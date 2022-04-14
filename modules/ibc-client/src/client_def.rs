@@ -53,7 +53,13 @@ impl LCPClient {
 
         // check if proxy's validation context matches our's context
         let vctx = ValidationContext {
-            current_timestamp: ctx.host_timestamp().nanoseconds(),
+            current_timestamp: ctx
+                .host_timestamp()
+                .into_datetime()
+                .unwrap()
+                .unix_timestamp_nanos()
+                .try_into()
+                .unwrap(),
         };
         assert!(
             TendermintValidationPredicate::predicate(&vctx, header.validation_params()).unwrap()
@@ -63,7 +69,7 @@ impl LCPClient {
         let new_client_state = client_state.with_header(&header);
         let new_consensus_state = ConsensusState {
             state_id: header.state_id(),
-            timestamp: header.timestamp_as_u64(),
+            timestamp: header.timestamp_as_u128(),
         };
 
         Ok((new_client_state, new_consensus_state))

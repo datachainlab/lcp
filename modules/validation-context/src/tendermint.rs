@@ -9,8 +9,8 @@ use std::vec::Vec;
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct TendermintValidationParams {
     pub options: TendermintValidationOptions,
-    pub untrusted_header_timestamp: u64,
-    pub trusted_consensus_state_timestamp: u64,
+    pub untrusted_header_timestamp: u128,
+    pub trusted_consensus_state_timestamp: u128,
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -55,11 +55,11 @@ impl TendermintValidationParams {
 pub struct TendermintValidationPredicate;
 
 impl TendermintValidationPredicate {
-    fn is_within_trust_period(trusted_state_time: u64, trusting_period: u64, now: u64) -> bool {
+    fn is_within_trust_period(trusted_state_time: u128, trusting_period: u128, now: u128) -> bool {
         trusted_state_time + trusting_period > now
     }
 
-    fn is_header_from_past(untrusted_header_time: u64, clock_drift: u64, now: u64) -> bool {
+    fn is_header_from_past(untrusted_header_time: u128, clock_drift: u128, now: u128) -> bool {
         untrusted_header_time < now + clock_drift
     }
 }
@@ -76,14 +76,14 @@ impl ValidationPredicate for TendermintValidationPredicate {
         // ensure that trusted consensus state's timestamp hasn't passed the trusting period
         assert!(Self::is_within_trust_period(
             params.trusted_consensus_state_timestamp,
-            params.options.trusting_period.as_secs(),
+            params.options.trusting_period.as_nanos(),
             vctx.current_timestamp,
         ));
 
         // ensure the header isn't from a future time
         assert!(Self::is_header_from_past(
             params.untrusted_header_timestamp,
-            params.options.clock_drift.as_secs(),
+            params.options.clock_drift.as_nanos(),
             vctx.current_timestamp,
         ));
 
@@ -99,8 +99,8 @@ mod tests {
     #[test]
     fn serialization_validation_params() {
         let current_timestamp = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
-        let untrusted_header_timestamp = current_timestamp.as_nanos() as u64;
-        let trusted_consensus_state_timestamp = current_timestamp.as_nanos() as u64;
+        let untrusted_header_timestamp = current_timestamp.as_nanos();
+        let trusted_consensus_state_timestamp = current_timestamp.as_nanos();
 
         let params = TendermintValidationParams {
             options: TendermintValidationOptions {

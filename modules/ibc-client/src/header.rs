@@ -36,7 +36,7 @@ impl Header {
         self.0.signer.as_slice().into()
     }
 
-    pub fn timestamp_as_u64(&self) -> u64 {
+    pub fn timestamp_as_u128(&self) -> u128 {
         self.commitment().timestamp
     }
 
@@ -56,7 +56,7 @@ impl ibc::core::ics02_client::header::Header for Header {
     }
 
     fn timestamp(&self) -> Timestamp {
-        Timestamp::from_nanoseconds(self.commitment().timestamp).unwrap()
+        Timestamp::from_nanoseconds(self.commitment().timestamp as u64).unwrap()
     }
 
     fn wrap_any(self) -> AnyHeader {
