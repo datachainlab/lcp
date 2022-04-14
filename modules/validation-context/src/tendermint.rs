@@ -10,7 +10,7 @@ use tendermint_light_client_verifier::{options::Options, types::TrustThreshold};
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct TendermintValidationParams {
     pub options: Options,
-    pub header_timestamp: u64,
+    pub untrusted_header_timestamp: u64,
     pub trusted_consensus_state_timestamp: u64,
 }
 
@@ -22,7 +22,7 @@ impl TendermintValidationParams {
             .append(&self.options.trust_threshold.denominator())
             .append(&self.options.trusting_period.as_nanos())
             .append(&self.options.clock_drift.as_nanos());
-        s.append(&self.header_timestamp);
+        s.append(&self.untrusted_header_timestamp);
         s.append(&self.trusted_consensus_state_timestamp);
         s.out().to_vec()
     }
@@ -41,7 +41,7 @@ impl TendermintValidationParams {
                 trusting_period: Duration::from_nanos(options.val_at(2).unwrap()),
                 clock_drift: Duration::from_nanos(options.val_at(3).unwrap()),
             },
-            header_timestamp: root.val_at(1).unwrap(),
+            untrusted_header_timestamp: root.val_at(1).unwrap(),
             trusted_consensus_state_timestamp: root.val_at(2).unwrap(),
         }
     }
@@ -49,13 +49,40 @@ impl TendermintValidationParams {
 
 pub struct TendermintValidationPredicate;
 
+impl TendermintValidationPredicate {
+    fn is_within_trust_period(trusted_state_time: u64, trusting_period: u64, now: u64) -> bool {
+        trusted_state_time + trusting_period > now
+    }
+
+    fn is_header_from_past(untrusted_header_time: u64, clock_drift: u64, now: u64) -> bool {
+        untrusted_header_time < now + clock_drift
+    }
+}
+
 impl ValidationPredicate for TendermintValidationPredicate {
     fn predicate(vctx: &ValidationContext, params: &ValidationParams) -> Result<bool, ()> {
         let params = match params {
             ValidationParams::Tendermint(params) => params,
             _ => unreachable!(),
         };
-        todo!()
+
+        // TODO return an error instead of assertion
+
+        // ensure that trusted consensus state's timestamp hasn't passed the trusting period
+        assert!(Self::is_within_trust_period(
+            params.trusted_consensus_state_timestamp,
+            params.options.trusting_period.as_secs(),
+            vctx.current_timestamp,
+        ));
+
+        // ensure the header isn't from a future time
+        assert!(Self::is_header_from_past(
+            params.untrusted_header_timestamp,
+            params.options.clock_drift.as_secs(),
+            vctx.current_timestamp,
+        ));
+
+        Ok(true)
     }
 }
 

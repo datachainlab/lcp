@@ -151,7 +151,7 @@ impl LightClient for TendermintLightClient {
         }
 
         let height = header.height();
-        let timestamp = header.timestamp();
+        let header_timestamp = header.timestamp();
 
         let trusted_consensus_state =
             ctx.consensus_state(&client_id, trusted_height)
@@ -195,17 +195,17 @@ impl LightClient for TendermintLightClient {
             new_any_client_state: Any::from(new_client_state),
             new_any_consensus_state: Any::from(new_consensus_state),
             height,
-            timestamp,
+            timestamp: header_timestamp,
             commitment: UpdateClientCommitment {
                 client_id,
                 prev_state_id: Some(prev_state_id),
                 new_state_id,
                 prev_height: Some(trusted_height),
                 new_height: height,
-                timestamp: timestamp.nanoseconds(),
+                timestamp: header_timestamp.nanoseconds(),
                 validation_params: ValidationParams::Tendermint(TendermintValidationParams {
                     options,
-                    header_timestamp: timestamp.nanoseconds(),
+                    untrusted_header_timestamp: header_timestamp.nanoseconds(),
                     trusted_consensus_state_timestamp,
                 }),
             },
