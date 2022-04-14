@@ -5,21 +5,31 @@ use core::time::Duration;
 use rlp::{Rlp, RlpStream};
 use serde::{Deserialize, Serialize};
 use std::vec::Vec;
-use tendermint_light_client_verifier::{options::Options, types::TrustThreshold};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct TendermintValidationParams {
-    pub options: Options,
+    pub options: TendermintValidationOptions,
     pub untrusted_header_timestamp: u64,
     pub trusted_consensus_state_timestamp: u64,
+}
+
+#[derive(Copy, Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct TendermintValidationOptions {
+    /// How long a validator set is trusted for (must be shorter than the chain's
+    /// unbonding period)
+    pub trusting_period: Duration,
+
+    /// Correction parameter dealing with only approximately synchronized clocks.
+    /// The local clock should always be ahead of timestamps from the blockchain; this
+    /// is the maximum amount that the local clock may drift behind a timestamp from the
+    /// blockchain.
+    pub clock_drift: Duration,
 }
 
 impl TendermintValidationParams {
     pub fn to_vec(&self) -> Vec<u8> {
         let mut s = RlpStream::new_list(3);
-        s.begin_list(4)
-            .append(&self.options.trust_threshold.numerator())
-            .append(&self.options.trust_threshold.denominator())
+        s.begin_list(2)
             .append(&self.options.trusting_period.as_nanos())
             .append(&self.options.clock_drift.as_nanos());
         s.append(&self.untrusted_header_timestamp);
@@ -32,14 +42,9 @@ impl TendermintValidationParams {
         let options = root.at(0).unwrap();
 
         Self {
-            options: Options {
-                trust_threshold: TrustThreshold::new(
-                    options.val_at(0).unwrap(),
-                    options.val_at(1).unwrap(),
-                )
-                .unwrap(),
-                trusting_period: Duration::from_nanos(options.val_at(2).unwrap()),
-                clock_drift: Duration::from_nanos(options.val_at(3).unwrap()),
+            options: TendermintValidationOptions {
+                trusting_period: Duration::from_nanos(options.val_at(0).unwrap()),
+                clock_drift: Duration::from_nanos(options.val_at(1).unwrap()),
             },
             untrusted_header_timestamp: root.val_at(1).unwrap(),
             trusted_consensus_state_timestamp: root.val_at(2).unwrap(),
@@ -94,16 +99,15 @@ mod tests {
     #[test]
     fn serialization_validation_params() {
         let current_timestamp = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
-        let header_timestamp = current_timestamp.as_nanos() as u64;
+        let untrusted_header_timestamp = current_timestamp.as_nanos() as u64;
         let trusted_consensus_state_timestamp = current_timestamp.as_nanos() as u64;
 
         let params = TendermintValidationParams {
-            options: Options {
-                trust_threshold: TrustThreshold::ONE_THIRD,
+            options: TendermintValidationOptions {
                 trusting_period: Duration::new(60 * 60 * 24, 0),
                 clock_drift: Duration::new(60 * 60, 0),
             },
-            header_timestamp,
+            untrusted_header_timestamp,
             trusted_consensus_state_timestamp,
         };
         let bz = params.to_vec();

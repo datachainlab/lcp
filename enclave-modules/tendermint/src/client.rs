@@ -26,7 +26,9 @@ use std::string::{String, ToString};
 use std::vec::Vec;
 use tendermint_light_client_verifier::options::Options;
 use tendermint_proto::Protobuf;
-use validation_context::tendermint::{TendermintValidationParams, TendermintValidationPredicate};
+use validation_context::tendermint::{
+    TendermintValidationOptions, TendermintValidationParams, TendermintValidationPredicate,
+};
 use validation_context::ValidationParams;
 
 #[derive(Default)]
@@ -204,7 +206,10 @@ impl LightClient for TendermintLightClient {
                 new_height: height,
                 timestamp: header_timestamp.nanoseconds(),
                 validation_params: ValidationParams::Tendermint(TendermintValidationParams {
-                    options,
+                    options: TendermintValidationOptions {
+                        trusting_period: options.trusting_period,
+                        clock_drift: options.clock_drift,
+                    },
                     untrusted_header_timestamp: header_timestamp.nanoseconds(),
                     trusted_consensus_state_timestamp,
                 }),
