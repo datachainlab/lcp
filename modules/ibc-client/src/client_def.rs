@@ -35,6 +35,10 @@ impl LCPClient {
     ) -> Result<(ClientState, ConsensusState), Ics02Error> {
         // TODO return an error instead of assertion
 
+        let header = match header {
+            Header::UpdateClient(header) => header,
+        };
+
         // header validation
         assert!(header.prev_height().is_some() && header.prev_state_id().is_some());
 

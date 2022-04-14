@@ -1,5 +1,5 @@
 use crate::crypto::Address;
-use crate::header::Header;
+use crate::header::{Header, UpdateClientHeader};
 #[cfg(feature = "sgx")]
 use crate::sgx_reexport_prelude::*;
 use ibc::core::ics02_client::client_type::ClientType;
@@ -21,7 +21,7 @@ impl ClientState {
         self.keys.contains(key)
     }
 
-    pub fn with_header(mut self, header: &Header) -> Self {
+    pub fn with_header(mut self, header: &UpdateClientHeader) -> Self {
         if self.latest_height < header.height() {
             self.latest_height = header.height();
         }

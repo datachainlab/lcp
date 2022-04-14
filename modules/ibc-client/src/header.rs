@@ -10,14 +10,23 @@ use serde::{Deserialize, Serialize};
 use validation_context::ValidationParams;
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
-pub struct Header(
+pub enum Header {
+    UpdateClient(UpdateClientHeader),
+}
+
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+pub struct UpdateClientHeader(
     pub UpdateClientCommitmentProof,
     #[serde(skip_serializing)] pub UpdateClientCommitment,
 );
 
-impl Header {
+impl UpdateClientHeader {
     pub fn commitment(&self) -> &UpdateClientCommitment {
         &self.1
+    }
+
+    pub fn height(&self) -> Height {
+        self.commitment().new_height
     }
 
     pub fn prev_height(&self) -> Option<Height> {
@@ -52,11 +61,17 @@ impl ibc::core::ics02_client::header::Header for Header {
     }
 
     fn height(&self) -> Height {
-        self.commitment().new_height
+        match self {
+            Header::UpdateClient(h) => h.height(),
+        }
     }
 
     fn timestamp(&self) -> Timestamp {
-        Timestamp::from_nanoseconds(self.commitment().timestamp as u64).unwrap()
+        match self {
+            Header::UpdateClient(h) => {
+                Timestamp::from_nanoseconds(h.timestamp_as_u128() as u64).unwrap()
+            }
+        }
     }
 
     fn wrap_any(self) -> AnyHeader {
