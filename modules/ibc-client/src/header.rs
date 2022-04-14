@@ -1,6 +1,7 @@
-use crate::crypto::Address;
 #[cfg(feature = "sgx")]
 use crate::sgx_reexport_prelude::*;
+use crate::{crypto::Address, report::AttestationVerificationReport};
+use attestation_report::EndorsedAttestationReport;
 use commitments::{StateID, UpdateClientCommitment, UpdateClientCommitmentProof};
 use ibc::core::ics02_client::client_type::ClientType;
 use ibc::core::ics02_client::header::AnyHeader;
@@ -11,8 +12,12 @@ use validation_context::ValidationParams;
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub enum Header {
+    RegisterEnclaveKey(RegisterEnclaveKeyHeader),
     UpdateClient(UpdateClientHeader),
 }
+
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+pub struct RegisterEnclaveKeyHeader(pub AttestationVerificationReport);
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub struct UpdateClientHeader(
@@ -63,6 +68,7 @@ impl ibc::core::ics02_client::header::Header for Header {
     fn height(&self) -> Height {
         match self {
             Header::UpdateClient(h) => h.height(),
+            _ => todo!(),
         }
     }
 
@@ -71,6 +77,7 @@ impl ibc::core::ics02_client::header::Header for Header {
             Header::UpdateClient(h) => {
                 Timestamp::from_nanoseconds(h.timestamp_as_u128() as u64).unwrap()
             }
+            _ => todo!(),
         }
     }
 

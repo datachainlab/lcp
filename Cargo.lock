@@ -1595,6 +1595,7 @@ dependencies = [
 name = "lcp-ibc-client"
 version = "0.1.0"
 dependencies = [
+ "attestation-report",
  "commitments",
  "context",
  "ibc",

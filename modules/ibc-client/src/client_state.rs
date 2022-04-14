@@ -12,7 +12,7 @@ use std::vec::Vec;
 #[derive(Clone, Default, Debug, PartialEq, Eq)]
 pub struct ClientState {
     pub latest_height: Height,
-    pub mrenclave: Vec<u8>,
+    pub mr_enclave: Vec<u8>,
     pub keys: Vec<Address>,
 }
 
@@ -26,6 +26,13 @@ impl ClientState {
             self.latest_height = header.height();
         }
         self
+    }
+
+    pub fn with_new_key(mut self, key: Address) -> Self {
+        todo!()
+        // assert!(!self.contains(&key));
+        // self.keys.push(key);
+        // self
     }
 }
 

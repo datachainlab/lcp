@@ -32,6 +32,6 @@ impl ibc::core::ics02_client::client_consensus::ConsensusState for ConsensusStat
 
 impl From<Any> for ConsensusState {
     fn from(value: Any) -> Self {
-        Default::default()
+        todo!()
     }
 }

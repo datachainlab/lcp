@@ -20,7 +20,8 @@ use validation_context::{ValidationContext, ValidationPredicate};
 use crate::client_state::ClientState;
 use crate::consensus_state::ConsensusState;
 use crate::crypto::verify_signature;
-use crate::header::Header;
+use crate::header::{Header, RegisterEnclaveKeyHeader, UpdateClientHeader};
+use crate::report::{read_enclave_key_from_report, verify_report};
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct LCPClient {}
@@ -33,11 +34,31 @@ impl LCPClient {
         client_state: ClientState,
         header: Header,
     ) -> Result<(ClientState, ConsensusState), Ics02Error> {
-        // TODO return an error instead of assertion
+        match header {
+            Header::UpdateClient(header) => self.check_header_and_update_state_for_update_client(
+                ctx,
+                client_id,
+                client_state,
+                header,
+            ),
+            Header::RegisterEnclaveKey(header) => self
+                .check_header_and_update_state_for_register_enclave_key(
+                    ctx,
+                    client_id,
+                    client_state,
+                    header,
+                ),
+        }
+    }
 
-        let header = match header {
-            Header::UpdateClient(header) => header,
-        };
+    fn check_header_and_update_state_for_update_client(
+        &self,
+        ctx: &dyn ClientReader,
+        client_id: ClientId,
+        client_state: ClientState,
+        header: UpdateClientHeader,
+    ) -> Result<(ClientState, ConsensusState), Ics02Error> {
+        // TODO return an error instead of assertion
 
         // header validation
         assert!(header.prev_height().is_some() && header.prev_state_id().is_some());
@@ -77,6 +98,27 @@ impl LCPClient {
         };
 
         Ok((new_client_state, new_consensus_state))
+    }
+
+    fn check_header_and_update_state_for_register_enclave_key(
+        &self,
+        ctx: &dyn ClientReader,
+        client_id: ClientId,
+        client_state: ClientState,
+        header: RegisterEnclaveKeyHeader,
+    ) -> Result<(ClientState, ConsensusState), Ics02Error> {
+        // TODO return an error instead of assertion
+
+        assert!(verify_report(&client_state.mr_enclave, &header.0));
+        let key = read_enclave_key_from_report(&header.0.body).unwrap();
+
+        let any_consensus_state = ctx
+            .consensus_state(&client_id, client_state.latest_height)
+            .unwrap();
+        let consensus_state = ConsensusState::from(any_consensus_state);
+        let new_client_state = client_state.with_new_key(key);
+
+        Ok((new_client_state, consensus_state))
     }
 
     pub fn verify_upgrade_and_update_state(
