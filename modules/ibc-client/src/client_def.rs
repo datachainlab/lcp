@@ -14,6 +14,8 @@ use ibc::core::ics23_commitment::commitment::{
 use ibc::core::ics24_host::identifier::{ChannelId, ClientId, ConnectionId, PortId};
 use ibc::Height;
 use ibc_proto::ibc::core::commitment::v1::MerkleProof;
+use validation_context::{ValidationContext, ValidationPredicate};
+use validation_context::tendermint::TendermintValidationPredicate;
 
 use crate::client_state::ClientState;
 use crate::consensus_state::ConsensusState;
@@ -34,6 +36,7 @@ impl LCPClient {
         // header validation
         assert!(header.prev_height().is_some() && header.prev_state_id().is_some());
 
+        // check if the proxy's trusted consensus state exists in the store
         let prev_consensus_state: ConsensusState = ctx
             .consensus_state(&client_id, header.prev_height().unwrap())?
             .into();
@@ -46,8 +49,11 @@ impl LCPClient {
         let signer = verify_signature(&header.0.commitment_bytes, &header.0.signature).unwrap();
         assert!(header.signer() == signer);
 
-        // TODO check if header.timestamp is valid in our context
+        // check if proxy's validation context matches our's context
+        let vctx = ValidationContext { current_timestamp: ctx.host_timestamp().nanoseconds() };
+        assert!(TendermintValidationPredicate::predicate(&vctx, header.validation_params()).unwrap());
 
+        // create a new state
         let new_client_state = client_state.with_header(&header);
         let new_consensus_state = ConsensusState {
             state_id: header.state_id(),

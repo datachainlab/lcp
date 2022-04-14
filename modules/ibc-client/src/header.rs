@@ -7,6 +7,7 @@ use ibc::core::ics02_client::header::AnyHeader;
 use ibc::timestamp::Timestamp;
 use ibc::Height;
 use serde::{Deserialize, Serialize};
+use validation_context::ValidationParams;
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub struct Header(
@@ -37,6 +38,10 @@ impl Header {
 
     pub fn timestamp_as_u64(&self) -> u64 {
         self.commitment().timestamp
+    }
+
+    pub fn validation_params(&self) -> &ValidationParams {
+        &self.commitment().validation_params
     }
 }
 

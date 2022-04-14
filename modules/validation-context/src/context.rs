@@ -6,7 +6,7 @@ use std::vec::Vec;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, RlpEncodable, RlpDecodable)]
 pub struct ValidationContext {
-    current_timestamp: u64,
+    pub current_timestamp: u64,
 }
 
 impl ValidationContext {
