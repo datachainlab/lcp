@@ -10,7 +10,7 @@ pub mod sgx_reexport_prelude {
 
 pub use context::ValidationContext;
 pub use params::ValidationParams;
-pub use predicate::ValidationPredicate;
+pub use predicate::{validation_predicate, ValidationPredicate};
 
 mod context;
 mod params;

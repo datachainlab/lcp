@@ -14,8 +14,7 @@ use ibc::core::ics23_commitment::commitment::{
 use ibc::core::ics24_host::identifier::{ChannelId, ClientId, ConnectionId, PortId};
 use ibc::Height;
 use ibc_proto::ibc::core::commitment::v1::MerkleProof;
-use validation_context::tendermint::TendermintValidationPredicate;
-use validation_context::{ValidationContext, ValidationPredicate};
+use validation_context::{validation_predicate, ValidationContext, ValidationPredicate};
 
 use crate::client_state::ClientState;
 use crate::consensus_state::ConsensusState;
@@ -86,9 +85,7 @@ impl LCPClient {
                 .try_into()
                 .unwrap(),
         };
-        assert!(
-            TendermintValidationPredicate::predicate(&vctx, header.validation_params()).unwrap()
-        );
+        assert!(validation_predicate(&vctx, header.validation_params()).unwrap());
 
         // create a new state
         let new_client_state = client_state.with_header(&header);
