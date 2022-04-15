@@ -27,6 +27,10 @@ impl StateID {
     pub fn to_vec(&self) -> Vec<u8> {
         self.0.to_vec()
     }
+
+    pub fn is_zero(&self) -> bool {
+        self == &StateID::default()
+    }
 }
 
 // TODO define owned error types

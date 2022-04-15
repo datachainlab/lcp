@@ -12,9 +12,12 @@ use validation_context::ValidationParams;
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub enum Header {
+    Activate(ActivateHeader),
     RegisterEnclaveKey(RegisterEnclaveKeyHeader),
     UpdateClient(UpdateClientHeader),
 }
+
+pub type ActivateHeader = UpdateClientHeader;
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub struct RegisterEnclaveKeyHeader(pub AttestationVerificationReport);

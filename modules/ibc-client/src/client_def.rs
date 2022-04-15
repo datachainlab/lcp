@@ -19,13 +19,32 @@ use validation_context::{validation_predicate, ValidationContext, ValidationPred
 use crate::client_state::ClientState;
 use crate::consensus_state::ConsensusState;
 use crate::crypto::verify_signature;
-use crate::header::{Header, RegisterEnclaveKeyHeader, UpdateClientHeader};
+use crate::header::{ActivateHeader, Header, RegisterEnclaveKeyHeader, UpdateClientHeader};
 use crate::report::{read_enclave_key_from_report, verify_report};
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct LCPClient {}
 
 impl LCPClient {
+    // initialise is called on CreateClient
+    pub fn initialise(
+        &self,
+        client_state: &ClientState,
+        consensus_state: &ConsensusState,
+    ) -> Result<(), Ics02Error> {
+        // An initial client state's keys must be empty
+        assert!(client_state.keys.len() == 0);
+        // An initial client state's latest height must be empty
+        assert!(client_state.latest_height.is_zero());
+        // mr_enclave length must be 32
+        assert!(client_state.mr_enclave.len() == 32);
+        // An initial consensus state must be empty
+        assert!(consensus_state.is_empty());
+
+        Ok(())
+    }
+
+    // check_header_and_update_state is called on UpdateClient
     pub fn check_header_and_update_state(
         &self,
         ctx: &dyn ClientReader,
@@ -34,6 +53,12 @@ impl LCPClient {
         header: Header,
     ) -> Result<(ClientState, ConsensusState), Ics02Error> {
         match header {
+            Header::Activate(header) => self.check_header_and_update_state_for_activate(
+                ctx,
+                client_id,
+                client_state,
+                header,
+            ),
             Header::UpdateClient(header) => self.check_header_and_update_state_for_update_client(
                 ctx,
                 client_id,
@@ -48,6 +73,42 @@ impl LCPClient {
                     header,
                 ),
         }
+    }
+
+    pub fn check_header_and_update_state_for_activate(
+        &self,
+        ctx: &dyn ClientReader,
+        client_id: ClientId,
+        client_state: ClientState,
+        header: ActivateHeader,
+    ) -> Result<(ClientState, ConsensusState), Ics02Error> {
+        // TODO return an error instead of assertion
+
+        // check if the client state is not activated
+        assert!(client_state.latest_height.is_zero());
+
+        // header validation
+        assert!(header.prev_height().is_none() && header.prev_state_id().is_none());
+
+        // check if the specified signer exists in the client state
+        assert!(client_state.contains(&header.signer()));
+
+        // check if the `header.signer` matches the commitment prover
+        let signer = verify_signature(&header.0.commitment_bytes, &header.0.signature).unwrap();
+        assert!(header.signer() == signer);
+
+        // check if proxy's validation context matches our's context
+        let vctx = self.validation_context(ctx);
+        assert!(validation_predicate(&vctx, header.validation_params()).unwrap());
+
+        // create a new state
+        let new_client_state = client_state.with_header(&header);
+        let new_consensus_state = ConsensusState {
+            state_id: header.state_id(),
+            timestamp: header.timestamp_as_u128(),
+        };
+
+        Ok((new_client_state, new_consensus_state))
     }
 
     fn check_header_and_update_state_for_update_client(
@@ -76,15 +137,7 @@ impl LCPClient {
         assert!(header.signer() == signer);
 
         // check if proxy's validation context matches our's context
-        let vctx = ValidationContext {
-            current_timestamp: ctx
-                .host_timestamp()
-                .into_datetime()
-                .unwrap()
-                .unix_timestamp_nanos()
-                .try_into()
-                .unwrap(),
-        };
+        let vctx = self.validation_context(ctx);
         assert!(validation_predicate(&vctx, header.validation_params()).unwrap());
 
         // create a new state
@@ -116,6 +169,18 @@ impl LCPClient {
         let new_client_state = client_state.with_new_key(key);
 
         Ok((new_client_state, consensus_state))
+    }
+
+    fn validation_context(&self, ctx: &dyn ClientReader) -> ValidationContext {
+        ValidationContext {
+            current_timestamp: ctx
+                .host_timestamp()
+                .into_datetime()
+                .unwrap()
+                .unix_timestamp_nanos()
+                .try_into()
+                .unwrap(),
+        }
     }
 
     pub fn verify_upgrade_and_update_state(

@@ -14,6 +14,12 @@ pub struct ConsensusState {
     pub timestamp: u128, // means upstream's timestamp
 }
 
+impl ConsensusState {
+    pub fn is_empty(&self) -> bool {
+        self.state_id.is_zero() && self.timestamp == 0
+    }
+}
+
 impl ibc::core::ics02_client::client_consensus::ConsensusState for ConsensusState {
     type Error = Infallible;
 
