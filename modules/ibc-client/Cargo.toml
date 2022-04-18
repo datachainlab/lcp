@@ -7,9 +7,11 @@ edition = "2021"
 sgx_tstd = { git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
 ibc = {git = "https://github.com/bluele/ibc-rs", branch = "sgx", default-features = false }
 ibc-proto = { git = "https://github.com/bluele/ibc-rs", branch = "sgx", default-features = false }
+tendermint-proto = { git = "https://github.com/informalsystems/tendermint-rs", rev = "235480171081fed74de7b3d3c19911304df29831", default-features = false }
 prost-types = { version = "0.9", default-features = false }
 tiny-keccak = "1.4"
 serde = { version = "1.0", default-features = false, features = ["alloc"] }
+serde_json = { version = "1.0", default-features = false, features = ["alloc"] }
 libsecp256k1 = { version = "0.3.5", optional = true }
 libsecp256k1-sgx = { package = "libsecp256k1", rev = "sgx_1.1.3-patch", git = "https://github.com/bluele/libsecp256k1-rs-sgx", optional = true }
 context = { path = "../context", default-features = false }

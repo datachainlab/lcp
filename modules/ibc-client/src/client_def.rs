@@ -1,3 +1,4 @@
+use commitments::StateCommitmentProof;
 use context::LightClientReader as ClientReader;
 use ibc::core::ics02_client::client_consensus::AnyConsensusState;
 use ibc::core::ics02_client::client_state::AnyClientState;
@@ -12,13 +13,15 @@ use ibc::core::ics23_commitment::commitment::{
     CommitmentPrefix, CommitmentProofBytes, CommitmentRoot,
 };
 use ibc::core::ics24_host::identifier::{ChannelId, ClientId, ConnectionId, PortId};
+use ibc::core::ics24_host::path::ClientConsensusStatePath;
 use ibc::Height;
 use ibc_proto::ibc::core::commitment::v1::MerkleProof;
+use tendermint_proto::Protobuf;
 use validation_context::{validation_predicate, ValidationContext, ValidationPredicate};
 
 use crate::client_state::ClientState;
 use crate::consensus_state::ConsensusState;
-use crate::crypto::verify_signature;
+use crate::crypto::{verify_signature, Address};
 use crate::header::{ActivateHeader, Header, RegisterEnclaveKeyHeader, UpdateClientHeader};
 use crate::report::{read_enclave_key_from_report, verify_report};
 
@@ -171,6 +174,16 @@ impl LCPClient {
         Ok((new_client_state, consensus_state))
     }
 
+    pub fn verify_upgrade_and_update_state(
+        &self,
+        client_state: &ClientState,
+        consensus_state: &ConsensusState,
+        proof_upgrade_client: MerkleProof,
+        proof_upgrade_consensus_state: MerkleProof,
+    ) -> Result<(ClientState, ConsensusState), Ics02Error> {
+        todo!()
+    }
+
     fn validation_context(&self, ctx: &dyn ClientReader) -> ValidationContext {
         ValidationContext {
             current_timestamp: ctx
@@ -183,14 +196,13 @@ impl LCPClient {
         }
     }
 
-    pub fn verify_upgrade_and_update_state(
-        &self,
-        client_state: &ClientState,
-        consensus_state: &ConsensusState,
-        proof_upgrade_client: MerkleProof,
-        proof_upgrade_consensus_state: MerkleProof,
-    ) -> Result<(ClientState, ConsensusState), Ics02Error> {
-        todo!()
+    // convert_to_state_commitment_proof tries to convert a given proof to StateCommitmentProof
+    // *Note this spec depends on a specific light client implementation* (e.g. RLP in ethereum, Proto in cosmos)
+    fn convert_to_state_commitment_proof(
+        proof: &CommitmentProofBytes,
+    ) -> Result<StateCommitmentProof, Ics02Error> {
+        let proof: Vec<u8> = proof.clone().into();
+        Ok(serde_json::from_slice(&proof).unwrap())
     }
 
     /// Verification functions as specified in:
@@ -203,16 +215,54 @@ impl LCPClient {
     #[allow(clippy::too_many_arguments)]
     pub fn verify_client_consensus_state(
         &self,
+        ctx: &dyn ClientReader,
         client_state: &ClientState,
         height: Height,
         prefix: &CommitmentPrefix,
         proof: &CommitmentProofBytes,
-        root: &CommitmentRoot,
         client_id: &ClientId,
         consensus_height: Height,
         expected_consensus_state: &AnyConsensusState,
     ) -> Result<(), Ics02Error> {
-        todo!()
+        // TODO return an error instead of assertion
+
+        // convert `proof` to StateCommitmentProof
+        let commitment_proof = Self::convert_to_state_commitment_proof(proof).unwrap();
+        let commitment = commitment_proof.commitment();
+
+        assert!(height == commitment.height);
+
+        // check if `.path` matches expected path
+        assert!(
+            commitment.path
+                == ClientConsensusStatePath {
+                    client_id: client_id.clone(),
+                    epoch: consensus_height.revision_number,
+                    height: consensus_height.revision_height,
+                }
+                .into()
+        );
+
+        // check if `.value` matches expected state
+        let value = expected_consensus_state.encode_vec().unwrap();
+        assert!(value == commitment.value);
+
+        // check if `.state_id` matches the corresponding stored consensus state's state_id
+        let consensus_state = ConsensusState::from(ctx.consensus_state(client_id, height)?);
+        assert!(consensus_state.state_id == commitment.state_id);
+
+        // check if the `commitment_proof.signer` matches the commitment prover
+        let signer = verify_signature(
+            &commitment_proof.commitment_bytes,
+            &commitment_proof.signature,
+        )
+        .unwrap();
+        assert!(Address::from(&commitment_proof.signer as &[u8]) == signer);
+
+        // check if the specified signer exists in the client state
+        assert!(client_state.contains(&signer));
+
+        Ok(())
     }
 
     /// Verify a `proof` that a connection state matches that of the input `connection_end`.
