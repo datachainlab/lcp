@@ -13,6 +13,7 @@ pub enum LightClientCommand {
     InitClient(InitClientInput),
     UpdateClient(UpdateClientInput),
     VerifyClient(VerifyClientInput),
+    VerifyClientConsensus(VerifyClientConsensusInput),
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -44,6 +45,17 @@ pub struct VerifyClientInput {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
+pub struct VerifyClientConsensusInput {
+    pub client_id: ClientId,
+    #[serde(with = "AnyDef")]
+    pub target_any_client_consensus_state: Any,
+    pub prefix: Vec<u8>,
+    pub counterparty_client_id: ClientId,
+    pub counterparty_consensus_height: Height,
+    pub proof: TargetProof,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
 pub struct TargetProof(pub Height, pub Vec<u8>);
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -51,6 +63,7 @@ pub enum LightClientResult {
     InitClient(InitClientResult),
     UpdateClient(UpdateClientResult),
     VerifyClient(VerifyClientResult),
+    VerifyClientConsensus(VerifyClientConsensusResult),
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -63,3 +76,6 @@ pub struct UpdateClientResult(pub UpdateClientCommitmentProof);
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct VerifyClientResult(pub StateCommitmentProof);
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct VerifyClientConsensusResult(pub StateCommitmentProof);

@@ -25,7 +25,8 @@ pub use enclave_manage::{
 };
 pub use light_client::{
     InitClientInput, InitClientResult, LightClientCommand, LightClientResult, UpdateClientInput,
-    UpdateClientResult, VerifyClientInput, VerifyClientResult,
+    UpdateClientResult, VerifyClientConsensusInput, VerifyClientConsensusResult, VerifyClientInput,
+    VerifyClientResult,
 };
 
 mod enclave_manage;

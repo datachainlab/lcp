@@ -34,7 +34,18 @@ pub trait LightClient {
         counterparty_client_id: ClientId,
         proof_height: Height,
         proof: Vec<u8>,
-    ) -> Result<VerifyClientResult>;
+    ) -> Result<StateVerificationResult>;
+    fn verify_client_consensus(
+        &self,
+        ctx: &dyn ConnectionReader,
+        client_id: ClientId,
+        expected_client_consensus_state: Any,
+        counterparty_prefix: Vec<u8>,
+        counterparty_client_id: ClientId,
+        counterparty_consensus_height: Height,
+        proof_height: Height,
+        proof: Vec<u8>,
+    ) -> Result<StateVerificationResult>;
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -59,6 +70,6 @@ pub struct UpdateClientResult {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct VerifyClientResult {
+pub struct StateVerificationResult {
     pub state_commitment: StateCommitment,
 }

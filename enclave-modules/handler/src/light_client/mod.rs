@@ -8,3 +8,4 @@ mod init_client;
 mod router;
 mod update_client;
 mod verify_client;
+mod verify_client_consensus;
