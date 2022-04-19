@@ -1,4 +1,4 @@
-use commitments::StateCommitmentProof;
+use commitments::{gen_state_id_from_bytes, StateCommitmentProof};
 use context::LightClientReader as ClientReader;
 use ibc::core::ics02_client::client_consensus::AnyConsensusState;
 use ibc::core::ics02_client::client_state::AnyClientState;
@@ -22,7 +22,9 @@ use validation_context::{validation_predicate, ValidationContext, ValidationPred
 use crate::client_state::ClientState;
 use crate::consensus_state::ConsensusState;
 use crate::crypto::{verify_signature, Address};
-use crate::header::{ActivateHeader, Header, RegisterEnclaveKeyHeader, UpdateClientHeader};
+use crate::header::{
+    ActivateHeader, Commitment, Header, RegisterEnclaveKeyHeader, UpdateClientHeader,
+};
 use crate::report::{read_enclave_key_from_report, verify_report};
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
@@ -93,11 +95,18 @@ impl LCPClient {
         // header validation
         assert!(header.prev_height().is_none() && header.prev_state_id().is_none());
 
+        // check if an initial state matches specified `state_id`
+        assert!(gen_state_id_from_bytes(&header.0).unwrap() == header.state_id());
+
         // check if the specified signer exists in the client state
         assert!(client_state.contains(&header.signer()));
 
         // check if the `header.signer` matches the commitment prover
-        let signer = verify_signature(&header.0.commitment_bytes, &header.0.signature).unwrap();
+        let signer = verify_signature(
+            &header.commitment_proof().commitment_bytes,
+            &header.commitment_proof().signature,
+        )
+        .unwrap();
         assert!(header.signer() == signer);
 
         // check if proxy's validation context matches our's context

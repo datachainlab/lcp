@@ -45,16 +45,19 @@ pub fn gen_state_id(
 }
 
 pub fn gen_state_id_from_any(any_client_state: &Any, any_consensus_state: &Any) -> Result<StateID> {
-    let mut result: [u8; STATE_ID_SIZE] = Default::default();
     let size = any_client_state.encoded_len() + any_consensus_state.encoded_len();
     let mut buf = vec![0; size];
     any_client_state.encode(&mut buf).unwrap();
     let offset = any_client_state.encoded_len();
     let mut slice = &mut buf[offset..];
     any_consensus_state.encode(&mut slice).unwrap();
+    gen_state_id_from_bytes(&buf)
+}
 
+pub fn gen_state_id_from_bytes(bz: &[u8]) -> Result<StateID> {
+    let mut result: [u8; STATE_ID_SIZE] = Default::default();
     let mut hasher = Sha256::new();
-    hasher.input(&buf);
+    hasher.input(&bz);
     let h = hasher.result();
     result.copy_from_slice(&h);
     Ok(StateID::from_bytes_array(result))

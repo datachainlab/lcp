@@ -17,7 +17,22 @@ pub enum Header {
     UpdateClient(UpdateClientHeader),
 }
 
-pub type ActivateHeader = UpdateClientHeader;
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+pub struct ActivateHeader(
+    pub Vec<u8>, // initial state bytes
+    pub UpdateClientCommitmentProof,
+    #[serde(skip_serializing)] pub UpdateClientCommitment,
+);
+
+impl Commitment for ActivateHeader {
+    fn commitment_proof(&self) -> &UpdateClientCommitmentProof {
+        &self.1
+    }
+
+    fn commitment(&self) -> &UpdateClientCommitment {
+        &self.2
+    }
+}
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub struct RegisterEnclaveKeyHeader(pub AttestationVerificationReport);
@@ -28,36 +43,46 @@ pub struct UpdateClientHeader(
     #[serde(skip_serializing)] pub UpdateClientCommitment,
 );
 
-impl UpdateClientHeader {
-    pub fn commitment(&self) -> &UpdateClientCommitment {
-        &self.1
+impl Commitment for UpdateClientHeader {
+    fn commitment_proof(&self) -> &UpdateClientCommitmentProof {
+        &self.0
     }
 
-    pub fn height(&self) -> Height {
+    fn commitment(&self) -> &UpdateClientCommitment {
+        &self.1
+    }
+}
+
+pub trait Commitment {
+    fn commitment_proof(&self) -> &UpdateClientCommitmentProof;
+
+    fn commitment(&self) -> &UpdateClientCommitment;
+
+    fn signer(&self) -> Address {
+        self.commitment_proof().signer.as_slice().into()
+    }
+
+    fn height(&self) -> Height {
         self.commitment().new_height
     }
 
-    pub fn prev_height(&self) -> Option<Height> {
+    fn prev_height(&self) -> Option<Height> {
         self.commitment().prev_height
     }
 
-    pub fn prev_state_id(&self) -> Option<StateID> {
+    fn prev_state_id(&self) -> Option<StateID> {
         self.commitment().prev_state_id
     }
 
-    pub fn state_id(&self) -> StateID {
+    fn state_id(&self) -> StateID {
         self.commitment().new_state_id
     }
 
-    pub fn signer(&self) -> Address {
-        self.0.signer.as_slice().into()
-    }
-
-    pub fn timestamp_as_u128(&self) -> u128 {
+    fn timestamp_as_u128(&self) -> u128 {
         self.commitment().timestamp
     }
 
-    pub fn validation_params(&self) -> &ValidationParams {
+    fn validation_params(&self) -> &ValidationParams {
         &self.commitment().validation_params
     }
 }

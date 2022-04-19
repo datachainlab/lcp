@@ -14,7 +14,9 @@ pub mod sgx_reexport_prelude {
 pub use commitment::{StateCommitment, UpdateClientCommitment};
 pub use errors::CommitmentError;
 pub use proof::{StateCommitmentProof, UpdateClientCommitmentProof};
-pub use state::{gen_state_id, gen_state_id_from_any, StateID, STATE_ID_SIZE};
+pub use state::{
+    gen_state_id, gen_state_id_from_any, gen_state_id_from_bytes, StateID, STATE_ID_SIZE,
+};
 
 mod commitment;
 mod errors;
