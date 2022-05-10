@@ -85,6 +85,7 @@ version = "0.1.0"
 dependencies = [
  "base64 0.13.0 (git+https://github.com/mesalock-linux/rust-base64-sgx)",
  "base64 0.20.0-alpha.1",
+ "chrono",
  "enclave_utils",
  "log 0.4.16",
  "pem 0.8.2",
@@ -327,6 +328,16 @@ name = "cfg-if"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
+
+[[package]]
+name = "chrono"
+version = "0.4.19"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "670ad68c9088c2a963aaa298cb369688cf3f9465ce5e2d4ca10e6e0098a1ce73"
+dependencies = [
+ "num-integer",
+ "num-traits",
+]
 
 [[package]]
 name = "commitments"
@@ -768,6 +779,7 @@ version = "0.1.0"
 dependencies = [
  "attestation-report",
  "base64 0.13.0 (git+https://github.com/mesalock-linux/rust-base64-sgx?rev=dc7389e10817b078f289386b3b6a852ab6c4c021)",
+ "chrono",
  "enclave_crypto",
  "hex",
  "httparse",

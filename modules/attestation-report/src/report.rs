@@ -1,5 +1,6 @@
 #[cfg(feature = "sgx")]
 use crate::sgx_reexport_prelude::*;
+use chrono::prelude::DateTime;
 use log::*;
 use pem;
 use serde_json::Value;
@@ -121,8 +122,23 @@ pub fn verify_report(report: &EndorsedAttestationReport) -> Result<(), sgx_statu
     }
 }
 
-pub fn parse_quote_from_report(attn_report: &[u8]) -> Result<sgx_quote_t, sgx_status_t> {
+pub struct Quote {
+    pub raw: sgx_quote_t,
+    pub timestamp: i64,
+}
+
+pub fn parse_quote_from_report(attn_report: &[u8]) -> Result<Quote, sgx_status_t> {
     let attn_report: Value = serde_json::from_slice(attn_report).unwrap();
+
+    let timestamp = if let Value::String(time) = &attn_report["timestamp"] {
+        let time_fixed = time.clone() + "+0000";
+        DateTime::parse_from_str(&time_fixed, "%Y-%m-%dT%H:%M:%S%.f%z")
+            .unwrap()
+            .timestamp()
+    } else {
+        error!("Failed to fetch timestamp from attestation report");
+        return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
+    };
 
     if let Value::String(version) = &attn_report["version"] {
         if version != "4" {
@@ -135,7 +151,10 @@ pub fn parse_quote_from_report(attn_report: &[u8]) -> Result<sgx_quote_t, sgx_st
             let quote = base64::decode(&quote_raw).unwrap();
 
             let sgx_quote: sgx_quote_t = unsafe { ptr::read(quote.as_ptr() as *const _) };
-            Ok(sgx_quote)
+            Ok(Quote {
+                raw: sgx_quote,
+                timestamp,
+            })
         }
         _ => {
             error!("Failed to fetch isvEnclaveQuoteBody from attestation report");

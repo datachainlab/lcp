@@ -1,8 +1,9 @@
 use attestation_report::parse_quote_from_report;
+use validation_context::ValidationContext;
 
-use crate::crypto::Address;
 #[cfg(feature = "sgx")]
 use crate::sgx_reexport_prelude::*;
+use crate::{client_state::ClientState, crypto::Address};
 use serde::{Deserialize, Serialize};
 use std::vec::Vec;
 
@@ -15,12 +16,22 @@ pub struct AttestationVerificationReport {
 }
 
 // verify_report verifies the Attestation Verification Report
-pub fn verify_report(expected_mr_enclave: &[u8], avr: &AttestationVerificationReport) -> bool {
+pub fn verify_report(
+    vctx: &ValidationContext,
+    client_state: &ClientState,
+    avr: &AttestationVerificationReport,
+) -> bool {
+    let quote = parse_quote_from_report(&avr.body).unwrap();
+
     // TODO verify `avr.signature` with Intel SGX Attestation Report Signing CA
 
+    // check if attestation report's timestamp is not expired
+    if vctx.current_timestamp - (quote.timestamp as u128) >= client_state.key_expiration {
+        return false;
+    }
+
     // check if `mr_enclave` that is included in the quote matches the expected value
-    let quote = parse_quote_from_report(&avr.body).unwrap();
-    if &quote.report_body.mr_enclave.m != expected_mr_enclave {
+    if &quote.raw.report_body.mr_enclave.m != client_state.mr_enclave.as_slice() {
         return false;
     }
     true
@@ -30,6 +41,6 @@ pub fn verify_report(expected_mr_enclave: &[u8], avr: &AttestationVerificationRe
 // read_enclave_key_from_report parses a report_data from the specified report body and get an enclave key from it
 pub fn read_enclave_key_from_report(report_body: &[u8]) -> Result<Address, ()> {
     let quote = parse_quote_from_report(report_body).unwrap();
-    let data = quote.report_body.report_data.d;
+    let data = quote.raw.report_body.report_data.d;
     Ok(Address::from(&data[..20]))
 }

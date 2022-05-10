@@ -1,25 +1,40 @@
+use chrono::{prelude::*, Duration};
 use enclave_crypto::consts::RT_ALLOWED_STATUS;
 use log::*;
 use serde_json::Value;
 use sgx_types::{sgx_platform_info_t, sgx_quote_t, sgx_status_t, sgx_update_info_bit_t};
 use std::ptr;
+use std::time::{SystemTime, UNIX_EPOCH};
+use std::untrusted::time::SystemTimeEx;
 use std::vec::Vec;
 
 use super::ocalls;
 
 pub fn verify_quote_status(attn_report: &[u8]) -> Result<sgx_quote_t, sgx_status_t> {
     let attn_report: Value = serde_json::from_slice(attn_report).unwrap();
-    // TODO consider about whether if the timestamp validation is required
     // 1. Check timestamp is within 24H
-    // if let Value::String(time) = &attn_report["timestamp"] {
-    //     let time_fixed = time.clone() + "+0000";
-    //     let ts = DateTime::parse_from_str(&time_fixed, "%Y-%m-%dT%H:%M:%S%.f%z").unwrap().timestamp();
-    //     let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() as i64;
-    //     info!("Time diff = {}", now - ts);
-    // } else {
-    //     error!("Failed to fetch timestamp from attestation report");
-    //     return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
-    // }
+    if let Value::String(time) = &attn_report["timestamp"] {
+        let time_fixed = time.clone() + "+0000";
+        let ts = DateTime::parse_from_str(&time_fixed, "%Y-%m-%dT%H:%M:%S%.f%z")
+            .unwrap()
+            .timestamp();
+        let now = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_secs() as i64;
+        assert!(ts >= 0 && now >= 0);
+        info!("Time: now={} ts={}", now, ts);
+        if now - ts >= Duration::hours(24).num_seconds() {
+            error!(
+                "The timestamp of the report is too old: now={} ts={}",
+                now, ts
+            );
+            return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
+        }
+    } else {
+        error!("Failed to fetch timestamp from attestation report");
+        return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
+    }
 
     if let Value::String(version) = &attn_report["version"] {
         if version != "4" {

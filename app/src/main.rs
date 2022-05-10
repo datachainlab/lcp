@@ -60,7 +60,7 @@ fn main() -> Result<(), anyhow::Error> {
 
     let report = EndorsedAttestationReport::read_from_file(&ENDORSED_ATTESTATION_PATH).unwrap();
     let quote = attestation_report::parse_quote_from_report(&report.report).unwrap();
-    info!("report={:?}", quote.report_body.report_data.d);
+    info!("report={:?}", quote.raw.report_body.report_data.d);
 
     // register the key into onchain
 

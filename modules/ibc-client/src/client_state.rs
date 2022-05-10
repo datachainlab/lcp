@@ -13,12 +13,13 @@ use std::vec::Vec;
 pub struct ClientState {
     pub latest_height: Height,
     pub mr_enclave: Vec<u8>,
-    pub keys: Vec<Address>,
+    pub key_expiration: u128, // sec
+    pub keys: Vec<(Address, u128)>,
 }
 
 impl ClientState {
     pub fn contains(&self, key: &Address) -> bool {
-        self.keys.contains(key)
+        self.keys.iter().find(|k| &k.0 == key).is_some()
     }
 
     pub fn with_header(mut self, header: &dyn Commitment) -> Self {
@@ -28,11 +29,10 @@ impl ClientState {
         self
     }
 
-    pub fn with_new_key(mut self, key: Address) -> Self {
-        todo!()
-        // assert!(!self.contains(&key));
-        // self.keys.push(key);
-        // self
+    pub fn with_new_key(mut self, key: (Address, u128)) -> Self {
+        assert!(!self.contains(&key.0));
+        self.keys.push(key);
+        self
     }
 }
 

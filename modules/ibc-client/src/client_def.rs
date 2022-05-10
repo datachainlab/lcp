@@ -39,6 +39,8 @@ impl LCPClient {
     ) -> Result<(), Ics02Error> {
         // An initial client state's keys must be empty
         assert!(client_state.keys.len() == 0);
+        // key_expiration must not be 0
+        assert!(client_state.key_expiration > 0);
         // An initial client state's latest height must be empty
         assert!(client_state.latest_height.is_zero());
         // mr_enclave length must be 32
@@ -171,14 +173,16 @@ impl LCPClient {
     ) -> Result<(ClientState, ConsensusState), Ics02Error> {
         // TODO return an error instead of assertion
 
-        assert!(verify_report(&client_state.mr_enclave, &header.0));
+        let vctx = self.validation_context(ctx);
+        assert!(verify_report(&vctx, &client_state, &header.0));
         let key = read_enclave_key_from_report(&header.0.body).unwrap();
 
         let any_consensus_state = ctx
             .consensus_state(&client_id, client_state.latest_height)
             .unwrap();
         let consensus_state = ConsensusState::from(any_consensus_state);
-        let new_client_state = client_state.with_new_key(key);
+        // TODO consider to improve sybil attack resistance for persmissionless environment
+        let new_client_state = client_state.with_new_key((key, 0));
 
         Ok((new_client_state, consensus_state))
     }
