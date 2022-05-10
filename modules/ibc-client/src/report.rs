@@ -15,26 +15,29 @@ pub struct AttestationVerificationReport {
     pub signature: Vec<u8>,
 }
 
-// verify_report verifies the Attestation Verification Report
-pub fn verify_report(
+// verify_report_and_get_key_expiration
+// - verifies the Attestation Verification Report
+// - calculate a key expiration with client_state and report's timestamp
+pub fn verify_report_and_get_key_expiration(
     vctx: &ValidationContext,
     client_state: &ClientState,
     avr: &AttestationVerificationReport,
-) -> bool {
+) -> (bool, u128) {
     let quote = parse_quote_from_report(&avr.body).unwrap();
 
     // TODO verify `avr.signature` with Intel SGX Attestation Report Signing CA
 
     // check if attestation report's timestamp is not expired
     if vctx.current_timestamp - (quote.timestamp as u128) >= client_state.key_expiration {
-        return false;
+        return (false, 0);
     }
 
     // check if `mr_enclave` that is included in the quote matches the expected value
     if &quote.raw.report_body.mr_enclave.m != client_state.mr_enclave.as_slice() {
-        return false;
+        return (false, 0);
     }
-    true
+
+    (true, quote.timestamp as u128 + client_state.key_expiration)
 }
 
 // TODO modify Result's right as Error type

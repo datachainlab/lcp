@@ -6,6 +6,7 @@ use pem;
 use serde_json::Value;
 use sgx_types::{sgx_quote_t, sgx_status_t};
 use std::ptr;
+use std::string::String;
 use std::time::SystemTime;
 #[cfg(feature = "sgx")]
 use std::untrusted::time::SystemTimeEx;
@@ -124,6 +125,7 @@ pub fn verify_report(report: &EndorsedAttestationReport) -> Result<(), sgx_statu
 
 pub struct Quote {
     pub raw: sgx_quote_t,
+    pub status: String,
     pub timestamp: i64,
 }
 
@@ -146,6 +148,19 @@ pub fn parse_quote_from_report(attn_report: &[u8]) -> Result<Quote, sgx_status_t
         }
     }
 
+    let quote_status = if let Value::String(quote_status) = &attn_report["isvEnclaveQuoteStatus"] {
+        match quote_status.as_ref() {
+            "OK" => (),
+            "GROUP_OUT_OF_DATE" | "GROUP_REVOKED" | "CONFIGURATION_NEEDED" => (),
+            _ => {
+                return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
+            }
+        }
+        quote_status
+    } else {
+        return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
+    };
+
     match &attn_report["isvEnclaveQuoteBody"] {
         Value::String(quote_raw) => {
             let quote = base64::decode(&quote_raw).unwrap();
@@ -153,6 +168,7 @@ pub fn parse_quote_from_report(attn_report: &[u8]) -> Result<Quote, sgx_status_t
             let sgx_quote: sgx_quote_t = unsafe { ptr::read(quote.as_ptr() as *const _) };
             Ok(Quote {
                 raw: sgx_quote,
+                status: quote_status.into(),
                 timestamp,
             })
         }

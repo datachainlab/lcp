@@ -25,7 +25,7 @@ use crate::crypto::{verify_signature, Address};
 use crate::header::{
     ActivateHeader, Commitment, Header, RegisterEnclaveKeyHeader, UpdateClientHeader,
 };
-use crate::report::{read_enclave_key_from_report, verify_report};
+use crate::report::{read_enclave_key_from_report, verify_report_and_get_key_expiration};
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct LCPClient {}
@@ -174,7 +174,9 @@ impl LCPClient {
         // TODO return an error instead of assertion
 
         let vctx = self.validation_context(ctx);
-        assert!(verify_report(&vctx, &client_state, &header.0));
+        let (valid, key_expiration) =
+            verify_report_and_get_key_expiration(&vctx, &client_state, &header.0);
+        assert!(valid);
         let key = read_enclave_key_from_report(&header.0.body).unwrap();
 
         let any_consensus_state = ctx
@@ -182,7 +184,7 @@ impl LCPClient {
             .unwrap();
         let consensus_state = ConsensusState::from(any_consensus_state);
         // TODO consider to improve sybil attack resistance for persmissionless environment
-        let new_client_state = client_state.with_new_key((key, 0));
+        let new_client_state = client_state.with_new_key((key, key_expiration));
 
         Ok((new_client_state, consensus_state))
     }
