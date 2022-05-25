@@ -3,8 +3,9 @@ use commitments::{StateCommitment, UpdateClientCommitment};
 use ibc::{
     core::{
         ics02_client::{context::ClientReader, height::Height},
-        ics03_connection::context::ConnectionReader,
-        ics24_host::identifier::ClientId,
+        ics03_connection::{connection::ConnectionEnd, context::ConnectionReader},
+        ics04_channel::channel::ChannelEnd,
+        ics24_host::identifier::{ChannelId, ClientId, ConnectionId, PortId},
     },
     timestamp::Timestamp,
 };
@@ -43,6 +44,27 @@ pub trait LightClient {
         counterparty_prefix: Vec<u8>,
         counterparty_client_id: ClientId,
         counterparty_consensus_height: Height,
+        proof_height: Height,
+        proof: Vec<u8>,
+    ) -> Result<StateVerificationResult>;
+    fn verify_connection(
+        &self,
+        ctx: &dyn ConnectionReader,
+        client_id: ClientId,
+        expected_connection_state: ConnectionEnd,
+        counterparty_prefix: Vec<u8>,
+        counterparty_connection_id: ConnectionId,
+        proof_height: Height,
+        proof: Vec<u8>,
+    ) -> Result<StateVerificationResult>;
+    fn verify_channel(
+        &self,
+        ctx: &dyn ConnectionReader,
+        client_id: ClientId,
+        expected_channel_state: ChannelEnd,
+        counterparty_prefix: Vec<u8>,
+        counterparty_port_id: PortId,
+        counterparty_channel_id: ChannelId,
         proof_height: Height,
         proof: Vec<u8>,
     ) -> Result<StateVerificationResult>;

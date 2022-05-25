@@ -2,6 +2,9 @@
 use crate::sgx_reexport_prelude::*;
 use crate::AnyDef;
 use commitments::{StateCommitmentProof, UpdateClientCommitmentProof};
+use ibc::core::ics03_connection::connection::ConnectionEnd;
+use ibc::core::ics04_channel::channel::ChannelEnd;
+use ibc::core::ics24_host::identifier::{ChannelId, ConnectionId, PortId};
 use ibc::core::{ics02_client::height::Height, ics24_host::identifier::ClientId};
 use prost_types::Any;
 use serde::{Deserialize, Serialize};
@@ -14,6 +17,8 @@ pub enum LightClientCommand {
     UpdateClient(UpdateClientInput),
     VerifyClient(VerifyClientInput),
     VerifyClientConsensus(VerifyClientConsensusInput),
+    VerifyConnection(VerifyConnectionInput),
+    VerifyChannel(VerifyChannelInput),
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -41,7 +46,7 @@ pub struct VerifyClientInput {
     pub target_any_client_state: Any,
     pub prefix: Vec<u8>,
     pub counterparty_client_id: ClientId,
-    pub proof: TargetProof,
+    pub proof: CommitmentProofPair,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -52,11 +57,30 @@ pub struct VerifyClientConsensusInput {
     pub prefix: Vec<u8>,
     pub counterparty_client_id: ClientId,
     pub counterparty_consensus_height: Height,
-    pub proof: TargetProof,
+    pub proof: CommitmentProofPair,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct TargetProof(pub Height, pub Vec<u8>);
+pub struct VerifyConnectionInput {
+    pub client_id: ClientId,
+    pub expected_connection: ConnectionEnd,
+    pub prefix: Vec<u8>,
+    pub counterparty_connection_id: ConnectionId,
+    pub proof: CommitmentProofPair,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct VerifyChannelInput {
+    pub client_id: ClientId,
+    pub expected_channel: ChannelEnd,
+    pub prefix: Vec<u8>,
+    pub counterparty_port_id: PortId,
+    pub counterparty_channel_id: ChannelId,
+    pub proof: CommitmentProofPair,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct CommitmentProofPair(pub Height, pub Vec<u8>);
 
 #[derive(Serialize, Deserialize, Debug)]
 pub enum LightClientResult {
@@ -64,6 +88,8 @@ pub enum LightClientResult {
     UpdateClient(UpdateClientResult),
     VerifyClient(VerifyClientResult),
     VerifyClientConsensus(VerifyClientConsensusResult),
+    VerifyConnection(VerifyConnectionResult),
+    VerifyChannel(VerifyChannelResult),
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -79,3 +105,9 @@ pub struct VerifyClientResult(pub StateCommitmentProof);
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct VerifyClientConsensusResult(pub StateCommitmentProof);
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct VerifyConnectionResult(pub StateCommitmentProof);
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct VerifyChannelResult(pub StateCommitmentProof);

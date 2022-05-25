@@ -7,5 +7,7 @@ mod errors;
 mod init_client;
 mod router;
 mod update_client;
+mod verify_channel;
 mod verify_client;
 mod verify_client_consensus;
+mod verify_connection;

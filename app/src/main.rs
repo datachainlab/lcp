@@ -1,12 +1,17 @@
 use attestation_report::EndorsedAttestationReport;
 use enclave_api::{Enclave, EnclaveAPI};
-use enclave_commands::{CommandResult, LightClientResult};
-use ibc::core::ics02_client::{client_def::ClientDef, height::Height};
+use enclave_commands::{CommandResult, CommitmentProofPair, LightClientResult};
+use ibc::core::{
+    ics02_client::{client_def::ClientDef, height::Height},
+    ics23_commitment::commitment::CommitmentProofBytes,
+    ics24_host::identifier::{ChannelId, PortId},
+};
+use ibc_proto::ibc::core::commitment::v1::MerkleProof;
 use log::*;
 use settings::ENDORSED_ATTESTATION_PATH;
 use sgx_types::*;
 use sgx_urts::SgxEnclave;
-use std::sync::Arc;
+use std::{str::FromStr, sync::Arc};
 use tokio::runtime::Runtime as TokioRuntime;
 
 mod ocalls;
@@ -80,22 +85,44 @@ fn main() -> Result<(), anyhow::Error> {
         panic!("unexpected result type")
     };
     let commitment = proof.commitment();
+    let client_id = commitment.client_id;
 
     info!(
         "generated client id is {}",
-        commitment.client_id.as_str().to_string()
+        client_id.as_str().to_string()
     );
 
     let target_header =
         rly.create_header(commitment.new_height, commitment.new_height.increment())?;
-    let res = enclave.update_client(commitment.client_id, target_header.into())?;
+    let res = enclave.update_client(client_id.clone(), target_header.into())?;
 
     info!("update_client's result is {:?}", res);
+
+    let (port_id, channel_id) = (
+        PortId::from_str("cross")?,
+        ChannelId::from_str("channel-0")?,
+    );
+    let res = rly.proven_channel(&port_id, &channel_id, None)?;
+    let res = enclave.verify_channel(
+        client_id.clone(),
+        res.0,
+        "ibc".into(),
+        port_id,
+        channel_id,
+        CommitmentProofPair(res.2, merkle_proof_to_bytes(res.1)?),
+    )?;
 
     let cs = lcp_ibc_client::client_state::ClientState::default();
     let client = lcp_ibc_client::client_def::LCPClient {};
 
+    // TODO implement the verification testing
+
     enclave.destroy();
 
     Ok(())
+}
+
+fn merkle_proof_to_bytes(proof: MerkleProof) -> Result<Vec<u8>, anyhow::Error> {
+    let proof = CommitmentProofBytes::try_from(proof)?;
+    Ok(proof.into())
 }

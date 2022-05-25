@@ -2,10 +2,13 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::{ffi, EnclaveAPIError as Error, Result};
 use enclave_commands::{
-    Command, CommandResult, EnclaveManageCommand, InitClientInput, InitEnclaveInput,
-    LightClientCommand, UpdateClientInput,
+    Command, CommandResult, CommitmentProofPair, EnclaveManageCommand, InitClientInput,
+    InitEnclaveInput, LightClientCommand, UpdateClientInput, VerifyChannelInput,
 };
-use ibc::core::ics24_host::identifier::ClientId;
+use ibc::core::{
+    ics04_channel::channel::ChannelEnd,
+    ics24_host::identifier::{ChannelId, ClientId, PortId},
+};
 use prost_types::Any;
 use sgx_types::{sgx_enclave_id_t, sgx_status_t};
 use sgx_urts::SgxEnclave;
@@ -26,6 +29,15 @@ pub trait EnclaveAPI {
         any_consensus_state: Any,
     ) -> Result<CommandResult>;
     fn update_client(&self, client_id: ClientId, any_header: Any) -> Result<CommandResult>;
+    fn verify_channel(
+        &self,
+        client_id: ClientId,
+        expected_channel: ChannelEnd,
+        prefix: Vec<u8>,
+        counterparty_port_id: PortId,
+        counterparty_channel_id: ChannelId,
+        proof: CommitmentProofPair,
+    ) -> Result<CommandResult>;
 }
 
 impl Enclave {
@@ -108,6 +120,26 @@ impl EnclaveAPI for Enclave {
             client_id,
             any_header,
             current_timestamp: Self::current_timestamp(),
+        }));
+        self.execute_command(&command)
+    }
+
+    fn verify_channel(
+        &self,
+        client_id: ClientId,
+        expected_channel: ChannelEnd,
+        prefix: Vec<u8>,
+        counterparty_port_id: PortId,
+        counterparty_channel_id: ChannelId,
+        proof: CommitmentProofPair,
+    ) -> Result<CommandResult> {
+        let command = Command::LightClient(LightClientCommand::VerifyChannel(VerifyChannelInput {
+            client_id,
+            expected_channel,
+            prefix,
+            counterparty_port_id,
+            counterparty_channel_id,
+            proof,
         }));
         self.execute_command(&command)
     }

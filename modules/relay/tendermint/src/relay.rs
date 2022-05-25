@@ -3,7 +3,10 @@ use ibc::clients::ics07_tendermint::client_state::ClientState;
 use ibc::clients::ics07_tendermint::consensus_state::ConsensusState;
 use ibc::core::ics02_client::header::AnyHeader;
 use ibc::core::ics02_client::{client_consensus::AnyConsensusState, client_state::AnyClientState};
+use ibc::core::ics04_channel::channel::ChannelEnd;
+use ibc::core::ics24_host::identifier::{ChannelId, PortId};
 use ibc::Height;
+use ibc_proto::ibc::core::commitment::v1::MerkleProof;
 use ibc_relayer::chain::{ChainEndpoint, CosmosSdkChain};
 use ibc_relayer::config::ChainConfig;
 use ibc_relayer::light_client::tendermint::LightClient;
@@ -65,5 +68,24 @@ impl Relayer {
             Any::from(AnyClientState::Tendermint(client_state)),
             Any::from(AnyConsensusState::Tendermint(consensus_state)),
         ))
+    }
+
+    pub fn query_latest_height(&self) -> Result<Height> {
+        let height = self.chain.query_latest_height()?;
+        Ok(height)
+    }
+
+    pub fn proven_channel(
+        &self,
+        port_id: &PortId,
+        channel_id: &ChannelId,
+        height: Option<Height>,
+    ) -> Result<(ChannelEnd, MerkleProof, Height)> {
+        let height = match height {
+            Some(height) => height,
+            None => self.query_latest_height()?,
+        };
+        let res = self.chain.proven_channel(port_id, channel_id, height)?;
+        Ok((res.0, res.1, height))
     }
 }

@@ -2184,6 +2184,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow 1.0.56",
  "ibc",
+ "ibc-proto",
  "ibc-relayer",
  "prost-types",
  "tendermint",
@@ -2665,6 +2666,7 @@ dependencies = [
  "enclave-commands",
  "env_logger 0.9.0",
  "ibc",
+ "ibc-proto",
  "ibc-relayer",
  "lcp-ibc-client",
  "log 0.4.16",

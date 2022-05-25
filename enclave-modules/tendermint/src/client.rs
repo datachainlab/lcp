@@ -11,11 +11,16 @@ use ibc::core::ics02_client::client_type::ClientType;
 use ibc::core::ics02_client::context::ClientReader;
 use ibc::core::ics02_client::error::Error as ICS02Error;
 use ibc::core::ics02_client::header::{AnyHeader, Header};
+use ibc::core::ics03_connection::connection::ConnectionEnd;
 use ibc::core::ics03_connection::context::ConnectionReader;
 use ibc::core::ics03_connection::error::Error as ICS03Error;
+use ibc::core::ics04_channel::channel::ChannelEnd;
+use ibc::core::ics04_channel::error::Error as ICS04Error;
 use ibc::core::ics23_commitment::commitment::{CommitmentPrefix, CommitmentProofBytes};
-use ibc::core::ics24_host::identifier::ClientId;
-use ibc::core::ics24_host::path::{ClientConsensusStatePath, ClientStatePath};
+use ibc::core::ics24_host::identifier::{ChannelId, ClientId, ConnectionId, PortId};
+use ibc::core::ics24_host::path::{
+    ChannelEndsPath, ClientConsensusStatePath, ClientStatePath, ConnectionsPath,
+};
 use ibc::core::ics24_host::Path;
 use ibc::Height;
 use log::*;
@@ -335,6 +340,99 @@ impl LightClient for TendermintLightClient {
                     height: counterparty_consensus_height.revision_height,
                 }),
                 value: expected_client_consensus_state.encode_vec().unwrap(),
+                height: proof_height,
+                state_id: gen_state_id_from_any(
+                    &Any::from(client_state),
+                    &Any::from(consensus_state),
+                )
+                .map_err(|e| Error::OtherError(e).into())?,
+            },
+        })
+    }
+
+    fn verify_connection(
+        &self,
+        ctx: &dyn ConnectionReader,
+        client_id: ClientId,
+        expected_connection_state: ConnectionEnd,
+        counterparty_prefix: Vec<u8>,
+        counterparty_connection_id: ConnectionId,
+        proof_height: ibc::core::ics02_client::height::Height,
+        proof: Vec<u8>,
+    ) -> enclave_light_client::Result<StateVerificationResult> {
+        let (client_def, client_state, consensus_state, prefix, proof) = Self::validate_args(
+            ctx,
+            client_id.clone(),
+            counterparty_prefix,
+            proof_height,
+            proof,
+        )?;
+
+        client_def
+            .verify_connection_state(
+                &client_state,
+                proof_height,
+                &prefix,
+                &proof,
+                consensus_state.root(),
+                &counterparty_connection_id,
+                &expected_connection_state,
+            )
+            .map_err(|e| Error::ICS03Error(ICS03Error::verify_connection_state(e)).into())?;
+
+        Ok(StateVerificationResult {
+            state_commitment: StateCommitment {
+                path: Path::Connections(ConnectionsPath(counterparty_connection_id)),
+                value: expected_connection_state.encode_vec().unwrap(),
+                height: proof_height,
+                state_id: gen_state_id_from_any(
+                    &Any::from(client_state),
+                    &Any::from(consensus_state),
+                )
+                .map_err(|e| Error::OtherError(e).into())?,
+            },
+        })
+    }
+
+    fn verify_channel(
+        &self,
+        ctx: &dyn ConnectionReader,
+        client_id: ClientId,
+        expected_channel_state: ChannelEnd,
+        counterparty_prefix: Vec<u8>,
+        counterparty_port_id: PortId,
+        counterparty_channel_id: ChannelId,
+        proof_height: ibc::core::ics02_client::height::Height,
+        proof: Vec<u8>,
+    ) -> enclave_light_client::Result<StateVerificationResult> {
+        let (client_def, client_state, consensus_state, prefix, proof) = Self::validate_args(
+            ctx,
+            client_id.clone(),
+            counterparty_prefix,
+            proof_height,
+            proof,
+        )?;
+
+        client_def
+            .verify_channel_state(
+                &client_state,
+                proof_height,
+                &prefix,
+                &proof,
+                consensus_state.root(),
+                &counterparty_port_id,
+                &counterparty_channel_id,
+                &expected_channel_state,
+            )
+            .map_err(|e| Error::ICS04Error(ICS04Error::verify_channel_failed(e)).into())?;
+
+        Ok(StateVerificationResult {
+            state_commitment: StateCommitment {
+                path: Path::ChannelEnds(ChannelEndsPath(
+                    counterparty_port_id,
+                    counterparty_channel_id,
+                )),
+                value: expected_channel_state.encode_vec().unwrap(),
                 height: proof_height,
                 state_id: gen_state_id_from_any(
                     &Any::from(client_state),
