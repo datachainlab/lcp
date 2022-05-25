@@ -79,13 +79,13 @@ impl Relayer {
         &self,
         port_id: &PortId,
         channel_id: &ChannelId,
-        height: Option<Height>,
+        height: Option<Height>, // height of consensus state
     ) -> Result<(ChannelEnd, MerkleProof, Height)> {
         let height = match height {
-            Some(height) => height,
+            Some(height) => height.decrement()?,
             None => self.query_latest_height()?.decrement()?,
         };
         let res = self.chain.proven_channel(port_id, channel_id, height)?;
-        Ok((res.0, res.1, height))
+        Ok((res.0, res.1, height.increment()))
     }
 }
