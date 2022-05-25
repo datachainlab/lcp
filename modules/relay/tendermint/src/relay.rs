@@ -83,7 +83,7 @@ impl Relayer {
     ) -> Result<(ChannelEnd, MerkleProof, Height)> {
         let height = match height {
             Some(height) => height,
-            None => self.query_latest_height()?,
+            None => self.query_latest_height()?.decrement()?,
         };
         let res = self.chain.proven_channel(port_id, channel_id, height)?;
         Ok((res.0, res.1, height))

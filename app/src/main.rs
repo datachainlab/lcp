@@ -1,6 +1,6 @@
 use attestation_report::EndorsedAttestationReport;
 use enclave_api::{Enclave, EnclaveAPI};
-use enclave_commands::{CommandResult, CommitmentProofPair, LightClientResult};
+use enclave_commands::{CommandResult, CommitmentProofPair, LightClientResult, UpdateClientResult};
 use ibc::core::{
     ics02_client::{client_def::ClientDef, height::Height},
     ics23_commitment::commitment::CommitmentProofBytes,
@@ -69,11 +69,19 @@ fn main() -> Result<(), anyhow::Error> {
 
     // register the key into onchain
 
-    let mut rly = relayer::create_relayer(rt, "ibc0").unwrap();
-    let (client_state, consensus_state) = rly.fetch_state_as_any(Height::new(0, 2)).unwrap();
+    let mut rly = relayer::create_relayer(rt, "ibc0")?;
+
+    // XXX use non-latest height here
+    let initial_height = rly
+        .query_latest_height()?
+        .decrement()?
+        .decrement()?
+        .decrement()?;
+
+    let (client_state, consensus_state) = rly.fetch_state_as_any(initial_height)?;
     info!(
-        "client_state: {:?}, consensus_state: {:?}",
-        client_state, consensus_state
+        "initial_height: {:?} client_state: {:?}, consensus_state: {:?}",
+        initial_height, client_state, consensus_state
     );
 
     let proof = if let CommandResult::LightClient(LightClientResult::InitClient(res)) = enclave
@@ -87,10 +95,7 @@ fn main() -> Result<(), anyhow::Error> {
     let commitment = proof.commitment();
     let client_id = commitment.client_id;
 
-    info!(
-        "generated client id is {}",
-        client_id.as_str().to_string()
-    );
+    info!("generated client id is {}", client_id.as_str().to_string());
 
     let target_header =
         rly.create_header(commitment.new_height, commitment.new_height.increment())?;
@@ -98,11 +103,23 @@ fn main() -> Result<(), anyhow::Error> {
 
     info!("update_client's result is {:?}", res);
 
+    let height = match res {
+        CommandResult::LightClient(LightClientResult::UpdateClient(UpdateClientResult(res))) => {
+            res.commitment().new_height
+        }
+        _ => unreachable!(),
+    };
+
+    info!("current height is {}", height);
+
     let (port_id, channel_id) = (
         PortId::from_str("cross")?,
         ChannelId::from_str("channel-0")?,
     );
-    let res = rly.proven_channel(&port_id, &channel_id, None)?;
+    let res = rly.proven_channel(&port_id, &channel_id, Some(height))?;
+
+    info!("expected channel is {:?}", res.0);
+
     let res = enclave.verify_channel(
         client_id.clone(),
         res.0,
