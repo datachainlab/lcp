@@ -184,7 +184,9 @@ impl<'a, 'e, S: Store> ConnectionReader for Context<'a, 'e, S> {
     }
 
     fn client_state(&self, client_id: &ClientId) -> Result<AnyClientState, ICS03Error> {
-        todo!()
+        let client_state = <Self as ClientReader>::client_state(&self, client_id)
+            .map_err(ICS03Error::ics02_client)?;
+        Ok(client_state)
     }
 
     fn host_current_height(&self) -> Height {
@@ -204,7 +206,9 @@ impl<'a, 'e, S: Store> ConnectionReader for Context<'a, 'e, S> {
         client_id: &ClientId,
         height: Height,
     ) -> Result<AnyConsensusState, ICS03Error> {
-        todo!()
+        let consensus_state = <Self as ClientReader>::consensus_state(&self, client_id, height)
+            .map_err(ICS03Error::ics02_client)?;
+        Ok(consensus_state)
     }
 
     fn host_consensus_state(&self, height: Height) -> Result<AnyConsensusState, ICS03Error> {
