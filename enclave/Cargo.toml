@@ -37,6 +37,9 @@ tendermint = { git = "https://github.com/bluele/tendermint-rs", branch = "sgx", 
 tendermint-proto = { git = "https://github.com/bluele/tendermint-rs", branch = "sgx", default-features = false }
 tendermint-light-client-verifier = { git = "https://github.com/bluele/tendermint-rs", branch = "sgx", default-features = false }
 
+[patch."crates-io"]
+ics23 = { git = "https://github.com/bluele/ics23", branch = "sgx", default-features = false }
+
 [profile.release]
 opt-level = 3
 debug = false
