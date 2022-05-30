@@ -9,7 +9,7 @@ use crate::light_client::{
 };
 use enclave_commands::{CommandResult, LightClientCommand};
 use enclave_light_client::LightClientSource;
-use enclave_store::Store;
+use store::Store;
 
 pub fn dispatch<'l, S: Store, L: LightClientSource<'l>>(
     ctx: &mut Context<S>,

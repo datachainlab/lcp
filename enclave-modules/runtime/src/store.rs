@@ -1,7 +1,7 @@
-use enclave_store::memory::MemStore;
 use lazy_static::lazy_static;
 use std::sync::Arc;
 use std::sync::SgxRwLock;
+use store::memory::MemStore;
 
 // NOTE: use the mem store for debug
 lazy_static! {

@@ -132,6 +132,8 @@ fn main() -> Result<(), anyhow::Error> {
     let cs = lcp_ibc_client::client_state::ClientState::default();
     let client = lcp_ibc_client::client_def::LCPClient {};
 
+    // client.initialise(&client_state, &consensus_state)?;
+
     // TODO implement the verification testing
 
     enclave.destroy();

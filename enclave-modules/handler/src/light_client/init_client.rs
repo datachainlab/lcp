@@ -4,7 +4,7 @@ use commitments::prover::UpdateClientCommitmentProver;
 use context::{LightClientKeeper, LightClientReader};
 use enclave_commands::{InitClientInput, InitClientResult, LightClientResult};
 use enclave_light_client::LightClientSource;
-use enclave_store::Store;
+use store::Store;
 
 pub fn init_client<'l, S: Store, L: LightClientSource<'l>>(
     ctx: &mut Context<S>,

@@ -6,9 +6,9 @@ use anyhow::anyhow;
 use enclave_commands::{Command, CommandResult};
 use enclave_crypto::EnclaveKey;
 use enclave_light_client::LightClientSource;
-use enclave_store::Store;
 use log::*;
 use std::format;
+use store::Store;
 
 pub fn dispatch<'l, S: Store, L: LightClientSource<'l>>(
     ek: Option<&EnclaveKey>,
@@ -22,7 +22,7 @@ pub fn dispatch<'l, S: Store, L: LightClientSource<'l>>(
                 None => return Err(Error::OtherError(anyhow!("ek must not be nil"))),
                 Some(ek) => {
                     store
-                        .load_state(Some(&ek.get_pubkey()))
+                        .load_and_verify(&ek.get_pubkey())
                         .map_err(Error::StoreError)?;
                     Context::new(&mut store, &ek)
                 }
@@ -30,7 +30,9 @@ pub fn dispatch<'l, S: Store, L: LightClientSource<'l>>(
             match command {
                 Command::LightClient(cmd) => match light_client::dispatch::<_, L>(&mut ctx, cmd) {
                     Ok(res) => {
-                        let commit = store.commit_and_sign(ek).map_err(Error::StoreError)?;
+                        let commit = store
+                            .commit_and_sign(ek.unwrap())
+                            .map_err(Error::StoreError)?;
                         info!("commit={:?}", commit);
                         res
                     }

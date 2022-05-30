@@ -1,7 +1,6 @@
 use context::{LightClientKeeper, LightClientReader};
 use core::str::FromStr;
 use enclave_crypto::EnclaveKey;
-use enclave_store::Store;
 use ibc::{
     core::{
         ics02_client::{
@@ -25,6 +24,7 @@ use serde::{Deserialize, Serialize};
 use std::format;
 use std::string::String;
 use std::vec::Vec;
+use store::Store;
 
 pub struct Context<'a, 'e, S> {
     store: &'a mut S,

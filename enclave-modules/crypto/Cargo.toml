@@ -16,4 +16,5 @@ libsecp256k1 = { rev = "sgx_1.1.3-patch", git = "https://github.com/bluele/libse
 tiny-keccak = "1.4"
 log = "0.4.8"
 
+store = { path = "../../modules/store", default-features = false, features = ["sgx"] }
 settings = { path = "../../modules/settings", default-features = false, features = ["sgx"] }

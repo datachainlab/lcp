@@ -1,5 +1,6 @@
 use crate::traits::Keccak256;
 use crate::{rng::rand_slice, traits::SealedKey, CryptoError as Error};
+use anyhow::anyhow;
 use log::*;
 use secp256k1::curve::Scalar;
 use secp256k1::{
@@ -12,6 +13,7 @@ use std::io::{Read, Write};
 use std::sgxfs::SgxFile;
 use std::vec;
 use std::vec::Vec;
+use store::{CommitSigner, CommitVerifier, StoreError};
 
 #[derive(Default)]
 pub struct EnclaveKey {
@@ -40,10 +42,10 @@ impl EnclaveKey {
     }
 
     pub fn sign(&self, bz: &[u8]) -> Result<Vec<u8>, Error> {
-        self.sign_hash(bz.keccak256())
+        self.sign_hash(&bz.keccak256())
     }
 
-    pub fn sign_hash(&self, bz: [u8; 32]) -> Result<Vec<u8>, Error> {
+    pub fn sign_hash(&self, bz: &[u8; 32]) -> Result<Vec<u8>, Error> {
         let mut s = Scalar::default();
         let _ = s.set_b32(&bz);
         let (sig, rid) = secp256k1::sign(&Message(s), &self.secret_key);
@@ -98,6 +100,29 @@ impl EnclavePublicKey {
                 signer
             )))
         }
+    }
+}
+
+impl CommitSigner for EnclaveKey {
+    fn sign_hash(&self, msg: &[u8; 32]) -> Result<Vec<u8>, StoreError> {
+        self.sign_hash(msg)
+            .map_err(|e| StoreError::OtherError(anyhow!(e)))
+    }
+
+    fn use_verifier(&self, f: &mut dyn FnMut(&dyn CommitVerifier)) {
+        f(&self.get_pubkey());
+    }
+}
+
+impl CommitVerifier for EnclavePublicKey {
+    fn get_pubkey(&self) -> Vec<u8> {
+        self.as_bytes().to_vec()
+    }
+
+    fn verify(&self, msg: &[u8; 32], signature: &[u8]) -> Result<(), StoreError> {
+        self.verify(msg, signature)
+            .map_err(|e| StoreError::OtherError(anyhow!(e)))?;
+        Ok(())
     }
 }
 

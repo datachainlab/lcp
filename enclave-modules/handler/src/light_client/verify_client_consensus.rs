@@ -7,7 +7,7 @@ use enclave_commands::{
     VerifyClientResult,
 };
 use enclave_light_client::LightClientSource;
-use enclave_store::Store;
+use store::Store;
 
 pub fn verify_client_consensus<'l, S: Store, L: LightClientSource<'l>>(
     ctx: &mut Context<S>,

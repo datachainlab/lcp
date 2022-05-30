@@ -20,7 +20,6 @@ hex = { version = "0.4", default-features = false, features = ["alloc"] }
 
 enclave_crypto = { path = "../crypto" }
 enclave_utils = { path = "../utils" }
-enclave-store = { path = "../store" }
 enclave-light-client = { path = "../light-client" }
 enclave-remote-attestation = { path = "../remote-attestation" }
 
@@ -29,3 +28,4 @@ enclave-commands = { path = "../../modules/enclave-commands", default-features =
 commitments = { path = "../../modules/commitments", default-features = false, features = ["sgx"] }
 attestation-report = { path = "../../modules/attestation-report", default-features = false, features = ["sgx"] }
 context = { path = "../../modules/context", default-features = false, features = ["sgx"] }
+store = { path = "../../modules/store", default-features = false, features = ["sgx"] }

@@ -1,13 +1,15 @@
-use crate::commit::{get_last_commit, save_commit, SignedCommit};
-use crate::store::{CommitStore, KVStore, LoadableStore, Store};
-use crate::Result;
-use crate::{Commit, CommitID, Sequence};
-use enclave_crypto::{EnclaveKey, EnclavePublicKey};
+use crate::errors::Result;
+#[cfg(feature = "sgx")]
+use crate::sgx_reexport_prelude::*;
+use crate::{
+    Commit, CommitID, CommitStore, KVStore, PersistentStore, Revision, SignedCommit,
+    VerifiablePersistentStore, Store,
+};
+use log::*;
+use log::*;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::collections::HashMap;
-use std::sync::Arc;
-use std::sync::SgxRwLock;
 use std::vec::Vec;
 
 // MemStore is only available for testing purposes
@@ -31,8 +33,6 @@ impl MemStore {
 
 impl Store for MemStore {}
 
-impl Store for Arc<SgxRwLock<MemStore>> {}
-
 impl KVStore for MemStore {
     fn set(&mut self, k: Vec<u8>, v: Vec<u8>) {
         self.cached.0.insert(k, v);
@@ -48,19 +48,6 @@ impl KVStore for MemStore {
     }
 }
 
-impl<T> KVStore for Arc<SgxRwLock<T>>
-where
-    T: Store,
-{
-    fn set(&mut self, k: Vec<u8>, v: Vec<u8>) {
-        self.write().unwrap().set(k, v)
-    }
-
-    fn get(&self, k: &[u8]) -> Option<Vec<u8>> {
-        self.read().unwrap().get(k)
-    }
-}
-
 impl CommitStore for MemStore {
     fn commit(&mut self) -> Result<Commit> {
         self.committed.0.extend(self.cached.0.clone());
@@ -69,15 +56,6 @@ impl CommitStore for MemStore {
         let commit = Commit::new(self.calculate_commit_id()?, self.revision);
         self.revision += 1;
         Ok(commit)
-    }
-
-    fn commit_and_sign(&mut self, signer: Option<&EnclaveKey>) -> Result<SignedCommit> {
-        let commit = self.commit()?;
-        let signer = signer.unwrap();
-        let sig = signer.sign_hash(commit.as_sign_msg()?).unwrap();
-        let sc = SignedCommit::new(commit, signer.get_pubkey().as_bytes().to_vec(), sig);
-        save_commit(&sc)?;
-        Ok(sc)
     }
 
     fn rollback(&mut self) {
@@ -102,58 +80,24 @@ impl CommitStore for MemStore {
         Ok(id.into())
     }
 
-    fn get_current_sequence(&self) -> Result<Sequence> {
+    fn current_revision(&self) -> Result<Revision> {
         Ok(self.revision)
     }
+}
 
-    fn get_last_commit(&self) -> Result<Option<SignedCommit>> {
-        get_last_commit()
+impl PersistentStore<SignedCommit> for MemStore {
+    fn load(&mut self) -> Result<Option<SignedCommit>> {
+        info!("load() is called");
+        Ok(None)
+    }
+
+    fn save(&mut self, sc: &SignedCommit) -> Result<()> {
+        info!("save() is called with {:?}", sc);
+        Ok(())
     }
 }
 
-impl<T> CommitStore for Arc<SgxRwLock<T>>
-where
-    T: Store,
-{
-    fn commit(&mut self) -> Result<Commit> {
-        self.write().unwrap().commit()
-    }
-
-    fn commit_and_sign(&mut self, signer: Option<&EnclaveKey>) -> Result<SignedCommit> {
-        self.write().unwrap().commit_and_sign(signer)
-    }
-
-    fn rollback(&mut self) {
-        self.write().unwrap().rollback()
-    }
-
-    fn clear(&mut self) -> Result<()> {
-        self.write().unwrap().clear()
-    }
-
-    fn calculate_commit_id(&self) -> Result<CommitID> {
-        self.read().unwrap().calculate_commit_id()
-    }
-
-    fn get_current_sequence(&self) -> Result<Sequence> {
-        self.read().unwrap().get_current_sequence()
-    }
-
-    fn get_last_commit(&self) -> Result<Option<SignedCommit>> {
-        self.read().unwrap().get_last_commit()
-    }
-}
-
-impl LoadableStore for MemStore {}
-
-impl<T> LoadableStore for Arc<SgxRwLock<T>>
-where
-    T: Store,
-{
-    fn load_state(&mut self, expected_signer: Option<&EnclavePublicKey>) -> Result<()> {
-        self.write().unwrap().load_state(expected_signer)
-    }
-}
+impl VerifiablePersistentStore for MemStore {}
 
 mod hash_map_bytes {
     use super::Vec;

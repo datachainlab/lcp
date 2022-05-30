@@ -3,8 +3,8 @@
 extern crate sgx_tstd as std;
 extern crate sgx_types;
 
+pub(crate) use crate::store::get_store;
 use ctor::ctor;
-pub(crate) use store::get_store;
 
 mod ecalls;
 mod errors;

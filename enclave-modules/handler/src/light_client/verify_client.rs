@@ -4,7 +4,7 @@ use commitments::prover::StateCommitmentProver;
 use context::{LightClientKeeper, LightClientReader};
 use enclave_commands::{LightClientResult, VerifyClientInput, VerifyClientResult};
 use enclave_light_client::LightClientSource;
-use enclave_store::Store;
+use store::Store;
 
 pub fn verify_client<'l, S: Store, L: LightClientSource<'l>>(
     ctx: &mut Context<S>,
