@@ -1,8 +1,8 @@
-use crate::context::Context;
 use crate::enclave_manage;
 use crate::light_client;
 use crate::{HandlerError as Error, Result};
 use anyhow::anyhow;
+use context::Context;
 use enclave_commands::{Command, CommandResult};
 use enclave_crypto::EnclaveKey;
 use enclave_light_client::LightClientSource;
@@ -24,7 +24,7 @@ pub fn dispatch<'l, S: Store, L: LightClientSource<'l>>(
                     store
                         .load_and_verify(&ek.get_pubkey())
                         .map_err(Error::StoreError)?;
-                    Context::new(&mut store, &ek)
+                    Context::new(&mut store, ek)
                 }
             };
             match command {

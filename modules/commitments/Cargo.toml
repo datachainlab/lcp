@@ -16,6 +16,7 @@ log = "0.4.8"
 derive_more = { version = "0.99.17", default-features = false, features = ["from", "display"] }
 hex = { version = "0.4", default-features = false, features = ["alloc"] }
 sha2 = { version = "0.8", default-features = false }
+store = { path = "../store", default-features = false }
 rlp = { version = "0.5.1", default-features = false }
 rlp-derive = { version = "0.1.0" }
 anyhow-sgx = { package = "anyhow", rev = "sgx_1.1.3", git = "https://github.com/mesalock-linux/anyhow-sgx.git", optional = true }
@@ -31,12 +32,14 @@ default = ["std"]
 std = [
     "anyhow",
     "thiserror",
-    "validation-context/std"
+    "validation-context/std",
+    "store/std"
 ]
 sgx = [
     "sgx_tstd",
     "anyhow-sgx",
     "thiserror-sgx",
     "validation-context/sgx",
-    "enclave_crypto"
+    "enclave_crypto",
+    "store/sgx"
 ]

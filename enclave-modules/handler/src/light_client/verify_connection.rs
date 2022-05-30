@@ -1,6 +1,6 @@
-use crate::context::Context;
 use crate::light_client::LightClientHandlerError as Error;
-use commitments::prover::StateCommitmentProver;
+use commitments::prover::prove_state_commitment;
+use context::Context;
 use context::{LightClientKeeper, LightClientReader};
 use enclave_commands::{LightClientResult, VerifyConnectionInput, VerifyConnectionResult};
 use enclave_light_client::LightClientSource;
@@ -30,7 +30,6 @@ pub fn verify_connection<'l, S: Store, L: LightClientSource<'l>>(
         .map_err(Error::LightClientError)?;
 
     Ok(LightClientResult::VerifyConnection(VerifyConnectionResult(
-        ek.prove_state_commitment(&res.state_commitment)
-            .map_err(Error::CommitmentError)?,
+        prove_state_commitment(ek, &res.state_commitment).map_err(Error::CommitmentError)?,
     )))
 }

@@ -104,6 +104,11 @@ impl EnclavePublicKey {
 }
 
 impl CommitSigner for EnclaveKey {
+    fn sign(&self, msg: &[u8]) -> Result<Vec<u8>, StoreError> {
+        self.sign(msg)
+            .map_err(|e| StoreError::OtherError(anyhow!(e)))
+    }
+
     fn sign_hash(&self, msg: &[u8; 32]) -> Result<Vec<u8>, StoreError> {
         self.sign_hash(msg)
             .map_err(|e| StoreError::OtherError(anyhow!(e)))
@@ -117,6 +122,10 @@ impl CommitSigner for EnclaveKey {
 impl CommitVerifier for EnclavePublicKey {
     fn get_pubkey(&self) -> Vec<u8> {
         self.as_bytes().to_vec()
+    }
+
+    fn get_address(&self) -> Vec<u8> {
+        self.get_address().to_vec()
     }
 
     fn verify(&self, msg: &[u8; 32], signature: &[u8]) -> Result<(), StoreError> {

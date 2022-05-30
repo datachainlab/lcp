@@ -1,6 +1,7 @@
-use context::{LightClientKeeper, LightClientReader};
+#[cfg(feature = "sgx")]
+use crate::sgx_reexport_prelude::*;
+use crate::{LightClientKeeper, LightClientReader};
 use core::str::FromStr;
-use enclave_crypto::EnclaveKey;
 use ibc::{
     core::{
         ics02_client::{
@@ -24,16 +25,16 @@ use serde::{Deserialize, Serialize};
 use std::format;
 use std::string::String;
 use std::vec::Vec;
-use store::Store;
+use store::{CommitSigner, KVStore};
 
 pub struct Context<'a, 'e, S> {
     store: &'a mut S,
-    ek: &'e EnclaveKey,
+    ek: &'e dyn CommitSigner,
     current_timestamp: Option<u128>,
 }
 
 impl<'a, 'e, S> Context<'a, 'e, S> {
-    pub fn new(store: &'a mut S, ek: &'e EnclaveKey) -> Self {
+    pub fn new(store: &'a mut S, ek: &'e dyn CommitSigner) -> Self {
         Self {
             store,
             ek,
@@ -45,12 +46,12 @@ impl<'a, 'e, S> Context<'a, 'e, S> {
         self.current_timestamp = Some(timestamp);
     }
 
-    pub fn get_enclave_key(&self) -> &'e EnclaveKey {
+    pub fn get_enclave_key(&self) -> &'e dyn CommitSigner {
         self.ek
     }
 }
 
-impl<'a, 'e, S: Store> LightClientReader for Context<'a, 'e, S> {
+impl<'a, 'e, S: KVStore> LightClientReader for Context<'a, 'e, S> {
     fn client_type(&self, client_id: &ClientId) -> Result<String, ICS02Error> {
         let value = self
             .store
@@ -98,7 +99,7 @@ impl<'a, 'e, S: Store> LightClientReader for Context<'a, 'e, S> {
     }
 }
 
-impl<'a, 'e, S: Store> ClientReader for Context<'a, 'e, S> {
+impl<'a, 'e, S: KVStore> ClientReader for Context<'a, 'e, S> {
     fn client_type(&self, client_id: &ClientId) -> Result<ClientType, ICS02Error> {
         let client_type = <Self as LightClientReader>::client_type(&self, client_id)?;
         ClientType::from_str(&client_type)
@@ -175,7 +176,7 @@ impl<'a, 'e, S: Store> ClientReader for Context<'a, 'e, S> {
     }
 }
 
-impl<'a, 'e, S: Store> ConnectionReader for Context<'a, 'e, S> {
+impl<'a, 'e, S: KVStore> ConnectionReader for Context<'a, 'e, S> {
     fn connection_end(
         &self,
         conn_id: &ConnectionId,
@@ -220,7 +221,7 @@ impl<'a, 'e, S: Store> ConnectionReader for Context<'a, 'e, S> {
     }
 }
 
-impl<'a, 'e, S: Store> LightClientKeeper for Context<'a, 'e, S> {
+impl<'a, 'e, S: KVStore> LightClientKeeper for Context<'a, 'e, S> {
     fn store_client_type(
         &mut self,
         client_id: ClientId,

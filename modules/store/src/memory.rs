@@ -2,10 +2,9 @@ use crate::errors::Result;
 #[cfg(feature = "sgx")]
 use crate::sgx_reexport_prelude::*;
 use crate::{
-    Commit, CommitID, CommitStore, KVStore, PersistentStore, Revision, SignedCommit,
-    VerifiablePersistentStore, Store,
+    Commit, CommitID, CommitStore, KVStore, PersistentStore, Revision, SignedCommit, Store,
+    VerifiablePersistentStore,
 };
-use log::*;
 use log::*;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};

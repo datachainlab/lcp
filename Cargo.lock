@@ -360,6 +360,7 @@ dependencies = [
  "sgx_tstd",
  "sgx_types",
  "sha2 0.8.2",
+ "store",
  "thiserror 1.0.30",
  "thiserror 1.0.9",
  "validation-context",
@@ -375,9 +376,15 @@ checksum = "e4c78c047431fee22c1a7bb92e00ad095a02a983affe4d8a72e2a2c62c1b94f3"
 name = "context"
 version = "0.1.0"
 dependencies = [
+ "bincode 1.3.1",
+ "bincode 1.3.3",
  "ibc",
+ "log 0.4.14",
+ "log 0.4.16",
  "prost-types",
+ "serde",
  "sgx_tstd",
+ "store",
 ]
 
 [[package]]
@@ -2809,6 +2816,7 @@ dependencies = [
  "bincode 1.3.3",
  "derive_more",
  "log 0.4.14",
+ "log 0.4.16",
  "serde",
  "serde_json",
  "sgx_tstd",

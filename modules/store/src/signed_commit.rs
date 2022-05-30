@@ -24,10 +24,12 @@ impl SignedCommit {
 
 pub trait CommitVerifier {
     fn get_pubkey(&self) -> Vec<u8>;
+    fn get_address(&self) -> Vec<u8>;
     fn verify(&self, msg: &[u8; 32], signature: &[u8]) -> Result<()>;
 }
 
 pub trait CommitSigner {
+    fn sign(&self, msg: &[u8]) -> Result<Vec<u8>>;
     fn sign_hash(&self, msg: &[u8; 32]) -> Result<Vec<u8>>;
     fn use_verifier(&self, f: &mut dyn FnMut(&dyn CommitVerifier));
 }

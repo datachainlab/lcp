@@ -6,12 +6,13 @@ extern crate sgx_tstd as std;
 pub mod sgx_reexport_prelude {
     pub use anyhow_sgx as anyhow;
     pub use bincode_sgx as bincode;
+    pub use log_sgx as log;
     pub use sgx_tstd as std;
     pub use thiserror_sgx as thiserror;
 }
 
 pub use crate::errors::StoreError;
-pub use crate::store::{CommitStore, KVStore, PersistentStore, VerifiablePersistentStore, Store};
+pub use crate::store::{CommitStore, KVStore, PersistentStore, Store, VerifiablePersistentStore};
 pub use commit::{Commit, CommitID, Revision};
 pub use signed_commit::{CommitSigner, CommitVerifier, SignedCommit};
 

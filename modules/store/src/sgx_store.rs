@@ -2,8 +2,8 @@ use crate::errors::Result;
 use crate::memory::MemStore;
 use crate::{sgx_reexport_prelude::*, CommitSigner, CommitVerifier};
 use crate::{
-    Commit, CommitID, CommitStore, KVStore, PersistentStore, Revision, SignedCommit,
-    VerifiablePersistentStore, Store,
+    Commit, CommitID, CommitStore, KVStore, PersistentStore, Revision, SignedCommit, Store,
+    VerifiablePersistentStore,
 };
 use std::sync::Arc;
 use std::sync::SgxRwLock;
