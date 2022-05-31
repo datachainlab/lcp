@@ -771,11 +771,11 @@ dependencies = [
  "crypto",
  "derive_more",
  "enclave-commands",
- "enclave-light-client",
  "enclave-remote-attestation",
  "enclave_utils",
  "hex",
  "ibc",
+ "light-client",
  "log 0.4.14",
  "prost-types",
  "serde",
@@ -783,23 +783,6 @@ dependencies = [
  "sgx_tstd",
  "sgx_types",
  "store",
- "thiserror 1.0.9",
-]
-
-[[package]]
-name = "enclave-light-client"
-version = "0.1.0"
-dependencies = [
- "anyhow 1.0.28",
- "commitments",
- "derive_more",
- "enclave-commands",
- "ibc",
- "log 0.4.16",
- "prost",
- "prost-types",
- "sgx_tstd",
- "sha2 0.8.2",
  "thiserror 1.0.9",
 ]
 
@@ -840,13 +823,12 @@ dependencies = [
  "derive_more",
  "enclave-commands",
  "enclave-handler",
- "enclave-light-client",
- "enclave-tendermint",
  "enclave_utils",
  "env_logger 0.7.1",
  "ibc",
  "itertools 0.8.2",
  "lazy_static",
+ "light-client",
  "log 0.4.14",
  "prost-types",
  "serde",
@@ -858,31 +840,8 @@ dependencies = [
  "sgx_tstd",
  "sgx_types",
  "store",
+ "tendermint 0.1.0",
  "thiserror 1.0.9",
-]
-
-[[package]]
-name = "enclave-tendermint"
-version = "0.1.0"
-dependencies = [
- "anyhow 1.0.28",
- "commitments",
- "enclave-light-client",
- "ibc",
- "ibc-proto",
- "lazy_static",
- "log 0.4.16",
- "prost",
- "prost-types",
- "serde",
- "serde_json",
- "sgx_tstd",
- "sha2 0.8.2",
- "tendermint-light-client-verifier",
- "tendermint-proto",
- "thiserror 1.0.9",
- "time",
- "validation-context",
 ]
 
 [[package]]
@@ -1412,7 +1371,7 @@ dependencies = [
  "serde_json",
  "sha2 0.10.2",
  "subtle-encoding",
- "tendermint",
+ "tendermint 0.23.5",
  "tendermint-light-client-verifier",
  "tendermint-proto",
  "time",
@@ -1469,7 +1428,7 @@ dependencies = [
  "sha2 0.10.2",
  "signature",
  "subtle-encoding",
- "tendermint",
+ "tendermint 0.23.5",
  "tendermint-light-client",
  "tendermint-light-client-verifier",
  "tendermint-proto",
@@ -1653,6 +1612,24 @@ dependencies = [
  "sha2 0.8.0",
  "subtle 2.2.2",
  "typenum",
+]
+
+[[package]]
+name = "light-client"
+version = "0.1.0"
+dependencies = [
+ "anyhow 1.0.28",
+ "anyhow 1.0.56",
+ "commitments",
+ "derive_more",
+ "enclave-commands",
+ "ibc",
+ "prost",
+ "prost-types",
+ "sgx_tstd",
+ "sha2 0.8.2",
+ "thiserror 1.0.30",
+ "thiserror 1.0.9",
 ]
 
 [[package]]
@@ -2181,7 +2158,7 @@ dependencies = [
  "ibc-proto",
  "ibc-relayer",
  "prost-types",
- "tendermint",
+ "tendermint 0.23.5",
  "tendermint-light-client-verifier",
  "tendermint-rpc",
  "thiserror 1.0.30",
@@ -2886,6 +2863,33 @@ dependencies = [
 
 [[package]]
 name = "tendermint"
+version = "0.1.0"
+dependencies = [
+ "anyhow 1.0.28",
+ "anyhow 1.0.56",
+ "commitments",
+ "ibc",
+ "ibc-proto",
+ "lazy_static",
+ "light-client",
+ "log 0.4.14",
+ "log 0.4.16",
+ "prost",
+ "prost-types",
+ "serde",
+ "serde_json",
+ "sgx_tstd",
+ "sha2 0.8.2",
+ "tendermint-light-client-verifier",
+ "tendermint-proto",
+ "thiserror 1.0.30",
+ "thiserror 1.0.9",
+ "time",
+ "validation-context",
+]
+
+[[package]]
+name = "tendermint"
 version = "0.23.5"
 source = "git+https://github.com/informalsystems/tendermint-rs?rev=235480171081fed74de7b3d3c19911304df29831#235480171081fed74de7b3d3c19911304df29831"
 dependencies = [
@@ -2922,7 +2926,7 @@ dependencies = [
  "flex-error",
  "serde",
  "serde_json",
- "tendermint",
+ "tendermint 0.23.5",
  "toml",
  "url",
 ]
@@ -2941,7 +2945,7 @@ dependencies = [
  "serde_cbor",
  "serde_derive",
  "static_assertions",
- "tendermint",
+ "tendermint 0.23.5",
  "tendermint-light-client-verifier",
  "tendermint-rpc",
  "time",
@@ -2956,7 +2960,7 @@ dependencies = [
  "derive_more",
  "flex-error",
  "serde",
- "tendermint",
+ "tendermint 0.23.5",
  "time",
 ]
 
@@ -2998,7 +3002,7 @@ dependencies = [
  "serde_bytes",
  "serde_json",
  "subtle-encoding",
- "tendermint",
+ "tendermint 0.23.5",
  "tendermint-config",
  "tendermint-proto",
  "thiserror 1.0.30",

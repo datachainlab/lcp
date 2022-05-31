@@ -1,4 +1,6 @@
-use enclave_light_client::{LightClientError, LightClientInstanceError};
+#[cfg(feature = "sgx")]
+use crate::sgx_reexport_prelude::*;
+use light_client::{LightClientError, LightClientInstanceError};
 use ibc::core::ics02_client::error::Error as ICS02Error;
 use ibc::core::ics03_connection::error::Error as ICS03Error;
 use ibc::core::ics04_channel::error::Error as ICS04Error;

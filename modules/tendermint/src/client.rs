@@ -1,9 +1,11 @@
+#[cfg(feature = "sgx")]
+use crate::sgx_reexport_prelude::*;
 use crate::errors::TendermintError as Error;
 use alloc::borrow::ToOwned;
 use commitments::{gen_state_id, gen_state_id_from_any, StateCommitment, UpdateClientCommitment};
-use enclave_light_client::LightClientError;
-use enclave_light_client::{CreateClientResult, StateVerificationResult, UpdateClientResult};
-use enclave_light_client::{LightClient, LightClientRegistry};
+use light_client::LightClientError;
+use light_client::{CreateClientResult, StateVerificationResult, UpdateClientResult};
+use light_client::{LightClient, LightClientRegistry};
 use ibc::core::ics02_client::client_consensus::{AnyConsensusState, ConsensusState};
 use ibc::core::ics02_client::client_def::{AnyClient, ClientDef};
 use ibc::core::ics02_client::client_state::{AnyClientState, ClientState};
@@ -359,7 +361,7 @@ impl LightClient for TendermintLightClient {
         counterparty_connection_id: ConnectionId,
         proof_height: ibc::core::ics02_client::height::Height,
         proof: Vec<u8>,
-    ) -> enclave_light_client::Result<StateVerificationResult> {
+    ) -> light_client::Result<StateVerificationResult> {
         let (client_def, client_state, consensus_state, prefix, proof) = Self::validate_args(
             ctx,
             client_id.clone(),
@@ -404,7 +406,7 @@ impl LightClient for TendermintLightClient {
         counterparty_channel_id: ChannelId,
         proof_height: ibc::core::ics02_client::height::Height,
         proof: Vec<u8>,
-    ) -> enclave_light_client::Result<StateVerificationResult> {
+    ) -> light_client::Result<StateVerificationResult> {
         let (client_def, client_state, consensus_state, prefix, proof) = Self::validate_args(
             ctx,
             client_id.clone(),

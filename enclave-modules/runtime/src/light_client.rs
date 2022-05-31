@@ -1,5 +1,5 @@
-use enclave_light_client::{LightClient, LightClientRegistry, LightClientSource};
-use enclave_tendermint::register_implementations;
+use light_client::{LightClient, LightClientRegistry, LightClientSource};
+use tendermint::register_implementations;
 use lazy_static::lazy_static;
 use std::boxed::Box;
 

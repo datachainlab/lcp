@@ -5,7 +5,7 @@ use anyhow::anyhow;
 use context::Context;
 use crypto::EnclaveKey;
 use enclave_commands::{Command, CommandResult};
-use enclave_light_client::LightClientSource;
+use ::light_client::LightClientSource;
 use log::*;
 use std::format;
 use store::Store;

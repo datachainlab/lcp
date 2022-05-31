@@ -1,3 +1,5 @@
+#[cfg(feature = "sgx")]
+use crate::sgx_reexport_prelude::*;
 use ibc::core::ics02_client::error::Error as ICS02Error;
 use std::boxed::Box;
 use std::fmt::{Debug, Display};

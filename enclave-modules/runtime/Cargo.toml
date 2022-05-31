@@ -26,9 +26,9 @@ derive_more = { version = "0.99.17", default-features = false, features = ["from
 
 enclave-handler = { path = "../handler" }
 enclave_utils = { path = "../utils" }
-enclave-light-client = { path = "../light-client" }
-enclave-tendermint = { path = "../tendermint" }
 
+light-client = { path = "../../modules/light-client", default-features = false, features = ["sgx"] }
+tendermint = { path = "../../modules/tendermint", default-features = false, features = ["sgx"] }
 enclave-commands = { path = "../../modules/enclave-commands", default-features = false, features = ["sgx"] }
 store = { path = "../../modules/store", default-features = false, features = ["sgx"] }
 settings = { path = "../../modules/settings", default-features = false, features = ["sgx"] }

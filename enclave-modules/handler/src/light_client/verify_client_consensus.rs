@@ -6,7 +6,7 @@ use enclave_commands::{
     LightClientResult, VerifyClientConsensusInput, VerifyClientConsensusResult, VerifyClientInput,
     VerifyClientResult,
 };
-use enclave_light_client::LightClientSource;
+use light_client::LightClientSource;
 use store::Store;
 
 pub fn verify_client_consensus<'l, S: Store, L: LightClientSource<'l>>(

@@ -3,7 +3,7 @@ use commitments::prover::prove_state_commitment;
 use context::Context;
 use context::{LightClientKeeper, LightClientReader};
 use enclave_commands::{LightClientResult, VerifyConnectionInput, VerifyConnectionResult};
-use enclave_light_client::LightClientSource;
+use light_client::LightClientSource;
 use store::Store;
 
 pub fn verify_connection<'l, S: Store, L: LightClientSource<'l>>(

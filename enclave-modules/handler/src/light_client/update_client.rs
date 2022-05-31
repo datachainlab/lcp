@@ -3,7 +3,7 @@ use commitments::prover::prove_update_client_commitment;
 use context::Context;
 use context::{LightClientKeeper, LightClientReader};
 use enclave_commands::{LightClientResult, UpdateClientInput, UpdateClientResult};
-use enclave_light_client::LightClientSource;
+use light_client::LightClientSource;
 use store::Store;
 
 pub fn update_client<'l, S: Store, L: LightClientSource<'l>>(

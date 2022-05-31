@@ -11,13 +11,13 @@ members = [
     "modules/settings",
     "modules/ibc-client",
     "modules/validation-context",
+    "modules/light-client",
+    "modules/tendermint",
     "modules/relay/tendermint",
     "enclave-modules/runtime",
     "enclave-modules/utils",
     "enclave-modules/remote-attestation",
-    "enclave-modules/handler",
-    "enclave-modules/light-client",
-    "enclave-modules/tendermint"
+    "enclave-modules/handler"
 ]
 exclude = ["enclave"]
 

@@ -19,9 +19,9 @@ log = { git = "https://github.com/mesalock-linux/log-sgx" }
 hex = { version = "0.4", default-features = false, features = ["alloc"] }
 
 enclave_utils = { path = "../utils" }
-enclave-light-client = { path = "../light-client" }
 enclave-remote-attestation = { path = "../remote-attestation" }
 
+light-client = { path = "../../modules/light-client", default-features = false, features = ["sgx"] }
 crypto = { path = "../../modules/crypto", default-features = false, features = ["sgx"] }
 settings = { path = "../../modules/settings", default-features = false, features = ["sgx"] }
 enclave-commands = { path = "../../modules/enclave-commands", default-features = false, features = ["sgx"] }
