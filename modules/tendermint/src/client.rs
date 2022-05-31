@@ -1,11 +1,8 @@
+use crate::errors::TendermintError as Error;
 #[cfg(feature = "sgx")]
 use crate::sgx_reexport_prelude::*;
-use crate::errors::TendermintError as Error;
 use alloc::borrow::ToOwned;
 use commitments::{gen_state_id, gen_state_id_from_any, StateCommitment, UpdateClientCommitment};
-use light_client::LightClientError;
-use light_client::{CreateClientResult, StateVerificationResult, UpdateClientResult};
-use light_client::{LightClient, LightClientRegistry};
 use ibc::core::ics02_client::client_consensus::{AnyConsensusState, ConsensusState};
 use ibc::core::ics02_client::client_def::{AnyClient, ClientDef};
 use ibc::core::ics02_client::client_state::{AnyClientState, ClientState};
@@ -25,6 +22,9 @@ use ibc::core::ics24_host::path::{
 };
 use ibc::core::ics24_host::Path;
 use ibc::Height;
+use light_client::LightClientError;
+use light_client::{CreateClientResult, StateVerificationResult, UpdateClientResult};
+use light_client::{LightClient, LightClientRegistry};
 use log::*;
 use prost_types::Any;
 use serde_json::Value;

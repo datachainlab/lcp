@@ -1,3 +1,5 @@
+#[cfg(feature = "sgx")]
+use crate::sgx_reexport_prelude::*;
 use crypto::CryptoError;
 use derive_more::Display;
 use sgx_types::sgx_status_t;

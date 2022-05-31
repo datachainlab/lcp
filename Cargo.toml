@@ -1,6 +1,7 @@
 [workspace]
 members = [
     "app",
+    "modules/handler",
     "modules/attestation-report",
     "modules/enclave-api",
     "modules/enclave-commands",
@@ -16,8 +17,7 @@ members = [
     "modules/relay/tendermint",
     "enclave-modules/runtime",
     "enclave-modules/utils",
-    "enclave-modules/remote-attestation",
-    "enclave-modules/handler"
+    "enclave-modules/remote-attestation"
 ]
 exclude = ["enclave"]
 

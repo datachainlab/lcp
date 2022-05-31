@@ -1,4 +1,6 @@
 use crate::enclave_manage::errors::EnclaveManageError as Error;
+#[cfg(feature = "sgx")]
+use crate::sgx_reexport_prelude::*;
 use anyhow::anyhow;
 use enclave_commands::{InitEnclaveInput, InitEnclaveResult};
 use log::*;

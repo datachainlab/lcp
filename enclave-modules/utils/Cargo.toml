@@ -1,5 +1,5 @@
 [package]
-name = "enclave_utils"
+name = "enclave-utils"
 version = "0.1.0"
 edition = "2021"
 
@@ -7,4 +7,4 @@ edition = "2021"
 sgx_tstd = { git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 sgx_types = { git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 sgx_trts = { git = "https://github.com/apache/teaclave-sgx-sdk.git" }
-log = "0.4.8"
+log = { git = "https://github.com/mesalock-linux/log-sgx" }

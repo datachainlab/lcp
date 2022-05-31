@@ -6,14 +6,12 @@ extern crate sgx_tstd as std;
 #[cfg(feature = "sgx")]
 pub mod sgx_reexport_prelude {
     pub use anyhow_sgx as anyhow;
-    pub use sgx_tstd as std;
+    pub use log_sgx as log;
     pub use thiserror_sgx as thiserror;
 }
-
-pub use client::{CreateClientResult, LightClient, StateVerificationResult, UpdateClientResult};
-pub use errors::{LightClientError, LightClientInstanceError, Result};
-pub use registry::{LightClientRegistry, LightClientSource};
-
-mod client;
+#[cfg(feature = "sgx")]
+mod enclave_manage;
+pub use errors::{HandlerError, Result};
 mod errors;
-mod registry;
+mod light_client;
+pub mod router;

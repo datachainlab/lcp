@@ -1,11 +1,14 @@
+#[cfg(feature = "sgx")]
 use crate::enclave_manage;
 use crate::light_client;
+#[cfg(feature = "sgx")]
+use crate::sgx_reexport_prelude::*;
 use crate::{HandlerError as Error, Result};
+use ::light_client::LightClientSource;
 use anyhow::anyhow;
 use context::Context;
 use crypto::EnclaveKey;
 use enclave_commands::{Command, CommandResult};
-use ::light_client::LightClientSource;
 use log::*;
 use std::format;
 use store::Store;
@@ -16,6 +19,7 @@ pub fn dispatch<'l, S: Store, L: LightClientSource<'l>>(
     command: Command,
 ) -> Result<CommandResult> {
     let res = match command {
+        #[cfg(feature = "sgx")]
         Command::EnclaveManage(cmd) => enclave_manage::dispatch(cmd)?,
         _ => {
             let mut ctx = match ek {
