@@ -1,9 +1,9 @@
 use super::ocalls::{ocall_get_ias_socket, ocall_get_quote, ocall_sgx_init_quote};
 use attestation_report::EndorsedAttestationReport;
-use enclave_crypto::consts::{SigningMethod, SIGNING_METHOD};
-use enclave_crypto::rand_fill_bytes;
+use crypto::sgx::rand::fill_bytes;
 use itertools::Itertools;
 use log::*;
+use settings::{SigningMethod, SIGNING_METHOD};
 use sgx_tcrypto::rsgx_sha256_slice;
 use sgx_tse::{rsgx_create_report, rsgx_verify_report};
 use sgx_types::{c_int, sgx_spid_t};
@@ -126,7 +126,7 @@ pub fn create_attestation_report(
     };
 
     let mut quote_nonce = sgx_quote_nonce_t { rand: [0; 16] };
-    rand_fill_bytes(&mut quote_nonce.rand)?;
+    fill_bytes(&mut quote_nonce.rand)?;
     trace!("Nonce generated successfully");
     let mut qe_report = sgx_report_t::default();
     const RET_QUOTE_BUF_LEN: u32 = 2048;

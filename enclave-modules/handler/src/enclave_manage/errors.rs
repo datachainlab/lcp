@@ -1,5 +1,5 @@
+use crypto::CryptoError;
 use derive_more::Display;
-use enclave_crypto::CryptoError;
 use sgx_types::sgx_status_t;
 
 #[derive(thiserror::Error, Debug, Display)]

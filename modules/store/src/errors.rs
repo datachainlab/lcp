@@ -1,17 +1,15 @@
 #[cfg(feature = "sgx")]
 use crate::sgx_reexport_prelude::*;
 use bincode::Error as BincodeError;
+use crypto::CryptoError;
 use derive_more::Display;
-// use enclave_crypto::CryptoError;
-// use sgx_types::sgx_status_t;
 
 pub type Result<T> = std::result::Result<T, StoreError>;
 
 #[derive(thiserror::Error, Debug, Display)]
 pub enum StoreError {
-    // CryptoError(CryptoError),
+    CryptoError(CryptoError),
     BincodeError(BincodeError),
-    // SGXError(sgx_status_t),
     #[error(transparent)]
     OtherError(#[from] anyhow::Error),
 }

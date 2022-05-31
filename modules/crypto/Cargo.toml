@@ -1,0 +1,44 @@
+[package]
+name = "crypto"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+sgx_types = { git = "https://github.com/apache/teaclave-sgx-sdk.git" }
+sgx_tstd = { git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
+sgx_trts = { git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
+sgx_rand = { git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
+lazy_static = { version = "1.1.0", features = ["spin_no_std"] }
+derive_more = { version = "0.99.17", default-features = false, features = ["from", "display"] }
+tiny-keccak = "1.4"
+
+log = { version = "0.4.8", optional = true }
+log-sgx = { package = "log", git = "https://github.com/mesalock-linux/log-sgx", optional = true }
+anyhow = { version = "1.0.56", optional = true }
+anyhow-sgx = { package = "anyhow", rev = "sgx_1.1.3", git = "https://github.com/mesalock-linux/anyhow-sgx.git", optional = true }
+thiserror = { version = "1.0.30", optional = true }
+thiserror-sgx = { package = "thiserror", git = "https://github.com/mesalock-linux/thiserror-sgx.git", optional = true }
+secp256k1 = { package = "libsecp256k1", version = "0.3.5", optional = true }
+secp256k1-sgx = { package = "libsecp256k1", rev = "sgx_1.1.3-patch", git = "https://github.com/bluele/libsecp256k1-rs-sgx", optional = true }
+
+settings = { path = "../settings", default-features = false }
+
+[features]
+default = ["std"]
+std = [
+    "anyhow",
+    "thiserror",
+    "log",
+    "secp256k1",
+    "settings/std"
+]
+sgx = [
+    "sgx_tstd",
+    "sgx_trts",
+    "sgx_rand",
+    "anyhow-sgx",
+    "thiserror-sgx",
+    "log-sgx",
+    "secp256k1-sgx",
+    "settings/sgx"
+]

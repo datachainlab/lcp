@@ -345,8 +345,8 @@ version = "0.1.0"
 dependencies = [
  "anyhow 1.0.28",
  "anyhow 1.0.56",
+ "crypto",
  "derive_more",
- "enclave_crypto",
  "hex",
  "ibc",
  "log 0.4.16",
@@ -378,6 +378,7 @@ version = "0.1.0"
 dependencies = [
  "bincode 1.3.1",
  "bincode 1.3.3",
+ "crypto",
  "ibc",
  "log 0.4.14",
  "log 0.4.16",
@@ -469,6 +470,28 @@ name = "crunchy"
 version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7a81dae078cea95a014a339291cec439d2f232ebe854a9d672b796c6afafa9b7"
+
+[[package]]
+name = "crypto"
+version = "0.1.0"
+dependencies = [
+ "anyhow 1.0.28",
+ "anyhow 1.0.56",
+ "derive_more",
+ "lazy_static",
+ "libsecp256k1 0.3.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libsecp256k1 0.3.5 (git+https://github.com/bluele/libsecp256k1-rs-sgx?rev=sgx_1.1.3-patch)",
+ "log 0.4.14",
+ "log 0.4.16",
+ "settings",
+ "sgx_rand",
+ "sgx_trts",
+ "sgx_tstd",
+ "sgx_types",
+ "thiserror 1.0.30",
+ "thiserror 1.0.9",
+ "tiny-keccak 1.5.0",
+]
 
 [[package]]
 name = "crypto-bigint"
@@ -745,11 +768,11 @@ dependencies = [
  "bincode 1.3.1",
  "commitments",
  "context",
+ "crypto",
  "derive_more",
  "enclave-commands",
  "enclave-light-client",
  "enclave-remote-attestation",
- "enclave_crypto",
  "enclave_utils",
  "hex",
  "ibc",
@@ -787,7 +810,7 @@ dependencies = [
  "attestation-report",
  "base64 0.13.0 (git+https://github.com/mesalock-linux/rust-base64-sgx?rev=dc7389e10817b078f289386b3b6a852ab6c4c021)",
  "chrono",
- "enclave_crypto",
+ "crypto",
  "hex",
  "httparse",
  "itertools 0.8.2",
@@ -795,6 +818,7 @@ dependencies = [
  "rustls 0.19.0",
  "serde",
  "serde_json",
+ "settings",
  "sgx_tcrypto",
  "sgx_trts",
  "sgx_tse",
@@ -811,13 +835,13 @@ dependencies = [
  "anyhow 1.0.28",
  "base64 0.13.0 (git+https://github.com/mesalock-linux/rust-base64-sgx?rev=dc7389e10817b078f289386b3b6a852ab6c4c021)",
  "bincode 1.3.1",
+ "crypto",
  "ctor",
  "derive_more",
  "enclave-commands",
  "enclave-handler",
  "enclave-light-client",
  "enclave-tendermint",
- "enclave_crypto",
  "enclave_utils",
  "env_logger 0.7.1",
  "ibc",
@@ -859,25 +883,6 @@ dependencies = [
  "thiserror 1.0.9",
  "time",
  "validation-context",
-]
-
-[[package]]
-name = "enclave_crypto"
-version = "0.1.0"
-dependencies = [
- "anyhow 1.0.28",
- "derive_more",
- "lazy_static",
- "libsecp256k1 0.3.5 (git+https://github.com/bluele/libsecp256k1-rs-sgx?rev=sgx_1.1.3-patch)",
- "log 0.4.16",
- "settings",
- "sgx_rand",
- "sgx_trts",
- "sgx_tstd",
- "sgx_types",
- "store",
- "thiserror 1.0.9",
- "tiny-keccak 1.5.0",
 ]
 
 [[package]]
@@ -2528,6 +2533,7 @@ version = "0.1.0"
 dependencies = [
  "lazy_static",
  "sgx_tstd",
+ "sgx_types",
 ]
 
 [[package]]
@@ -2814,6 +2820,7 @@ dependencies = [
  "anyhow 1.0.56",
  "bincode 1.3.1",
  "bincode 1.3.3",
+ "crypto",
  "derive_more",
  "log 0.4.14",
  "log 0.4.16",

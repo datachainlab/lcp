@@ -25,7 +25,6 @@ bincode = { git = "https://github.com/bluele/bincode-sgx", branch = "serde" }
 derive_more = { version = "0.99.17", default-features = false, features = ["from", "display"] }
 
 enclave-handler = { path = "../handler" }
-enclave_crypto = { path = "../crypto" }
 enclave_utils = { path = "../utils" }
 enclave-light-client = { path = "../light-client" }
 enclave-tendermint = { path = "../tendermint" }
@@ -33,3 +32,4 @@ enclave-tendermint = { path = "../tendermint" }
 enclave-commands = { path = "../../modules/enclave-commands", default-features = false, features = ["sgx"] }
 store = { path = "../../modules/store", default-features = false, features = ["sgx"] }
 settings = { path = "../../modules/settings", default-features = false, features = ["sgx"] }
+crypto = { path = "../../modules/crypto", default-features = false, features = ["sgx"] }

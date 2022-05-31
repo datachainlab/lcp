@@ -11,6 +11,7 @@ ibc = {git = "https://github.com/bluele/ibc-rs", branch = "sgx", default-feature
 prost-types = { version = "0.9", default-features = false }
 serde = { version = "1.0", default-features = false, features = ["alloc"] }
 store = { path = "../store", default-features = false }
+crypto = { path = "../crypto", default-features = false }
 log-sgx = { package = "log", git = "https://github.com/mesalock-linux/log-sgx", optional = true }
 log = { version = "0.4.8", optional = true }
 
@@ -21,12 +22,14 @@ bincode = { version = "1.3", optional = true }
 default = ["std"]
 std = [
     "store/std",
+    "crypto/std",
     "bincode",
     "log"
 ]
 sgx = [
     "sgx_tstd",
     "store/sgx",
+    "crypto/sgx",
     "bincode-sgx",
     "log-sgx"
 ]

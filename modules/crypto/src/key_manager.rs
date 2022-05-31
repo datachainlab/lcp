@@ -1,4 +1,6 @@
 use crate::errors::CryptoError as Error;
+#[cfg(feature = "sgx")]
+use crate::sgx_reexport_prelude::*;
 use crate::{traits::SealedKey, EnclaveKey};
 use log::*;
 use settings::ENCLAVE_KEY_SEALING_PATH;

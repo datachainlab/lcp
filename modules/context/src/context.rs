@@ -2,6 +2,7 @@
 use crate::sgx_reexport_prelude::*;
 use crate::{LightClientKeeper, LightClientReader};
 use core::str::FromStr;
+use crypto::Signer;
 use ibc::{
     core::{
         ics02_client::{
@@ -25,16 +26,16 @@ use serde::{Deserialize, Serialize};
 use std::format;
 use std::string::String;
 use std::vec::Vec;
-use store::{CommitSigner, KVStore};
+use store::KVStore;
 
 pub struct Context<'a, 'e, S> {
     store: &'a mut S,
-    ek: &'e dyn CommitSigner,
+    ek: &'e dyn Signer,
     current_timestamp: Option<u128>,
 }
 
 impl<'a, 'e, S> Context<'a, 'e, S> {
-    pub fn new(store: &'a mut S, ek: &'e dyn CommitSigner) -> Self {
+    pub fn new(store: &'a mut S, ek: &'e dyn Signer) -> Self {
         Self {
             store,
             ek,
@@ -46,7 +47,7 @@ impl<'a, 'e, S> Context<'a, 'e, S> {
         self.current_timestamp = Some(timestamp);
     }
 
-    pub fn get_enclave_key(&self) -> &'e dyn CommitSigner {
+    pub fn get_enclave_key(&self) -> &'e dyn Signer {
         self.ek
     }
 }

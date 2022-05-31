@@ -1,7 +1,7 @@
 use chrono::{prelude::*, Duration};
-use enclave_crypto::consts::RT_ALLOWED_STATUS;
 use log::*;
 use serde_json::Value;
+use settings::RT_ALLOWED_STATUS;
 use sgx_types::{sgx_platform_info_t, sgx_quote_t, sgx_status_t, sgx_update_info_bit_t};
 use std::ptr;
 use std::time::{SystemTime, UNIX_EPOCH};

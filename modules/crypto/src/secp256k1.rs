@@ -1,6 +1,9 @@
-use crate::traits::Keccak256;
-use crate::{rng::rand_slice, traits::SealedKey, CryptoError as Error};
-use anyhow::anyhow;
+#[cfg(feature = "sgx")]
+use crate::sgx_reexport_prelude::*;
+use crate::{
+    traits::{Keccak256, SealedKey},
+    CryptoError as Error, Signer, Verifier,
+};
 use log::*;
 use secp256k1::curve::Scalar;
 use secp256k1::{
@@ -10,10 +13,19 @@ use secp256k1::{
 use sgx_types::sgx_report_data_t;
 use std::format;
 use std::io::{Read, Write};
-use std::sgxfs::SgxFile;
 use std::vec;
 use std::vec::Vec;
-use store::{CommitSigner, CommitVerifier, StoreError};
+
+#[cfg(feature = "sgx")]
+use crate::sgx::rand::rand_slice;
+#[cfg(not(feature = "sgx"))]
+use std::fs::File;
+#[cfg(feature = "sgx")]
+use std::sgxfs::SgxFile as File;
+#[cfg(not(feature = "sgx"))]
+fn rand_slice(rand: &mut [u8]) -> Result<(), Error> {
+    todo!()
+}
 
 #[derive(Default)]
 pub struct EnclaveKey {
@@ -103,23 +115,21 @@ impl EnclavePublicKey {
     }
 }
 
-impl CommitSigner for EnclaveKey {
-    fn sign(&self, msg: &[u8]) -> Result<Vec<u8>, StoreError> {
+impl Signer for EnclaveKey {
+    fn sign(&self, msg: &[u8]) -> Result<Vec<u8>, Error> {
         self.sign(msg)
-            .map_err(|e| StoreError::OtherError(anyhow!(e)))
     }
 
-    fn sign_hash(&self, msg: &[u8; 32]) -> Result<Vec<u8>, StoreError> {
+    fn sign_hash(&self, msg: &[u8; 32]) -> Result<Vec<u8>, Error> {
         self.sign_hash(msg)
-            .map_err(|e| StoreError::OtherError(anyhow!(e)))
     }
 
-    fn use_verifier(&self, f: &mut dyn FnMut(&dyn CommitVerifier)) {
+    fn use_verifier(&self, f: &mut dyn FnMut(&dyn Verifier)) {
         f(&self.get_pubkey());
     }
 }
 
-impl CommitVerifier for EnclavePublicKey {
+impl Verifier for EnclavePublicKey {
     fn get_pubkey(&self) -> Vec<u8> {
         self.as_bytes().to_vec()
     }
@@ -128,10 +138,8 @@ impl CommitVerifier for EnclavePublicKey {
         self.get_address().to_vec()
     }
 
-    fn verify(&self, msg: &[u8; 32], signature: &[u8]) -> Result<(), StoreError> {
+    fn verify(&self, msg: &[u8; 32], signature: &[u8]) -> Result<(), Error> {
         self.verify(msg, signature)
-            .map_err(|e| StoreError::OtherError(anyhow!(e)))?;
-        Ok(())
     }
 }
 
@@ -148,7 +156,7 @@ impl SealedKey for EnclaveKey {
 }
 
 fn seal(data: &[u8; 32], filepath: &str) -> Result<(), Error> {
-    let mut file = SgxFile::create(filepath).map_err(|_err| {
+    let mut file = File::create(filepath).map_err(|_err| {
         error!("error creating file {}: {:?}", filepath, _err);
         Error::FailedSeal
     })?;
@@ -160,7 +168,7 @@ fn seal(data: &[u8; 32], filepath: &str) -> Result<(), Error> {
 }
 
 fn open(filepath: &str) -> Result<SecretKey, Error> {
-    let mut file = SgxFile::open(filepath).map_err(|_err| Error::FailedUnseal)?;
+    let mut file = File::open(filepath).map_err(|_err| Error::FailedUnseal)?;
 
     let mut buf = [0u8; SECRET_KEY_SIZE];
     let n = file

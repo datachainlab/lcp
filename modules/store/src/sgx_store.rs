@@ -1,6 +1,9 @@
+use crypto::{Signer, Verifier};
+
 use crate::errors::Result;
 use crate::memory::MemStore;
-use crate::{sgx_reexport_prelude::*, CommitSigner, CommitVerifier};
+#[cfg(feature = "sgx")]
+use crate::sgx_reexport_prelude::*;
 use crate::{
     Commit, CommitID, CommitStore, KVStore, PersistentStore, Revision, SignedCommit, Store,
     VerifiablePersistentStore,
@@ -64,11 +67,11 @@ impl<T> VerifiablePersistentStore for Arc<SgxRwLock<T>>
 where
     T: Store,
 {
-    fn load_and_verify(&mut self, verifier: &dyn CommitVerifier) -> Result<()> {
+    fn load_and_verify(&mut self, verifier: &dyn Verifier) -> Result<()> {
         self.write().unwrap().load_and_verify(verifier)
     }
 
-    fn commit_and_sign(&mut self, signer: &dyn CommitSigner) -> Result<SignedCommit> {
+    fn commit_and_sign(&mut self, signer: &dyn Signer) -> Result<SignedCommit> {
         self.write().unwrap().commit_and_sign(signer)
     }
 }

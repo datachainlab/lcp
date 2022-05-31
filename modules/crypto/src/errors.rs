@@ -1,3 +1,7 @@
+#[cfg(feature = "sgx")]
+use crate::sgx::errors::SGXCryptoError;
+#[cfg(feature = "sgx")]
+use crate::sgx_reexport_prelude::*;
 use derive_more::Display;
 use std::string::String;
 
@@ -8,6 +12,8 @@ pub enum CryptoError {
     KeyError,
     /// The random function had failed generating randomness
     RandomError,
+    #[cfg(feature = "sgx")]
+    SGXCryptoError(SGXCryptoError),
 
     // Errors in contract ABI:
     /// Failed to seal data

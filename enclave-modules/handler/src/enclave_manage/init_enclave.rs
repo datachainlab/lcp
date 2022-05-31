@@ -7,7 +7,7 @@ use std::format;
 use std::string::String;
 
 use attestation_report::verify_report;
-use enclave_crypto::KeyManager;
+use crypto::KeyManager;
 use enclave_remote_attestation::attestation::create_attestation_report;
 use enclave_remote_attestation::report::verify_quote_status;
 use enclave_utils::storage::write_to_untrusted;

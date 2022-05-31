@@ -1,4 +1,4 @@
-use enclave_crypto::KeyManager;
+use crypto::KeyManager;
 use lazy_static::lazy_static;
 use std::sync::SgxRwLock;
 

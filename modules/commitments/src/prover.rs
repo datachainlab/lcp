@@ -4,19 +4,18 @@ use crate::sgx_reexport_prelude::*;
 use crate::{
     StateCommitment, StateCommitmentProof, UpdateClientCommitment, UpdateClientCommitmentProof,
 };
-use store::{CommitSigner, CommitVerifier};
+use crypto::{Signer, Verifier};
 
 pub fn prove_update_client_commitment(
-    signer: &dyn CommitSigner,
+    signer: &dyn Signer,
     commitment: &UpdateClientCommitment,
 ) -> Result<UpdateClientCommitmentProof, CommitmentError> {
     let commitment_bytes = commitment.to_vec();
     let signature = signer
         .sign(&commitment_bytes)
-        // .map_err(CommitmentError::CryptoError)?;
-        .unwrap();
+        .map_err(CommitmentError::CryptoError)?;
     let mut signer_address = Default::default();
-    signer.use_verifier(&mut |verifier: &dyn CommitVerifier| {
+    signer.use_verifier(&mut |verifier: &dyn Verifier| {
         signer_address = verifier.get_address();
     });
     Ok(UpdateClientCommitmentProof {
@@ -27,16 +26,15 @@ pub fn prove_update_client_commitment(
 }
 
 pub fn prove_state_commitment(
-    signer: &dyn CommitSigner,
+    signer: &dyn Signer,
     commitment: &StateCommitment,
 ) -> Result<StateCommitmentProof, CommitmentError> {
     let commitment_bytes = commitment.to_vec();
     let signature = signer
         .sign(&commitment_bytes)
-        // .map_err(CommitmentError::CryptoError)?;
-        .unwrap();
+        .map_err(CommitmentError::CryptoError)?;
     let mut signer_address = Default::default();
-    signer.use_verifier(&mut |verifier: &dyn CommitVerifier| {
+    signer.use_verifier(&mut |verifier: &dyn Verifier| {
         signer_address = verifier.get_address();
     });
     Ok(StateCommitmentProof {

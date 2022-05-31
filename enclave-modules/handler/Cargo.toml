@@ -18,11 +18,11 @@ bincode = { git = "https://github.com/bluele/bincode-sgx", branch = "serde" }
 log = { git = "https://github.com/mesalock-linux/log-sgx" }
 hex = { version = "0.4", default-features = false, features = ["alloc"] }
 
-enclave_crypto = { path = "../crypto" }
 enclave_utils = { path = "../utils" }
 enclave-light-client = { path = "../light-client" }
 enclave-remote-attestation = { path = "../remote-attestation" }
 
+crypto = { path = "../../modules/crypto", default-features = false, features = ["sgx"] }
 settings = { path = "../../modules/settings", default-features = false, features = ["sgx"] }
 enclave-commands = { path = "../../modules/enclave-commands", default-features = false, features = ["sgx"] }
 commitments = { path = "../../modules/commitments", default-features = false, features = ["sgx"] }

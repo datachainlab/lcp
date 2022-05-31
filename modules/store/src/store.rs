@@ -1,8 +1,7 @@
 #[cfg(feature = "sgx")]
 use crate::sgx_reexport_prelude::*;
-use crate::{
-    errors::Result, Commit, CommitID, CommitSigner, CommitVerifier, Revision, SignedCommit,
-};
+use crate::{errors::Result, Commit, CommitID, Revision, SignedCommit, StoreError};
+use crypto::{Signer, Verifier};
 use std::vec::Vec;
 
 pub trait Store: KVStore + VerifiablePersistentStore {}
@@ -27,18 +26,22 @@ pub trait PersistentStore<T> {
 }
 
 pub trait VerifiablePersistentStore: CommitStore + PersistentStore<SignedCommit> {
-    fn load_and_verify(&mut self, verifier: &dyn CommitVerifier) -> Result<()> {
+    fn load_and_verify(&mut self, verifier: &dyn Verifier) -> Result<()> {
         match self.load()? {
-            Some(sc) => verifier.verify(&sc.commit.as_sign_msg()?, &sc.signature),
+            Some(sc) => verifier
+                .verify(&sc.commit.as_sign_msg()?, &sc.signature)
+                .map_err(StoreError::CryptoError),
             None => Ok(()),
         }
     }
 
-    fn commit_and_sign(&mut self, signer: &dyn CommitSigner) -> Result<SignedCommit> {
+    fn commit_and_sign(&mut self, signer: &dyn Signer) -> Result<SignedCommit> {
         let commit = self.commit()?;
-        let sig = signer.sign_hash(&commit.as_sign_msg()?)?;
+        let sig = signer
+            .sign_hash(&commit.as_sign_msg()?)
+            .map_err(StoreError::CryptoError)?;
         let mut pubkey = Default::default();
-        signer.use_verifier(&mut |verifier: &dyn CommitVerifier| {
+        signer.use_verifier(&mut |verifier: &dyn Verifier| {
             pubkey = verifier.get_pubkey();
         });
         let sc = SignedCommit::new(commit, pubkey, sig);
