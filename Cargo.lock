@@ -1622,7 +1622,6 @@ dependencies = [
  "serde_json",
  "sgx_tstd",
  "store",
- "tendermint-lc",
  "tendermint-proto",
  "tiny-keccak 1.5.0",
  "validation-context",
@@ -1771,6 +1770,7 @@ dependencies = [
  "thiserror 1.0.30",
  "thiserror 1.0.9",
  "time",
+ "validation-context",
 ]
 
 [[package]]

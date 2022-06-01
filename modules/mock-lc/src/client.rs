@@ -31,6 +31,7 @@ use serde_json::Value;
 use std::boxed::Box;
 use std::string::{String, ToString};
 use std::vec::Vec;
+use validation_context::ValidationParams;
 
 #[derive(Default)]
 pub struct MockLightClient;
@@ -42,7 +43,53 @@ impl LightClient for MockLightClient {
         any_client_state: Any,
         any_consensus_state: Any,
     ) -> Result<CreateClientResult, LightClientError> {
-        todo!()
+        let client_state = match AnyClientState::try_from(any_client_state.clone()) {
+            Ok(AnyClientState::Mock(client_state)) => AnyClientState::Mock(client_state),
+            #[allow(unreachable_patterns)]
+            Ok(s) => {
+                return Err(Error::UnexpectedClientTypeError(s.client_type().to_string()).into())
+            }
+            Err(e) => return Err(Error::ICS02Error(e).into()),
+        };
+        let consensus_state = match AnyConsensusState::try_from(any_consensus_state.clone()) {
+            Ok(AnyConsensusState::Mock(consensus_state)) => {
+                AnyConsensusState::Mock(consensus_state)
+            }
+            #[allow(unreachable_patterns)]
+            Ok(s) => {
+                return Err(Error::UnexpectedClientTypeError(s.client_type().to_string()).into())
+            }
+            Err(e) => return Err(Error::ICS02Error(e).into()),
+        };
+        let client_id = gen_client_id(&any_client_state, &any_consensus_state)?;
+        let height = client_state.latest_height();
+        let timestamp = consensus_state.timestamp();
+
+        let state_id = gen_state_id_from_any(&any_client_state, &any_consensus_state)
+            .map_err(|e| Error::OtherError(e).into())?;
+
+        Ok(CreateClientResult {
+            client_id: client_id.clone(),
+            client_type: ClientType::Mock.as_str().to_owned(),
+            any_client_state,
+            any_consensus_state,
+            height,
+            timestamp,
+            commitment: UpdateClientCommitment {
+                client_id,
+                prev_state_id: None,
+                new_state_id: state_id,
+                prev_height: None,
+                new_height: height,
+                timestamp: timestamp
+                    .into_datetime()
+                    .unwrap()
+                    .unix_timestamp_nanos()
+                    .try_into()
+                    .unwrap(),
+                validation_params: ValidationParams::Empty,
+            },
+        })
     }
 
     fn update_client(
@@ -116,4 +163,13 @@ pub fn register_implementations(registry: &mut LightClientRegistry) {
             Box::new(MockLightClient),
         )
         .unwrap()
+}
+
+pub fn gen_client_id(
+    any_client_state: &Any,
+    any_consensus_state: &Any,
+) -> Result<ClientId, LightClientError> {
+    let state_id = gen_state_id_from_any(any_client_state, any_consensus_state)
+        .map_err(LightClientError::OtherError)?;
+    Ok(serde_json::from_value::<ClientId>(Value::String(state_id.to_string())).unwrap())
 }
