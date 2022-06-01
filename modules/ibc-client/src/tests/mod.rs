@@ -1,12 +1,15 @@
 #[cfg(test)]
 mod tests {
     use crypto::EnclaveKey;
-    use enclave_commands::{Command, InitClientInput, LightClientCommand};
+    use enclave_commands::{
+        Command, CommandResult, InitClientInput, InitClientResult, LightClientCommand,
+        LightClientResult, UpdateClientInput, UpdateClientResult,
+    };
     use handler::router;
     use ibc::{
         core::ics02_client::{
             client_consensus::AnyConsensusState, client_state::AnyClientState,
-            client_type::ClientType,
+            client_type::ClientType, header::AnyHeader,
         },
         mock::{
             client_state::{MockClientState, MockConsensusState},
@@ -41,23 +44,60 @@ mod tests {
         let ek = EnclaveKey::new().unwrap();
         let mut store = MemStore::new();
 
-        let header = MockHeader::new(Height::new(0, 1));
-        let client_state = MockClientState::new(header);
-        let consensus_state = MockConsensusState::new(header);
+        let proof0 = {
+            let header = MockHeader::new(Height::new(0, 1));
+            let client_state = MockClientState::new(header);
+            let consensus_state = MockConsensusState::new(header);
 
-        let input = InitClientInput {
-            client_type: ClientType::Mock.as_str().to_string(),
-            any_client_state: Any::from(AnyClientState::Mock(client_state)),
-            any_consensus_state: Any::from(AnyConsensusState::Mock(consensus_state)),
-            current_timestamp: 0,
+            let input = InitClientInput {
+                client_type: ClientType::Mock.as_str().to_string(),
+                any_client_state: Any::from(AnyClientState::Mock(client_state)),
+                any_consensus_state: Any::from(AnyConsensusState::Mock(consensus_state)),
+                current_timestamp: 0,
+            };
+            assert_eq!(store.revision, 1);
+            let res = router::dispatch::<_, LocalLightClientRegistry>(
+                Some(&ek),
+                &mut store,
+                Command::LightClient(LightClientCommand::InitClient(input)),
+            );
+            assert!(res.is_ok(), "res={:?}", res);
+            assert_eq!(store.revision, 2);
+            if let CommandResult::LightClient(LightClientResult::InitClient(InitClientResult(
+                proof,
+            ))) = res.unwrap()
+            {
+                proof
+            } else {
+                unreachable!()
+            }
         };
-        assert_eq!(store.revision, 1);
-        let res = router::dispatch::<_, LocalLightClientRegistry>(
-            Some(&ek),
-            &mut store,
-            Command::LightClient(LightClientCommand::InitClient(input)),
-        );
-        assert!(res.is_ok());
-        assert_eq!(store.revision, 2);
+
+        let proof1 = {
+            let header = MockHeader::new(Height::new(0, 2));
+            let any_header = Any::from(AnyHeader::Mock(header));
+
+            let input = UpdateClientInput {
+                client_id: proof0.commitment().client_id,
+                any_header,
+                current_timestamp: 0,
+            };
+
+            let res = router::dispatch::<_, LocalLightClientRegistry>(
+                Some(&ek),
+                &mut store,
+                Command::LightClient(LightClientCommand::UpdateClient(input)),
+            );
+            assert!(res.is_ok(), "res={:?}", res);
+            assert_eq!(store.revision, 3);
+            if let CommandResult::LightClient(LightClientResult::UpdateClient(UpdateClientResult(
+                proof,
+            ))) = res.unwrap()
+            {
+                proof
+            } else {
+                unreachable!()
+            }
+        };
     }
 }

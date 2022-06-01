@@ -98,7 +98,83 @@ impl LightClient for MockLightClient {
         client_id: ClientId,
         any_header: Any,
     ) -> Result<UpdateClientResult, LightClientError> {
-        todo!()
+        let header = match AnyHeader::try_from(any_header) {
+            Ok(AnyHeader::Mock(header)) => AnyHeader::Mock(header),
+            #[allow(unreachable_patterns)]
+            Ok(h) => {
+                return Err(Error::UnexpectedClientTypeError(h.client_type().to_string()).into())
+            }
+            Err(e) => return Err(Error::ICS02Error(e).into()),
+        };
+
+        // Read client type from the host chain store. The client should already exist.
+        let client_type = ctx
+            .client_type(&client_id)
+            .map_err(|e| Error::ICS02Error(e).into())?;
+
+        let client_def = AnyClient::from_client_type(client_type);
+
+        // Read client state from the host chain store.
+        let client_state = ctx
+            .client_state(&client_id)
+            .map_err(|e| Error::ICS02Error(e).into())?;
+
+        if client_state.is_frozen() {
+            return Err(Error::ICS02Error(ICS02Error::client_frozen(client_id)).into());
+        }
+
+        let height = header.height();
+        let header_timestamp = header.timestamp();
+
+        let latest_height = client_state.latest_height();
+
+        // Read consensus state from the host chain store.
+        let latest_consensus_state =
+            ctx.consensus_state(&client_id, latest_height)
+                .map_err(|_| {
+                    Error::ICS02Error(ICS02Error::consensus_state_not_found(
+                        client_id.clone(),
+                        latest_height,
+                    ))
+                    .into()
+                })?;
+
+        // Use client_state to validate the new header against the latest consensus_state.
+        // This function will return the new client_state (its latest_height changed) and a
+        // consensus_state obtained from header. These will be later persisted by the keeper.
+        let (new_client_state, new_consensus_state) = client_def
+            .check_header_and_update_state(ctx, client_id.clone(), client_state.clone(), header)
+            .map_err(|e| {
+                Error::ICS02Error(ICS02Error::header_verification_failure(e.to_string())).into()
+            })?;
+
+        let prev_state_id = gen_state_id(client_state, latest_consensus_state)
+            .map_err(|e| Error::OtherError(e).into())?;
+        let new_state_id = gen_state_id(new_client_state.clone(), new_consensus_state.clone())
+            .map_err(|e| Error::OtherError(e).into())?;
+        let header_timestamp_nanos = header_timestamp
+            .into_datetime()
+            .unwrap()
+            .unix_timestamp_nanos()
+            .try_into()
+            .unwrap();
+
+        Ok(UpdateClientResult {
+            client_id: client_id.clone(),
+            new_any_client_state: Any::from(new_client_state),
+            new_any_consensus_state: Any::from(new_consensus_state),
+            height,
+            timestamp: header_timestamp,
+            commitment: UpdateClientCommitment {
+                client_id,
+                prev_state_id: Some(prev_state_id),
+                new_state_id,
+                prev_height: Some(latest_height),
+                new_height: height,
+                timestamp: header_timestamp_nanos,
+                validation_params: ValidationParams::Empty,
+            },
+        })
     }
 
     fn verify_client(
