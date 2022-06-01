@@ -25,8 +25,8 @@ thiserror = { version = "1.0.30", optional = true }
 thiserror-sgx = { package = "thiserror", git = "https://github.com/mesalock-linux/thiserror-sgx.git", optional = true }
 
 light-client = { path = "../light-client", default-features = false }
-commitments = { path = "../commitments", default-features = false, features = ["sgx"] }
-validation-context = { path = "../validation-context", default-features = false, features = ["sgx"] }
+commitments = { path = "../commitments", default-features = false }
+validation-context = { path = "../validation-context", default-features = false }
 
 [features]
 default = ["std"]
@@ -35,6 +35,7 @@ std = [
     "anyhow",
     "thiserror",
     "commitments/std",
+    "validation-context/std",
     "light-client/std"
 ]
 sgx = [
@@ -43,5 +44,6 @@ sgx = [
     "anyhow-sgx",
     "thiserror-sgx",
     "commitments/sgx",
+    "validation-context/sgx",
     "light-client/sgx"
 ]

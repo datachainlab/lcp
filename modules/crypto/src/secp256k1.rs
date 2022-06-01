@@ -23,8 +23,10 @@ use std::fs::File;
 #[cfg(feature = "sgx")]
 use std::sgxfs::SgxFile as File;
 #[cfg(not(feature = "sgx"))]
-fn rand_slice(rand: &mut [u8]) -> Result<(), Error> {
-    todo!()
+fn rand_slice(bz: &mut [u8]) -> Result<(), Error> {
+    use rand::{thread_rng, Rng};
+    thread_rng().fill(bz);
+    Ok(())
 }
 
 #[derive(Default)]
