@@ -52,17 +52,19 @@ impl LightClient for TendermintLightClient {
             Ok(AnyClientState::Tendermint(client_state)) => {
                 AnyClientState::Tendermint(client_state)
             }
-            #[cfg(any(test, feature = "mocks"))]
-            Ok(_) => return Err(Error::UnexpectedClientTypeError(any_client_state.type_url).into()),
+            #[allow(unreachable_patterns)]
+            Ok(s) => {
+                return Err(Error::UnexpectedClientTypeError(s.client_type().to_string()).into())
+            }
             Err(e) => return Err(Error::ICS02Error(e).into()),
         };
         let consensus_state = match AnyConsensusState::try_from(any_consensus_state.clone()) {
             Ok(AnyConsensusState::Tendermint(consensus_state)) => {
                 AnyConsensusState::Tendermint(consensus_state)
             }
-            #[cfg(any(test, feature = "mocks"))]
-            Ok(_) => {
-                return Err(Error::UnexpectedClientTypeError(any_consensus_state.type_url).into())
+            #[allow(unreachable_patterns)]
+            Ok(s) => {
+                return Err(Error::UnexpectedClientTypeError(s.client_type().to_string()).into())
             }
             Err(e) => return Err(Error::ICS02Error(e).into()),
         };
@@ -109,8 +111,10 @@ impl LightClient for TendermintLightClient {
                 let trusted_height = header.trusted_height;
                 (AnyHeader::Tendermint(header), trusted_height)
             }
-            #[cfg(any(test, feature = "mocks"))]
-            Ok(_) => return Err(Error::UnexpectedClientTypeError(any_client_state.type_url).into()),
+            #[allow(unreachable_patterns)]
+            Ok(h) => {
+                return Err(Error::UnexpectedClientTypeError(h.client_type().to_string()).into())
+            }
             Err(e) => return Err(Error::ICS02Error(e).into()),
         };
 

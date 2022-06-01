@@ -22,7 +22,8 @@ attestation-report = { path = "../attestation-report", default-features = false 
 [dev-dependencies]
 lazy_static = { version = "1.1.0", features = ["spin_no_std"] }
 light-client = { path = "../light-client" }
-tendermint = { path = "../tendermint" }
+tendermint-lc = { path = "../tendermint-lc" }
+mock-lc = { path = "../mock-lc" }
 crypto = { path = "../crypto" }
 handler = { path = "../handler" }
 store = { path = "../store" }

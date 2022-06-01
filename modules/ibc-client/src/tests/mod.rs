@@ -15,12 +15,12 @@ mod tests {
     use light_client::{LightClient, LightClientRegistry, LightClientSource};
     use prost_types::Any;
     use store::memory::MemStore;
-    use tendermint::register_implementations;
 
     lazy_static! {
         pub static ref LIGHT_CLIENT_REGISTRY: LightClientRegistry = {
             let mut registry = LightClientRegistry::new();
-            register_implementations(&mut registry);
+            tendermint_lc::register_implementations(&mut registry);
+            mock_lc::register_implementations(&mut registry);
             registry
         };
     }

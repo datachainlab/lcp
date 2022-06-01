@@ -1,7 +1,7 @@
 use lazy_static::lazy_static;
 use light_client::{LightClient, LightClientRegistry, LightClientSource};
 use std::boxed::Box;
-use tendermint::register_implementations;
+use tendermint_lc::register_implementations;
 
 lazy_static! {
     pub static ref LIGHT_CLIENT_REGISTRY: LightClientRegistry = {

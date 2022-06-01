@@ -1,14 +1,12 @@
 [package]
-name = "tendermint"
+name = "mock-lc"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
 sgx_tstd = { git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
-ibc = { git = "https://github.com/bluele/ibc-rs", branch = "sgx", default-features = false }
+ibc = { git = "https://github.com/bluele/ibc-rs", branch = "sgx", default-features = false, features = ["mocks"] }
 ibc-proto = { git = "https://github.com/bluele/ibc-rs", branch = "sgx", default-features = false }
-tendermint-light-client-verifier = { git = "https://github.com/informalsystems/tendermint-rs", rev = "235480171081fed74de7b3d3c19911304df29831", default-features = false }
-tendermint-proto = { git = "https://github.com/informalsystems/tendermint-rs", rev = "235480171081fed74de7b3d3c19911304df29831", default-features = false }
 prost = { version = "0.9", default-features = false }
 prost-types = { version = "0.9", default-features = false }
 sha2 = { version = "0.8", default-features = false }
@@ -26,7 +24,6 @@ thiserror-sgx = { package = "thiserror", git = "https://github.com/mesalock-linu
 
 light-client = { path = "../light-client", default-features = false }
 commitments = { path = "../commitments", default-features = false }
-validation-context = { path = "../validation-context", default-features = false }
 
 [features]
 default = ["std"]
@@ -35,7 +32,6 @@ std = [
     "anyhow",
     "thiserror",
     "commitments/std",
-    "validation-context/std",
     "light-client/std"
 ]
 sgx = [
@@ -44,6 +40,5 @@ sgx = [
     "anyhow-sgx",
     "thiserror-sgx",
     "commitments/sgx",
-    "validation-context/sgx",
     "light-client/sgx"
 ]

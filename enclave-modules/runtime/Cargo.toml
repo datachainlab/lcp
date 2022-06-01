@@ -28,7 +28,7 @@ enclave-utils = { path = "../utils" }
 
 handler = { path = "../../modules/handler", default-features = false, features = ["sgx"] }
 light-client = { path = "../../modules/light-client", default-features = false, features = ["sgx"] }
-tendermint = { path = "../../modules/tendermint", default-features = false, features = ["sgx"] }
+tendermint-lc = { path = "../../modules/tendermint-lc", default-features = false, features = ["sgx"] }
 enclave-commands = { path = "../../modules/enclave-commands", default-features = false, features = ["sgx"] }
 store = { path = "../../modules/store", default-features = false, features = ["sgx"] }
 settings = { path = "../../modules/settings", default-features = false, features = ["sgx"] }
