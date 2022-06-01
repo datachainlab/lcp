@@ -27,7 +27,8 @@ pub unsafe extern "C" fn ecall_execute_command(
 
     let mut km = KEY_MANAGER.write().unwrap();
     let result =
-        dispatch::<_, GlobalLightClientRegistry>(km.get_enclave_key(), get_store(), cmd).unwrap();
+        dispatch::<_, GlobalLightClientRegistry>(km.get_enclave_key(), &mut get_store(), cmd)
+            .unwrap();
     // if InitEnclave is succeeded, load the generated key into the key manager
     if let CommandResult::EnclaveManage(EnclaveManageResult::InitEnclave(_)) = result {
         km.load_enclave_key().unwrap();

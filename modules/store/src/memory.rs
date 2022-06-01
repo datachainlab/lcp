@@ -9,24 +9,33 @@ use log::*;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::collections::HashMap;
+use std::ops::Deref;
 use std::vec::Vec;
 
 // MemStore is only available for testing purposes
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct MemStore {
-    revision: u64,
-    committed: MemMap,
-    cached: MemMap,
+    pub revision: u64,
+    pub committed: MemMap,
+    pub cached: MemMap,
 }
 
-#[derive(Default, Serialize, Deserialize)]
-struct MemMap(#[serde(with = "hash_map_bytes")] HashMap<Vec<u8>, Vec<u8>>);
+#[derive(Default, Debug, Serialize, Deserialize)]
+pub struct MemMap(#[serde(with = "hash_map_bytes")] HashMap<Vec<u8>, Vec<u8>>);
 
 impl MemStore {
     pub fn new() -> Self {
         let mut store = MemStore::default();
         store.clear().unwrap();
         store
+    }
+}
+
+impl Deref for MemMap {
+    type Target = HashMap<Vec<u8>, Vec<u8>>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
     }
 }
 

@@ -1,6 +1,5 @@
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crypto::EnclaveKey;
     use enclave_commands::{Command, InitClientInput, LightClientCommand};
     use handler::router;
@@ -52,11 +51,13 @@ mod tests {
             any_consensus_state: Any::from(AnyConsensusState::Mock(consensus_state)),
             current_timestamp: 0,
         };
+        assert_eq!(store.revision, 1);
         let res = router::dispatch::<_, LocalLightClientRegistry>(
             Some(&ek),
-            store,
+            &mut store,
             Command::LightClient(LightClientCommand::InitClient(input)),
         );
         assert!(res.is_ok());
+        assert_eq!(store.revision, 2);
     }
 }

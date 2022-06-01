@@ -1,10 +1,6 @@
-use crate::light_client::verify_channel::verify_channel;
-use crate::light_client::verify_client::verify_client;
-use crate::light_client::verify_client_consensus::verify_client_consensus;
-use crate::light_client::verify_connection::verify_connection;
 use crate::light_client::{
-    init_client, update_client, verify_channel, verify_client_consensus, verify_connection,
-    LightClientHandlerError as Error,
+    init_client, update_client, verify_channel, verify_client, verify_client_consensus,
+    verify_connection, LightClientHandlerError as Error,
 };
 use context::Context;
 use enclave_commands::{CommandResult, LightClientCommand};

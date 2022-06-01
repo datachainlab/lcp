@@ -15,7 +15,7 @@ use store::Store;
 
 pub fn dispatch<'l, S: Store, L: LightClientSource<'l>>(
     ek: Option<&EnclaveKey>,
-    mut store: S,
+    store: &mut S,
     command: Command,
 ) -> Result<CommandResult> {
     let res = match command {
@@ -28,7 +28,7 @@ pub fn dispatch<'l, S: Store, L: LightClientSource<'l>>(
                     store
                         .load_and_verify(&ek.get_pubkey())
                         .map_err(Error::StoreError)?;
-                    Context::new(&mut store, ek)
+                    Context::new(store, ek)
                 }
             };
             match command {

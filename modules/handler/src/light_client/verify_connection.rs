@@ -1,12 +1,11 @@
 use crate::light_client::LightClientHandlerError as Error;
 use commitments::prover::prove_state_commitment;
-use context::Context;
-use context::{LightClientKeeper, LightClientReader};
+use context::{Context, LightClientReader};
 use enclave_commands::{LightClientResult, VerifyConnectionInput, VerifyConnectionResult};
 use light_client::LightClientSource;
-use store::Store;
+use store::KVStore;
 
-pub fn verify_connection<'l, S: Store, L: LightClientSource<'l>>(
+pub fn verify_connection<'l, S: KVStore, L: LightClientSource<'l>>(
     ctx: &mut Context<S>,
     input: VerifyConnectionInput,
 ) -> Result<LightClientResult, Error> {

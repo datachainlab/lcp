@@ -4,9 +4,9 @@ use context::Context;
 use context::{LightClientKeeper, LightClientReader};
 use enclave_commands::{InitClientInput, InitClientResult, LightClientResult};
 use light_client::LightClientSource;
-use store::Store;
+use store::KVStore;
 
-pub fn init_client<'l, S: Store, L: LightClientSource<'l>>(
+pub fn init_client<'l, S: KVStore, L: LightClientSource<'l>>(
     ctx: &mut Context<S>,
     input: InitClientInput,
 ) -> Result<LightClientResult, Error> {
