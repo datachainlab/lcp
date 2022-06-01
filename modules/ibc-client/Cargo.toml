@@ -19,6 +19,15 @@ commitments = { path = "../commitments", default-features = false }
 validation-context = { path = "../validation-context", default-features = false }
 attestation-report = { path = "../attestation-report", default-features = false }
 
+[dev-dependencies]
+lazy_static = { version = "1.1.0", features = ["spin_no_std"] }
+light-client = { path = "../light-client" }
+tendermint = { path = "../tendermint" }
+crypto = { path = "../crypto" }
+handler = { path = "../handler" }
+store = { path = "../store" }
+enclave-commands = { path = "../enclave-commands" }
+
 [features]
 default = ["std"]
 std = [

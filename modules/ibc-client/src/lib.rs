@@ -15,3 +15,5 @@ pub mod consensus_state;
 mod crypto;
 pub mod header;
 mod report;
+#[cfg(test)]
+mod tests;
