@@ -21,6 +21,5 @@ pub use state::{
 mod commitment;
 mod errors;
 mod proof;
-#[cfg(feature = "sgx")]
 pub mod prover;
 mod state;
