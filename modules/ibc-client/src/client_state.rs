@@ -14,7 +14,7 @@ use tendermint_proto::Protobuf;
 
 pub const LCP_CLIENT_STATE_TYPE_URL: &str = "/ibc.lightclients.lcp.v1.ClientState";
 
-#[derive(Clone, Default, Debug, PartialEq, Eq)]
+#[derive(Clone, Default, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ClientState {
     pub latest_height: Height,
     pub mr_enclave: Vec<u8>,

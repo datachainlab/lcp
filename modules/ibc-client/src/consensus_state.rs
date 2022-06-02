@@ -12,11 +12,12 @@ use ibc::{
     timestamp::Timestamp,
 };
 use prost_types::Any;
+use serde::{Deserialize, Serialize};
 use tendermint_proto::Protobuf;
 
 pub const LCP_CONSENSUS_STATE_TYPE_URL: &str = "/ibc.lightclients.lcp.v1.ConsensusState";
 
-#[derive(Clone, Default, Debug, PartialEq, Eq)]
+#[derive(Clone, Default, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ConsensusState {
     pub state_id: StateID,
     pub timestamp: u128, // means upstream's timestamp
