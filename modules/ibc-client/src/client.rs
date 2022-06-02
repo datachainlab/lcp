@@ -11,7 +11,6 @@ use ibc::core::ics02_client::client_consensus::ConsensusState as ICS02ConsensusS
 use ibc::core::ics02_client::client_def::{AnyClient, ClientDef};
 use ibc::core::ics02_client::client_state::ClientState as ICS02ClientState;
 use ibc::core::ics02_client::client_type::ClientType;
-use ibc::core::ics02_client::context::ClientReader;
 use ibc::core::ics02_client::error::Error as ICS02Error;
 use ibc::core::ics03_connection::connection::ConnectionEnd;
 use ibc::core::ics03_connection::context::ConnectionReader;
@@ -25,9 +24,9 @@ use ibc::core::ics24_host::path::{
 };
 use ibc::core::ics24_host::Path;
 use ibc::Height;
-use light_client::LightClientError;
 use light_client::{CreateClientResult, StateVerificationResult, UpdateClientResult};
 use light_client::{LightClient, LightClientRegistry};
+use light_client::{LightClientError, LightClientReader};
 use log::*;
 use prost_types::Any;
 use serde_json::Value;
@@ -44,7 +43,7 @@ pub struct LCPLightClient;
 impl LightClient for LCPLightClient {
     fn create_client(
         &self,
-        ctx: &dyn ClientReader,
+        ctx: &dyn LightClientReader,
         any_client_state: Any,
         any_consensus_state: Any,
     ) -> Result<CreateClientResult, LightClientError> {
@@ -84,7 +83,7 @@ impl LightClient for LCPLightClient {
 
     fn update_client(
         &self,
-        ctx: &dyn ClientReader,
+        ctx: &dyn LightClientReader,
         client_id: ClientId,
         any_header: Any,
     ) -> Result<UpdateClientResult, LightClientError> {

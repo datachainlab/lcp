@@ -1,8 +1,8 @@
 use crate::light_client::LightClientHandlerError as Error;
 use commitments::prover::prove_state_commitment;
-use context::{Context, LightClientReader};
+use context::Context;
 use enclave_commands::{LightClientResult, VerifyChannelInput, VerifyChannelResult};
-use light_client::LightClientSource;
+use light_client::{LightClientReader, LightClientSource};
 use store::KVStore;
 
 pub fn verify_channel<'l, S: KVStore, L: LightClientSource<'l>>(

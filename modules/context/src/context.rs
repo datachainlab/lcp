@@ -1,6 +1,5 @@
 #[cfg(feature = "sgx")]
 use crate::sgx_reexport_prelude::*;
-use crate::{LightClientKeeper, LightClientReader};
 use core::str::FromStr;
 use crypto::Signer;
 use ibc::{
@@ -20,6 +19,7 @@ use ibc::{
     timestamp::Timestamp,
     Height,
 };
+use light_client::{LightClientKeeper, LightClientReader};
 use log::*;
 use prost_types::Any;
 use serde::{Deserialize, Serialize};
@@ -97,6 +97,10 @@ impl<'a, 'e, S: KVStore> LightClientReader for Context<'a, 'e, S> {
 
     fn host_timestamp(&self) -> Timestamp {
         Timestamp::from_nanoseconds(self.current_timestamp.unwrap() as u64).unwrap()
+    }
+
+    fn as_client_reader(&self) -> &dyn ClientReader {
+        self
     }
 }
 

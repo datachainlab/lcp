@@ -10,7 +10,10 @@ pub mod sgx_reexport_prelude {
     pub use thiserror_sgx as thiserror;
 }
 
-pub use client::{CreateClientResult, LightClient, StateVerificationResult, UpdateClientResult};
+pub use client::{
+    CreateClientResult, LightClient, LightClientKeeper, LightClientReader, StateVerificationResult,
+    UpdateClientResult,
+};
 pub use errors::{LightClientError, LightClientInstanceError, Result};
 pub use registry::{LightClientRegistry, LightClientSource};
 

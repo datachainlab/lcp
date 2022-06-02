@@ -7,7 +7,6 @@ use ibc::core::ics02_client::client_consensus::{AnyConsensusState, ConsensusStat
 use ibc::core::ics02_client::client_def::{AnyClient, ClientDef};
 use ibc::core::ics02_client::client_state::{AnyClientState, ClientState};
 use ibc::core::ics02_client::client_type::ClientType;
-use ibc::core::ics02_client::context::ClientReader;
 use ibc::core::ics02_client::error::Error as ICS02Error;
 use ibc::core::ics02_client::header::{AnyHeader, Header};
 use ibc::core::ics03_connection::connection::ConnectionEnd;
@@ -22,20 +21,19 @@ use ibc::core::ics24_host::path::{
 };
 use ibc::core::ics24_host::Path;
 use ibc::Height;
-use light_client::LightClientError;
-use light_client::{CreateClientResult, StateVerificationResult, UpdateClientResult};
-use light_client::{LightClient, LightClientRegistry};
+use light_client::{
+    CreateClientResult, LightClient, LightClientError, LightClientReader, LightClientRegistry,
+    StateVerificationResult, UpdateClientResult,
+};
 use log::*;
 use prost_types::Any;
 use serde_json::Value;
 use std::boxed::Box;
-use std::string::{String, ToString};
+use std::string::ToString;
 use std::vec::Vec;
 use tendermint_light_client_verifier::options::Options;
 use tendermint_proto::Protobuf;
-use validation_context::tendermint::{
-    TendermintValidationOptions, TendermintValidationParams, TendermintValidationPredicate,
-};
+use validation_context::tendermint::{TendermintValidationOptions, TendermintValidationParams};
 use validation_context::ValidationParams;
 
 #[derive(Default)]
@@ -44,7 +42,7 @@ pub struct TendermintLightClient;
 impl LightClient for TendermintLightClient {
     fn create_client(
         &self,
-        ctx: &dyn ClientReader,
+        _: &dyn LightClientReader,
         any_client_state: Any,
         any_consensus_state: Any,
     ) -> Result<CreateClientResult, LightClientError> {
@@ -102,10 +100,12 @@ impl LightClient for TendermintLightClient {
 
     fn update_client(
         &self,
-        ctx: &dyn ClientReader,
+        ctx: &dyn LightClientReader,
         client_id: ClientId,
         any_header: Any,
     ) -> Result<UpdateClientResult, LightClientError> {
+        let ctx = ctx.as_client_reader();
+
         let (header, trusted_height) = match AnyHeader::try_from(any_header) {
             Ok(AnyHeader::Tendermint(header)) => {
                 let trusted_height = header.trusted_height;

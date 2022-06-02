@@ -9,8 +9,5 @@ pub mod sgx_reexport_prelude {
     pub use log_sgx as log;
 }
 
-pub use client::{LightClientKeeper, LightClientReader};
-pub use context::Context;
-
-mod client;
+pub use crate::context::Context;
 mod context;

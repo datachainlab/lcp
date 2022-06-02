@@ -1,5 +1,4 @@
 use commitments::{gen_state_id_from_bytes, StateCommitmentProof};
-use context::LightClientReader as ClientReader;
 use ibc::core::ics02_client::client_consensus::AnyConsensusState;
 use ibc::core::ics02_client::client_state::AnyClientState;
 use ibc::core::ics02_client::client_type::ClientType;
@@ -16,6 +15,7 @@ use ibc::core::ics24_host::identifier::{ChannelId, ClientId, ConnectionId, PortI
 use ibc::core::ics24_host::path::ClientConsensusStatePath;
 use ibc::Height;
 use ibc_proto::ibc::core::commitment::v1::MerkleProof;
+use light_client::LightClientReader as ClientReader;
 use tendermint_proto::Protobuf;
 use validation_context::{validation_predicate, ValidationContext, ValidationPredicate};
 

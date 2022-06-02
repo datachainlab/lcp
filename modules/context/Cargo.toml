@@ -10,19 +10,22 @@ sgx_tstd = { git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = 
 ibc = {git = "https://github.com/bluele/ibc-rs", branch = "sgx", default-features = false }
 prost-types = { version = "0.9", default-features = false }
 serde = { version = "1.0", default-features = false, features = ["alloc"] }
-store = { path = "../store", default-features = false }
-crypto = { path = "../crypto", default-features = false }
+
 log-sgx = { package = "log", git = "https://github.com/mesalock-linux/log-sgx", optional = true }
 log = { version = "0.4.8", optional = true }
-
 bincode-sgx = { package = "bincode", git = "https://github.com/bluele/bincode-sgx", branch = "serde", optional = true }
 bincode = { version = "1.3", optional = true }
+
+store = { path = "../store", default-features = false }
+crypto = { path = "../crypto", default-features = false }
+light-client = { path = "../light-client", default-features = false }
 
 [features]
 default = ["std"]
 std = [
     "store/std",
     "crypto/std",
+    "light-client/std",
     "bincode",
     "log"
 ]
@@ -30,6 +33,7 @@ sgx = [
     "sgx_tstd",
     "store/sgx",
     "crypto/sgx",
+    "light-client/sgx",
     "bincode-sgx",
     "log-sgx"
 ]

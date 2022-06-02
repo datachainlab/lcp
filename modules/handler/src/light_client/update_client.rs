@@ -1,9 +1,8 @@
 use crate::light_client::LightClientHandlerError as Error;
 use commitments::prover::prove_update_client_commitment;
 use context::Context;
-use context::{LightClientKeeper, LightClientReader};
 use enclave_commands::{LightClientResult, UpdateClientInput, UpdateClientResult};
-use light_client::LightClientSource;
+use light_client::{LightClientKeeper, LightClientReader, LightClientSource};
 use store::KVStore;
 
 pub fn update_client<'l, S: KVStore, L: LightClientSource<'l>>(
