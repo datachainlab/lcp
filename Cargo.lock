@@ -1604,6 +1604,8 @@ dependencies = [
 name = "lcp-ibc-client"
 version = "0.1.0"
 dependencies = [
+ "anyhow 1.0.28",
+ "anyhow 1.0.56",
  "attestation-report",
  "commitments",
  "context",
@@ -1616,6 +1618,8 @@ dependencies = [
  "libsecp256k1 0.3.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "libsecp256k1 0.3.5 (git+https://github.com/bluele/libsecp256k1-rs-sgx?rev=sgx_1.1.3-patch)",
  "light-client",
+ "log 0.4.14",
+ "log 0.4.16",
  "mock-lc",
  "prost-types",
  "serde",
@@ -1623,6 +1627,8 @@ dependencies = [
  "sgx_tstd",
  "store",
  "tendermint-proto",
+ "thiserror 1.0.30",
+ "thiserror 1.0.9",
  "tiny-keccak 1.5.0",
  "validation-context",
 ]

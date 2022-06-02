@@ -3,11 +3,16 @@ use crate::header::{Commitment, Header, UpdateClientHeader};
 #[cfg(feature = "sgx")]
 use crate::sgx_reexport_prelude::*;
 use ibc::core::ics02_client::client_type::ClientType;
+use ibc::core::ics02_client::error::Error;
 use ibc::core::ics02_client::header::Header as Ics02Header;
 use ibc::core::{ics02_client::client_state::AnyClientState, ics24_host::identifier::ChainId};
 use ibc::Height;
+use prost_types::Any;
 use serde::{Deserialize, Serialize};
 use std::vec::Vec;
+use tendermint_proto::Protobuf;
+
+pub const LCP_CLIENT_STATE_TYPE_URL: &str = "/ibc.lightclients.lcp.v1.ClientState";
 
 #[derive(Clone, Default, Debug, PartialEq, Eq)]
 pub struct ClientState {
@@ -33,6 +38,33 @@ impl ClientState {
         assert!(!self.contains(&key.0));
         self.keys.push(key);
         self
+    }
+}
+
+impl Protobuf<Any> for ClientState {}
+
+impl From<ClientState> for Any {
+    fn from(value: ClientState) -> Self {
+        Any {
+            type_url: LCP_CLIENT_STATE_TYPE_URL.to_string(),
+            value: value
+                .encode_vec()
+                .expect("encoding to `Any` from `ClientState`"),
+        }
+    }
+}
+
+impl TryFrom<Any> for ClientState {
+    type Error = Error;
+
+    fn try_from(raw: Any) -> Result<Self, Self::Error> {
+        match raw.type_url.as_str() {
+            "" => Err(Error::empty_client_state_response()),
+            LCP_CLIENT_STATE_TYPE_URL => {
+                Ok(ClientState::decode_vec(&raw.value).map_err(Error::decode_raw_client_state)?)
+            }
+            _ => Err(Error::unknown_client_state_type(raw.type_url)),
+        }
     }
 }
 

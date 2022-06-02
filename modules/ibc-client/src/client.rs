@@ -1,0 +1,187 @@
+use crate::client_def::LCPClient;
+use crate::client_state::ClientState;
+use crate::consensus_state::ConsensusState;
+use crate::errors::LCPLCError as Error;
+use crate::header::Header;
+#[cfg(feature = "sgx")]
+use crate::sgx_reexport_prelude::*;
+use alloc::borrow::ToOwned;
+use commitments::{gen_state_id, gen_state_id_from_any, StateCommitment, UpdateClientCommitment};
+use ibc::core::ics02_client::client_consensus::ConsensusState as ICS02ConsensusState;
+use ibc::core::ics02_client::client_def::{AnyClient, ClientDef};
+use ibc::core::ics02_client::client_state::ClientState as ICS02ClientState;
+use ibc::core::ics02_client::client_type::ClientType;
+use ibc::core::ics02_client::context::ClientReader;
+use ibc::core::ics02_client::error::Error as ICS02Error;
+use ibc::core::ics03_connection::connection::ConnectionEnd;
+use ibc::core::ics03_connection::context::ConnectionReader;
+use ibc::core::ics03_connection::error::Error as ICS03Error;
+use ibc::core::ics04_channel::channel::ChannelEnd;
+use ibc::core::ics04_channel::error::Error as ICS04Error;
+use ibc::core::ics23_commitment::commitment::{CommitmentPrefix, CommitmentProofBytes};
+use ibc::core::ics24_host::identifier::{ChannelId, ClientId, ConnectionId, PortId};
+use ibc::core::ics24_host::path::{
+    ChannelEndsPath, ClientConsensusStatePath, ClientStatePath, ConnectionsPath,
+};
+use ibc::core::ics24_host::Path;
+use ibc::Height;
+use light_client::LightClientError;
+use light_client::{CreateClientResult, StateVerificationResult, UpdateClientResult};
+use light_client::{LightClient, LightClientRegistry};
+use log::*;
+use prost_types::Any;
+use serde_json::Value;
+use std::boxed::Box;
+use std::string::{String, ToString};
+use std::vec::Vec;
+use validation_context::ValidationParams;
+
+pub const LCP_CLIENT_TYPE: &str = "0000-lcp";
+
+#[derive(Default)]
+pub struct LCPLightClient;
+
+impl LightClient for LCPLightClient {
+    fn create_client(
+        &self,
+        ctx: &dyn ClientReader,
+        any_client_state: Any,
+        any_consensus_state: Any,
+    ) -> Result<CreateClientResult, LightClientError> {
+        let client_state = ClientState::try_from(any_client_state.clone())
+            .map_err(LightClientError::ICS02Error)?;
+        let consensus_state = ConsensusState::try_from(any_consensus_state.clone())
+            .map_err(LightClientError::ICS02Error)?;
+        let client_id = gen_client_id(&any_client_state, &any_consensus_state)?;
+        let height = client_state.latest_height();
+        let timestamp = consensus_state.get_timestamp();
+        let state_id = gen_state_id_from_any(&any_client_state, &any_consensus_state)
+            .map_err(|e| LightClientError::OtherError(e).into())?;
+
+        Ok(CreateClientResult {
+            client_id: client_id.clone(),
+            client_type: LCP_CLIENT_TYPE.to_owned(),
+            any_client_state,
+            any_consensus_state,
+            height,
+            timestamp,
+            commitment: UpdateClientCommitment {
+                client_id,
+                prev_state_id: None,
+                new_state_id: state_id,
+                prev_height: None,
+                new_height: height,
+                timestamp: timestamp
+                    .into_datetime()
+                    .unwrap()
+                    .unix_timestamp_nanos()
+                    .try_into()
+                    .unwrap(),
+                validation_params: ValidationParams::Empty,
+            },
+        })
+    }
+
+    fn update_client(
+        &self,
+        ctx: &dyn ClientReader,
+        client_id: ClientId,
+        any_header: Any,
+    ) -> Result<UpdateClientResult, LightClientError> {
+        let header = Header::try_from(any_header).map_err(LightClientError::ICS02Error)?;
+
+        // // Read client type from the host chain store. The client should already exist.
+        // let client_type = ctx
+        //     .client_type(&client_id)
+        //     .map_err(|e| Error::ICS02Error(e).into())?;
+
+        // // Read client state from the host chain store.
+        // let client_state = ctx
+        //     .client_state(&client_id)
+        //     .map_err(|e| Error::ICS02Error(e).into())?;
+
+        // if client_state.is_frozen() {
+        //     return Err(Error::ICS02Error(ICS02Error::client_frozen(client_id)).into());
+        // }
+
+        // // Use client_state to validate the new header against the latest consensus_state.
+        // // This function will return the new client_state (its latest_height changed) and a
+        // // consensus_state obtained from header. These will be later persisted by the keeper.
+        // let (new_client_state, new_consensus_state) = LCPClient {}
+        //     .check_header_and_update_state(ctx, client_id.clone(), client_state.clone(), header)
+        //     .map_err(|e| {
+        //         Error::ICS02Error(ICS02Error::header_verification_failure(e.to_string())).into()
+        //     })?;
+
+        todo!()
+    }
+
+    fn verify_client(
+        &self,
+        ctx: &dyn ConnectionReader,
+        client_id: ClientId,
+        expected_client_state: Any,
+        counterparty_prefix: Vec<u8>,
+        counterparty_client_id: ClientId,
+        proof_height: Height,
+        proof: Vec<u8>,
+    ) -> Result<StateVerificationResult, LightClientError> {
+        todo!()
+    }
+
+    fn verify_client_consensus(
+        &self,
+        ctx: &dyn ConnectionReader,
+        client_id: ClientId,
+        expected_client_consensus_state: Any,
+        counterparty_prefix: Vec<u8>,
+        counterparty_client_id: ClientId,
+        counterparty_consensus_height: Height,
+        proof_height: Height,
+        proof: Vec<u8>,
+    ) -> Result<StateVerificationResult, LightClientError> {
+        todo!()
+    }
+
+    fn verify_connection(
+        &self,
+        ctx: &dyn ConnectionReader,
+        client_id: ClientId,
+        expected_connection_state: ConnectionEnd,
+        counterparty_prefix: Vec<u8>,
+        counterparty_connection_id: ConnectionId,
+        proof_height: Height,
+        proof: Vec<u8>,
+    ) -> Result<StateVerificationResult, LightClientError> {
+        todo!()
+    }
+
+    fn verify_channel(
+        &self,
+        ctx: &dyn ConnectionReader,
+        client_id: ClientId,
+        expected_channel_state: ChannelEnd,
+        counterparty_prefix: Vec<u8>,
+        counterparty_port_id: PortId,
+        counterparty_channel_id: ChannelId,
+        proof_height: Height,
+        proof: Vec<u8>,
+    ) -> Result<StateVerificationResult, LightClientError> {
+        todo!()
+    }
+}
+
+pub fn register_implementations(registry: &mut LightClientRegistry) {
+    registry
+        .put(LCP_CLIENT_TYPE.to_string(), Box::new(LCPLightClient))
+        .unwrap()
+}
+
+pub fn gen_client_id(
+    any_client_state: &Any,
+    any_consensus_state: &Any,
+) -> Result<ClientId, LightClientError> {
+    let state_id = gen_state_id_from_any(any_client_state, any_consensus_state)
+        .map_err(LightClientError::OtherError)?;
+    Ok(serde_json::from_value::<ClientId>(Value::String(state_id.to_string())).unwrap())
+}

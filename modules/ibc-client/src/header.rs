@@ -4,11 +4,16 @@ use crate::{crypto::Address, report::AttestationVerificationReport};
 use attestation_report::EndorsedAttestationReport;
 use commitments::{StateID, UpdateClientCommitment, UpdateClientCommitmentProof};
 use ibc::core::ics02_client::client_type::ClientType;
+use ibc::core::ics02_client::error::Error;
 use ibc::core::ics02_client::header::AnyHeader;
 use ibc::timestamp::Timestamp;
 use ibc::Height;
+use prost_types::Any;
 use serde::{Deserialize, Serialize};
+use tendermint_proto::Protobuf;
 use validation_context::ValidationParams;
+
+pub const LCP_HEADER_TYPE_URL: &str = "/ibc.lcp.Header";
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub enum Header {
@@ -112,5 +117,32 @@ impl ibc::core::ics02_client::header::Header for Header {
     fn wrap_any(self) -> AnyHeader {
         // NOTE: AnyHeader is defined as enum in ibc-rs, so we cannot support an additional type
         todo!()
+    }
+}
+
+impl Protobuf<Any> for Header {}
+
+impl From<Header> for Any {
+    fn from(value: Header) -> Self {
+        Any {
+            type_url: LCP_HEADER_TYPE_URL.to_string(),
+            value: value
+                .encode_vec()
+                .expect("encoding to `Any` from `ClientState`"),
+        }
+    }
+}
+
+impl TryFrom<Any> for Header {
+    type Error = Error;
+
+    fn try_from(raw: Any) -> Result<Self, Self::Error> {
+        match raw.type_url.as_str() {
+            "" => Err(Error::empty_client_state_response()),
+            LCP_HEADER_TYPE_URL => {
+                Ok(Header::decode_vec(&raw.value).map_err(Error::invalid_raw_header)?)
+            }
+            _ => Err(Error::unknown_header_type(raw.type_url)),
+        }
     }
 }

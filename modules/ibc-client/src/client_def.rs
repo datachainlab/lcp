@@ -31,26 +31,6 @@ use crate::report::{read_enclave_key_from_report, verify_report_and_get_key_expi
 pub struct LCPClient {}
 
 impl LCPClient {
-    // initialise is called on CreateClient
-    pub fn initialise(
-        &self,
-        client_state: &ClientState,
-        consensus_state: &ConsensusState,
-    ) -> Result<(), Ics02Error> {
-        // An initial client state's keys must be empty
-        assert!(client_state.keys.len() == 0);
-        // key_expiration must not be 0
-        assert!(client_state.key_expiration > 0);
-        // An initial client state's latest height must be empty
-        assert!(client_state.latest_height.is_zero());
-        // mr_enclave length must be 32
-        assert!(client_state.mr_enclave.len() == 32);
-        // An initial consensus state must be empty
-        assert!(consensus_state.is_empty());
-
-        Ok(())
-    }
-
     // check_header_and_update_state is called on UpdateClient
     pub fn check_header_and_update_state(
         &self,
@@ -140,7 +120,7 @@ impl LCPClient {
         // check if the proxy's trusted consensus state exists in the store
         let prev_consensus_state: ConsensusState = ctx
             .consensus_state(&client_id, header.prev_height().unwrap())?
-            .into();
+            .try_into()?;
         assert!(prev_consensus_state.state_id == header.prev_state_id().unwrap());
 
         // check if the specified signer exists in the client state
@@ -182,7 +162,7 @@ impl LCPClient {
         let any_consensus_state = ctx
             .consensus_state(&client_id, client_state.latest_height)
             .unwrap();
-        let consensus_state = ConsensusState::from(any_consensus_state);
+        let consensus_state = ConsensusState::try_from(any_consensus_state)?;
         // TODO consider to improve sybil attack resistance for persmissionless environment
         let new_client_state = client_state.with_new_key((key, key_expiration));
 
@@ -263,7 +243,7 @@ impl LCPClient {
         assert!(value == commitment.value);
 
         // check if `.state_id` matches the corresponding stored consensus state's state_id
-        let consensus_state = ConsensusState::from(ctx.consensus_state(client_id, height)?);
+        let consensus_state = ConsensusState::try_from(ctx.consensus_state(client_id, height)?)?;
         assert!(consensus_state.state_id == commitment.state_id);
 
         // check if the `commitment_proof.signer` matches the commitment prover
@@ -276,6 +256,48 @@ impl LCPClient {
 
         // check if the specified signer exists in the client state
         assert!(client_state.contains(&signer));
+
+        Ok(())
+    }
+
+    // initialise is called on CreateClient
+    #[cfg(not(test))]
+    pub fn initialise(
+        &self,
+        client_state: &ClientState,
+        consensus_state: &ConsensusState,
+    ) -> Result<(), Ics02Error> {
+        // An initial client state's keys must be empty
+        assert!(client_state.keys.len() == 0);
+        // key_expiration must not be 0
+        assert!(client_state.key_expiration > 0);
+        // An initial client state's latest height must be empty
+        assert!(client_state.latest_height.is_zero());
+        // mr_enclave length must be 32
+        assert!(client_state.mr_enclave.len() == 32);
+        // An initial consensus state must be empty
+        assert!(consensus_state.is_empty());
+
+        Ok(())
+    }
+
+    // WARNING: FOR ONLY TESTING PURPOSE: initialise is called on CreateClient
+    #[cfg(test)]
+    pub fn initialise(
+        &self,
+        client_state: &ClientState,
+        consensus_state: &ConsensusState,
+    ) -> Result<(), Ics02Error> {
+        // An initial client state's keys must not be empty
+        assert!(client_state.keys.len() != 0);
+        // key_expiration must not be 0
+        assert!(client_state.key_expiration > 0);
+        // An initial client state's latest height must be empty
+        assert!(client_state.latest_height.is_zero());
+        // mr_enclave length must be 0
+        assert!(client_state.mr_enclave.len() == 0);
+        // An initial consensus state must be empty
+        assert!(consensus_state.is_empty());
 
         Ok(())
     }

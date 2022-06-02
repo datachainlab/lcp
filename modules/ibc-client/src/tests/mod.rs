@@ -22,6 +22,8 @@ mod tests {
     use prost_types::Any;
     use store::memory::MemStore;
 
+    use crate::client_def::LCPClient;
+
     lazy_static! {
         pub static ref LIGHT_CLIENT_REGISTRY: LightClientRegistry = {
             let mut registry = LightClientRegistry::new();
@@ -42,7 +44,10 @@ mod tests {
     #[test]
     fn test_init_client() {
         let ek = EnclaveKey::new().unwrap();
-        let mut store = MemStore::new();
+        let mut lcp_store = MemStore::new();
+        let mut ibc_store = MemStore::new();
+
+        let client = LCPClient::default();
 
         let proof0 = {
             let header = MockHeader::new(Height::new(0, 1));
@@ -55,14 +60,14 @@ mod tests {
                 any_consensus_state: Any::from(AnyConsensusState::Mock(consensus_state)),
                 current_timestamp: 0,
             };
-            assert_eq!(store.revision, 1);
+            assert_eq!(lcp_store.revision, 1);
             let res = router::dispatch::<_, LocalLightClientRegistry>(
                 Some(&ek),
-                &mut store,
+                &mut lcp_store,
                 Command::LightClient(LightClientCommand::InitClient(input)),
             );
             assert!(res.is_ok(), "res={:?}", res);
-            assert_eq!(store.revision, 2);
+            assert_eq!(lcp_store.revision, 2);
             if let CommandResult::LightClient(LightClientResult::InitClient(InitClientResult(
                 proof,
             ))) = res.unwrap()
@@ -85,14 +90,14 @@ mod tests {
 
             let res = router::dispatch::<_, LocalLightClientRegistry>(
                 Some(&ek),
-                &mut store,
+                &mut lcp_store,
                 Command::LightClient(LightClientCommand::UpdateClient(input)),
             );
             assert!(res.is_ok(), "res={:?}", res);
-            assert_eq!(store.revision, 3);
-            if let CommandResult::LightClient(LightClientResult::UpdateClient(UpdateClientResult(
-                proof,
-            ))) = res.unwrap()
+            assert_eq!(lcp_store.revision, 3);
+            if let CommandResult::LightClient(LightClientResult::UpdateClient(
+                UpdateClientResult(proof),
+            )) = res.unwrap()
             {
                 proof
             } else {
