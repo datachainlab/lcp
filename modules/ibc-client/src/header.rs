@@ -92,6 +92,24 @@ pub trait Commitment {
     }
 }
 
+impl Header {
+    pub fn get_height(&self) -> Option<Height> {
+        match self {
+            Header::UpdateClient(h) => Some(h.height()),
+            _ => None,
+        }
+    }
+
+    pub fn get_timestamp(&self) -> Option<Timestamp> {
+        match self {
+            Header::UpdateClient(h) => {
+                Some(Timestamp::from_nanoseconds(h.timestamp_as_u128() as u64).unwrap())
+            }
+            _ => None,
+        }
+    }
+}
+
 impl ibc::core::ics02_client::header::Header for Header {
     fn client_type(&self) -> ClientType {
         // NOTE: ClientType is defined as enum in ibc-rs, so we cannot support an additional type
@@ -99,19 +117,11 @@ impl ibc::core::ics02_client::header::Header for Header {
     }
 
     fn height(&self) -> Height {
-        match self {
-            Header::UpdateClient(h) => h.height(),
-            _ => todo!(),
-        }
+        self.get_height().unwrap()
     }
 
     fn timestamp(&self) -> Timestamp {
-        match self {
-            Header::UpdateClient(h) => {
-                Timestamp::from_nanoseconds(h.timestamp_as_u128() as u64).unwrap()
-            }
-            _ => todo!(),
-        }
+        self.get_timestamp().unwrap()
     }
 
     fn wrap_any(self) -> AnyHeader {

@@ -1,5 +1,9 @@
+mod client;
+mod errors;
 #[cfg(test)]
 mod tests {
+    use super::*;
+    use crate::client_def::LCPClient;
     use crypto::EnclaveKey;
     use enclave_commands::{
         Command, CommandResult, InitClientInput, InitClientResult, LightClientCommand,
@@ -21,8 +25,6 @@ mod tests {
     use light_client::{LightClient, LightClientRegistry, LightClientSource};
     use prost_types::Any;
     use store::memory::MemStore;
-
-    use crate::client_def::LCPClient;
 
     lazy_static! {
         pub static ref LIGHT_CLIENT_REGISTRY: LightClientRegistry = {

@@ -10,6 +10,12 @@ pub enum ValidationParams {
     Tendermint(TendermintValidationParams),
 }
 
+impl Default for ValidationParams {
+    fn default() -> Self {
+        Self::Empty
+    }
+}
+
 impl ValidationParams {
     pub fn to_vec(&self) -> Vec<u8> {
         use ValidationParams::*;

@@ -1,7 +1,7 @@
+use super::errors::LCPLCError as Error;
 use crate::client_def::LCPClient;
 use crate::client_state::ClientState;
 use crate::consensus_state::ConsensusState;
-use crate::errors::LCPLCError as Error;
 use crate::header::Header;
 #[cfg(feature = "sgx")]
 use crate::sgx_reexport_prelude::*;
@@ -40,6 +40,8 @@ pub const LCP_CLIENT_TYPE: &str = "0000-lcp";
 #[derive(Default)]
 pub struct LCPLightClient;
 
+// WARNING: This implementation is intended for testing purpose only
+// each function always returns the default value as a commitment
 impl LightClient for LCPLightClient {
     fn create_client(
         &self,
@@ -58,26 +60,13 @@ impl LightClient for LCPLightClient {
             .map_err(|e| LightClientError::OtherError(e).into())?;
 
         Ok(CreateClientResult {
-            client_id: client_id.clone(),
+            client_id,
             client_type: LCP_CLIENT_TYPE.to_owned(),
             any_client_state,
             any_consensus_state,
             height,
             timestamp,
-            commitment: UpdateClientCommitment {
-                client_id,
-                prev_state_id: None,
-                new_state_id: state_id,
-                prev_height: None,
-                new_height: height,
-                timestamp: timestamp
-                    .into_datetime()
-                    .unwrap()
-                    .unix_timestamp_nanos()
-                    .try_into()
-                    .unwrap(),
-                validation_params: ValidationParams::Empty,
-            },
+            commitment: UpdateClientCommitment::default(),
         })
     }
 
@@ -89,30 +78,44 @@ impl LightClient for LCPLightClient {
     ) -> Result<UpdateClientResult, LightClientError> {
         let header = Header::try_from(any_header).map_err(LightClientError::ICS02Error)?;
 
-        // // Read client type from the host chain store. The client should already exist.
-        // let client_type = ctx
-        //     .client_type(&client_id)
-        //     .map_err(|e| Error::ICS02Error(e).into())?;
+        // Read client type from the host chain store. The client should already exist.
+        let client_type = ctx
+            .client_type(&client_id)
+            .map_err(LightClientError::ICS02Error)?;
 
-        // // Read client state from the host chain store.
-        // let client_state = ctx
-        //     .client_state(&client_id)
-        //     .map_err(|e| Error::ICS02Error(e).into())?;
+        assert!(client_type.eq(LCP_CLIENT_TYPE));
+
+        // Read client state from the host chain store.
+        let client_state = ClientState::try_from(
+            ctx.client_state(&client_id)
+                .map_err(LightClientError::ICS02Error)?,
+        )
+        .map_err(LightClientError::ICS02Error)?;
 
         // if client_state.is_frozen() {
         //     return Err(Error::ICS02Error(ICS02Error::client_frozen(client_id)).into());
         // }
 
-        // // Use client_state to validate the new header against the latest consensus_state.
-        // // This function will return the new client_state (its latest_height changed) and a
-        // // consensus_state obtained from header. These will be later persisted by the keeper.
-        // let (new_client_state, new_consensus_state) = LCPClient {}
-        //     .check_header_and_update_state(ctx, client_id.clone(), client_state.clone(), header)
-        //     .map_err(|e| {
-        //         Error::ICS02Error(ICS02Error::header_verification_failure(e.to_string())).into()
-        //     })?;
+        let height = header.get_height().unwrap_or_default();
+        let header_timestamp = header.get_timestamp().unwrap_or_default();
 
-        todo!()
+        // Use client_state to validate the new header against the latest consensus_state.
+        // This function will return the new client_state (its latest_height changed) and a
+        // consensus_state obtained from header. These will be later persisted by the keeper.
+        let (new_client_state, new_consensus_state) = LCPClient {}
+            .check_header_and_update_state(ctx, client_id.clone(), client_state.clone(), header)
+            .map_err(|e| {
+                Error::ICS02Error(ICS02Error::header_verification_failure(e.to_string())).into()
+            })?;
+
+        Ok(UpdateClientResult {
+            client_id,
+            new_any_client_state: Any::from(new_client_state),
+            new_any_consensus_state: Any::from(new_consensus_state),
+            height,
+            timestamp: header_timestamp,
+            commitment: UpdateClientCommitment::default(),
+        })
     }
 
     fn verify_client(

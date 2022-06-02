@@ -13,12 +13,10 @@ pub mod sgx_reexport_prelude {
     pub use thiserror_sgx as thiserror;
 }
 
-pub mod client;
 pub mod client_def;
 pub mod client_state;
 pub mod consensus_state;
 mod crypto;
-mod errors;
 pub mod header;
 mod report;
 #[cfg(test)]

@@ -17,7 +17,7 @@ use validation_context::ValidationParams;
 
 use rlp_derive::{RlpDecodable, RlpEncodable};
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, PartialEq, Serialize, Deserialize)]
 pub struct UpdateClientCommitment {
     pub client_id: ClientId,
     pub prev_state_id: Option<StateID>,
