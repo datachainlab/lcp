@@ -8,6 +8,7 @@ sgx_tstd = { git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = 
 ibc = {git = "https://github.com/bluele/ibc-rs", branch = "sgx", default-features = false }
 ibc-proto = { git = "https://github.com/bluele/ibc-rs", branch = "sgx", default-features = false }
 tendermint-proto = { git = "https://github.com/informalsystems/tendermint-rs", rev = "235480171081fed74de7b3d3c19911304df29831", default-features = false }
+prost = { version = "0.9", default-features = false }
 prost-types = { version = "0.9", default-features = false }
 tiny-keccak = "1.4"
 serde = { version = "1.0", default-features = false, features = ["alloc"] }
@@ -18,6 +19,7 @@ commitments = { path = "../commitments", default-features = false }
 validation-context = { path = "../validation-context", default-features = false }
 attestation-report = { path = "../attestation-report", default-features = false }
 light-client = { path = "../light-client", default-features = false  }
+lcp-proto = { path = "../../proto", default-features = false }
 
 log = { version = "0.4.8", optional = true }
 log-sgx = { package = "log", git = "https://github.com/mesalock-linux/log-sgx", optional = true }

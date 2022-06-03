@@ -1,12 +1,14 @@
 use crate::crypto::Address;
-use crate::header::{Commitment, Header, UpdateClientHeader};
+use crate::header::Commitment;
 #[cfg(feature = "sgx")]
 use crate::sgx_reexport_prelude::*;
 use ibc::core::ics02_client::client_type::ClientType;
 use ibc::core::ics02_client::error::Error;
-use ibc::core::ics02_client::header::Header as Ics02Header;
 use ibc::core::{ics02_client::client_state::AnyClientState, ics24_host::identifier::ChainId};
 use ibc::Height;
+use lcp_proto::ibc::core::client::v1::Height as ProtoHeight;
+use lcp_proto::ibc::lightclients::lcp::v1::ClientState as RawClientState;
+use prost::Message;
 use prost_types::Any;
 use serde::{Deserialize, Serialize};
 use std::vec::Vec;
@@ -41,15 +43,35 @@ impl ClientState {
     }
 }
 
+impl From<ClientState> for RawClientState {
+    fn from(value: ClientState) -> Self {
+        RawClientState {
+            latest_height: Some(ProtoHeight {
+                revision_number: value.latest_height.revision_number,
+                revision_height: value.latest_height.revision_height,
+            }),
+            mrenclave: Default::default(),
+            keys: Default::default(),
+        }
+    }
+}
+
+impl TryFrom<RawClientState> for ClientState {
+    type Error = Error;
+
+    fn try_from(raw: RawClientState) -> Result<Self, Self::Error> {
+        Ok(Default::default())
+    }
+}
+
 impl Protobuf<Any> for ClientState {}
 
 impl From<ClientState> for Any {
     fn from(value: ClientState) -> Self {
+        let value = RawClientState::try_from(value).expect("encoding to `Any` from `ClientState`");
         Any {
             type_url: LCP_CLIENT_STATE_TYPE_URL.to_string(),
-            value: value
-                .encode_vec()
-                .expect("encoding to `Any` from `ClientState`"),
+            value: value.encode_to_vec(),
         }
     }
 }

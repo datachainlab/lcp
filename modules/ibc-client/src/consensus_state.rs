@@ -11,6 +11,8 @@ use ibc::{
     },
     timestamp::Timestamp,
 };
+use lcp_proto::ibc::lightclients::lcp::v1::ConsensusState as RawConsensusState;
+use prost::Message;
 use prost_types::Any;
 use serde::{Deserialize, Serialize};
 use tendermint_proto::Protobuf;
@@ -33,15 +35,32 @@ impl ConsensusState {
     }
 }
 
+impl From<ConsensusState> for RawConsensusState {
+    fn from(value: ConsensusState) -> Self {
+        RawConsensusState {
+            state_id: value.state_id.to_vec(),
+            timestamp: Default::default(),
+        }
+    }
+}
+
+impl TryFrom<RawConsensusState> for ConsensusState {
+    type Error = Error;
+
+    fn try_from(raw: RawConsensusState) -> Result<Self, Self::Error> {
+        Ok(Default::default())
+    }
+}
+
 impl Protobuf<Any> for ConsensusState {}
 
 impl From<ConsensusState> for Any {
     fn from(value: ConsensusState) -> Self {
+        let value =
+            RawConsensusState::try_from(value).expect("encoding to `Any` from `ConsensusState`");
         Any {
             type_url: LCP_CONSENSUS_STATE_TYPE_URL.to_string(),
-            value: value
-                .encode_vec()
-                .expect("encoding to `Any` from `ConsensusState`"),
+            value: value.encode_to_vec(),
         }
     }
 }

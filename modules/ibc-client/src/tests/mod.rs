@@ -2,8 +2,13 @@ mod client;
 mod errors;
 #[cfg(test)]
 mod tests {
+    use super::client::register_implementations;
+    use super::client::LCP_CLIENT_TYPE;
     use super::*;
-    use crate::client_def::LCPClient;
+    use crate::{
+        client_def::LCPClient, client_state::ClientState, consensus_state::ConsensusState,
+        crypto::Address, header::Header,
+    };
     use crypto::EnclaveKey;
     use enclave_commands::{
         Command, CommandResult, InitClientInput, InitClientResult, LightClientCommand,
@@ -30,6 +35,7 @@ mod tests {
         pub static ref LIGHT_CLIENT_REGISTRY: LightClientRegistry = {
             let mut registry = LightClientRegistry::new();
             mock_lc::register_implementations(&mut registry);
+            register_implementations(&mut registry);
             registry
         };
     }
@@ -79,6 +85,26 @@ mod tests {
                 unreachable!()
             }
         };
+
+        {
+            let initial_client_state = ClientState {
+                latest_height: Height::new(0, 1),
+                mr_enclave: Default::default(),
+                key_expiration: 1000000,
+                keys: vec![(Address::from(ek.get_pubkey().get_address().as_slice()), 0)],
+            };
+            let initial_consensus_state = ConsensusState {
+                state_id: proof0.commitment().new_state_id,
+                timestamp: proof0.commitment().timestamp,
+            };
+
+            let input = InitClientInput {
+                client_type: LCP_CLIENT_TYPE.to_string(),
+                any_client_state: Any::from(initial_client_state),
+                any_consensus_state: Any::from(initial_consensus_state),
+                current_timestamp: 0,
+            };
+        }
 
         let proof1 = {
             let header = MockHeader::new(Height::new(0, 2));
