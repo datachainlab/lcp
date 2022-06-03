@@ -169,3 +169,11 @@ clean:
 .PHONY: fmt
 fmt:
 	@cargo fmt && cd ./enclave && cargo fmt
+
+.PHONY: test
+test:
+	@cargo test --lib
+
+.PHONY: proto
+proto:
+	@cd proto-compiler && cargo run -- compile --ibc /tmp/cosmos/ibc --out ../proto/src/prost

@@ -1,0 +1,19 @@
+syntax = "proto3";
+package ibc.lightclients.lcp.v1;
+
+import "ibc/core/client/v1/client.proto";
+
+message Header {
+  bytes update_client_commitment = 1;
+}
+
+message ClientState {
+  ibc.core.client.v1.Height latest_height = 1;
+  bytes mrenclave = 2;
+  repeated bytes keys = 3;
+}
+
+message ConsensusState {
+  bytes state_id = 1;
+  uint64 timestamp = 2;
+}
