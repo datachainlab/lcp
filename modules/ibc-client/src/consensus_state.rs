@@ -75,8 +75,7 @@ impl TryFrom<Any> for ConsensusState {
         match raw.type_url.as_str() {
             "" => Err(Error::empty_client_state_response()),
             LCP_CONSENSUS_STATE_TYPE_URL => {
-                Ok(ConsensusState::decode_vec(&raw.value)
-                    .map_err(Error::decode_raw_client_state)?)
+                ConsensusState::try_from(RawConsensusState::decode(&*raw.value).unwrap())
             }
             _ => Err(Error::unknown_consensus_state_type(raw.type_url)),
         }

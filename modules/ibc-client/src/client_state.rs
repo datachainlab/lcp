@@ -113,7 +113,7 @@ impl TryFrom<Any> for ClientState {
         match raw.type_url.as_str() {
             "" => Err(Error::empty_client_state_response()),
             LCP_CLIENT_STATE_TYPE_URL => {
-                Ok(ClientState::decode_vec(&raw.value).map_err(Error::decode_raw_client_state)?)
+                ClientState::try_from(RawClientState::decode(&*raw.value).unwrap())
             }
             _ => Err(Error::unknown_client_state_type(raw.type_url)),
         }
