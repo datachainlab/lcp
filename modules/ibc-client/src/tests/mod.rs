@@ -4,6 +4,8 @@ mod errors;
 mod tests {
     use super::client::register_implementations;
     use super::client::LCP_CLIENT_TYPE;
+    use crate::header::Header;
+    use crate::header::UpdateClientHeader;
     use crate::{client_state::ClientState, consensus_state::ConsensusState, crypto::Address};
     use core::time::Duration;
     use crypto::EnclaveKey;
@@ -160,23 +162,29 @@ mod tests {
         };
 
         // 4. on the downstream side, updates LCP Light Client's state with the commitment from the LCP
-        // {
-        //     let header = Header::UpdateClient(
-        //         UpdateClientHeader(
-        //             proof1,
-        //             Default::default(),
-        //         ),
-        //     );
-        //     let input = UpdateClientInput {
-        //         client_id: lcp_client_id.clone(),
-        //         any_header: todo!(),
-        //         current_timestamp: SystemTime::now()
-        //             .checked_add(Duration::from_secs(60))
-        //             .unwrap()
-        //             .duration_since(UNIX_EPOCH)
-        //             .unwrap()
-        //             .as_nanos(),
-        //     };
-        // }
+        {
+            let header = Header::UpdateClient(UpdateClientHeader {
+                commitment: proof1.commitment(),
+                commitment_bytes: proof1.commitment_bytes,
+                signer: proof1.signer,
+                signature: proof1.signature,
+            });
+            let input = UpdateClientInput {
+                client_id: lcp_client_id.clone(),
+                any_header: header.into(),
+                current_timestamp: SystemTime::now()
+                    .checked_add(Duration::from_secs(60))
+                    .unwrap()
+                    .duration_since(UNIX_EPOCH)
+                    .unwrap()
+                    .as_nanos(),
+            };
+            let res = router::dispatch::<_, LocalLightClientRegistry>(
+                Some(&ek),
+                &mut ibc_store,
+                Command::LightClient(LightClientCommand::UpdateClient(input)),
+            );
+            assert!(res.is_ok(), "res={:?}", res);
+        }
     }
 }

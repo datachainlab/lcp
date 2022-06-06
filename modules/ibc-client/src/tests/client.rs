@@ -60,13 +60,21 @@ impl LightClient for LCPLightClient {
             .map_err(|e| LightClientError::OtherError(e).into())?;
 
         Ok(CreateClientResult {
-            client_id,
+            client_id: client_id.clone(),
             client_type: LCP_CLIENT_TYPE.to_owned(),
             any_client_state,
             any_consensus_state,
             height,
             timestamp,
-            commitment: UpdateClientCommitment::default(),
+            commitment: UpdateClientCommitment {
+                client_id,
+                prev_state_id: None,
+                new_state_id: state_id,
+                prev_height: None,
+                new_height: height,
+                timestamp: timestamp.nanoseconds() as u128,
+                validation_params: ValidationParams::Empty,
+            },
         })
     }
 
