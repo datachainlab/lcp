@@ -1,11 +1,12 @@
 #[cfg(feature = "sgx")]
 use crate::sgx_reexport_prelude::*;
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use ibc::core::ics02_client::{client_consensus::AnyConsensusState, client_state::AnyClientState};
 use prost::Message;
 use prost_types::Any;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
+use std::format;
 use std::string::String;
 use std::vec;
 use std::vec::Vec;
@@ -30,6 +31,19 @@ impl StateID {
 
     pub fn is_zero(&self) -> bool {
         self == &StateID::default()
+    }
+}
+
+impl TryFrom<&[u8]> for StateID {
+    type Error = anyhow::Error;
+
+    fn try_from(value: &[u8]) -> Result<Self, Self::Error> {
+        if value.len() != STATE_ID_SIZE {
+            return Err(anyhow!("value length must be {}", STATE_ID_SIZE));
+        }
+        let mut bz: [u8; STATE_ID_SIZE] = Default::default();
+        bz.copy_from_slice(value);
+        Ok(Self::from_bytes_array(bz))
     }
 }
 

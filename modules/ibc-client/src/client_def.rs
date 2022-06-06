@@ -164,7 +164,7 @@ impl LCPClient {
             .unwrap();
         let consensus_state = ConsensusState::try_from(any_consensus_state)?;
         // TODO consider to improve sybil attack resistance for persmissionless environment
-        let new_client_state = client_state.with_new_key((key, key_expiration));
+        let new_client_state = client_state.with_new_key((key_expiration, key));
 
         Ok((new_client_state, consensus_state))
     }

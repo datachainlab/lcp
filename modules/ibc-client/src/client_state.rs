@@ -21,12 +21,12 @@ pub struct ClientState {
     pub latest_height: Height,
     pub mr_enclave: Vec<u8>,
     pub key_expiration: u128, // sec
-    pub keys: Vec<(Address, u128)>,
+    pub keys: Vec<(u128, Address)>,
 }
 
 impl ClientState {
     pub fn contains(&self, key: &Address) -> bool {
-        self.keys.iter().find(|k| &k.0 == key).is_some()
+        self.keys.iter().find(|k| &k.1 == key).is_some()
     }
 
     pub fn with_header(mut self, header: &dyn Commitment) -> Self {
@@ -36,8 +36,8 @@ impl ClientState {
         self
     }
 
-    pub fn with_new_key(mut self, key: (Address, u128)) -> Self {
-        assert!(!self.contains(&key.0));
+    pub fn with_new_key(mut self, key: (u128, Address)) -> Self {
+        assert!(!self.contains(&key.1));
         self.keys.push(key);
         self
     }
@@ -45,13 +45,24 @@ impl ClientState {
 
 impl From<ClientState> for RawClientState {
     fn from(value: ClientState) -> Self {
+        let keys = value
+            .keys
+            .iter()
+            .map(|k| {
+                let mut key = vec![0; 36];
+                key[..16].copy_from_slice(k.0.to_be_bytes().as_slice());
+                key[16..].copy_from_slice(&k.1 .0);
+                key
+            })
+            .collect();
         RawClientState {
             latest_height: Some(ProtoHeight {
                 revision_number: value.latest_height.revision_number,
                 revision_height: value.latest_height.revision_height,
             }),
-            mrenclave: Default::default(),
-            keys: Default::default(),
+            mrenclave: value.mr_enclave,
+            key_expiration: value.key_expiration as u64,
+            keys,
         }
     }
 }
@@ -60,7 +71,26 @@ impl TryFrom<RawClientState> for ClientState {
     type Error = Error;
 
     fn try_from(raw: RawClientState) -> Result<Self, Self::Error> {
-        Ok(Default::default())
+        let height = raw.latest_height.unwrap();
+        let keys = raw
+            .keys
+            .iter()
+            .map(|k| {
+                let ks = k.as_slice();
+                let mut expiration: [u8; 16] = Default::default();
+                expiration.copy_from_slice(&ks[..16]);
+                (u128::from_be_bytes(expiration), Address::from(&ks[16..]))
+            })
+            .collect();
+        Ok(ClientState {
+            latest_height: Height {
+                revision_number: height.revision_number,
+                revision_height: height.revision_height,
+            },
+            mr_enclave: raw.mrenclave,
+            key_expiration: raw.key_expiration as u128,
+            keys,
+        })
     }
 }
 

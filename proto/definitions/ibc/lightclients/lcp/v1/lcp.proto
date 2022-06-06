@@ -10,7 +10,8 @@ message Header {
 message ClientState {
   ibc.core.client.v1.Height latest_height = 1;
   bytes mrenclave = 2;
-  repeated bytes keys = 3;
+  uint64 key_expiration = 3;
+  repeated bytes keys = 4;
 }
 
 message ConsensusState {

@@ -2,6 +2,10 @@ mod client;
 mod errors;
 #[cfg(test)]
 mod tests {
+    use core::time::Duration;
+    use std::time::SystemTime;
+    use std::time::UNIX_EPOCH;
+
     use super::client::register_implementations;
     use super::client::LCP_CLIENT_TYPE;
     use super::*;
@@ -87,11 +91,17 @@ mod tests {
         };
 
         {
+            let now = SystemTime::now()
+                .checked_add(Duration::from_secs(60))
+                .unwrap()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_nanos();
             let initial_client_state = ClientState {
                 latest_height: Height::new(0, 1),
                 mr_enclave: Default::default(),
-                key_expiration: 1000000,
-                keys: vec![(Address::from(ek.get_pubkey().get_address().as_slice()), 0)],
+                key_expiration: Duration::from_secs(60).as_nanos(),
+                keys: vec![(now, Address::from(ek.get_pubkey().get_address().as_slice()))],
             };
             let initial_consensus_state = ConsensusState {
                 state_id: proof0.commitment().new_state_id,

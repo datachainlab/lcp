@@ -3,13 +3,12 @@
 #[cfg(feature = "sgx")]
 use crate::sgx_reexport_prelude::*;
 use secp256k1::curve::Scalar;
-use secp256k1::{Message, PublicKey, RecoveryId, SecretKey, Signature};
+use secp256k1::{Message, PublicKey, RecoveryId, Signature};
 use serde::{Deserialize, Serialize};
-use std::vec::Vec;
 use tiny_keccak::Keccak;
 
 #[derive(Clone, Default, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub struct Address([u8; 20]);
+pub struct Address(pub [u8; 20]);
 
 impl From<&[u8]> for Address {
     fn from(v: &[u8]) -> Self {

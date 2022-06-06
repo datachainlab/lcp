@@ -9,7 +9,9 @@ pub struct ClientState {
     pub latest_height: ::core::option::Option<super::super::super::core::client::v1::Height>,
     #[prost(bytes = "vec", tag = "2")]
     pub mrenclave: ::prost::alloc::vec::Vec<u8>,
-    #[prost(bytes = "vec", repeated, tag = "3")]
+    #[prost(uint64, tag = "3")]
+    pub key_expiration: u64,
+    #[prost(bytes = "vec", repeated, tag = "4")]
     pub keys: ::prost::alloc::vec::Vec<::prost::alloc::vec::Vec<u8>>,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]

@@ -39,7 +39,7 @@ impl From<ConsensusState> for RawConsensusState {
     fn from(value: ConsensusState) -> Self {
         RawConsensusState {
             state_id: value.state_id.to_vec(),
-            timestamp: Default::default(),
+            timestamp: value.timestamp as u64,
         }
     }
 }
@@ -48,7 +48,10 @@ impl TryFrom<RawConsensusState> for ConsensusState {
     type Error = Error;
 
     fn try_from(raw: RawConsensusState) -> Result<Self, Self::Error> {
-        Ok(Default::default())
+        Ok(ConsensusState {
+            state_id: raw.state_id.as_slice().try_into().unwrap(),
+            timestamp: raw.timestamp as u128,
+        })
     }
 }
 
