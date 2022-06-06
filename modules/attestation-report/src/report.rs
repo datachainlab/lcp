@@ -151,7 +151,10 @@ pub fn parse_quote_from_report(attn_report: &[u8]) -> Result<Quote, sgx_status_t
     let quote_status = if let Value::String(quote_status) = &attn_report["isvEnclaveQuoteStatus"] {
         match quote_status.as_ref() {
             "OK" => (),
-            "GROUP_OUT_OF_DATE" | "GROUP_REVOKED" | "CONFIGURATION_NEEDED" => (),
+            "GROUP_OUT_OF_DATE"
+            | "GROUP_REVOKED"
+            | "CONFIGURATION_NEEDED"
+            | "CONFIGURATION_AND_SW_HARDENING_NEEDED" => (),
             _ => {
                 return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
             }

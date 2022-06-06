@@ -46,7 +46,10 @@ pub fn verify_quote_status(attn_report: &[u8]) -> Result<sgx_quote_t, sgx_status
     if let Value::String(quote_status) = &attn_report["isvEnclaveQuoteStatus"] {
         match quote_status.as_ref() {
             "OK" => (),
-            "GROUP_OUT_OF_DATE" | "GROUP_REVOKED" | "CONFIGURATION_NEEDED" => {
+            "GROUP_OUT_OF_DATE"
+            | "GROUP_REVOKED"
+            | "CONFIGURATION_NEEDED"
+            | "CONFIGURATION_AND_SW_HARDENING_NEEDED" => {
                 // Verify platformInfoBlob for further info if status not OK
                 // This is optional
                 if let Value::String(pib) = &attn_report["platformInfoBlob"] {
