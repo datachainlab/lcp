@@ -18,4 +18,5 @@ updatesdk:
 	@cd $(SDK_PATH_GIT) && $(GIT) checkout $(TARGET_VERSION) && cd ..
 	rsync -a $(SDK_PATH_GIT)/edl $(SDK_PATH)
 	rsync -a $(SDK_PATH_GIT)/common $(SDK_PATH)
+	rsync -a $(SDK_PATH_GIT)/dockerfile $(SDK_PATH)
 	rm -rf $(SDK_PATH_GIT)

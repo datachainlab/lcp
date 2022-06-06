@@ -177,3 +177,7 @@ test:
 .PHONY: proto
 proto:
 	@cd proto-compiler && cargo run -- compile --ibc /tmp/cosmos/ibc --out ../proto/src/prost
+
+.PHONY: docker
+docker:
+	 docker build --no-cache -t datachainlab/sgx-rust:2004-1.1.4 -f Dockerfile.2004.nightly .
