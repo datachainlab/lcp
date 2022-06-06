@@ -1,3 +1,4 @@
+// This mod is a copy from https://github.com/informalsystems/ibc-rs/blob/f13e8f59572c8b4d19c4b7599504269ac9aa8c68/proto/src/google.rs
 pub mod protobuf {
     use crate::include_proto;
     include_proto!("google.protobuf.rs");
@@ -5,6 +6,7 @@ pub mod protobuf {
     // source: https://github.com/tokio-rs/prost/blob/master/prost-types/src/lib.rs
     use core::i32;
     use core::i64;
+    use core::time;
 
     // The Protobuf `Duration` and `Timestamp` types can't delegate to the standard library equivalents
     // because the Protobuf versions are signed. To make them easier to work with, `From` conversions
