@@ -1,7 +1,11 @@
 #[derive(Clone, PartialEq, ::prost::Message)]
-pub struct Header {
+pub struct UpdateClientHeader {
     #[prost(bytes = "vec", tag = "1")]
-    pub update_client_commitment: ::prost::alloc::vec::Vec<u8>,
+    pub commitment: ::prost::alloc::vec::Vec<u8>,
+    #[prost(bytes = "vec", tag = "2")]
+    pub signer: ::prost::alloc::vec::Vec<u8>,
+    #[prost(bytes = "vec", tag = "3")]
+    pub signature: ::prost::alloc::vec::Vec<u8>,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ClientState {

@@ -3,8 +3,10 @@ package ibc.lightclients.lcp.v1;
 
 import "ibc/core/client/v1/client.proto";
 
-message Header {
-  bytes update_client_commitment = 1;
+message UpdateClientHeader {
+  bytes commitment = 1;
+  bytes signer = 2;
+  bytes signature = 3;
 }
 
 message ClientState {
