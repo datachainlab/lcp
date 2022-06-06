@@ -2,17 +2,10 @@ mod client;
 mod errors;
 #[cfg(test)]
 mod tests {
-    use core::time::Duration;
-    use std::time::SystemTime;
-    use std::time::UNIX_EPOCH;
-
     use super::client::register_implementations;
     use super::client::LCP_CLIENT_TYPE;
-    use super::*;
-    use crate::{
-        client_def::LCPClient, client_state::ClientState, consensus_state::ConsensusState,
-        crypto::Address, header::Header,
-    };
+    use crate::{client_state::ClientState, consensus_state::ConsensusState, crypto::Address};
+    use core::time::Duration;
     use crypto::EnclaveKey;
     use enclave_commands::{
         Command, CommandResult, InitClientInput, InitClientResult, LightClientCommand,
@@ -33,6 +26,8 @@ mod tests {
     use lazy_static::lazy_static;
     use light_client::{LightClient, LightClientRegistry, LightClientSource};
     use prost_types::Any;
+    use std::time::SystemTime;
+    use std::time::UNIX_EPOCH;
     use store::memory::MemStore;
 
     lazy_static! {
@@ -54,13 +49,15 @@ mod tests {
     }
 
     #[test]
-    fn test_init_client() {
+    fn test_ibc_client() {
+        // ek is a signing key to prove LCP's commitments
         let ek = EnclaveKey::new().unwrap();
+        // lcp_store is a store to keeps LCP's state
         let mut lcp_store = MemStore::new();
+        // ibc_store is a store to keeps downstream's state
         let mut ibc_store = MemStore::new();
 
-        let client = LCPClient::default();
-
+        // 1. initializes Light Client(Mock) corresponding to the upstream chain on the LCP side
         let proof0 = {
             let header = MockHeader::new(Height::new(0, 1));
             let client_state = MockClientState::new(header);
@@ -90,8 +87,9 @@ mod tests {
             }
         };
 
-        {
-            let now = SystemTime::now()
+        // 2. initializes Light Client for LCP on the downstream side
+        let lcp_client_id = {
+            let expired_at = SystemTime::now()
                 .checked_add(Duration::from_secs(60))
                 .unwrap()
                 .duration_since(UNIX_EPOCH)
@@ -101,7 +99,10 @@ mod tests {
                 latest_height: Height::new(0, 1),
                 mr_enclave: Default::default(),
                 key_expiration: Duration::from_secs(60).as_nanos(),
-                keys: vec![(now, Address::from(ek.get_pubkey().get_address().as_slice()))],
+                keys: vec![(
+                    expired_at,
+                    Address::from(ek.get_pubkey().get_address().as_slice()),
+                )],
             };
             let initial_consensus_state = ConsensusState {
                 state_id: proof0.commitment().new_state_id,
@@ -114,8 +115,23 @@ mod tests {
                 any_consensus_state: Any::from(initial_consensus_state),
                 current_timestamp: 0,
             };
-        }
+            let res = router::dispatch::<_, LocalLightClientRegistry>(
+                Some(&ek),
+                &mut ibc_store,
+                Command::LightClient(LightClientCommand::InitClient(input)),
+            );
+            assert!(res.is_ok(), "res={:?}", res);
+            if let CommandResult::LightClient(LightClientResult::InitClient(InitClientResult(
+                proof,
+            ))) = res.unwrap()
+            {
+                proof.commitment().client_id
+            } else {
+                unreachable!()
+            }
+        };
 
+        // 3. updates the Light Client state on the LCP side
         let proof1 = {
             let header = MockHeader::new(Height::new(0, 2));
             let any_header = Any::from(AnyHeader::Mock(header));
@@ -142,5 +158,25 @@ mod tests {
                 unreachable!()
             }
         };
+
+        // 4. on the downstream side, updates LCP Light Client's state with the commitment from the LCP
+        // {
+        //     let header = Header::UpdateClient(
+        //         UpdateClientHeader(
+        //             proof1,
+        //             Default::default(),
+        //         ),
+        //     );
+        //     let input = UpdateClientInput {
+        //         client_id: lcp_client_id.clone(),
+        //         any_header: todo!(),
+        //         current_timestamp: SystemTime::now()
+        //             .checked_add(Duration::from_secs(60))
+        //             .unwrap()
+        //             .duration_since(UNIX_EPOCH)
+        //             .unwrap()
+        //             .as_nanos(),
+        //     };
+        // }
     }
 }
