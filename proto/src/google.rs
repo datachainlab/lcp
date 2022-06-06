@@ -6,6 +6,7 @@ pub mod protobuf {
     // source: https://github.com/tokio-rs/prost/blob/master/prost-types/src/lib.rs
     use core::i32;
     use core::i64;
+    #[allow(unused_imports)]
     use core::time;
 
     // The Protobuf `Duration` and `Timestamp` types can't delegate to the standard library equivalents
