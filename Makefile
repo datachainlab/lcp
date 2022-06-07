@@ -168,7 +168,7 @@ clean:
 
 .PHONY: fmt
 fmt:
-	@cargo fmt && cd ./enclave && cargo fmt
+	@cargo fmt --all && cd ./enclave && cargo fmt --all
 
 .PHONY: test
 test:
