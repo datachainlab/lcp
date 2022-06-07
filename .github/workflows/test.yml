@@ -18,3 +18,10 @@ jobs:
         with:
           command: test
           args: --lib
+
+  sdk-test:
+    runs-on: ubuntu-latest
+    container:
+      image: bluele/sgx-rust:2004-1.1.4
+    steps:
+      - run: make
