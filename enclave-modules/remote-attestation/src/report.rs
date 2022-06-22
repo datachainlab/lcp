@@ -52,7 +52,10 @@ pub fn verify_quote_status(attn_report: &[u8]) -> Result<sgx_quote_t, sgx_status
             | "CONFIGURATION_NEEDED"
             | "CONFIGURATION_AND_SW_HARDENING_NEEDED" => {
                 // Verify platformInfoBlob for further info if status not OK
-                // This is optional
+                // https://api.trustedservices.intel.com/documents/sgx-attestation-api-spec.pdf
+                // This field is optional, it will only be present if one the following conditions is met:
+                // - isvEnclaveQuoteStatus is equal to GROUP_REVOKED, GROUP_OUT_OF_DATE, CONFIGURATION_NEEDED or CONFIGURATION_AND_SW_HARDENING_NEEDED.
+                // - pseManifestStatus is equal to one of the following values: OUT_OF_DATE, REVOKED or RL_VERSION_MISMATCH.
                 if let Value::String(pib) = &attn_report["platformInfoBlob"] {
                     let mut buf = Vec::new();
 
@@ -94,8 +97,7 @@ pub fn verify_quote_status(attn_report: &[u8]) -> Result<sgx_quote_t, sgx_status
                         }
                     }
                 } else {
-                    error!("Failed to fetch platformInfoBlob from attestation report");
-                    return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
+                    info!("attestation report doesn't contain platformInfoBlob");
                 }
             }
             _ => return Err(sgx_status_t::SGX_ERROR_UNEXPECTED),
