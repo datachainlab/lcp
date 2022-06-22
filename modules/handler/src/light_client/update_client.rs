@@ -9,7 +9,7 @@ pub fn update_client<'l, S: KVStore, L: LightClientSource<'l>>(
     ctx: &mut Context<S>,
     input: UpdateClientInput,
 ) -> Result<LightClientResult, Error> {
-    ctx.set_timestmap(input.current_timestamp);
+    ctx.set_timestamp(input.current_timestamp);
 
     let client_type = ctx
         .client_type(&input.client_id)

@@ -43,7 +43,7 @@ impl<'a, 'e, S> Context<'a, 'e, S> {
         }
     }
 
-    pub fn set_timestmap(&mut self, timestamp: u128) {
+    pub fn set_timestamp(&mut self, timestamp: u128) {
         self.current_timestamp = Some(timestamp);
     }
 

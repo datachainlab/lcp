@@ -9,7 +9,7 @@ pub fn init_client<'l, S: KVStore, L: LightClientSource<'l>>(
     ctx: &mut Context<S>,
     input: InitClientInput,
 ) -> Result<LightClientResult, Error> {
-    ctx.set_timestmap(input.current_timestamp);
+    ctx.set_timestamp(input.current_timestamp);
 
     let lc = L::get_light_client(&input.client_type).unwrap();
     let ek = ctx.get_enclave_key();
