@@ -153,6 +153,7 @@ pub fn parse_quote_from_report(attn_report: &[u8]) -> Result<Quote, sgx_status_t
             "OK" => (),
             "GROUP_OUT_OF_DATE"
             | "GROUP_REVOKED"
+            | "SW_HARDENING_NEEDED"
             | "CONFIGURATION_NEEDED"
             | "CONFIGURATION_AND_SW_HARDENING_NEEDED" => (),
             _ => {

@@ -48,6 +48,7 @@ pub fn verify_quote_status(attn_report: &[u8]) -> Result<sgx_quote_t, sgx_status
             "OK" => (),
             "GROUP_OUT_OF_DATE"
             | "GROUP_REVOKED"
+            | "SW_HARDENING_NEEDED"
             | "CONFIGURATION_NEEDED"
             | "CONFIGURATION_AND_SW_HARDENING_NEEDED" => {
                 // Verify platformInfoBlob for further info if status not OK
