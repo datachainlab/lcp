@@ -84,7 +84,7 @@ App_C_Flags := $(SGX_COMMON_CFLAGS) -fPIC -Wno-attributes $(App_Include_Paths)
 
 App_Rust_Path := ./target/$(OUTPUT_PATH)
 App_Enclave_u_Object :=lib/libEnclave_u.a
-App_Name := sgxrars
+App_Name := lcp
 App_Dir := bin/$(App_Name)
 
 ######## Enclave Settings ########
@@ -172,7 +172,11 @@ fmt:
 
 .PHONY: test
 test:
-	@cargo test --lib
+	cargo test --lib --workspace --exclude integration-test
+
+.PHONY: integration-test
+integration-test:
+	SGX_MODE=HW cargo test --package integration-test
 
 .PHONY: proto
 proto:
