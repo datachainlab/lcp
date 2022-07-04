@@ -1219,6 +1219,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "host"
+version = "0.1.0"
+dependencies = [
+ "log 0.4.16",
+ "sgx_types",
+ "sgx_urts",
+]
+
+[[package]]
 name = "http"
 version = "0.2.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1495,6 +1504,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "integration-test"
+version = "0.1.0"
+dependencies = [
+ "anyhow 1.0.56",
+ "attestation-report",
+ "enclave-api",
+ "enclave-commands",
+ "env_logger",
+ "host",
+ "ibc",
+ "ibc-proto",
+ "ibc-relayer",
+ "lcp-ibc-client",
+ "log 0.4.16",
+ "relay-tendermint",
+ "settings",
+ "tendermint-rpc",
+ "thiserror 1.0.30",
+ "tokio",
+]
+
+[[package]]
 name = "itertools"
 version = "0.8.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1553,6 +1584,14 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e2abad23fbc42b3700f2f279844dc832adb2b2eb069b2df918f455c4e18cc646"
 dependencies = [
  "spin",
+]
+
+[[package]]
+name = "lcp"
+version = "0.0.1"
+dependencies = [
+ "env_logger",
+ "log 0.4.16",
 ]
 
 [[package]]
@@ -2722,29 +2761,6 @@ source = "git+https://github.com/bluele/incubator-teaclave-sgx-sdk?branch=master
 dependencies = [
  "libc",
  "sgx_types",
-]
-
-[[package]]
-name = "sgxrars"
-version = "0.0.1"
-dependencies = [
- "anyhow 1.0.56",
- "attestation-report",
- "enclave-api",
- "enclave-commands",
- "env_logger",
- "ibc",
- "ibc-proto",
- "ibc-relayer",
- "lcp-ibc-client",
- "log 0.4.16",
- "relay-tendermint",
- "settings",
- "sgx_types",
- "sgx_urts",
- "tendermint-rpc",
- "thiserror 1.0.30",
- "tokio",
 ]
 
 [[package]]
