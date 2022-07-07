@@ -1,9 +1,7 @@
 use commitments::{gen_state_id_from_bytes, StateCommitmentProof};
 use ibc::core::ics02_client::client_consensus::AnyConsensusState;
 use ibc::core::ics02_client::client_state::AnyClientState;
-use ibc::core::ics02_client::client_type::ClientType;
 use ibc::core::ics02_client::error::Error as Ics02Error;
-use ibc::core::ics02_client::header::Header as Ics02Header;
 use ibc::core::ics03_connection::connection::ConnectionEnd;
 use ibc::core::ics04_channel::channel::ChannelEnd;
 use ibc::core::ics04_channel::context::ChannelReader;
@@ -13,11 +11,11 @@ use ibc::core::ics23_commitment::commitment::{
 };
 use ibc::core::ics24_host::identifier::{ChannelId, ClientId, ConnectionId, PortId};
 use ibc::core::ics24_host::path::ClientConsensusStatePath;
-use ibc::Height;
 use ibc_proto::ibc::core::commitment::v1::MerkleProof;
+use lcp_types::Height;
 use light_client::LightClientReader as ClientReader;
 use tendermint_proto::Protobuf;
-use validation_context::{validation_predicate, ValidationContext, ValidationPredicate};
+use validation_context::{validation_predicate, ValidationContext};
 
 use crate::client_state::ClientState;
 use crate::consensus_state::ConsensusState;
@@ -116,7 +114,9 @@ impl LCPClient {
         // check if the proxy's trusted consensus state exists in the store
         let prev_consensus_state: ConsensusState = ctx
             .consensus_state(&client_id, header.prev_height().unwrap())?
-            .try_into()?;
+            .to_proto()
+            .try_into()
+            .unwrap();
         assert!(prev_consensus_state.state_id == header.prev_state_id().unwrap());
 
         // check if the specified signer exists in the client state
@@ -158,7 +158,7 @@ impl LCPClient {
         let any_consensus_state = ctx
             .consensus_state(&client_id, client_state.latest_height)
             .unwrap();
-        let consensus_state = ConsensusState::try_from(any_consensus_state)?;
+        let consensus_state = ConsensusState::try_from(any_consensus_state.to_proto())?;
         // TODO consider to improve sybil attack resistance for persmissionless environment
         let new_client_state = client_state.with_new_key((key_expiration, key));
 
@@ -228,8 +228,8 @@ impl LCPClient {
             commitment.path
                 == ClientConsensusStatePath {
                     client_id: client_id.clone(),
-                    epoch: consensus_height.revision_number,
-                    height: consensus_height.revision_height,
+                    epoch: consensus_height.revision_number(),
+                    height: consensus_height.revision_height(),
                 }
                 .into()
         );
@@ -239,7 +239,8 @@ impl LCPClient {
         assert!(value == commitment.value);
 
         // check if `.state_id` matches the corresponding stored consensus state's state_id
-        let consensus_state = ConsensusState::try_from(ctx.consensus_state(client_id, height)?)?;
+        let any_consensus_state = ctx.consensus_state(client_id, height)?;
+        let consensus_state = ConsensusState::try_from(any_consensus_state.to_proto())?;
         assert!(consensus_state.state_id == commitment.state_id);
 
         // check if the `commitment_proof.signer` matches the commitment prover

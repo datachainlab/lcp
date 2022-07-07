@@ -7,6 +7,7 @@ use ibc::{
         ics02_client::{
             client_consensus::AnyConsensusState, client_state::AnyClientState,
             client_type::ClientType, context::ClientReader, error::Error as ICS02Error,
+            height::Height as ICS02Height,
         },
         ics03_connection::context::ConnectionReader,
         ics03_connection::error::Error as ICS03Error,
@@ -17,15 +18,12 @@ use ibc::{
         },
     },
     timestamp::Timestamp,
-    Height,
 };
+use lcp_types::{Any, Height};
 use light_client::{LightClientKeeper, LightClientReader};
 use log::*;
-use prost_types::Any;
-use serde::{Deserialize, Serialize};
 use std::format;
 use std::string::String;
-use std::vec::Vec;
 use store::KVStore;
 
 pub struct Context<'a, 'e, S> {
@@ -64,15 +62,14 @@ impl<'a, 'e, S: KVStore> LightClientReader for Context<'a, 'e, S> {
         let value = self
             .store
             .get(format!("{}", ClientStatePath(client_id.clone())).as_bytes());
-        let any: SerializableAny = bincode::deserialize(&value.unwrap()).unwrap();
-        Ok(any.into())
+        Ok(bincode::deserialize(&value.unwrap()).unwrap())
     }
 
     fn consensus_state(&self, client_id: &ClientId, height: Height) -> Result<Any, ICS02Error> {
         let path = ClientConsensusStatePath {
             client_id: client_id.clone(),
-            epoch: height.revision_number,
-            height: height.revision_height,
+            epoch: height.revision_number(),
+            height: height.revision_height(),
         };
         debug!("consensus_state: height={:?}", height);
         let value = match self.store.get(format!("{}", path).as_bytes()) {
@@ -81,13 +78,11 @@ impl<'a, 'e, S: KVStore> LightClientReader for Context<'a, 'e, S> {
                 // TODO fix
                 return Err(ICS02Error::consensus_state_not_found(
                     client_id.clone(),
-                    height,
+                    height.try_into()?,
                 ));
-                // panic!("{:?}, {:?}", client_id, height);
             }
         };
-        let any: SerializableAny = bincode::deserialize(&value).unwrap();
-        Ok(any.into())
+        Ok(bincode::deserialize(&value).unwrap())
     }
 
     fn host_height(&self) -> Height {
@@ -118,10 +113,10 @@ impl<'a, 'e, S: KVStore> ClientReader for Context<'a, 'e, S> {
     fn consensus_state(
         &self,
         client_id: &ClientId,
-        height: Height,
+        height: ICS02Height,
     ) -> Result<AnyConsensusState, ICS02Error> {
         let consensus_state =
-            <Self as LightClientReader>::consensus_state(&self, client_id, height)?;
+            <Self as LightClientReader>::consensus_state(&self, client_id, height.into())?;
         AnyConsensusState::try_from(consensus_state)
     }
 
@@ -130,7 +125,7 @@ impl<'a, 'e, S: KVStore> ClientReader for Context<'a, 'e, S> {
     fn maybe_consensus_state(
         &self,
         client_id: &ClientId,
-        height: Height,
+        height: ICS02Height,
     ) -> Result<Option<AnyConsensusState>, ICS02Error> {
         use ibc::core::ics02_client::error::ErrorDetail;
         debug!("maybe_consensus_state: {:?}", height);
@@ -146,7 +141,7 @@ impl<'a, 'e, S: KVStore> ClientReader for Context<'a, 'e, S> {
     fn next_consensus_state(
         &self,
         client_id: &ClientId,
-        height: Height,
+        height: ICS02Height,
     ) -> Result<Option<AnyConsensusState>, ICS02Error> {
         todo!()
     }
@@ -154,21 +149,23 @@ impl<'a, 'e, S: KVStore> ClientReader for Context<'a, 'e, S> {
     fn prev_consensus_state(
         &self,
         client_id: &ClientId,
-        height: Height,
+        height: ICS02Height,
     ) -> Result<Option<AnyConsensusState>, ICS02Error> {
         // TODO implement this
         Ok(None)
     }
 
-    fn host_height(&self) -> Height {
+    fn host_height(&self) -> ICS02Height {
         <Self as LightClientReader>::host_height(&self)
+            .try_into()
+            .unwrap()
     }
 
     fn host_timestamp(&self) -> Timestamp {
         <Self as LightClientReader>::host_timestamp(&self)
     }
 
-    fn host_consensus_state(&self, height: Height) -> Result<AnyConsensusState, ICS02Error> {
+    fn host_consensus_state(&self, height: ICS02Height) -> Result<AnyConsensusState, ICS02Error> {
         todo!()
     }
 
@@ -195,11 +192,11 @@ impl<'a, 'e, S: KVStore> ConnectionReader for Context<'a, 'e, S> {
         Ok(client_state)
     }
 
-    fn host_current_height(&self) -> Height {
+    fn host_current_height(&self) -> ICS02Height {
         todo!()
     }
 
-    fn host_oldest_height(&self) -> Height {
+    fn host_oldest_height(&self) -> ICS02Height {
         todo!()
     }
 
@@ -210,14 +207,14 @@ impl<'a, 'e, S: KVStore> ConnectionReader for Context<'a, 'e, S> {
     fn client_consensus_state(
         &self,
         client_id: &ClientId,
-        height: Height,
+        height: ICS02Height,
     ) -> Result<AnyConsensusState, ICS03Error> {
         let consensus_state = <Self as ClientReader>::consensus_state(&self, client_id, height)
             .map_err(ICS03Error::ics02_client)?;
         Ok(consensus_state)
     }
 
-    fn host_consensus_state(&self, height: Height) -> Result<AnyConsensusState, ICS03Error> {
+    fn host_consensus_state(&self, height: ICS02Height) -> Result<AnyConsensusState, ICS03Error> {
         todo!()
     }
 
@@ -244,8 +241,7 @@ impl<'a, 'e, S: KVStore> LightClientKeeper for Context<'a, 'e, S> {
         client_id: ClientId,
         client_state: Any,
     ) -> Result<(), ICS02Error> {
-        let any: SerializableAny = client_state.into();
-        let bz = bincode::serialize(&any).unwrap();
+        let bz = bincode::serialize(&client_state).unwrap();
         self.store
             .set(format!("{}", ClientStatePath(client_id)).into_bytes(), bz);
         Ok(())
@@ -257,12 +253,11 @@ impl<'a, 'e, S: KVStore> LightClientKeeper for Context<'a, 'e, S> {
         height: Height,
         consensus_state: Any,
     ) -> Result<(), ICS02Error> {
-        let any: SerializableAny = consensus_state.into();
-        let bz = bincode::serialize(&any).unwrap();
+        let bz = bincode::serialize(&consensus_state).unwrap();
         let path = ClientConsensusStatePath {
             client_id,
-            epoch: height.revision_number,
-            height: height.revision_height,
+            epoch: height.revision_number(),
+            height: height.revision_height(),
         };
         self.store.set(format!("{}", path).into_bytes(), bz);
         Ok(())
@@ -286,29 +281,5 @@ impl<'a, 'e, S: KVStore> LightClientKeeper for Context<'a, 'e, S> {
         host_height: Height,
     ) -> Result<(), ICS02Error> {
         Ok(())
-    }
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-struct SerializableAny {
-    pub type_url: String,
-    pub value: Vec<u8>,
-}
-
-impl Into<SerializableAny> for Any {
-    fn into(self) -> SerializableAny {
-        SerializableAny {
-            type_url: self.type_url,
-            value: self.value,
-        }
-    }
-}
-
-impl From<SerializableAny> for Any {
-    fn from(value: SerializableAny) -> Self {
-        Any {
-            type_url: value.type_url,
-            value: value.value,
-        }
     }
 }

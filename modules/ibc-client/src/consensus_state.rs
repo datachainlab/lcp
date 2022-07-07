@@ -12,8 +12,9 @@ use ibc::{
     timestamp::Timestamp,
 };
 use lcp_proto::ibc::lightclients::lcp::v1::ConsensusState as RawConsensusState;
+use lcp_types::Any;
 use prost::Message;
-use prost_types::Any;
+use prost_types::Any as ProtoAny;
 use serde::{Deserialize, Serialize};
 use tendermint_proto::Protobuf;
 
@@ -55,23 +56,23 @@ impl TryFrom<RawConsensusState> for ConsensusState {
     }
 }
 
-impl Protobuf<Any> for ConsensusState {}
+impl Protobuf<ProtoAny> for ConsensusState {}
 
-impl From<ConsensusState> for Any {
+impl From<ConsensusState> for ProtoAny {
     fn from(value: ConsensusState) -> Self {
         let value =
             RawConsensusState::try_from(value).expect("encoding to `Any` from `ConsensusState`");
-        Any {
+        ProtoAny {
             type_url: LCP_CONSENSUS_STATE_TYPE_URL.to_string(),
             value: value.encode_to_vec(),
         }
     }
 }
 
-impl TryFrom<Any> for ConsensusState {
+impl TryFrom<ProtoAny> for ConsensusState {
     type Error = Error;
 
-    fn try_from(raw: Any) -> Result<Self, Self::Error> {
+    fn try_from(raw: ProtoAny) -> Result<Self, Self::Error> {
         match raw.type_url.as_str() {
             "" => Err(Error::empty_client_state_response()),
             LCP_CONSENSUS_STATE_TYPE_URL => {
@@ -79,6 +80,12 @@ impl TryFrom<Any> for ConsensusState {
             }
             _ => Err(Error::unknown_consensus_state_type(raw.type_url)),
         }
+    }
+}
+
+impl From<ConsensusState> for Any {
+    fn from(value: ConsensusState) -> Self {
+        ProtoAny::from(value).into()
     }
 }
 

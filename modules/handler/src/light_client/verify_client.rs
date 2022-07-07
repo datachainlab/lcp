@@ -20,7 +20,7 @@ pub fn verify_client<'l, S: KVStore, L: LightClientSource<'l>>(
         .verify_client(
             ctx,
             input.client_id,
-            input.target_any_client_state,
+            input.target_any_client_state.into(),
             input.prefix,
             input.counterparty_client_id,
             input.proof.0,

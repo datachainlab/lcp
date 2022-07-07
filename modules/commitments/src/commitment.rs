@@ -4,11 +4,12 @@ use crate::CommitmentError as Error;
 use crate::{StateID, STATE_ID_SIZE};
 use anyhow::{anyhow, Error as AnyhowError};
 use core::str::FromStr;
-use ibc::core::ics02_client::height::Height;
 use ibc::core::ics24_host::identifier::ClientId;
 use ibc::core::ics24_host::Path;
+use lcp_types::Height;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+#[allow(unused_imports)]
 use std::format;
 use std::string::{String, ToString};
 use std::vec;
@@ -17,7 +18,7 @@ use validation_context::ValidationParams;
 
 use rlp_derive::{RlpDecodable, RlpEncodable};
 
-#[derive(Debug, Default, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct UpdateClientCommitment {
     pub client_id: ClientId,
     pub prev_state_id: Option<StateID>,
@@ -124,8 +125,8 @@ fn string_to_client_id(client_id: String) -> Result<ClientId, AnyhowError> {
 
 fn height_to_bytes(h: Height) -> Vec<u8> {
     let mut bz: [u8; 16] = Default::default();
-    bz[..8].copy_from_slice(&h.revision_number.to_be_bytes());
-    bz[8..].copy_from_slice(&h.revision_height.to_be_bytes());
+    bz[..8].copy_from_slice(&h.revision_number().to_be_bytes());
+    bz[8..].copy_from_slice(&h.revision_height().to_be_bytes());
     bz.to_vec()
 }
 
@@ -133,13 +134,12 @@ fn bytes_to_height(bz: &[u8]) -> Result<Height, AnyhowError> {
     if bz.len() != 16 {
         return Err(anyhow!("bytes length must be 16, but got {}", bz.len()));
     }
-    let mut h = Height::default();
     let mut ar: [u8; 8] = Default::default();
     ar.copy_from_slice(&bz[..8]);
-    h.revision_number = u64::from_be_bytes(ar);
+    let revision_number = u64::from_be_bytes(ar);
     ar.copy_from_slice(&bz[8..]);
-    h.revision_height = u64::from_be_bytes(ar);
-    Ok(h)
+    let revision_height = u64::from_be_bytes(ar);
+    Ok(Height::new(revision_number, revision_height))
 }
 
 fn bytes_to_state_id(bz: &[u8]) -> Result<StateID, AnyhowError> {

@@ -7,8 +7,9 @@ edition = "2021"
 
 [dependencies]
 sgx_tstd = { git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
-ibc = { git = "https://github.com/informalsystems/ibc-rs", default-features = false }
-prost-types = { version = "0.9", default-features = false }
+ibc = { git = "https://github.com/informalsystems/ibc-rs", rev = "e8c98d440949abf971ac45a68ed9dd9e6e9f48ed", default-features = false }
+ibc-proto = { git = "https://github.com/informalsystems/ibc-rs", rev = "e8c98d440949abf971ac45a68ed9dd9e6e9f48ed", default-features = false }
+prost-types = { version = "0.10", default-features = false }
 serde = { version = "1.0", default-features = false, features = ["alloc"] }
 
 log-sgx = { package = "log", git = "https://github.com/mesalock-linux/log-sgx", optional = true }
@@ -16,6 +17,7 @@ log = { version = "0.4.8", optional = true }
 bincode-sgx = { package = "bincode", git = "https://github.com/bluele/bincode-sgx", branch = "serde", optional = true }
 bincode = { version = "1.3", optional = true }
 
+lcp-types = { path = "../types", default-features = false }
 store = { path = "../store", default-features = false }
 crypto = { path = "../crypto", default-features = false }
 light-client = { path = "../light-client", default-features = false }

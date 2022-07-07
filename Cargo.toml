@@ -2,6 +2,7 @@
 members = [
     "app",
     "modules/host",
+    "modules/types",
     "modules/handler",
     "modules/attestation-report",
     "modules/enclave-api",
@@ -44,7 +45,7 @@ sgx_tcrypto_helper = { version = "1.1.5", git = "https://github.com/apache/incub
 sgx_crypto_helper = { version = "1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", branch = "master"}
 sgx_rand = { version = "1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", branch = "master"}
 
-[patch."https://github.com/informalsystems/ibc-rs.git"]
-ibc = { git = "https://github.com/bluele/ibc-rs", branch = "sgx", default-features = false }
-ibc-proto = { git = "https://github.com/bluele/ibc-rs", branch = "sgx", default-features = false }
-ibc-relayer = { git = "https://github.com/bluele/ibc-rs", branch = "sgx", default-features = false }
+[patch."crates-io"]
+parking_lot = { git = "https://github.com/bluele/parking_lot", branch = "patch-const-fn-trait" }
+parking_lot_core = { git = "https://github.com/bluele/parking_lot", branch = "patch-const-fn-trait" }
+lock_api = { git = "https://github.com/bluele/parking_lot", branch = "patch-const-fn-trait" }

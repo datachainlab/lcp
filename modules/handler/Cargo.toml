@@ -6,8 +6,8 @@ edition = "2021"
 [dependencies]
 sgx_types = { git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 sgx_tstd = { git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
-ibc = { git = "https://github.com/informalsystems/ibc-rs", default-features = false }
-prost-types = { version = "0.9", default-features = false }
+ibc = { git = "https://github.com/informalsystems/ibc-rs", rev = "e8c98d440949abf971ac45a68ed9dd9e6e9f48ed", default-features = false }
+prost-types = { version = "0.10", default-features = false }
 serde = { version = "1.0", default-features = false, features = ["alloc"] }
 derive_more = { version = "0.99.17", default-features = false, features = ["from", "display"] }
 hex = { version = "0.4", default-features = false, features = ["alloc"] }
@@ -24,6 +24,7 @@ bincode-sgx = { package = "bincode", git = "https://github.com/bluele/bincode-sg
 enclave-utils = { path = "../../enclave-modules/utils", optional = true }
 enclave-remote-attestation = { path = "../../enclave-modules/remote-attestation", optional = true }
 
+lcp-types = { path = "../types", default-features = false }
 light-client = { path = "../light-client", default-features = false }
 crypto = { path = "../crypto", default-features = false }
 settings = { path = "../settings", default-features = false }

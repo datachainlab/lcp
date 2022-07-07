@@ -1,14 +1,14 @@
 #[cfg(feature = "sgx")]
 use crate::sgx_reexport_prelude::*;
 use crate::{crypto::Address, report::AttestationVerificationReport};
-use commitments::{StateID, UpdateClientCommitment, UpdateClientCommitmentProof};
-use ibc::core::ics02_client::client_type::ClientType;
-use ibc::core::ics02_client::error::Error;
-use ibc::core::ics02_client::header::AnyHeader;
+use commitments::{StateID, UpdateClientCommitment};
+use ibc::core::ics02_client::{
+    client_type::ClientType, error::Error, header::AnyHeader, height::Height as ICS02Height,
+};
 use ibc::timestamp::Timestamp;
-use ibc::Height;
 use lcp_proto::ibc::lightclients::lcp::v1::UpdateClientHeader as RawUpdateClientHeader;
-use prost_types::Any;
+use lcp_types::{Any, Height};
+use prost_types::Any as ProtoAny;
 use serde::{Deserialize, Serialize};
 use tendermint_proto::Protobuf;
 use validation_context::ValidationParams;
@@ -25,12 +25,12 @@ pub enum Header {
     UpdateClient(UpdateClientHeader),
 }
 
-impl Protobuf<Any> for Header {}
+impl Protobuf<ProtoAny> for Header {}
 
-impl TryFrom<Any> for Header {
+impl TryFrom<ProtoAny> for Header {
     type Error = Error;
 
-    fn try_from(raw: Any) -> Result<Self, Self::Error> {
+    fn try_from(raw: ProtoAny) -> Result<Self, Self::Error> {
         match raw.type_url.as_str() {
             "" => Err(Error::empty_client_state_response()),
             LCP_HEADER_UPDATE_CLIENT_TYPE_URL => Ok(Header::UpdateClient(
@@ -41,15 +41,21 @@ impl TryFrom<Any> for Header {
     }
 }
 
-impl From<Header> for Any {
+impl From<Header> for ProtoAny {
     fn from(value: Header) -> Self {
         match value {
-            Header::UpdateClient(h) => Any {
+            Header::UpdateClient(h) => ProtoAny {
                 type_url: LCP_HEADER_UPDATE_CLIENT_TYPE_URL.to_string(),
                 value: h.encode_vec().unwrap(),
             },
             _ => unimplemented!(),
         }
+    }
+}
+
+impl From<Header> for Any {
+    fn from(value: Header) -> Self {
+        ProtoAny::from(value).into()
     }
 }
 
@@ -171,8 +177,8 @@ impl ibc::core::ics02_client::header::Header for Header {
         todo!()
     }
 
-    fn height(&self) -> Height {
-        self.get_height().unwrap()
+    fn height(&self) -> ICS02Height {
+        self.get_height().unwrap().try_into().unwrap()
     }
 
     fn timestamp(&self) -> Timestamp {

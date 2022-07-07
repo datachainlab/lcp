@@ -15,10 +15,7 @@ pub use anyhow;
 #[cfg(feature = "sgx")]
 pub use anyhow_sgx as anyhow;
 
-use prost_types::Any;
 use serde::{Deserialize, Serialize};
-use std::string::String;
-use std::vec::Vec;
 
 pub use enclave_manage::{
     EnclaveManageCommand, EnclaveManageResult, InitEnclaveInput, InitEnclaveResult,
@@ -43,20 +40,4 @@ pub enum Command {
 pub enum CommandResult {
     EnclaveManage(EnclaveManageResult),
     LightClient(LightClientResult),
-}
-
-#[derive(Default, Debug, Serialize, Deserialize)]
-#[serde(remote = "Any")]
-pub struct AnyDef {
-    pub type_url: String,
-    pub value: Vec<u8>,
-}
-
-impl From<AnyDef> for Any {
-    fn from(value: AnyDef) -> Self {
-        Any {
-            type_url: value.type_url,
-            value: value.value,
-        }
-    }
 }

@@ -14,7 +14,11 @@ pub fn init_client<'l, S: KVStore, L: LightClientSource<'l>>(
     let lc = L::get_light_client(&input.client_type).unwrap();
     let ek = ctx.get_enclave_key();
     let res = lc
-        .create_client(ctx, input.any_client_state, input.any_consensus_state)
+        .create_client(
+            ctx,
+            input.any_client_state.into(),
+            input.any_consensus_state.into(),
+        )
         .map_err(Error::LightClientError)?;
 
     ctx.store_client_type(res.client_id.clone(), res.client_type)

@@ -22,7 +22,7 @@ pub fn verify_client_consensus<'l, S: KVStore, L: LightClientSource<'l>>(
         .verify_client_consensus(
             ctx,
             input.client_id,
-            input.target_any_client_consensus_state,
+            input.target_any_client_consensus_state.into(),
             input.prefix,
             input.counterparty_client_id,
             input.counterparty_consensus_height,
