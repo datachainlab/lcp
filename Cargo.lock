@@ -1106,8 +1106,8 @@ checksum = "ab5ef0d4909ef3724cc8cce6ccc8572c5c817592e9285f5464f8e86f8bd3726e"
 
 [[package]]
 name = "hashbrown_tstd"
-version = "0.11.2"
-source = "git+https://github.com/bluele/incubator-teaclave-sgx-sdk?branch=master#e8a9fc22939befa27ff67f5509b2c2dfe8499945"
+version = "0.12.0"
+source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?branch=master#d2d339cbb005f676bb700059bd51dc689c025f6b"
 
 [[package]]
 name = "hdpath"
@@ -2650,13 +2650,13 @@ dependencies = [
 
 [[package]]
 name = "sgx_alloc"
-version = "1.1.4"
-source = "git+https://github.com/bluele/incubator-teaclave-sgx-sdk?branch=master#e8a9fc22939befa27ff67f5509b2c2dfe8499945"
+version = "1.1.5"
+source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?branch=master#d2d339cbb005f676bb700059bd51dc689c025f6b"
 
 [[package]]
 name = "sgx_backtrace_sys"
-version = "1.1.4"
-source = "git+https://github.com/bluele/incubator-teaclave-sgx-sdk?branch=master#e8a9fc22939befa27ff67f5509b2c2dfe8499945"
+version = "1.1.5"
+source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?branch=master#d2d339cbb005f676bb700059bd51dc689c025f6b"
 dependencies = [
  "cc",
  "sgx_build_helper",
@@ -2665,26 +2665,26 @@ dependencies = [
 
 [[package]]
 name = "sgx_build_helper"
-version = "1.1.4"
-source = "git+https://github.com/bluele/incubator-teaclave-sgx-sdk?branch=master#e8a9fc22939befa27ff67f5509b2c2dfe8499945"
+version = "1.1.5"
+source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?branch=master#d2d339cbb005f676bb700059bd51dc689c025f6b"
 
 [[package]]
 name = "sgx_demangle"
-version = "1.1.4"
-source = "git+https://github.com/bluele/incubator-teaclave-sgx-sdk?branch=master#e8a9fc22939befa27ff67f5509b2c2dfe8499945"
+version = "1.1.5"
+source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?branch=master#d2d339cbb005f676bb700059bd51dc689c025f6b"
 
 [[package]]
 name = "sgx_libc"
-version = "1.1.4"
-source = "git+https://github.com/bluele/incubator-teaclave-sgx-sdk?branch=master#e8a9fc22939befa27ff67f5509b2c2dfe8499945"
+version = "1.1.5"
+source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?branch=master#d2d339cbb005f676bb700059bd51dc689c025f6b"
 dependencies = [
  "sgx_types",
 ]
 
 [[package]]
 name = "sgx_rand"
-version = "1.1.4"
-source = "git+https://github.com/bluele/incubator-teaclave-sgx-sdk?branch=master#e8a9fc22939befa27ff67f5509b2c2dfe8499945"
+version = "1.1.5"
+source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?branch=master#d2d339cbb005f676bb700059bd51dc689c025f6b"
 dependencies = [
  "sgx_trts",
  "sgx_tstd",
@@ -2693,16 +2693,16 @@ dependencies = [
 
 [[package]]
 name = "sgx_tcrypto"
-version = "1.1.4"
-source = "git+https://github.com/bluele/incubator-teaclave-sgx-sdk?branch=master#e8a9fc22939befa27ff67f5509b2c2dfe8499945"
+version = "1.1.5"
+source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?branch=master#d2d339cbb005f676bb700059bd51dc689c025f6b"
 dependencies = [
  "sgx_types",
 ]
 
 [[package]]
 name = "sgx_tprotected_fs"
-version = "1.1.4"
-source = "git+https://github.com/bluele/incubator-teaclave-sgx-sdk?branch=master#e8a9fc22939befa27ff67f5509b2c2dfe8499945"
+version = "1.1.5"
+source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?branch=master#d2d339cbb005f676bb700059bd51dc689c025f6b"
 dependencies = [
  "sgx_trts",
  "sgx_types",
@@ -2710,8 +2710,8 @@ dependencies = [
 
 [[package]]
 name = "sgx_trts"
-version = "1.1.4"
-source = "git+https://github.com/bluele/incubator-teaclave-sgx-sdk?branch=master#e8a9fc22939befa27ff67f5509b2c2dfe8499945"
+version = "1.1.5"
+source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?branch=master#d2d339cbb005f676bb700059bd51dc689c025f6b"
 dependencies = [
  "sgx_libc",
  "sgx_types",
@@ -2719,16 +2719,16 @@ dependencies = [
 
 [[package]]
 name = "sgx_tse"
-version = "1.1.4"
-source = "git+https://github.com/bluele/incubator-teaclave-sgx-sdk?branch=master#e8a9fc22939befa27ff67f5509b2c2dfe8499945"
+version = "1.1.5"
+source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?branch=master#d2d339cbb005f676bb700059bd51dc689c025f6b"
 dependencies = [
  "sgx_types",
 ]
 
 [[package]]
 name = "sgx_tstd"
-version = "1.1.4"
-source = "git+https://github.com/bluele/incubator-teaclave-sgx-sdk?branch=master#e8a9fc22939befa27ff67f5509b2c2dfe8499945"
+version = "1.1.5"
+source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?branch=master#d2d339cbb005f676bb700059bd51dc689c025f6b"
 dependencies = [
  "hashbrown_tstd",
  "sgx_alloc",
@@ -2743,21 +2743,21 @@ dependencies = [
 
 [[package]]
 name = "sgx_types"
-version = "1.1.4"
-source = "git+https://github.com/bluele/incubator-teaclave-sgx-sdk?branch=master#e8a9fc22939befa27ff67f5509b2c2dfe8499945"
+version = "1.1.5"
+source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?branch=master#d2d339cbb005f676bb700059bd51dc689c025f6b"
 
 [[package]]
 name = "sgx_unwind"
-version = "1.1.4"
-source = "git+https://github.com/bluele/incubator-teaclave-sgx-sdk?branch=master#e8a9fc22939befa27ff67f5509b2c2dfe8499945"
+version = "1.1.5"
+source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?branch=master#d2d339cbb005f676bb700059bd51dc689c025f6b"
 dependencies = [
  "sgx_build_helper",
 ]
 
 [[package]]
 name = "sgx_urts"
-version = "1.1.4"
-source = "git+https://github.com/bluele/incubator-teaclave-sgx-sdk?branch=master#e8a9fc22939befa27ff67f5509b2c2dfe8499945"
+version = "1.1.5"
+source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?branch=master#d2d339cbb005f676bb700059bd51dc689c025f6b"
 dependencies = [
  "libc",
  "sgx_types",
@@ -3789,25 +3789,25 @@ dependencies = [
 
 [[patch.unused]]
 name = "sgx_crypto_helper"
-version = "1.1.4"
-source = "git+https://github.com/bluele/incubator-teaclave-sgx-sdk?branch=master#e8a9fc22939befa27ff67f5509b2c2dfe8499945"
+version = "1.1.5"
+source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?branch=master#d2d339cbb005f676bb700059bd51dc689c025f6b"
 
 [[patch.unused]]
 name = "sgx_serialize"
-version = "1.1.4"
-source = "git+https://github.com/bluele/incubator-teaclave-sgx-sdk?branch=master#e8a9fc22939befa27ff67f5509b2c2dfe8499945"
+version = "1.1.5"
+source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?branch=master#d2d339cbb005f676bb700059bd51dc689c025f6b"
 
 [[patch.unused]]
 name = "sgx_serialize_derive"
-version = "1.1.4"
-source = "git+https://github.com/bluele/incubator-teaclave-sgx-sdk?branch=master#e8a9fc22939befa27ff67f5509b2c2dfe8499945"
+version = "1.1.5"
+source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?branch=master#d2d339cbb005f676bb700059bd51dc689c025f6b"
 
 [[patch.unused]]
 name = "sgx_serialize_derive_internals"
-version = "1.1.4"
-source = "git+https://github.com/bluele/incubator-teaclave-sgx-sdk?branch=master#e8a9fc22939befa27ff67f5509b2c2dfe8499945"
+version = "1.1.5"
+source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?branch=master#d2d339cbb005f676bb700059bd51dc689c025f6b"
 
 [[patch.unused]]
 name = "sgx_tcrypto_helper"
-version = "1.1.4"
-source = "git+https://github.com/bluele/incubator-teaclave-sgx-sdk?branch=master#e8a9fc22939befa27ff67f5509b2c2dfe8499945"
+version = "1.1.5"
+source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?branch=master#d2d339cbb005f676bb700059bd51dc689c025f6b"

@@ -17,20 +17,20 @@ sgx_tstd = { git = "https://github.com/apache/teaclave-sgx-sdk.git", features = 
 enclave-runtime = { path = "../enclave-modules/runtime" }
 
 [patch."https://github.com/apache/teaclave-sgx-sdk.git"]
-sgx_tstd = { version = "1.1.4", git = "https://github.com/bluele/incubator-teaclave-sgx-sdk", branch = "master"}
-sgx_urts = { version = "1.1.4", git = "https://github.com/bluele/incubator-teaclave-sgx-sdk", branch = "master"}
-sgx_tse = { version = "1.1.4", git = "https://github.com/bluele/incubator-teaclave-sgx-sdk", branch = "master"}
-sgx_alloc = { version = "1.1.4", git = "https://github.com/bluele/incubator-teaclave-sgx-sdk", branch = "master"}
-sgx_libc = { version = "1.1.4", git = "https://github.com/bluele/incubator-teaclave-sgx-sdk", branch = "master"}
-sgx_serialize = { version = "1.1.4", git = "https://github.com/bluele/incubator-teaclave-sgx-sdk", branch = "master"}
-sgx_serialize_derive = { version = "1.1.4", git = "https://github.com/bluele/incubator-teaclave-sgx-sdk", branch = "master"}
-sgx_serialize_derive_internals = { version = "1.1.4", git = "https://github.com/bluele/incubator-teaclave-sgx-sdk", branch = "master"}
-sgx_trts = { version = "1.1.4", git = "https://github.com/bluele/incubator-teaclave-sgx-sdk", branch = "master"}
-sgx_types = { version = "1.1.4", git = "https://github.com/bluele/incubator-teaclave-sgx-sdk", branch = "master"}
-sgx_tcrypto = { version = "1.1.4", git = "https://github.com/bluele/incubator-teaclave-sgx-sdk", branch = "master"}
-sgx_tcrypto_helper = { version = "1.1.4", git = "https://github.com/bluele/incubator-teaclave-sgx-sdk", branch = "master"}
-sgx_crypto_helper = { version = "1.1.4", git = "https://github.com/bluele/incubator-teaclave-sgx-sdk", branch = "master"}
-sgx_rand = { version = "1.1.4", git = "https://github.com/bluele/incubator-teaclave-sgx-sdk", branch = "master"}
+sgx_tstd = { version = "1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", branch = "master"}
+sgx_urts = { version = "1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", branch = "master"}
+sgx_tse = { version = "1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", branch = "master"}
+sgx_alloc = { version = "1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", branch = "master"}
+sgx_libc = { version = "1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", branch = "master"}
+sgx_serialize = { version = "1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", branch = "master"}
+sgx_serialize_derive = { version = "1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", branch = "master"}
+sgx_serialize_derive_internals = { version = "1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", branch = "master"}
+sgx_trts = { version = "1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", branch = "master"}
+sgx_types = { version = "1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", branch = "master"}
+sgx_tcrypto = { version = "1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", branch = "master"}
+sgx_tcrypto_helper = { version = "1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", branch = "master"}
+sgx_crypto_helper = { version = "1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", branch = "master"}
+sgx_rand = { version = "1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", branch = "master"}
 
 [patch."https://github.com/informalsystems/ibc-rs.git"]
 ibc = { git = "https://github.com/bluele/ibc-rs", branch = "sgx", default-features = false }
