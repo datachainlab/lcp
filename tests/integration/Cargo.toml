@@ -5,9 +5,9 @@ edition = "2021"
 build = "build.rs"
 
 [dependencies]
-ibc = {git = "https://github.com/bluele/ibc-rs", branch = "sgx", default-features = false }
-ibc-relayer = {git = "https://github.com/bluele/ibc-rs", branch = "sgx", default-features = false }
-ibc-proto = { git = "https://github.com/bluele/ibc-rs", branch = "sgx", default-features = false }
+ibc = { git = "https://github.com/informalsystems/ibc-rs", default-features = false }
+ibc-relayer = { git = "https://github.com/informalsystems/ibc-rs", default-features = false }
+ibc-proto = { git = "https://github.com/informalsystems/ibc-rs", default-features = false }
 tendermint-rpc  = { git = "https://github.com/informalsystems/tendermint-rs", rev = "235480171081fed74de7b3d3c19911304df29831", features = ["http-client", "websocket-client"] }
 
 anyhow = { version = "1.0.56" }

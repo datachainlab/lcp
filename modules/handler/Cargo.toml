@@ -6,7 +6,7 @@ edition = "2021"
 [dependencies]
 sgx_types = { git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 sgx_tstd = { git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
-ibc = {git = "https://github.com/bluele/ibc-rs", branch = "sgx", default-features = false }
+ibc = { git = "https://github.com/informalsystems/ibc-rs", default-features = false }
 prost-types = { version = "0.9", default-features = false }
 serde = { version = "1.0", default-features = false, features = ["alloc"] }
 derive_more = { version = "0.99.17", default-features = false, features = ["from", "display"] }

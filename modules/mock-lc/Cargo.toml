@@ -5,8 +5,8 @@ edition = "2021"
 
 [dependencies]
 sgx_tstd = { git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
-ibc = { git = "https://github.com/bluele/ibc-rs", branch = "sgx", default-features = false, features = ["mocks"] }
-ibc-proto = { git = "https://github.com/bluele/ibc-rs", branch = "sgx", default-features = false }
+ibc = { git = "https://github.com/informalsystems/ibc-rs", default-features = false, features = ["mocks"] }
+ibc-proto = { git = "https://github.com/informalsystems/ibc-rs", default-features = false }
 prost = { version = "0.9", default-features = false }
 prost-types = { version = "0.9", default-features = false }
 sha2 = { version = "0.8", default-features = false }

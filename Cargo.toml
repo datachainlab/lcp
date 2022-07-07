@@ -43,3 +43,8 @@ sgx_tcrypto = { version = "1.1.4", git = "https://github.com/bluele/incubator-te
 sgx_tcrypto_helper = { version = "1.1.4", git = "https://github.com/bluele/incubator-teaclave-sgx-sdk", branch = "master"}
 sgx_crypto_helper = { version = "1.1.4", git = "https://github.com/bluele/incubator-teaclave-sgx-sdk", branch = "master"}
 sgx_rand = { version = "1.1.4", git = "https://github.com/bluele/incubator-teaclave-sgx-sdk", branch = "master"}
+
+[patch."https://github.com/informalsystems/ibc-rs.git"]
+ibc = { git = "https://github.com/bluele/ibc-rs", branch = "sgx", default-features = false }
+ibc-proto = { git = "https://github.com/bluele/ibc-rs", branch = "sgx", default-features = false }
+ibc-relayer = { git = "https://github.com/bluele/ibc-rs", branch = "sgx", default-features = false }
