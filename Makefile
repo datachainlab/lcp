@@ -184,4 +184,4 @@ proto:
 
 .PHONY: docker
 docker:
-	 docker build --no-cache -t datachainlab/sgx-rust:2004-1.1.4 -f Dockerfile.2004.nightly .
+	 @cd rust-sgx-sdk/dockerfile && docker build --no-cache -t datachainlab/sgx-rust:2004-1.1.5 -f Dockerfile.2004.nightly .

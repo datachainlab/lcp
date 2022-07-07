@@ -20,7 +20,7 @@ jobs:
   sdk-test:
     runs-on: ubuntu-latest
     container:
-      image: bluele/sgx-rust:2004-1.1.4
+      image: bluele/sgx-rust:2004-1.1.5
     steps:
       - uses: actions/checkout@v2
       - uses: actions-rs/toolchain@v1
