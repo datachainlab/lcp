@@ -1,12 +1,10 @@
 #[cfg(feature = "sgx")]
 use crate::sgx_reexport_prelude::*;
-use crate::AnyDef;
 use commitments::{StateCommitmentProof, UpdateClientCommitmentProof};
 use ibc::core::ics03_connection::connection::ConnectionEnd;
 use ibc::core::ics04_channel::channel::ChannelEnd;
-use ibc::core::ics24_host::identifier::{ChannelId, ConnectionId, PortId};
-use ibc::core::{ics02_client::height::Height, ics24_host::identifier::ClientId};
-use prost_types::Any;
+use ibc::core::ics24_host::identifier::{ChannelId, ClientId, ConnectionId, PortId};
+use lcp_types::{Any, Height};
 use serde::{Deserialize, Serialize};
 use std::string::String;
 use std::vec::Vec;
@@ -24,9 +22,7 @@ pub enum LightClientCommand {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct InitClientInput {
     pub client_type: String,
-    #[serde(with = "AnyDef")]
     pub any_client_state: Any,
-    #[serde(with = "AnyDef")]
     pub any_consensus_state: Any,
     pub current_timestamp: u128,
 }
@@ -34,7 +30,6 @@ pub struct InitClientInput {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct UpdateClientInput {
     pub client_id: ClientId,
-    #[serde(with = "AnyDef")]
     pub any_header: Any,
     pub current_timestamp: u128,
 }
@@ -42,7 +37,6 @@ pub struct UpdateClientInput {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct VerifyClientInput {
     pub client_id: ClientId,
-    #[serde(with = "AnyDef")]
     pub target_any_client_state: Any,
     pub prefix: Vec<u8>,
     pub counterparty_client_id: ClientId,
@@ -52,7 +46,6 @@ pub struct VerifyClientInput {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct VerifyClientConsensusInput {
     pub client_id: ClientId,
-    #[serde(with = "AnyDef")]
     pub target_any_client_consensus_state: Any,
     pub prefix: Vec<u8>,
     pub counterparty_client_id: ClientId,

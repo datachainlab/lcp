@@ -1,4 +1,5 @@
 use ibc::core::ics24_host::identifier::ChainId;
+use ibc_relayer::chain::ChainType;
 use ibc_relayer::config::{self, ChainConfig};
 use ibc_relayer::keyring::Store;
 use relay_tendermint::Relayer;
@@ -16,6 +17,7 @@ pub fn create_relayer(rt: Arc<TokioRuntime>, chain_id: &str) -> Result<Relayer> 
 fn make_tm_config(chain_id: &str) -> ChainConfig {
     ChainConfig {
         id: ChainId::new(chain_id.into(), 0),
+        r#type: ChainType::CosmosSdk,
         rpc_addr: Url::from_str("http://localhost:26657").unwrap(),
         websocket_addr: Url::from_str("ws://localhost:26657/websocket").unwrap(),
         grpc_addr: Url::from_str("http://localhost:9090").unwrap(),
@@ -32,6 +34,7 @@ fn make_tm_config(chain_id: &str) -> ChainConfig {
         default_gas: None,
         max_gas: Some(3000000),
         gas_adjustment: Some(0.1),
+        gas_multiplier: None,
         fee_granter: None,
         max_msg_num: Default::default(),
         max_tx_size: Default::default(),

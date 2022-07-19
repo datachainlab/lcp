@@ -4,13 +4,14 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-tendermint      = { git = "https://github.com/informalsystems/tendermint-rs", rev = "235480171081fed74de7b3d3c19911304df29831" }
-tendermint-rpc  = { git = "https://github.com/informalsystems/tendermint-rs", rev = "235480171081fed74de7b3d3c19911304df29831", features = ["http-client", "websocket-client"] }
-tendermint-light-client-verifier = { git = "https://github.com/informalsystems/tendermint-rs", rev = "235480171081fed74de7b3d3c19911304df29831", default-features = false }
-prost-types = { version = "0.9", default-features = false }
-ibc = { git = "https://github.com/informalsystems/ibc-rs", default-features = false }
-ibc-relayer = { git = "https://github.com/informalsystems/ibc-rs" }
-ibc-proto = { git = "https://github.com/informalsystems/ibc-rs", default-features = false }
+tendermint      = { version = "=0.23.7" }
+tendermint-rpc  = { version = "=0.23.7", features = ["http-client", "websocket-client"] }
+tendermint-light-client-verifier = { version = "=0.23.7", default-features = false }
+prost-types = { version = "0.10", default-features = false }
+ibc = { git = "https://github.com/informalsystems/ibc-rs", rev = "e8c98d440949abf971ac45a68ed9dd9e6e9f48ed", default-features = false }
+ibc-relayer = { git = "https://github.com/informalsystems/ibc-rs", rev = "e8c98d440949abf971ac45a68ed9dd9e6e9f48ed" }
+ibc-proto = { git = "https://github.com/informalsystems/ibc-rs", rev = "e8c98d440949abf971ac45a68ed9dd9e6e9f48ed", default-features = false }
 anyhow = { version = "1.0.56" }
 thiserror = { version = "1.0.30" }
 tokio = { version = "1.0" }
+lcp-types = { path = "../../types" }

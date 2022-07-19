@@ -4,14 +4,18 @@ use ibc::clients::ics07_tendermint::consensus_state::ConsensusState;
 use ibc::core::ics02_client::header::AnyHeader;
 use ibc::core::ics02_client::{client_consensus::AnyConsensusState, client_state::AnyClientState};
 use ibc::core::ics04_channel::channel::ChannelEnd;
+use ibc::core::ics23_commitment::merkle::MerkleProof;
 use ibc::core::ics24_host::identifier::{ChannelId, PortId};
 use ibc::Height;
-use ibc_proto::ibc::core::commitment::v1::MerkleProof;
-use ibc_relayer::chain::{ChainEndpoint, CosmosSdkChain};
+use ibc_relayer::chain::{
+    client::ClientSettings,
+    cosmos::{client::Settings, CosmosSdkChain},
+    endpoint::ChainEndpoint,
+    requests::{IncludeProof, QueryChannelRequest, QueryHeight},
+};
 use ibc_relayer::config::ChainConfig;
-use ibc_relayer::light_client::tendermint::LightClient;
-use ibc_relayer::light_client::LightClient as IBCLightClient;
-use prost_types::Any;
+use ibc_relayer::light_client::{tendermint::LightClient, LightClient as IBCLightClient};
+use lcp_types::Any;
 use std::sync::Arc;
 use tokio::runtime::Runtime as TokioRuntime;
 
@@ -52,9 +56,15 @@ impl Relayer {
 
     pub fn fetch_state(&mut self, height: Height) -> Result<(ClientState, ConsensusState)> {
         let block = self.tmlc.fetch(height)?;
-        let client_state = self
-            .chain
-            .build_client_state(height, self.chain.config().to_owned())?;
+        let config = self.chain.config();
+        let client_state = self.chain.build_client_state(
+            height,
+            ClientSettings::Tendermint(Settings {
+                max_clock_drift: config.clock_drift,
+                trusting_period: config.trusting_period,
+                trust_threshold: config.trust_threshold.into(),
+            }),
+        )?;
         let consensus_state = self.chain.build_consensus_state(block)?;
 
         self.client_state = Some(AnyClientState::Tendermint(client_state.clone()));
@@ -64,15 +74,13 @@ impl Relayer {
 
     pub fn fetch_state_as_any(&mut self, height: Height) -> Result<(Any, Any)> {
         let (client_state, consensus_state) = self.fetch_state(height)?;
-        Ok((
-            Any::from(AnyClientState::Tendermint(client_state)),
-            Any::from(AnyConsensusState::Tendermint(consensus_state)),
-        ))
+        let client_state = AnyClientState::Tendermint(client_state);
+        let consensus_state = AnyConsensusState::Tendermint(consensus_state);
+        Ok((client_state.into(), consensus_state.into()))
     }
 
     pub fn query_latest_height(&self) -> Result<Height> {
-        let height = self.chain.query_latest_height()?;
-        Ok(height)
+        Ok(self.chain.query_chain_latest_height()?)
     }
 
     pub fn proven_channel(
@@ -85,7 +93,12 @@ impl Relayer {
             Some(height) => height.decrement()?,
             None => self.query_latest_height()?.decrement()?,
         };
-        let res = self.chain.proven_channel(port_id, channel_id, height)?;
-        Ok((res.0, res.1, height.increment()))
+        let req = QueryChannelRequest {
+            port_id: port_id.clone(),
+            channel_id: channel_id.clone(),
+            height: QueryHeight::Specific(height),
+        };
+        let res = self.chain.query_channel(req, IncludeProof::Yes)?;
+        Ok((res.0, res.1.unwrap(), height.increment()))
     }
 }

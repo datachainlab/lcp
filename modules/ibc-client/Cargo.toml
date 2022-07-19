@@ -5,15 +5,16 @@ edition = "2021"
 
 [dependencies]
 sgx_tstd = { git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
-ibc = { git = "https://github.com/informalsystems/ibc-rs", default-features = false }
-ibc-proto = { git = "https://github.com/informalsystems/ibc-rs", default-features = false }
-tendermint-proto = { git = "https://github.com/informalsystems/tendermint-rs", rev = "235480171081fed74de7b3d3c19911304df29831", default-features = false }
-prost = { version = "0.9", default-features = false }
-prost-types = { version = "0.9", default-features = false }
+ibc = { git = "https://github.com/informalsystems/ibc-rs", rev = "e8c98d440949abf971ac45a68ed9dd9e6e9f48ed", default-features = false }
+ibc-proto = { git = "https://github.com/informalsystems/ibc-rs", rev = "e8c98d440949abf971ac45a68ed9dd9e6e9f48ed", default-features = false }
+tendermint-proto = { version = "=0.23.7", default-features = false }
+prost = { version = "0.10", default-features = false }
+prost-types = { version = "0.10", default-features = false }
 tiny-keccak = "1.4"
 serde = { version = "1.0", default-features = false, features = ["alloc"] }
 serde_json = { version = "1.0", default-features = false, features = ["alloc"] }
 
+lcp-types = { path = "../types", default-features = false }
 context = { path = "../context", default-features = false }
 commitments = { path = "../commitments", default-features = false }
 validation-context = { path = "../validation-context", default-features = false }

@@ -17,7 +17,7 @@ pub fn update_client<'l, S: KVStore, L: LightClientSource<'l>>(
     let lc = L::get_light_client(&client_type).unwrap();
     let ek = ctx.get_enclave_key();
     let res = lc
-        .update_client(ctx, input.client_id, input.any_header)
+        .update_client(ctx, input.client_id, input.any_header.into())
         .map_err(Error::LightClientError)?;
 
     ctx.store_any_client_state(res.client_id.clone(), res.new_any_client_state)

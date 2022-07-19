@@ -5,11 +5,12 @@ edition = "2021"
 build = "build.rs"
 
 [dependencies]
-ibc = { git = "https://github.com/informalsystems/ibc-rs", default-features = false }
-ibc-relayer = { git = "https://github.com/informalsystems/ibc-rs", default-features = false }
-ibc-proto = { git = "https://github.com/informalsystems/ibc-rs", default-features = false }
-tendermint-rpc  = { git = "https://github.com/informalsystems/tendermint-rs", rev = "235480171081fed74de7b3d3c19911304df29831", features = ["http-client", "websocket-client"] }
+ibc = { git = "https://github.com/informalsystems/ibc-rs", rev = "e8c98d440949abf971ac45a68ed9dd9e6e9f48ed", default-features = false }
+ibc-relayer = { git = "https://github.com/informalsystems/ibc-rs", rev = "e8c98d440949abf971ac45a68ed9dd9e6e9f48ed", default-features = false }
+ibc-proto = { git = "https://github.com/informalsystems/ibc-rs", rev = "e8c98d440949abf971ac45a68ed9dd9e6e9f48ed", default-features = false }
+tendermint-rpc  = { version = "=0.23.7", features = ["http-client", "websocket-client"] }
 
+prost-types = { version = "0.10", default-features = false }
 anyhow = { version = "1.0.56" }
 thiserror = { version = "1.0.30" }
 tokio = { version = "1.0" }

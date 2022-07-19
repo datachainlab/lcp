@@ -1,7 +1,6 @@
 #[cfg(feature = "sgx")]
 use crate::sgx_reexport_prelude::*;
 use crate::{commitment::UpdateClientCommitment, StateCommitment};
-use ibc::core::ics23_commitment::commitment::CommitmentProofBytes;
 use serde::{Deserialize, Serialize};
 use std::vec::Vec;
 

@@ -4,8 +4,8 @@ version      = "0.1.0"
 edition      = "2021"
 
 [dependencies]
-prost-build = "0.9"
+prost-build = "0.10.1"
 tempdir     = "0.3.7"
 walkdir     = "2.3"
 argh        = "0.1.3"
-tonic-build = "0.6"
+tonic-build = "0.7"

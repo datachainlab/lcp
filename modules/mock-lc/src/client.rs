@@ -2,8 +2,8 @@ use crate::errors::MockLCError as Error;
 #[cfg(feature = "sgx")]
 use crate::sgx_reexport_prelude::*;
 use alloc::borrow::ToOwned;
-use commitments::{gen_state_id, gen_state_id_from_any, StateCommitment, UpdateClientCommitment};
-use ibc::core::ics02_client::client_consensus::{AnyConsensusState, ConsensusState};
+use commitments::{gen_state_id, gen_state_id_from_any, UpdateClientCommitment};
+use ibc::core::ics02_client::client_consensus::AnyConsensusState;
 use ibc::core::ics02_client::client_def::{AnyClient, ClientDef};
 use ibc::core::ics02_client::client_state::{AnyClientState, ClientState};
 use ibc::core::ics02_client::client_type::ClientType;
@@ -11,24 +11,16 @@ use ibc::core::ics02_client::error::Error as ICS02Error;
 use ibc::core::ics02_client::header::{AnyHeader, Header};
 use ibc::core::ics03_connection::connection::ConnectionEnd;
 use ibc::core::ics03_connection::context::ConnectionReader;
-use ibc::core::ics03_connection::error::Error as ICS03Error;
 use ibc::core::ics04_channel::channel::ChannelEnd;
-use ibc::core::ics04_channel::error::Error as ICS04Error;
-use ibc::core::ics23_commitment::commitment::{CommitmentPrefix, CommitmentProofBytes};
 use ibc::core::ics24_host::identifier::{ChannelId, ClientId, ConnectionId, PortId};
-use ibc::core::ics24_host::path::{
-    ChannelEndsPath, ClientConsensusStatePath, ClientStatePath, ConnectionsPath,
-};
-use ibc::core::ics24_host::Path;
-use ibc::Height;
+use lcp_types::{Any, Height};
 use light_client::{CreateClientResult, StateVerificationResult, UpdateClientResult};
 use light_client::{LightClient, LightClientRegistry};
 use light_client::{LightClientError, LightClientReader};
 use log::*;
-use prost_types::Any;
 use serde_json::Value;
 use std::boxed::Box;
-use std::string::{String, ToString};
+use std::string::ToString;
 use std::vec::Vec;
 use validation_context::ValidationParams;
 
@@ -38,12 +30,13 @@ pub struct MockLightClient;
 impl LightClient for MockLightClient {
     fn create_client(
         &self,
-        ctx: &dyn LightClientReader,
+        _: &dyn LightClientReader,
         any_client_state: Any,
         any_consensus_state: Any,
     ) -> Result<CreateClientResult, LightClientError> {
-        let ctx = ctx.as_client_reader();
-
+        let client_id = gen_client_id(&any_client_state, &any_consensus_state)?;
+        let state_id = gen_state_id_from_any(&any_client_state, &any_consensus_state)
+            .map_err(|e| Error::OtherError(e).into())?;
         let client_state = match AnyClientState::try_from(any_client_state.clone()) {
             Ok(AnyClientState::Mock(client_state)) => AnyClientState::Mock(client_state),
             #[allow(unreachable_patterns)]
@@ -62,12 +55,9 @@ impl LightClient for MockLightClient {
             }
             Err(e) => return Err(Error::ICS02Error(e).into()),
         };
-        let client_id = gen_client_id(&any_client_state, &any_consensus_state)?;
-        let height = client_state.latest_height();
-        let timestamp = consensus_state.timestamp();
 
-        let state_id = gen_state_id_from_any(&any_client_state, &any_consensus_state)
-            .map_err(|e| Error::OtherError(e).into())?;
+        let height = client_state.latest_height().into();
+        let timestamp = consensus_state.timestamp();
 
         Ok(CreateClientResult {
             client_id: client_id.clone(),
@@ -100,7 +90,6 @@ impl LightClient for MockLightClient {
         any_header: Any,
     ) -> Result<UpdateClientResult, LightClientError> {
         let ctx = ctx.as_client_reader();
-
         let header = match AnyHeader::try_from(any_header) {
             Ok(AnyHeader::Mock(header)) => AnyHeader::Mock(header),
             #[allow(unreachable_patterns)]
@@ -126,7 +115,7 @@ impl LightClient for MockLightClient {
             return Err(Error::ICS02Error(ICS02Error::client_frozen(client_id)).into());
         }
 
-        let height = header.height();
+        let height = header.height().into();
         let header_timestamp = header.timestamp();
 
         let latest_height = client_state.latest_height();
@@ -164,15 +153,15 @@ impl LightClient for MockLightClient {
 
         Ok(UpdateClientResult {
             client_id: client_id.clone(),
-            new_any_client_state: Any::from(new_client_state),
-            new_any_consensus_state: Any::from(new_consensus_state),
+            new_any_client_state: Any::try_from(new_client_state).unwrap(),
+            new_any_consensus_state: Any::try_from(new_consensus_state).unwrap(),
             height,
             timestamp: header_timestamp,
             commitment: UpdateClientCommitment {
                 client_id,
                 prev_state_id: Some(prev_state_id),
                 new_state_id,
-                prev_height: Some(latest_height),
+                prev_height: Some(latest_height.into()),
                 new_height: height,
                 timestamp: header_timestamp_nanos,
                 validation_params: ValidationParams::Empty,
@@ -214,7 +203,7 @@ impl LightClient for MockLightClient {
         expected_connection_state: ConnectionEnd,
         counterparty_prefix: Vec<u8>,
         counterparty_connection_id: ConnectionId,
-        proof_height: ibc::core::ics02_client::height::Height,
+        proof_height: Height,
         proof: Vec<u8>,
     ) -> light_client::Result<StateVerificationResult> {
         todo!()
@@ -228,7 +217,7 @@ impl LightClient for MockLightClient {
         counterparty_prefix: Vec<u8>,
         counterparty_port_id: PortId,
         counterparty_channel_id: ChannelId,
-        proof_height: ibc::core::ics02_client::height::Height,
+        proof_height: Height,
         proof: Vec<u8>,
     ) -> light_client::Result<StateVerificationResult> {
         todo!()

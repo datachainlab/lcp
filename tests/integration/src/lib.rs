@@ -2,16 +2,16 @@ mod relayer;
 #[cfg(test)]
 mod tests {
     use super::*;
+    use anyhow::anyhow;
     use attestation_report::EndorsedAttestationReport;
     use enclave_api::{Enclave, EnclaveAPI};
     use enclave_commands::{
         CommandResult, CommitmentProofPair, LightClientResult, UpdateClientResult,
     };
     use ibc::core::{
-        ics23_commitment::commitment::CommitmentProofBytes,
+        ics23_commitment::{commitment::CommitmentProofBytes, merkle::MerkleProof},
         ics24_host::identifier::{ChannelId, PortId},
     };
-    use ibc_proto::ibc::core::commitment::v1::MerkleProof;
     use log::*;
     use settings::ENDORSED_ATTESTATION_PATH;
     use std::{str::FromStr, sync::Arc};
@@ -71,7 +71,7 @@ mod tests {
         );
 
         let proof = if let CommandResult::LightClient(LightClientResult::InitClient(res)) = enclave
-            .init_client("07-tendermint", client_state, consensus_state)
+            .init_client("07-tendermint", client_state.into(), consensus_state.into())
             .unwrap()
         {
             res.0
@@ -83,8 +83,17 @@ mod tests {
 
         info!("generated client id is {}", client_id.as_str().to_string());
 
-        let target_header =
-            rly.create_header(commitment.new_height, commitment.new_height.increment())?;
+        let target_header = rly.create_header(
+            commitment
+                .new_height
+                .try_into()
+                .map_err(|e| anyhow!("{:?}", e))?,
+            commitment
+                .new_height
+                .increment()
+                .try_into()
+                .map_err(|e| anyhow!("{:?}", e))?,
+        )?;
         let res = enclave.update_client(client_id.clone(), target_header.into())?;
 
         info!("update_client's result is {:?}", res);
@@ -102,25 +111,25 @@ mod tests {
             PortId::from_str("cross")?,
             ChannelId::from_str("channel-0")?,
         );
-        let res = rly.proven_channel(&port_id, &channel_id, Some(height))?;
+        let res = rly.proven_channel(
+            &port_id,
+            &channel_id,
+            Some(height.try_into().map_err(|e| anyhow!("{:?}", e))?),
+        )?;
 
         info!("expected channel is {:?}", res.0);
 
-        let res = enclave.verify_channel(
+        let _ = enclave.verify_channel(
             client_id.clone(),
             res.0,
             "ibc".into(),
             port_id,
             channel_id,
-            CommitmentProofPair(res.2, merkle_proof_to_bytes(res.1)?),
+            CommitmentProofPair(
+                res.2.try_into().map_err(|e| anyhow!("{:?}", e))?,
+                merkle_proof_to_bytes(res.1)?,
+            ),
         )?;
-
-        let cs = lcp_ibc_client::client_state::ClientState::default();
-        let client = lcp_ibc_client::client_def::LCPClient {};
-
-        // client.initialise(&client_state, &consensus_state)?;
-
-        // TODO implement the verification testing
 
         enclave.destroy();
         Ok(())

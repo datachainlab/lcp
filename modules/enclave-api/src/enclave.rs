@@ -9,7 +9,7 @@ use ibc::core::{
     ics04_channel::channel::ChannelEnd,
     ics24_host::identifier::{ChannelId, ClientId, PortId},
 };
-use prost_types::Any;
+use lcp_types::Any;
 use sgx_types::{sgx_enclave_id_t, sgx_status_t};
 use sgx_urts::SgxEnclave;
 
@@ -109,8 +109,8 @@ impl EnclaveAPI for Enclave {
         let command = Command::LightClient(LightClientCommand::InitClient(InitClientInput {
             current_timestamp: Self::current_timestamp(),
             client_type: client_type.into(),
-            any_client_state,
-            any_consensus_state,
+            any_client_state: any_client_state.into(),
+            any_consensus_state: any_consensus_state.into(),
         }));
         self.execute_command(&command)
     }
@@ -118,7 +118,7 @@ impl EnclaveAPI for Enclave {
     fn update_client(&self, client_id: ClientId, any_header: Any) -> Result<CommandResult> {
         let command = Command::LightClient(LightClientCommand::UpdateClient(UpdateClientInput {
             client_id,
-            any_header,
+            any_header: any_header.into(),
             current_timestamp: Self::current_timestamp(),
         }));
         self.execute_command(&command)

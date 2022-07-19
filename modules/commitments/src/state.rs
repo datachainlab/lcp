@@ -2,10 +2,11 @@
 use crate::sgx_reexport_prelude::*;
 use anyhow::{anyhow, Result};
 use ibc::core::ics02_client::{client_consensus::AnyConsensusState, client_state::AnyClientState};
+use lcp_types::Any;
 use prost::Message;
-use prost_types::Any;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
+#[allow(unused_imports)]
 use std::format;
 use std::string::String;
 use std::vec;
@@ -53,9 +54,10 @@ pub fn gen_state_id(
     any_client_state: AnyClientState,
     any_consensus_state: AnyConsensusState,
 ) -> Result<StateID> {
-    let any_client_state = Any::from(any_client_state);
-    let any_consensus_state = Any::from(any_consensus_state);
-    gen_state_id_from_any(&any_client_state, &any_consensus_state)
+    gen_state_id_from_any(
+        &Any::from(any_client_state),
+        &Any::from(any_consensus_state),
+    )
 }
 
 pub fn gen_state_id_from_any(any_client_state: &Any, any_consensus_state: &Any) -> Result<StateID> {

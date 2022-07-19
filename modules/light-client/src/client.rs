@@ -4,14 +4,14 @@ use crate::LightClientError;
 use commitments::{StateCommitment, UpdateClientCommitment};
 use ibc::{
     core::{
-        ics02_client::{context::ClientReader, error::Error as ICS02Error, height::Height},
+        ics02_client::{context::ClientReader, error::Error as ICS02Error},
         ics03_connection::{connection::ConnectionEnd, context::ConnectionReader},
         ics04_channel::channel::ChannelEnd,
         ics24_host::identifier::{ChannelId, ClientId, ConnectionId, PortId},
     },
     timestamp::Timestamp,
 };
-use prost_types::Any;
+use lcp_types::{Any, Height};
 use std::string::String;
 use std::vec::Vec;
 

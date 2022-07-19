@@ -9,8 +9,8 @@ sgx_types = { git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 sgx_trts = { git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 serde = { version = "1.0", default-features = false, features = ["alloc"] }
 serde_json = { version = "1.0", default-features = false, features = ["alloc"] }
-prost-types = { version = "0.9", default-features = false }
-ibc = { git = "https://github.com/informalsystems/ibc-rs", default-features = false }
+prost-types = { version = "0.10", default-features = false }
+ibc = { git = "https://github.com/informalsystems/ibc-rs", rev = "e8c98d440949abf971ac45a68ed9dd9e6e9f48ed", default-features = false }
 log = "0.4.8"
 hex = { version = "0.4", default-features = false, features = ["alloc"] }
 rlp = { version = "0.5.1", default-features = false }
@@ -20,6 +20,7 @@ anyhow = { version = "1.0.56", optional = true }
 thiserror-sgx = { package = "thiserror", git = "https://github.com/mesalock-linux/thiserror-sgx.git", optional = true }
 thiserror = { version = "1.0.30", optional = true }
 commitments = { path = "../commitments", default-features = false }
+lcp-types = { path = "../types", default-features = false }
 
 [features]
 default = ["std"]

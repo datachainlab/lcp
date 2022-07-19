@@ -23,11 +23,11 @@ mod tests {
             client_state::{MockClientState, MockConsensusState},
             header::MockHeader,
         },
-        Height,
+        Height as ICS02Height,
     };
     use lazy_static::lazy_static;
+    use lcp_types::{Any, Height};
     use light_client::{LightClient, LightClientRegistry, LightClientSource};
-    use prost_types::Any;
     use std::time::SystemTime;
     use std::time::UNIX_EPOCH;
     use store::memory::MemStore;
@@ -61,14 +61,14 @@ mod tests {
 
         // 1. initializes Light Client(Mock) corresponding to the upstream chain on the LCP side
         let proof0 = {
-            let header = MockHeader::new(Height::new(0, 1));
-            let client_state = MockClientState::new(header);
-            let consensus_state = MockConsensusState::new(header);
+            let header = MockHeader::new(ICS02Height::new(0, 1).unwrap());
+            let client_state = AnyClientState::Mock(MockClientState::new(header));
+            let consensus_state = AnyConsensusState::Mock(MockConsensusState::new(header));
 
             let input = InitClientInput {
                 client_type: ClientType::Mock.as_str().to_string(),
-                any_client_state: Any::from(AnyClientState::Mock(client_state)),
-                any_consensus_state: Any::from(AnyConsensusState::Mock(consensus_state)),
+                any_client_state: Any::from(client_state).into(),
+                any_consensus_state: Any::from(consensus_state).into(),
                 current_timestamp: 0,
             };
             assert_eq!(lcp_store.revision, 1);
@@ -113,8 +113,8 @@ mod tests {
 
             let input = InitClientInput {
                 client_type: LCP_CLIENT_TYPE.to_string(),
-                any_client_state: Any::from(initial_client_state),
-                any_consensus_state: Any::from(initial_consensus_state),
+                any_client_state: initial_client_state.into(),
+                any_consensus_state: initial_consensus_state.into(),
                 current_timestamp: 0,
             };
             let res = router::dispatch::<_, LocalLightClientRegistry>(
@@ -135,12 +135,10 @@ mod tests {
 
         // 3. updates the Light Client state on the LCP side
         let proof1 = {
-            let header = MockHeader::new(Height::new(0, 2));
-            let any_header = Any::from(AnyHeader::Mock(header));
-
+            let header = MockHeader::new(ICS02Height::new(0, 2).unwrap());
             let input = UpdateClientInput {
                 client_id: proof0.commitment().client_id,
-                any_header,
+                any_header: Any::from(AnyHeader::Mock(header)).into(),
                 current_timestamp: 0,
             };
 
