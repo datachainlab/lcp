@@ -17,6 +17,7 @@ members = [
     "modules/light-client",
     "modules/tendermint-lc",
     "modules/mock-lc",
+    "modules/service",
     "modules/relay/tendermint",
     "proto",
     "tests/integration"
