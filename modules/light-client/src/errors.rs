@@ -10,6 +10,8 @@ pub type Result<T> = std::result::Result<T, LightClientError>;
 
 #[derive(thiserror::Error, Debug)]
 pub enum LightClientError {
+    #[error("the type_url not found in the registry: {0}")]
+    TypeUrlNotFoundError(String),
     #[error("the type_url already exists in the registry: {0}")]
     TypeUrlAlreadyExistsError(String),
     #[error("the registry is already sealed")]

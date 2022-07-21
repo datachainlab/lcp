@@ -21,11 +21,10 @@ impl Msg for AppService {
         }
         let any_client_state = req.client_state.unwrap();
         let any_consensus_state = req.consensus_state.unwrap();
-        match self.enclave.init_client(
-            "unknown",
-            any_client_state.into(),
-            any_consensus_state.into(),
-        ) {
+        match self
+            .enclave
+            .init_client(any_client_state.into(), any_consensus_state.into())
+        {
             Ok(_) => Ok(Response::new(MsgCreateClientResponse {})),
             Err(e) => Err(Status::aborted(e.to_string())),
         }

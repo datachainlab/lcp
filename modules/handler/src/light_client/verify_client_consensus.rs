@@ -1,10 +1,11 @@
+use super::registry::get_light_client_by_client_id;
 use crate::light_client::LightClientHandlerError as Error;
 use commitments::prover::prove_state_commitment;
 use context::Context;
 use enclave_commands::{
     LightClientResult, VerifyClientConsensusInput, VerifyClientConsensusResult,
 };
-use light_client::{LightClientReader, LightClientSource};
+use light_client::LightClientSource;
 use store::KVStore;
 
 pub fn verify_client_consensus<'l, S: KVStore, L: LightClientSource<'l>>(
@@ -12,11 +13,7 @@ pub fn verify_client_consensus<'l, S: KVStore, L: LightClientSource<'l>>(
     input: VerifyClientConsensusInput,
 ) -> Result<LightClientResult, Error> {
     let ek = ctx.get_enclave_key();
-
-    let client_type = ctx
-        .client_type(&input.client_id)
-        .map_err(Error::ICS02Error)?;
-    let lc = L::get_light_client(&client_type).unwrap();
+    let lc = get_light_client_by_client_id::<_, L>(ctx, &input.client_id)?;
 
     let res = lc
         .verify_client_consensus(

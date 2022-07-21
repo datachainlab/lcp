@@ -24,12 +24,8 @@ pub struct Enclave {
 pub trait EnclaveAPI {
     fn execute_command(&self, cmd: &EnclaveCommand) -> Result<CommandResult>;
     fn init_enclave_key(&self, spid: &[u8], ias_key: &[u8]) -> Result<CommandResult>;
-    fn init_client(
-        &self,
-        client_type: &str,
-        any_client_state: Any,
-        any_consensus_state: Any,
-    ) -> Result<CommandResult>;
+    fn init_client(&self, any_client_state: Any, any_consensus_state: Any)
+        -> Result<CommandResult>;
     fn update_client(&self, client_id: ClientId, any_header: Any) -> Result<CommandResult>;
     fn verify_channel(
         &self,
@@ -108,15 +104,13 @@ impl EnclaveAPI for Enclave {
 
     fn init_client(
         &self,
-        client_type: &str,
         any_client_state: Any,
         any_consensus_state: Any,
     ) -> Result<CommandResult> {
         let cmd = Command::LightClient(LightClientCommand::InitClient(InitClientInput {
-            current_timestamp: Self::current_timestamp(),
-            client_type: client_type.into(),
             any_client_state: any_client_state.into(),
             any_consensus_state: any_consensus_state.into(),
+            current_timestamp: Self::current_timestamp(),
         }));
         self.execute_command(&EnclaveCommand::new(
             CommandParams::new(self.home.clone()),

@@ -5,7 +5,9 @@ use alloc::borrow::ToOwned;
 use commitments::{gen_state_id, gen_state_id_from_any, UpdateClientCommitment};
 use ibc::core::ics02_client::client_consensus::AnyConsensusState;
 use ibc::core::ics02_client::client_def::{AnyClient, ClientDef};
-use ibc::core::ics02_client::client_state::{AnyClientState, ClientState};
+use ibc::core::ics02_client::client_state::{
+    AnyClientState, ClientState, MOCK_CLIENT_STATE_TYPE_URL,
+};
 use ibc::core::ics02_client::client_type::ClientType;
 use ibc::core::ics02_client::error::Error as ICS02Error;
 use ibc::core::ics02_client::header::{AnyHeader, Header};
@@ -227,7 +229,7 @@ impl LightClient for MockLightClient {
 pub fn register_implementations(registry: &mut LightClientRegistry) {
     registry
         .put(
-            ClientType::Mock.as_str().to_string(),
+            MOCK_CLIENT_STATE_TYPE_URL.to_string(),
             Box::new(MockLightClient),
         )
         .unwrap()

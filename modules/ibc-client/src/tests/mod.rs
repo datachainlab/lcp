@@ -71,7 +71,6 @@ mod tests {
             let consensus_state = AnyConsensusState::Mock(MockConsensusState::new(header));
 
             let input = InitClientInput {
-                client_type: ClientType::Mock.as_str().to_string(),
                 any_client_state: Any::from(client_state).into(),
                 any_consensus_state: Any::from(consensus_state).into(),
                 current_timestamp: 0,
@@ -120,7 +119,6 @@ mod tests {
             };
 
             let input = InitClientInput {
-                client_type: LCP_CLIENT_TYPE.to_string(),
                 any_client_state: initial_client_state.into(),
                 any_consensus_state: initial_consensus_state.into(),
                 current_timestamp: 0,

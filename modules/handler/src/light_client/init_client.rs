@@ -2,6 +2,7 @@ use crate::light_client::LightClientHandlerError as Error;
 use commitments::prover::prove_update_client_commitment;
 use context::Context;
 use enclave_commands::{InitClientInput, InitClientResult, LightClientResult};
+use lcp_types::Any;
 use light_client::{LightClientKeeper, LightClientReader, LightClientSource};
 use store::KVStore;
 
@@ -11,14 +12,11 @@ pub fn init_client<'l, S: KVStore, L: LightClientSource<'l>>(
 ) -> Result<LightClientResult, Error> {
     ctx.set_timestamp(input.current_timestamp);
 
-    let lc = L::get_light_client(&input.client_type).unwrap();
+    let any_client_state: Any = input.any_client_state.into();
+    let lc = L::get_light_client(&any_client_state.type_url).unwrap();
     let ek = ctx.get_enclave_key();
     let res = lc
-        .create_client(
-            ctx,
-            input.any_client_state.into(),
-            input.any_consensus_state.into(),
-        )
+        .create_client(ctx, any_client_state, input.any_consensus_state.into())
         .map_err(Error::LightClientError)?;
 
     ctx.store_client_type(res.client_id.clone(), res.client_type)

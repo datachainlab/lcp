@@ -73,7 +73,7 @@ mod tests {
         );
 
         let proof = if let CommandResult::LightClient(LightClientResult::InitClient(res)) = enclave
-            .init_client("07-tendermint", client_state.into(), consensus_state.into())
+            .init_client(client_state.into(), consensus_state.into())
             .unwrap()
         {
             res.0

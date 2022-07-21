@@ -6,7 +6,6 @@ use ibc::core::ics04_channel::channel::ChannelEnd;
 use ibc::core::ics24_host::identifier::{ChannelId, ClientId, ConnectionId, PortId};
 use lcp_types::{Any, Height};
 use serde::{Deserialize, Serialize};
-use std::string::String;
 use std::vec::Vec;
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -21,7 +20,6 @@ pub enum LightClientCommand {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct InitClientInput {
-    pub client_type: String,
     pub any_client_state: Any,
     pub any_consensus_state: Any,
     pub current_timestamp: u128,

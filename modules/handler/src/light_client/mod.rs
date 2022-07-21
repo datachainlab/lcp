@@ -10,6 +10,7 @@ pub use {
 
 mod errors;
 mod init_client;
+mod registry;
 mod router;
 mod update_client;
 mod verify_channel;

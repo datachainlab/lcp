@@ -1,6 +1,6 @@
 use super::errors::LCPLCError as Error;
 use crate::client_def::LCPClient;
-use crate::client_state::ClientState;
+use crate::client_state::{ClientState, LCP_CLIENT_STATE_TYPE_URL};
 use crate::consensus_state::ConsensusState;
 use crate::header::Header;
 #[cfg(feature = "sgx")]
@@ -174,7 +174,10 @@ impl LightClient for LCPLightClient {
 
 pub fn register_implementations(registry: &mut LightClientRegistry) {
     registry
-        .put(LCP_CLIENT_TYPE.to_string(), Box::new(LCPLightClient))
+        .put(
+            LCP_CLIENT_STATE_TYPE_URL.to_string(),
+            Box::new(LCPLightClient),
+        )
         .unwrap()
 }
 

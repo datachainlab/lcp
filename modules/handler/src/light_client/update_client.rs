@@ -1,3 +1,4 @@
+use super::registry::get_light_client_by_client_id;
 use crate::light_client::LightClientHandlerError as Error;
 use commitments::prover::prove_update_client_commitment;
 use context::Context;
@@ -11,10 +12,8 @@ pub fn update_client<'l, S: KVStore, L: LightClientSource<'l>>(
 ) -> Result<LightClientResult, Error> {
     ctx.set_timestamp(input.current_timestamp);
 
-    let client_type = ctx
-        .client_type(&input.client_id)
-        .map_err(Error::ICS02Error)?;
-    let lc = L::get_light_client(&client_type).unwrap();
+    let lc = get_light_client_by_client_id::<_, L>(ctx, &input.client_id)?;
+
     let ek = ctx.get_enclave_key();
     let res = lc
         .update_client(ctx, input.client_id, input.any_header.into())

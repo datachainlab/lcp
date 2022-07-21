@@ -5,7 +5,9 @@ use alloc::borrow::ToOwned;
 use commitments::{gen_state_id, gen_state_id_from_any, StateCommitment, UpdateClientCommitment};
 use ibc::core::ics02_client::client_consensus::{AnyConsensusState, ConsensusState};
 use ibc::core::ics02_client::client_def::{AnyClient, ClientDef};
-use ibc::core::ics02_client::client_state::{AnyClientState, ClientState};
+use ibc::core::ics02_client::client_state::{
+    AnyClientState, ClientState, TENDERMINT_CLIENT_STATE_TYPE_URL,
+};
 use ibc::core::ics02_client::client_type::ClientType;
 use ibc::core::ics02_client::error::Error as ICS02Error;
 use ibc::core::ics02_client::header::{AnyHeader, Header};
@@ -512,7 +514,7 @@ impl TendermintLightClient {
 pub fn register_implementations(registry: &mut LightClientRegistry) {
     registry
         .put(
-            ClientType::Tendermint.as_str().to_string(),
+            TENDERMINT_CLIENT_STATE_TYPE_URL.to_string(),
             Box::new(TendermintLightClient),
         )
         .unwrap()
