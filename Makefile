@@ -176,7 +176,7 @@ test:
 	cargo test --lib --workspace --exclude integration-test
 
 .PHONY: integration-test
-integration-test:
+integration-test: $(Signed_RustEnclave_Name)
 	SGX_MODE=HW cargo test --package integration-test
 
 .PHONY: proto
