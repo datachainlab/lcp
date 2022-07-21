@@ -30,18 +30,18 @@ impl LightClientRegistry {
         }
     }
 
-    pub fn put(&mut self, client_type: String, lc: Box<dyn LightClient>) -> Result<()> {
-        // TODO check if same type_url doesn't exist in the registry
+    pub fn put(&mut self, client_state_type_url: String, lc: Box<dyn LightClient>) -> Result<()> {
         assert!(!self.sealed);
-        self.registry.insert(client_type, lc);
-        Ok(())
+        if self.get(&client_state_type_url).is_some() {
+            Err(Error::TypeUrlAlreadyExistsError(client_state_type_url))
+        } else {
+            self.registry.insert(client_state_type_url, lc);
+            Ok(())
+        }
     }
 
-    pub fn get(&self, client_type: &str) -> Option<&Box<dyn LightClient>> {
-        match self.registry.get(client_type) {
-            Some(lc) => Some(lc),
-            None => None,
-        }
+    pub fn get(&self, client_state_type_url: &str) -> Option<&Box<dyn LightClient>> {
+        self.registry.get(client_state_type_url)
     }
 }
 
