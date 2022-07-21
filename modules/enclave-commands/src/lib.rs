@@ -16,6 +16,7 @@ pub use anyhow;
 pub use anyhow_sgx as anyhow;
 
 use serde::{Deserialize, Serialize};
+use std::string::String;
 
 pub use enclave_manage::{
     EnclaveManageCommand, EnclaveManageResult, InitEnclaveInput, InitEnclaveResult,
@@ -29,6 +30,29 @@ pub use light_client::{
 
 mod enclave_manage;
 mod light_client;
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct EnclaveCommand {
+    pub params: CommandParams,
+    pub cmd: Command,
+}
+
+impl EnclaveCommand {
+    pub fn new(params: CommandParams, cmd: Command) -> Self {
+        Self { params, cmd }
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct CommandParams {
+    pub home: String,
+}
+
+impl CommandParams {
+    pub fn new(home: String) -> Self {
+        Self { home }
+    }
+}
 
 #[derive(Serialize, Deserialize, Debug)]
 pub enum Command {

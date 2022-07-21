@@ -21,17 +21,20 @@ thiserror-sgx = { package = "thiserror", git = "https://github.com/mesalock-linu
 thiserror = { version = "1.0.30", optional = true }
 commitments = { path = "../commitments", default-features = false }
 lcp-types = { path = "../types", default-features = false }
+attestation-report = { path = "../attestation-report", default-features = false }
 
 [features]
 default = ["std"]
 std = [
     "anyhow",
     "thiserror",
-    "commitments/std"
+    "commitments/std",
+    "attestation-report/std"
 ]
 sgx = [
     "sgx_tstd",
     "anyhow-sgx",
     "thiserror-sgx",
-    "commitments/sgx"
+    "commitments/sgx",
+    "attestation-report/sgx"
 ]

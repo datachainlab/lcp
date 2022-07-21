@@ -3,16 +3,9 @@
 #[cfg(feature = "sgx")]
 extern crate sgx_tstd as std;
 
-use lazy_static::lazy_static;
 use sgx_types::sgx_status_t;
-use std::string::{String, ToString};
 
-lazy_static! {
-    pub static ref ENCLAVE_KEY_SEALING_PATH: String = "ek_sealing".to_string();
-    pub static ref ENDORSED_ATTESTATION_PATH: String = "endorsed_attestation".to_string();
-    pub static ref COMMIT_ID_DIR: String = "commits".to_string();
-    pub static ref LAST_COMMIT_SEQUENCE: String = "last_commit_seq".to_string();
-}
+pub static SEALED_ENCLAVE_KEY_PATH: &str = "ek_sealed";
 
 #[allow(dead_code)]
 #[derive(PartialEq, Eq, Debug)]

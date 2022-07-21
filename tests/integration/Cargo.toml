@@ -9,7 +9,7 @@ ibc = { git = "https://github.com/informalsystems/ibc-rs", rev = "e8c98d440949ab
 ibc-relayer = { git = "https://github.com/informalsystems/ibc-rs", rev = "e8c98d440949abf971ac45a68ed9dd9e6e9f48ed", default-features = false }
 ibc-proto = { git = "https://github.com/informalsystems/ibc-rs", rev = "e8c98d440949abf971ac45a68ed9dd9e6e9f48ed", default-features = false }
 tendermint-rpc  = { version = "=0.23.7", features = ["http-client", "websocket-client"] }
-
+tempdir = "0.3.7"
 prost-types = { version = "0.10", default-features = false }
 anyhow = { version = "1.0.56" }
 thiserror = { version = "1.0.30" }

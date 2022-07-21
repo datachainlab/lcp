@@ -8,7 +8,7 @@ use ::light_client::LightClientSource;
 use anyhow::anyhow;
 use context::Context;
 use crypto::EnclaveKey;
-use enclave_commands::{Command, CommandResult};
+use enclave_commands::{Command, CommandResult, EnclaveCommand};
 use log::*;
 use std::format;
 use store::Store;
@@ -16,12 +16,12 @@ use store::Store;
 pub fn dispatch<'l, S: Store, L: LightClientSource<'l>>(
     ek: Option<&EnclaveKey>,
     store: &mut S,
-    command: Command,
+    command: EnclaveCommand,
 ) -> Result<CommandResult> {
-    let res = match command {
+    let res = match command.cmd {
         #[cfg(feature = "sgx")]
-        Command::EnclaveManage(cmd) => enclave_manage::dispatch(cmd)?,
-        _ => {
+        Command::EnclaveManage(cmd) => enclave_manage::dispatch(cmd, command.params)?,
+        cmd => {
             let mut ctx = match ek {
                 None => return Err(Error::OtherError(anyhow!("ek must not be nil"))),
                 Some(ek) => {
@@ -31,7 +31,7 @@ pub fn dispatch<'l, S: Store, L: LightClientSource<'l>>(
                     Context::new(store, ek)
                 }
             };
-            match command {
+            match cmd {
                 Command::LightClient(cmd) => match light_client::dispatch::<_, L>(&mut ctx, cmd) {
                     Ok(res) => {
                         let commit = store

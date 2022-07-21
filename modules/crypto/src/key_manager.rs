@@ -3,22 +3,35 @@ use crate::errors::CryptoError as Error;
 use crate::sgx_reexport_prelude::*;
 use crate::{traits::SealedKey, EnclaveKey};
 use log::*;
-use settings::ENCLAVE_KEY_SEALING_PATH;
+use settings::SEALED_ENCLAVE_KEY_PATH;
+use std::{
+    path::PathBuf,
+    string::{String, ToString},
+};
 
 #[derive(Default)]
 pub struct KeyManager {
+    key_dir: String,
     enclave_key: Option<EnclaveKey>,
 }
 
 impl<'a> KeyManager {
-    pub fn new() -> Self {
-        let mut km = Self::default();
+    pub fn new(home: String) -> Self {
+        let key_dir = PathBuf::from(home)
+            .join(PathBuf::from(SEALED_ENCLAVE_KEY_PATH))
+            .to_str()
+            .unwrap()
+            .to_string();
+        let mut km = Self {
+            key_dir,
+            enclave_key: None,
+        };
         let _ = km.load_enclave_key();
         km
     }
 
     pub fn load_enclave_key(&mut self) -> Result<(), Error> {
-        let enclave_key = EnclaveKey::unseal(&ENCLAVE_KEY_SEALING_PATH)?;
+        let enclave_key = EnclaveKey::unseal(&self.key_dir)?;
         self.enclave_key = Some(enclave_key);
         Ok(())
     }
@@ -34,7 +47,7 @@ impl<'a> KeyManager {
     }
 
     pub fn set_enclave_key(&'a mut self, kp: EnclaveKey) -> Result<&'a EnclaveKey, Error> {
-        if let Err(e) = kp.seal(&ENCLAVE_KEY_SEALING_PATH) {
+        if let Err(e) = kp.seal(&self.key_dir) {
             error!("Error sealing registration key");
             return Err(e);
         }

@@ -1,8 +1,9 @@
 use crate::opts::Opts;
-use anyhow::Result;
+use anyhow::{bail, Result};
 use clap::Parser;
 use enclave_api::Enclave;
 use host::enclave::init_enclave;
+use log::*;
 use service::{run_service, AppService};
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -39,9 +40,26 @@ impl ServiceCmd {
                 } else {
                     opts.default_enclave()
                 };
+                let enclave = match init_enclave(&path) {
+                    Ok(r) => {
+                        info!(
+                            "Init Enclave Successful: eid={} path={:?}",
+                            r.geteid(),
+                            path.as_path()
+                        );
+                        r
+                    }
+                    Err(x) => {
+                        bail!(
+                            "Init Enclave Failed: status={} path={:?}",
+                            x.as_str(),
+                            path.as_path()
+                        );
+                    }
+                };
 
                 let rt = Arc::new(Runtime::new()?);
-                let enclave = Enclave::new(init_enclave(path).unwrap());
+                let enclave = Enclave::new(enclave, opts.get_home().to_str().unwrap().to_string());
                 let srv = AppService::builder(enclave);
 
                 log::info!("start service");

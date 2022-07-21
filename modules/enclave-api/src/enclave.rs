@@ -2,8 +2,9 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::{ffi, EnclaveAPIError as Error, Result};
 use enclave_commands::{
-    Command, CommandResult, CommitmentProofPair, EnclaveManageCommand, InitClientInput,
-    InitEnclaveInput, LightClientCommand, UpdateClientInput, VerifyChannelInput,
+    Command, CommandParams, CommandResult, CommitmentProofPair, EnclaveCommand,
+    EnclaveManageCommand, InitClientInput, InitEnclaveInput, LightClientCommand, UpdateClientInput,
+    VerifyChannelInput,
 };
 use ibc::core::{
     ics04_channel::channel::ChannelEnd,
@@ -15,12 +16,13 @@ use sgx_urts::SgxEnclave;
 
 #[derive(Clone, Debug, Default)]
 pub struct Enclave {
+    home: String,
     eid: sgx_enclave_id_t,
     sgx_enclave: SgxEnclave,
 }
 
 pub trait EnclaveAPI {
-    fn execute_command(&self, cmd: &Command) -> Result<CommandResult>;
+    fn execute_command(&self, cmd: &EnclaveCommand) -> Result<CommandResult>;
     fn init_enclave_key(&self, spid: &[u8], ias_key: &[u8]) -> Result<CommandResult>;
     fn init_client(
         &self,
@@ -41,8 +43,9 @@ pub trait EnclaveAPI {
 }
 
 impl Enclave {
-    pub fn new(sgx_enclave: SgxEnclave) -> Self {
+    pub fn new(sgx_enclave: SgxEnclave, home: String) -> Self {
         Enclave {
+            home,
             eid: sgx_enclave.geteid(),
             sgx_enclave,
         }
@@ -59,14 +62,14 @@ impl Enclave {
 }
 
 impl EnclaveAPI for Enclave {
-    fn execute_command(&self, cmd: &Command) -> Result<CommandResult> {
+    fn execute_command(&self, cmd: &EnclaveCommand) -> Result<CommandResult> {
         let mut output_len = 0;
-        let output_maxlen = 1024;
+        let output_maxlen = 65536;
         let mut output_buf = Vec::with_capacity(output_maxlen);
         let output_ptr = output_buf.as_mut_ptr();
         let mut ret = sgx_status_t::SGX_SUCCESS;
 
-        let command_bytes = bincode::serialize(cmd).unwrap();
+        let command_bytes = bincode::serialize(cmd).map_err(Error::BincodeError)?;
         let result = unsafe {
             ffi::ecall_execute_command(
                 self.eid,
@@ -93,11 +96,14 @@ impl EnclaveAPI for Enclave {
     }
 
     fn init_enclave_key(&self, spid: &[u8], ias_key: &[u8]) -> Result<CommandResult> {
-        let command = Command::EnclaveManage(EnclaveManageCommand::InitEnclave(InitEnclaveInput {
+        let cmd = Command::EnclaveManage(EnclaveManageCommand::InitEnclave(InitEnclaveInput {
             spid: spid.to_vec(),
             ias_key: ias_key.to_vec(),
         }));
-        self.execute_command(&command)
+        self.execute_command(&EnclaveCommand::new(
+            CommandParams::new(self.home.clone()),
+            cmd,
+        ))
     }
 
     fn init_client(
@@ -106,22 +112,28 @@ impl EnclaveAPI for Enclave {
         any_client_state: Any,
         any_consensus_state: Any,
     ) -> Result<CommandResult> {
-        let command = Command::LightClient(LightClientCommand::InitClient(InitClientInput {
+        let cmd = Command::LightClient(LightClientCommand::InitClient(InitClientInput {
             current_timestamp: Self::current_timestamp(),
             client_type: client_type.into(),
             any_client_state: any_client_state.into(),
             any_consensus_state: any_consensus_state.into(),
         }));
-        self.execute_command(&command)
+        self.execute_command(&EnclaveCommand::new(
+            CommandParams::new(self.home.clone()),
+            cmd,
+        ))
     }
 
     fn update_client(&self, client_id: ClientId, any_header: Any) -> Result<CommandResult> {
-        let command = Command::LightClient(LightClientCommand::UpdateClient(UpdateClientInput {
+        let cmd = Command::LightClient(LightClientCommand::UpdateClient(UpdateClientInput {
             client_id,
             any_header: any_header.into(),
             current_timestamp: Self::current_timestamp(),
         }));
-        self.execute_command(&command)
+        self.execute_command(&EnclaveCommand::new(
+            CommandParams::new(self.home.clone()),
+            cmd,
+        ))
     }
 
     fn verify_channel(
@@ -133,7 +145,7 @@ impl EnclaveAPI for Enclave {
         counterparty_channel_id: ChannelId,
         proof: CommitmentProofPair,
     ) -> Result<CommandResult> {
-        let command = Command::LightClient(LightClientCommand::VerifyChannel(VerifyChannelInput {
+        let cmd = Command::LightClient(LightClientCommand::VerifyChannel(VerifyChannelInput {
             client_id,
             expected_channel,
             prefix,
@@ -141,6 +153,9 @@ impl EnclaveAPI for Enclave {
             counterparty_channel_id,
             proof,
         }));
-        self.execute_command(&command)
+        self.execute_command(&EnclaveCommand::new(
+            CommandParams::new(self.home.clone()),
+            cmd,
+        ))
     }
 }

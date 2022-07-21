@@ -2,22 +2,22 @@ use crate::enclave_manage::errors::EnclaveManageError as Error;
 #[cfg(feature = "sgx")]
 use crate::sgx_reexport_prelude::*;
 use anyhow::anyhow;
-use enclave_commands::{InitEnclaveInput, InitEnclaveResult};
+use attestation_report::verify_report;
+use crypto::KeyManager;
+use enclave_commands::{CommandParams, InitEnclaveInput, InitEnclaveResult};
+use enclave_remote_attestation::attestation::create_attestation_report;
+use enclave_remote_attestation::report::verify_quote_status;
 use log::*;
 use sgx_types::{sgx_quote_sign_type_t, sgx_spid_t};
 use std::format;
 use std::string::String;
 
-use attestation_report::verify_report;
-use crypto::KeyManager;
-use enclave_remote_attestation::attestation::create_attestation_report;
-use enclave_remote_attestation::report::verify_quote_status;
-use enclave_utils::storage::write_to_untrusted;
-use settings::ENDORSED_ATTESTATION_PATH;
-
-pub fn init_enclave(input: InitEnclaveInput) -> Result<InitEnclaveResult, Error> {
+pub fn init_enclave(
+    input: InitEnclaveInput,
+    params: CommandParams,
+) -> Result<InitEnclaveResult, Error> {
     let spid = decode_spid(&input.spid)?;
-    let mut key_manager = KeyManager::new();
+    let mut key_manager = KeyManager::new(params.home);
     let kp = match key_manager.get_enclave_key() {
         Some(kp) => kp,
         None => key_manager
@@ -38,9 +38,8 @@ pub fn init_enclave(input: InitEnclaveInput) -> Result<InitEnclaveResult, Error>
 
     verify_report(&report).map_err(Error::SGXError)?;
     verify_quote_status(&report.report).map_err(Error::SGXError)?;
-    write_to_untrusted(&report.report, &ENDORSED_ATTESTATION_PATH).map_err(Error::SGXError)?;
 
-    Ok(Default::default())
+    Ok(InitEnclaveResult { report })
 }
 
 fn decode_spid(hex: &[u8]) -> Result<sgx_spid_t, Error> {

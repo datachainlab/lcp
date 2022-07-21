@@ -3,18 +3,18 @@ mod relayer;
 mod tests {
     use super::*;
     use anyhow::anyhow;
-    use attestation_report::EndorsedAttestationReport;
     use enclave_api::{Enclave, EnclaveAPI};
     use enclave_commands::{
-        CommandResult, CommitmentProofPair, LightClientResult, UpdateClientResult,
+        CommandResult, CommitmentProofPair, EnclaveManageResult, LightClientResult,
+        UpdateClientResult,
     };
     use ibc::core::{
         ics23_commitment::{commitment::CommitmentProofBytes, merkle::MerkleProof},
         ics24_host::identifier::{ChannelId, PortId},
     };
     use log::*;
-    use settings::ENDORSED_ATTESTATION_PATH;
     use std::{str::FromStr, sync::Arc};
+    use tempdir::TempDir;
     use tokio::runtime::Runtime as TokioRuntime;
 
     static ENCLAVE_FILE: &'static str = "../../bin/enclave.signed.so";
@@ -33,23 +33,25 @@ mod tests {
 
         let enclave = match host::enclave::init_enclave(ENCLAVE_FILE) {
             Ok(r) => {
-                info!("[+] Init Enclave Successful {}!", r.geteid());
+                info!("Init Enclave Successful {}!", r.geteid());
                 r
             }
             Err(x) => {
-                panic!("[-] Init Enclave Failed {}!", x.as_str());
+                panic!("Init Enclave Failed {}!", x.as_str());
             }
         };
 
-        let enclave = Enclave::new(enclave);
+        let tmp_dir = TempDir::new("lcp").unwrap();
+        let home = tmp_dir.path().to_str().unwrap().to_string();
+        let enclave = Enclave::new(enclave, home);
 
-        if let Err(e) = enclave.init_enclave_key(spid.as_bytes(), ias_key.as_bytes()) {
-            panic!("[-] ECALL Enclave Failed {:?}!", e);
-        } else {
-            info!("[+] remote attestation success...");
-        }
-
-        let report = EndorsedAttestationReport::read_from_file(&ENDORSED_ATTESTATION_PATH).unwrap();
+        let report = match enclave.init_enclave_key(spid.as_bytes(), ias_key.as_bytes()) {
+            Ok(CommandResult::EnclaveManage(EnclaveManageResult::InitEnclave(res))) => res.report,
+            Err(e) => {
+                panic!("ECALL Enclave Failed {:?}!", e);
+            }
+            _ => unreachable!(),
+        };
         let quote = attestation_report::parse_quote_from_report(&report.report).unwrap();
         info!("report={:?}", quote.raw.report_body.report_data.d);
 

@@ -8,7 +8,6 @@ use ctor::ctor;
 
 mod ecalls;
 mod errors;
-mod key_manager;
 mod light_client;
 mod store;
 

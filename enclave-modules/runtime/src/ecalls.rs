@@ -1,7 +1,7 @@
 use crate::get_store;
-use crate::key_manager::KEY_MANAGER;
 use crate::light_client::GlobalLightClientRegistry;
-use enclave_commands::{Command, CommandResult, EnclaveManageResult};
+use crypto::KeyManager;
+use enclave_commands::EnclaveCommand;
 use enclave_utils::validate_const_ptr;
 use handler::router::dispatch;
 use sgx_types::sgx_status_t;
@@ -22,19 +22,20 @@ pub unsafe extern "C" fn ecall_execute_command(
     );
     // TODO add error handling instead of unwrap
 
-    let cmd: Command =
+    let cmd: EnclaveCommand =
         bincode::deserialize(slice::from_raw_parts(command, command_len as usize)).unwrap();
 
-    let mut km = KEY_MANAGER.write().unwrap();
+    let km = KeyManager::new(cmd.params.home.clone());
     let result =
         dispatch::<_, GlobalLightClientRegistry>(km.get_enclave_key(), &mut get_store(), cmd)
             .unwrap();
-    // if InitEnclave is succeeded, load the generated key into the key manager
-    if let CommandResult::EnclaveManage(EnclaveManageResult::InitEnclave(_)) = result {
-        km.load_enclave_key().unwrap();
-    }
     let res = bincode::serialize(&result).unwrap();
-    assert!(output_buf_maxlen as usize >= res.len());
+    assert!(
+        output_buf_maxlen as usize >= res.len(),
+        "{} >= {}",
+        output_buf_maxlen as usize,
+        res.len()
+    );
     std::ptr::copy_nonoverlapping(res.as_ptr(), output_buf, res.len());
     *output_len = res.len() as u32;
 

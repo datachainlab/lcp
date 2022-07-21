@@ -9,9 +9,10 @@ mod tests {
     use crate::{client_state::ClientState, consensus_state::ConsensusState, crypto::Address};
     use core::time::Duration;
     use crypto::EnclaveKey;
+    use enclave_commands::CommandParams;
     use enclave_commands::{
-        Command, CommandResult, InitClientInput, InitClientResult, LightClientCommand,
-        LightClientResult, UpdateClientInput, UpdateClientResult,
+        Command, CommandResult, EnclaveCommand, InitClientInput, InitClientResult,
+        LightClientCommand, LightClientResult, UpdateClientInput, UpdateClientResult,
     };
     use handler::router;
     use ibc::{
@@ -31,6 +32,7 @@ mod tests {
     use std::time::SystemTime;
     use std::time::UNIX_EPOCH;
     use store::memory::MemStore;
+    use tempdir::TempDir;
 
     lazy_static! {
         pub static ref LIGHT_CLIENT_REGISTRY: LightClientRegistry = {
@@ -59,6 +61,9 @@ mod tests {
         // ibc_store is a store to keeps downstream's state
         let mut ibc_store = MemStore::new();
 
+        let tmp_dir = TempDir::new("lcp").unwrap();
+        let home = tmp_dir.path().to_str().unwrap().to_string();
+
         // 1. initializes Light Client(Mock) corresponding to the upstream chain on the LCP side
         let proof0 = {
             let header = MockHeader::new(ICS02Height::new(0, 1).unwrap());
@@ -75,7 +80,10 @@ mod tests {
             let res = router::dispatch::<_, LocalLightClientRegistry>(
                 Some(&ek),
                 &mut lcp_store,
-                Command::LightClient(LightClientCommand::InitClient(input)),
+                EnclaveCommand::new(
+                    CommandParams::new(home.clone()),
+                    Command::LightClient(LightClientCommand::InitClient(input)),
+                ),
             );
             assert!(res.is_ok(), "res={:?}", res);
             assert_eq!(lcp_store.revision, 2);
@@ -120,7 +128,10 @@ mod tests {
             let res = router::dispatch::<_, LocalLightClientRegistry>(
                 Some(&ek),
                 &mut ibc_store,
-                Command::LightClient(LightClientCommand::InitClient(input)),
+                EnclaveCommand::new(
+                    CommandParams::new(home.clone()),
+                    Command::LightClient(LightClientCommand::InitClient(input)),
+                ),
             );
             assert!(res.is_ok(), "res={:?}", res);
             if let CommandResult::LightClient(LightClientResult::InitClient(InitClientResult(
@@ -145,7 +156,10 @@ mod tests {
             let res = router::dispatch::<_, LocalLightClientRegistry>(
                 Some(&ek),
                 &mut lcp_store,
-                Command::LightClient(LightClientCommand::UpdateClient(input)),
+                EnclaveCommand::new(
+                    CommandParams::new(home.clone()),
+                    Command::LightClient(LightClientCommand::UpdateClient(input)),
+                ),
             );
             assert!(res.is_ok(), "res={:?}", res);
             assert_eq!(lcp_store.revision, 3);
@@ -180,7 +194,10 @@ mod tests {
             let res = router::dispatch::<_, LocalLightClientRegistry>(
                 Some(&ek),
                 &mut ibc_store,
-                Command::LightClient(LightClientCommand::UpdateClient(input)),
+                EnclaveCommand::new(
+                    CommandParams::new(home.clone()),
+                    Command::LightClient(LightClientCommand::UpdateClient(input)),
+                ),
             );
             assert!(res.is_ok(), "res={:?}", res);
         }
