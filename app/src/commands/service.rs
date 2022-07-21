@@ -9,7 +9,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::runtime::Runtime;
 
-// `enclave` subcommand
+// `service` subcommand
 #[derive(Debug, Parser)]
 pub enum ServiceCmd {
     #[clap(about = "Start the App service")]
