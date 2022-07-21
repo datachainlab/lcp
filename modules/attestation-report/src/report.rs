@@ -44,32 +44,6 @@ pub struct EndorsedAttestationReport {
     pub signing_cert: Vec<u8>,
 }
 
-impl EndorsedAttestationReport {
-    #[cfg(not(feature = "sgx"))]
-    pub fn read_from_file(filepath: &str) -> Result<Self, sgx_status_t> {
-        use std::fs::File;
-        use std::io::Read;
-        let mut file = File::open(filepath).unwrap();
-        let mut buf = Vec::new();
-        let _ = file.read_to_end(&mut buf).unwrap();
-        Ok(Self {
-            report: buf,
-            signature: vec![],
-            signing_cert: vec![],
-        })
-    }
-
-    #[cfg(feature = "sgx")]
-    pub fn write_to_file(&self, filepath: &str) -> Result<(), sgx_status_t> {
-        use enclave_utils::storage::write_to_untrusted;
-        if let Err(e) = write_to_untrusted(&self.report, filepath) {
-            Err(sgx_status_t::SGX_ERROR_FILE_CANT_WRITE_RECOVERY_FILE)
-        } else {
-            Ok(())
-        }
-    }
-}
-
 pub fn verify_report(report: &EndorsedAttestationReport) -> Result<(), sgx_status_t> {
     let now = match webpki::Time::try_from(SystemTime::now()) {
         Ok(r) => r,

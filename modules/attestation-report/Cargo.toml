@@ -20,9 +20,6 @@ serde = { version = "1.0", default-features = false, features = ["alloc"] }
 serde_json = { version = "1.0", default-features = false, features = ["alloc"] }
 log = "0.4.8"
 
-settings = { path = "../settings" }
-enclave-utils = { path = "../../enclave-modules/utils", optional = true }
-
 [features]
 default = ["std"]
 std = [
@@ -37,5 +34,4 @@ sgx = [
     "rustls_sgx",
     "base64_sgx",
     "pem_sgx",
-    "enclave-utils"
 ]
