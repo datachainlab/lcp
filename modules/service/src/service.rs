@@ -1,12 +1,12 @@
 use anyhow::Result;
-use enclave_api::{Enclave, EnclaveAPI};
+use enclave_api::Enclave;
 use ibc_proto::ibc::core::client::v1::msg_server::MsgServer;
 use std::{net::SocketAddr, sync::Arc};
 use tokio::runtime::Runtime;
 use tonic::transport::Server;
 
 pub struct AppService {
-    enclave: Enclave,
+    pub(crate) enclave: Enclave,
 }
 
 impl AppService {
