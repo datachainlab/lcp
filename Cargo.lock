@@ -1807,6 +1807,7 @@ dependencies = [
  "clap",
  "dirs",
  "enclave-api",
+ "enclave-commands",
  "env_logger",
  "host",
  "log 0.4.17",

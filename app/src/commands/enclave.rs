@@ -2,6 +2,7 @@ use crate::{enclave::load_enclave, opts::Opts};
 use anyhow::{bail, Result};
 use clap::Parser;
 use enclave_api::EnclavePrimitiveAPI;
+use enclave_commands::{CommandResult, EnclaveManageResult};
 use log::*;
 use std::path::PathBuf;
 
@@ -33,13 +34,15 @@ impl EnclaveCmd {
                 }
 
                 let enclave = load_enclave(opts, cmd.enclave.as_ref())?;
-                if let Err(e) = enclave.init_enclave_key(spid.as_bytes(), ias_key.as_bytes()) {
-                    bail!("ECALL Enclave Failed {:?}!", e);
-                } else {
-                    info!("remote attestation success...");
+                match enclave.init_enclave_key(spid.as_bytes(), ias_key.as_bytes()) {
+                    Ok(CommandResult::EnclaveManage(EnclaveManageResult::InitEnclave(res))) => {
+                        // TODO add an option to persist the AVR
+                        // info!("successfully got the AVR {:?}", res.report);
+                        Ok(())
+                    }
+                    Err(e) => bail!("ECALL Enclave Failed {:?}!", e),
+                    _ => unreachable!(),
                 }
-
-                Ok(())
             }
         }
     }

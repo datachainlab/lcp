@@ -20,6 +20,7 @@ serde_json = { version = "1.0", default-features = false, features = ["alloc"] }
 host = { path = "../modules/host" }
 service = { path = "../modules/service" }
 enclave-api = { path = "../modules/enclave-api" }
+enclave-commands = { path = "../modules/enclave-commands" }
 
 [features]
 default = []
