@@ -2,31 +2,28 @@ use crate::enclave::load_enclave;
 use crate::opts::Opts;
 use anyhow::Result;
 use clap::Parser;
+use enclave_api::EnclaveProtoAPI;
 use serde::de::DeserializeOwned;
 use std::path::PathBuf;
 
 // `client` subcommand
 #[derive(Debug, Parser)]
 pub enum ELCCmd {
-    #[clap(about = "Create Light Client")]
-    CreateClient(CreateClient),
-    #[clap(about = "Update Light Client")]
-    UpdateClient(UpdateClient),
+    #[clap(display_order = 1, about = "Create Light Client")]
+    CreateClient(ELCOpts),
+    #[clap(display_order = 2, about = "Update Light Client")]
+    UpdateClient(ELCOpts),
 }
 
-#[derive(Clone, Debug, Parser, PartialEq)]
-pub struct CreateClient {
-    #[clap(flatten)]
-    pub opts: ELCOpts,
+impl ELCCmd {
+    fn opts(&self) -> &ELCOpts {
+        match self {
+            ELCCmd::CreateClient(opts) => opts,
+            ELCCmd::UpdateClient(opts) => opts,
+        }
+    }
 }
 
-#[derive(Clone, Debug, Parser, PartialEq)]
-pub struct UpdateClient {
-    #[clap(flatten)]
-    pub opts: ELCOpts,
-}
-
-// TODO embed it into parent struct
 #[derive(Clone, Debug, Parser, PartialEq)]
 pub struct ELCOpts {
     /// Path to the enclave binary
@@ -46,15 +43,16 @@ impl ELCOpts {
 
 impl ELCCmd {
     pub fn run(&self, opts: &Opts) -> Result<()> {
-        // TODO init the enclave
-
+        let elc_opts = self.opts();
+        let enclave = load_enclave(opts, elc_opts.enclave.as_ref())?;
         match self {
-            Self::CreateClient(cmd) => {
-                // let msg = cmd.opts.load()?;
-                let enclave = load_enclave(opts, cmd.opts.enclave.as_ref())?;
-                Ok(())
+            Self::CreateClient(_) => {
+                let _ = enclave.proto_create_client(elc_opts.load()?)?;
             }
-            Self::UpdateClient(cmd) => Ok(()),
+            Self::UpdateClient(_) => {
+                let _ = enclave.proto_update_client(elc_opts.load()?)?;
+            }
         }
+        Ok(())
     }
 }
