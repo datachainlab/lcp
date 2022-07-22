@@ -3,7 +3,7 @@ use std::path::Path;
 use sgx_types::*;
 use sgx_urts::SgxEnclave;
 
-pub fn init_enclave<P: AsRef<Path>>(file: P) -> SgxResult<SgxEnclave> {
+pub fn load_enclave<P: AsRef<Path>>(file: P) -> SgxResult<SgxEnclave> {
     let mut launch_token: sgx_launch_token_t = [0; 1024];
     let mut launch_token_updated: i32 = 0;
     // call sgx_create_enclave to initialize an enclave instance

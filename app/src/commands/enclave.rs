@@ -1,8 +1,7 @@
-use crate::opts::Opts;
+use crate::{enclave::load_enclave, opts::Opts};
 use anyhow::{bail, Result};
 use clap::Parser;
-use enclave_api::{Enclave, EnclaveAPI};
-use host::enclave::init_enclave;
+use enclave_api::EnclaveAPI;
 use log::*;
 use std::path::PathBuf;
 
@@ -33,32 +32,8 @@ impl EnclaveCmd {
                     std::fs::create_dir_all(&home)?;
                 }
 
-                let path = if let Some(path) = cmd.enclave.as_ref() {
-                    path.clone()
-                } else {
-                    opts.default_enclave()
-                };
-                let enclave = match init_enclave(&path) {
-                    Ok(r) => {
-                        info!(
-                            "Init Enclave Successful: eid={} path={:?}",
-                            r.geteid(),
-                            path.as_path()
-                        );
-                        r
-                    }
-                    Err(x) => {
-                        bail!(
-                            "Init Enclave Failed: status={} path={:?}",
-                            x.as_str(),
-                            path.as_path()
-                        );
-                    }
-                };
-
-                if let Err(e) = Enclave::new(enclave, home.to_str().unwrap().to_string())
-                    .init_enclave_key(spid.as_bytes(), ias_key.as_bytes())
-                {
+                let enclave = load_enclave(opts, cmd.enclave.as_ref())?;
+                if let Err(e) = enclave.init_enclave_key(spid.as_bytes(), ias_key.as_bytes()) {
                     bail!("ECALL Enclave Failed {:?}!", e);
                 } else {
                     info!("remote attestation success...");

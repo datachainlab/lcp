@@ -31,7 +31,7 @@ mod tests {
         let spid = std::env::var("SPID")?;
         let ias_key = std::env::var("IAS_KEY")?;
 
-        let enclave = match host::enclave::init_enclave(ENCLAVE_FILE) {
+        let enclave = match host::enclave::load_enclave(ENCLAVE_FILE) {
             Ok(r) => {
                 info!("Init Enclave Successful {}!", r.geteid());
                 r
