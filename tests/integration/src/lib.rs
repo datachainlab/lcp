@@ -3,7 +3,7 @@ mod relayer;
 mod tests {
     use super::*;
     use anyhow::anyhow;
-    use enclave_api::{Enclave, EnclaveAPI};
+    use enclave_api::{Enclave, EnclavePrimitiveAPI};
     use enclave_commands::{
         CommandResult, CommitmentProofPair, EnclaveManageResult, LightClientResult,
         UpdateClientResult,

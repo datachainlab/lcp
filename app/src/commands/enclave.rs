@@ -1,7 +1,7 @@
 use crate::{enclave::load_enclave, opts::Opts};
 use anyhow::{bail, Result};
 use clap::Parser;
-use enclave_api::EnclaveAPI;
+use enclave_api::EnclavePrimitiveAPI;
 use log::*;
 use std::path::PathBuf;
 
