@@ -173,11 +173,11 @@ fmt:
 
 .PHONY: test
 test:
-	cargo test --lib --workspace --exclude integration-test
+	@cargo test $(CARGO_TARGET) --lib --workspace --exclude integration-test
 
 .PHONY: integration-test
 integration-test: $(Signed_RustEnclave_Name)
-	SGX_MODE=HW cargo test --package integration-test
+	@SGX_MODE=HW cargo test $(CARGO_TARGET) --package integration-test
 
 .PHONY: proto
 proto:
@@ -185,4 +185,4 @@ proto:
 
 .PHONY: docker
 docker:
-	 @cd rust-sgx-sdk/dockerfile && docker build --no-cache -t datachainlab/sgx-rust:2004-1.1.5 -f Dockerfile.2004.nightly .
+	@cd rust-sgx-sdk/dockerfile && docker build --no-cache -t datachainlab/sgx-rust:2004-1.1.5 -f Dockerfile.2004.nightly .
