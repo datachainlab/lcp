@@ -51,7 +51,7 @@ impl LightClient for LCPLightClient {
         Ok(CreateClientResult {
             client_id: client_id.clone(),
             client_type: LCP_CLIENT_TYPE.to_owned(),
-            any_client_state: client_state.into(),
+            any_client_state: client_state.clone().into(),
             any_consensus_state: consensus_state.into(),
             height,
             timestamp,
@@ -59,6 +59,7 @@ impl LightClient for LCPLightClient {
                 client_id,
                 prev_state_id: None,
                 new_state_id: state_id,
+                new_state: Some(client_state.into()),
                 prev_height: None,
                 new_height: height,
                 timestamp: timestamp.nanoseconds() as u128,

@@ -1,4 +1,4 @@
-use commitments::{gen_state_id_from_bytes, StateCommitmentProof};
+use commitments::StateCommitmentProof;
 use ibc::core::ics02_client::client_consensus::AnyConsensusState;
 use ibc::core::ics02_client::client_state::AnyClientState;
 use ibc::core::ics02_client::error::Error as Ics02Error;
@@ -20,9 +20,7 @@ use validation_context::{validation_predicate, ValidationContext};
 use crate::client_state::ClientState;
 use crate::consensus_state::ConsensusState;
 use crate::crypto::{verify_signature, Address};
-use crate::header::{
-    ActivateHeader, Commitment, Header, RegisterEnclaveKeyHeader, UpdateClientHeader,
-};
+use crate::header::{Commitment, Header, RegisterEnclaveKeyHeader, UpdateClientHeader};
 use crate::report::{read_enclave_key_from_report, verify_report_and_get_key_expiration};
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
@@ -38,12 +36,6 @@ impl LCPClient {
         header: Header,
     ) -> Result<(ClientState, ConsensusState), Ics02Error> {
         match header {
-            Header::Activate(header) => self.check_header_and_update_state_for_activate(
-                ctx,
-                client_id,
-                client_state,
-                header,
-            ),
             Header::UpdateClient(header) => self.check_header_and_update_state_for_update_client(
                 ctx,
                 client_id,
@@ -60,45 +52,6 @@ impl LCPClient {
         }
     }
 
-    pub fn check_header_and_update_state_for_activate(
-        &self,
-        ctx: &dyn ClientReader,
-        client_id: ClientId,
-        client_state: ClientState,
-        header: ActivateHeader,
-    ) -> Result<(ClientState, ConsensusState), Ics02Error> {
-        // TODO return an error instead of assertion
-
-        // check if the client state is not activated
-        assert!(client_state.latest_height.is_zero());
-
-        // header validation
-        assert!(header.prev_height().is_none() && header.prev_state_id().is_none());
-
-        // check if an initial state matches specified `state_id`
-        assert!(gen_state_id_from_bytes(&header.initial_state_bytes).unwrap() == header.state_id());
-
-        // check if the specified signer exists in the client state
-        assert!(client_state.contains(&header.signer()));
-
-        // check if the `header.signer` matches the commitment prover
-        let signer = verify_signature(&header.commitment_bytes, &header.signature).unwrap();
-        assert!(header.signer() == signer);
-
-        // check if proxy's validation context matches our's context
-        let vctx = self.validation_context(ctx);
-        assert!(validation_predicate(&vctx, header.validation_params()).unwrap());
-
-        // create a new state
-        let new_client_state = client_state.with_header(&header);
-        let new_consensus_state = ConsensusState {
-            state_id: header.state_id(),
-            timestamp: header.timestamp_as_u128(),
-        };
-
-        Ok((new_client_state, new_consensus_state))
-    }
-
     fn check_header_and_update_state_for_update_client(
         &self,
         ctx: &dyn ClientReader,
@@ -108,16 +61,18 @@ impl LCPClient {
     ) -> Result<(ClientState, ConsensusState), Ics02Error> {
         // TODO return an error instead of assertion
 
-        // header validation
-        assert!(header.prev_height().is_some() && header.prev_state_id().is_some());
-
-        // check if the proxy's trusted consensus state exists in the store
-        let prev_consensus_state: ConsensusState = ctx
-            .consensus_state(&client_id, header.prev_height().unwrap())?
-            .to_proto()
-            .try_into()
-            .unwrap();
-        assert!(prev_consensus_state.state_id == header.prev_state_id().unwrap());
+        if header.prev_height().is_none() && header.prev_state_id().is_none() {
+            // if header.prev_* is nil, the client state's latest_height must be zero
+            assert!(client_state.latest_height.is_zero());
+        } else {
+            assert!(header.prev_height().is_some() && header.prev_state_id().is_some());
+            // check if the proxy's trusted consensus state exists in the store
+            let prev_consensus_state: ConsensusState = ctx
+                .consensus_state(&client_id, header.prev_height().unwrap())?
+                .to_proto()
+                .try_into()?;
+            assert!(prev_consensus_state.state_id == header.prev_state_id().unwrap());
+        }
 
         // check if the specified signer exists in the client state
         assert!(client_state.contains(&header.signer()));

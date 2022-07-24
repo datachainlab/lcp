@@ -6,7 +6,8 @@ use anyhow::{anyhow, Error as AnyhowError};
 use core::str::FromStr;
 use ibc::core::ics24_host::identifier::ClientId;
 use ibc::core::ics24_host::Path;
-use lcp_types::Height;
+use lcp_types::{Any, Height};
+use prost::Message;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 #[allow(unused_imports)]
@@ -23,6 +24,7 @@ pub struct UpdateClientCommitment {
     pub client_id: ClientId,
     pub prev_state_id: Option<StateID>,
     pub new_state_id: StateID,
+    pub new_state: Option<Any>,
     pub prev_height: Option<Height>,
     pub new_height: Height,
     pub timestamp: u128,
@@ -35,6 +37,7 @@ pub struct RLPUpdateClientCommitment {
     client_id: String,
     prev_state_id: Vec<u8>,
     new_state_id: Vec<u8>,
+    new_state: Vec<u8>,
     prev_height: Vec<u8>,
     new_height: Vec<u8>,
     timestamp: u128,
@@ -50,6 +53,10 @@ impl UpdateClientCommitment {
                 None => vec![],
             },
             new_state_id: self.new_state_id.to_vec(),
+            new_state: match self.new_state.as_ref() {
+                Some(s) => s.encode_to_vec(),
+                None => vec![],
+            },
             prev_height: match self.prev_height {
                 Some(h) => height_to_bytes(h),
                 None => vec![],
@@ -70,6 +77,10 @@ impl UpdateClientCommitment {
                 _ => None,
             },
             new_state_id: bytes_to_state_id(&rc.new_state_id)?,
+            new_state: match rc.new_state {
+                v if v.len() > 0 => Some(Any::try_from(v).unwrap()),
+                _ => None,
+            },
             prev_height: match rc.prev_height {
                 ref v if v.len() > 0 => Some(bytes_to_height(v)?),
                 _ => None,

@@ -19,7 +19,6 @@ use lcp_types::{Any, Height};
 use light_client::{CreateClientResult, StateVerificationResult, UpdateClientResult};
 use light_client::{LightClient, LightClientRegistry};
 use light_client::{LightClientError, LightClientReader};
-use log::*;
 use serde_json::Value;
 use std::boxed::Box;
 use std::string::ToString;
@@ -64,7 +63,7 @@ impl LightClient for MockLightClient {
         Ok(CreateClientResult {
             client_id: client_id.clone(),
             client_type: ClientType::Mock.as_str().to_owned(),
-            any_client_state,
+            any_client_state: any_client_state.clone(),
             any_consensus_state,
             height,
             timestamp,
@@ -72,6 +71,7 @@ impl LightClient for MockLightClient {
                 client_id,
                 prev_state_id: None,
                 new_state_id: state_id,
+                new_state: Some(any_client_state.into()),
                 prev_height: None,
                 new_height: height,
                 timestamp: timestamp
@@ -152,10 +152,11 @@ impl LightClient for MockLightClient {
             .unix_timestamp_nanos()
             .try_into()
             .unwrap();
+        let new_any_client_state = Any::try_from(new_client_state).unwrap();
 
         Ok(UpdateClientResult {
             client_id: client_id.clone(),
-            new_any_client_state: Any::try_from(new_client_state).unwrap(),
+            new_any_client_state: new_any_client_state.clone(),
             new_any_consensus_state: Any::try_from(new_consensus_state).unwrap(),
             height,
             timestamp: header_timestamp,
@@ -163,6 +164,7 @@ impl LightClient for MockLightClient {
                 client_id,
                 prev_state_id: Some(prev_state_id),
                 new_state_id,
+                new_state: new_any_client_state.into(),
                 prev_height: Some(latest_height.into()),
                 new_height: height,
                 timestamp: header_timestamp_nanos,

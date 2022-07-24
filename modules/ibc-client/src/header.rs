@@ -20,7 +20,6 @@ pub const LCP_HEADER_UPDATE_CLIENT_TYPE_URL: &str = "/ibc.lightclients.lcp.v1.He
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub enum Header {
-    Activate(ActivateHeader),
     RegisterEnclaveKey(RegisterEnclaveKeyHeader),
     UpdateClient(UpdateClientHeader),
 }
@@ -56,25 +55,6 @@ impl From<Header> for ProtoAny {
 impl From<Header> for Any {
     fn from(value: Header) -> Self {
         ProtoAny::from(value).into()
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
-pub struct ActivateHeader {
-    pub initial_state_bytes: Vec<u8>,
-    pub commitment_bytes: Vec<u8>,
-    pub signer: Vec<u8>,
-    pub signature: Vec<u8>,
-    pub commitment: UpdateClientCommitment,
-}
-
-impl Commitment for ActivateHeader {
-    fn signer(&self) -> Address {
-        self.signer.as_slice().into()
-    }
-
-    fn commitment(&self) -> &UpdateClientCommitment {
-        &self.commitment
     }
 }
 

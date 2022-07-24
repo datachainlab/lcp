@@ -88,7 +88,7 @@ impl LightClient for TendermintLightClient {
         Ok(CreateClientResult {
             client_id: client_id.clone(),
             client_type: ClientType::Tendermint.as_str().to_owned(),
-            any_client_state,
+            any_client_state: any_client_state.clone(),
             any_consensus_state,
             height,
             timestamp,
@@ -96,6 +96,7 @@ impl LightClient for TendermintLightClient {
                 client_id,
                 prev_state_id: None,
                 new_state_id: state_id,
+                new_state: Some(any_client_state.into()),
                 prev_height: None,
                 new_height: height,
                 timestamp: timestamp
@@ -239,6 +240,7 @@ impl LightClient for TendermintLightClient {
                 client_id,
                 prev_state_id: Some(prev_state_id),
                 new_state_id,
+                new_state: None,
                 prev_height: Some(trusted_height.into()),
                 new_height: height,
                 timestamp: header_timestamp_nanos,

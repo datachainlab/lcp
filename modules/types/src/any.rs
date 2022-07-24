@@ -105,6 +105,13 @@ impl From<AnyHeader> for Any {
     }
 }
 
+impl TryFrom<Vec<u8>> for Any {
+    type Error = Error;
+    fn try_from(value: Vec<u8>) -> Result<Self, Self::Error> {
+        Ok(Any::decode_vec(&value).unwrap())
+    }
+}
+
 impl Protobuf<ProtoAny> for Any {}
 
 #[derive(Default, Debug, Serialize, Deserialize)]

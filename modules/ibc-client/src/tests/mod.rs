@@ -3,7 +3,6 @@ mod errors;
 #[cfg(test)]
 mod tests {
     use super::client::register_implementations;
-    use super::client::LCP_CLIENT_TYPE;
     use crate::header::Header;
     use crate::header::UpdateClientHeader;
     use crate::{client_state::ClientState, consensus_state::ConsensusState, crypto::Address};
@@ -17,8 +16,7 @@ mod tests {
     use handler::router;
     use ibc::{
         core::ics02_client::{
-            client_consensus::AnyConsensusState, client_state::AnyClientState,
-            client_type::ClientType, header::AnyHeader,
+            client_consensus::AnyConsensusState, client_state::AnyClientState, header::AnyHeader,
         },
         mock::{
             client_state::{MockClientState, MockConsensusState},
