@@ -25,6 +25,10 @@ impl Height {
         }
     }
 
+    pub fn zero() -> Self {
+        return Height::new(0, 0);
+    }
+
     pub fn revision_number(&self) -> u64 {
         self.revision_number
     }
@@ -154,12 +158,31 @@ impl TryFrom<Height> for ICS02Height {
     type Error = ICS02Error;
 
     fn try_from(height: Height) -> Result<Self, Self::Error> {
-        ICS02Height::new(height.revision_number(), height.revision_height())
+        if height.is_zero() {
+            // XXX this is a trick for height type conversion due to ics02 height doesn't allow "zero" height
+            Ok(serde_json::from_slice(&serde_json::to_vec(&height).unwrap()).unwrap())
+        } else {
+            ICS02Height::new(height.revision_number(), height.revision_height())
+        }
     }
 }
 
 impl From<ICS02Height> for Height {
     fn from(height: ICS02Height) -> Self {
         Height::new(height.revision_number(), height.revision_height())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_zero_height_conversion() {
+        let h = Height::zero();
+        let res: Result<ICS02Height, _> = h.try_into();
+        assert!(res.is_ok());
+        let ibc_height = res.unwrap();
+        assert_eq!(ibc_height.revision_number(), 0);
     }
 }
