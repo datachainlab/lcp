@@ -4,6 +4,8 @@
   <img alt="LCP" src="./.github/logo.png" />
 </div>
 
+**This software is still under heavy active development.**
+
 LCP is a proxy for light client verification executed in TEE.
 
 LCP uses Intel SGX, a representative TEE implementation, to provide light clients implemented in enclave. It also provides an on-chain client(called LCP Client) that verifies commitments indicating the results of verification by the light clients. In addition, LCP Client is compatible with [ICS-02](https://github.com/cosmos/ibc/tree/main/spec/core/ics-002-client-semantics), so LCP can be integrated with [IBC](https://github.com/cosmos/ibc).
