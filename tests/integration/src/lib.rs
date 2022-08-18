@@ -12,22 +12,57 @@ mod tests {
         ics23_commitment::{commitment::CommitmentProofBytes, merkle::MerkleProof},
         ics24_host::identifier::{ChannelId, PortId},
     };
+    use ibc_test_framework::prelude::{
+        run_binary_channel_test, BinaryChannelTest, ChainHandle, Config, ConnectedChains,
+        ConnectedChannel, Error, RelayerDriver, TestConfig, TestOverrides,
+    };
     use log::*;
+    use relay_tendermint::Relayer;
     use std::{str::FromStr, sync::Arc};
     use tempdir::TempDir;
     use tokio::runtime::Runtime as TokioRuntime;
 
     static ENCLAVE_FILE: &'static str = "../../bin/enclave.signed.so";
+    static ENV_SETUP_NODES: &'static str = "SETUP_NODES";
 
-    #[test]
-    fn test_verification() {
-        assert!(_test_verification().is_ok());
+    struct ELCStateVerificationTest;
+
+    impl TestOverrides for ELCStateVerificationTest {
+        fn modify_relayer_config(&self, config: &mut Config) {}
     }
 
-    fn _test_verification() -> Result<(), anyhow::Error> {
+    impl BinaryChannelTest for ELCStateVerificationTest {
+        fn run<ChainA: ChainHandle, ChainB: ChainHandle>(
+            &self,
+            _config: &TestConfig,
+            _relayer: RelayerDriver,
+            chains: ConnectedChains<ChainA, ChainB>,
+            _channel: ConnectedChannel<ChainA, ChainB>,
+        ) -> Result<(), Error> {
+            let rt = Arc::new(TokioRuntime::new()?);
+            let config_a = chains.handle_a().config()?;
+            let rly = Relayer::new(config_a, rt).unwrap();
+            verify(rly).unwrap();
+            Ok(())
+        }
+    }
+
+    #[test]
+    fn test_elc_state_verification() {
+        match std::env::var(ENV_SETUP_NODES).map(|v| v.to_lowercase()) {
+            Ok(v) if v == "false" => run_test().unwrap(),
+            _ => run_binary_channel_test(&ELCStateVerificationTest).unwrap(),
+        }
+    }
+
+    fn run_test() -> Result<(), anyhow::Error> {
         env_logger::init();
         let rt = Arc::new(TokioRuntime::new()?);
+        let rly = relayer::create_relayer(rt).unwrap();
+        verify(rly)
+    }
 
+    fn verify(mut rly: Relayer) -> Result<(), anyhow::Error> {
         let spid = std::env::var("SPID")?;
         let ias_key = std::env::var("IAS_KEY")?;
 
@@ -56,8 +91,6 @@ mod tests {
         info!("report={:?}", quote.raw.report_body.report_data.d);
 
         // register the key into onchain
-
-        let mut rly = relayer::create_relayer(rt, "ibc0")?;
 
         // XXX use non-latest height here
         let initial_height = rly
@@ -110,7 +143,7 @@ mod tests {
         info!("current height is {}", height);
 
         let (port_id, channel_id) = (
-            PortId::from_str("cross")?,
+            PortId::from_str("transfer")?,
             ChannelId::from_str("channel-0")?,
         );
         let res = rly.proven_channel(
