@@ -20,7 +20,8 @@ members = [
     "modules/service",
     "modules/relay/tendermint",
     "proto",
-    "tests/integration"
+    "tests/integration",
+    "tools/nodes-runner"
 ]
 exclude = [
     "enclave",

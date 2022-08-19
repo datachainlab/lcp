@@ -176,6 +176,14 @@ clean:
 fmt:
 	@cargo fmt --all && cd ./enclave && cargo fmt --all
 
+.PHONY: proto
+proto:
+	@cd proto-compiler && cargo run -- compile --ibc /tmp/cosmos/ibc --out ../proto/src/prost
+
+.PHONY: docker
+docker:
+	@cd rust-sgx-sdk/dockerfile && docker build --no-cache -t datachainlab/sgx-rust:2004-1.1.5 -f Dockerfile.2004.nightly .
+
 .PHONY: test
 test:
 	@cargo test $(CARGO_TARGET) --lib --workspace --exclude integration-test
@@ -184,13 +192,9 @@ test:
 integration-test: $(Signed_RustEnclave_Name) bin/gaiad
 	@PATH=${PATH}:$(CURDIR)/bin SGX_MODE=HW cargo test $(CARGO_TARGET) --package integration-test
 
-.PHONY: proto
-proto:
-	@cd proto-compiler && cargo run -- compile --ibc /tmp/cosmos/ibc --out ../proto/src/prost
-
-.PHONY: docker
-docker:
-	@cd rust-sgx-sdk/dockerfile && docker build --no-cache -t datachainlab/sgx-rust:2004-1.1.5 -f Dockerfile.2004.nightly .
+.PHONY: test-nodes
+test-setup-nodes: bin/gaiad
+	@PATH=${PATH}:$(CURDIR)/bin cargo run --bin test_setup_with_binary_channel
 
 bin/gaiad:
 	curl -o ./bin/gaiad -LO https://github.com/cosmos/gaia/releases/download/$(GAIAD_VERSION)/gaiad-$(GAIAD_VERSION)-linux-amd64 && chmod +x ./bin/gaiad
