@@ -1,3 +1,4 @@
+use envconfig::Envconfig;
 use ibc::core::ics24_host::identifier::ChainId;
 use ibc_relayer::chain::ChainType;
 use ibc_relayer::config::{self, ChainConfig};
@@ -10,17 +11,33 @@ use tokio::runtime::Runtime as TokioRuntime;
 
 type Result<T> = std::result::Result<T, anyhow::Error>;
 
-pub fn create_relayer(rt: Arc<TokioRuntime>, chain_id: &str) -> Result<Relayer> {
-    Relayer::new(make_tm_config(chain_id), rt)
+#[derive(Envconfig)]
+pub struct TestChainConfig {
+    #[envconfig(from = "TEST_NODE_CHAIN_ID", default = "ibc0")]
+    pub id: String,
+    #[envconfig(from = "TEST_NODE_RPC_ADDR", default = "http://localhost:26657")]
+    pub rpc_addr: String,
+    #[envconfig(
+        from = "TEST_NODE_WEBSOCKET_ADDR",
+        default = "ws://localhost:26657/websocket"
+    )]
+    pub websocket_addr: String,
+    #[envconfig(from = "TEST_NODE_GRPC_ADDR", default = "http://localhost:9090")]
+    pub grpc_addr: String,
 }
 
-fn make_tm_config(chain_id: &str) -> ChainConfig {
+pub fn create_relayer(rt: Arc<TokioRuntime>) -> Result<Relayer> {
+    let cfg = TestChainConfig::init_from_env().unwrap();
+    Relayer::new(make_tm_config(cfg), rt)
+}
+
+fn make_tm_config(cfg: TestChainConfig) -> ChainConfig {
     ChainConfig {
-        id: ChainId::new(chain_id.into(), 0),
+        id: ChainId::new(cfg.id, 0),
         r#type: ChainType::CosmosSdk,
-        rpc_addr: Url::from_str("http://localhost:26657").unwrap(),
-        websocket_addr: Url::from_str("ws://localhost:26657/websocket").unwrap(),
-        grpc_addr: Url::from_str("http://localhost:9090").unwrap(),
+        rpc_addr: Url::from_str(&cfg.rpc_addr).unwrap(),
+        websocket_addr: Url::from_str(&cfg.websocket_addr).unwrap(),
+        grpc_addr: Url::from_str(&cfg.grpc_addr).unwrap(),
         rpc_timeout: Duration::from_secs(10),
         account_prefix: "cosmos".to_string(),
         key_name: "testkey".to_string(),

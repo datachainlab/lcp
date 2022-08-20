@@ -85,7 +85,8 @@ App_C_Flags := $(SGX_COMMON_CFLAGS) -fPIC -Wno-attributes $(App_Include_Paths)
 App_Rust_Path := ./target/$(OUTPUT_PATH)
 App_Enclave_u_Object :=lib/libEnclave_u.a
 App_Name := lcp
-App_Dir := bin/$(App_Name)
+App_Dir := ./bin
+App_Path := $(App_Dir)/$(App_Name)
 
 ######## Enclave Settings ########
 
@@ -116,8 +117,12 @@ RUSTFLAGS :="-C target-feature=+avx2"
 RustEnclave_Name := enclave/enclave.so
 Signed_RustEnclave_Name := bin/enclave.signed.so
 
+######## Test Settings ########
+
+GAIAD_VERSION ?= v7.0.3
+
 .PHONY: all
-all: $(App_Dir) $(Signed_RustEnclave_Name)
+all: $(App_Path) $(Signed_RustEnclave_Name)
 
 ######## EDL Objects ########
 
@@ -135,7 +140,7 @@ app/Enclave_u.o: $(Enclave_EDL_Files)
 $(App_Enclave_u_Object): app/Enclave_u.o
 	$(AR) rcsD $@ $^
 
-$(App_Dir): $(App_Enclave_u_Object) $(App_SRC_Files)
+$(App_Path): $(App_Enclave_u_Object) $(App_SRC_Files)
 	@cd app && SGX_SDK=$(SGX_SDK) SGX_MODE=$(SGX_MODE) cargo build $(App_Rust_Flags)
 	@echo "Cargo  =>  $@"
 	mkdir -p bin
@@ -163,21 +168,13 @@ enclave:
 
 .PHONY: clean
 clean:
-	@rm -f $(App_Dir) $(RustEnclave_Name) $(Signed_RustEnclave_Name) enclave/*_t.* app/*_u.* lib/*.a
+	@rm -f $(App_Dir)/* $(RustEnclave_Name) $(Signed_RustEnclave_Name) enclave/*_t.* app/*_u.* lib/*.a
 	@cd enclave && cargo clean && rm -f Cargo.lock
-	@cd app && cargo clean && rm -f Cargo.lock
+	@cargo clean && rm -f Cargo.lock
 
 .PHONY: fmt
 fmt:
 	@cargo fmt --all && cd ./enclave && cargo fmt --all
-
-.PHONY: test
-test:
-	@cargo test $(CARGO_TARGET) --lib --workspace --exclude integration-test
-
-.PHONY: integration-test
-integration-test: $(Signed_RustEnclave_Name)
-	@SGX_MODE=HW cargo test $(CARGO_TARGET) --package integration-test
 
 .PHONY: proto
 proto:
@@ -186,3 +183,18 @@ proto:
 .PHONY: docker
 docker:
 	@cd rust-sgx-sdk/dockerfile && docker build --no-cache -t datachainlab/sgx-rust:2004-1.1.5 -f Dockerfile.2004.nightly .
+
+.PHONY: test
+test:
+	@cargo test $(CARGO_TARGET) --lib --workspace --exclude integration-test
+
+.PHONY: integration-test
+integration-test: $(Signed_RustEnclave_Name) bin/gaiad
+	@PATH=${PATH}:$(CURDIR)/bin SGX_MODE=HW cargo test $(CARGO_TARGET) --package integration-test
+
+.PHONY: test-nodes
+test-setup-nodes: bin/gaiad
+	@PATH=${PATH}:$(CURDIR)/bin cargo run --bin test_setup_with_binary_channel
+
+bin/gaiad:
+	curl -o ./bin/gaiad -LO https://github.com/cosmos/gaia/releases/download/$(GAIAD_VERSION)/gaiad-$(GAIAD_VERSION)-linux-amd64 && chmod +x ./bin/gaiad
