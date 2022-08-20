@@ -1,7 +1,7 @@
 use crate::light_client::LightClientHandlerError as Error;
 use context::Context;
 use ibc::core::ics24_host::identifier::ClientId;
-use light_client::{LightClient, LightClientError, LightClientReader, LightClientSource};
+use light_client::{ClientReader, LightClient, LightClientError, LightClientSource};
 use std::boxed::Box;
 use store::KVStore;
 

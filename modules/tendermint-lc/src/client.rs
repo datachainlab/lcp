@@ -10,10 +10,10 @@ use ibc::core::ics02_client::client_state::{
     AnyClientState, ClientState, TENDERMINT_CLIENT_STATE_TYPE_URL,
 };
 use ibc::core::ics02_client::client_type::ClientType;
+use ibc::core::ics02_client::context::ClientReader as IBCClientReader;
 use ibc::core::ics02_client::error::Error as ICS02Error;
 use ibc::core::ics02_client::header::{AnyHeader, Header};
 use ibc::core::ics03_connection::connection::ConnectionEnd;
-use ibc::core::ics03_connection::context::ConnectionReader;
 use ibc::core::ics03_connection::error::Error as ICS03Error;
 use ibc::core::ics04_channel::channel::ChannelEnd;
 use ibc::core::ics04_channel::error::Error as ICS04Error;
@@ -25,7 +25,7 @@ use ibc::core::ics24_host::path::{
 use ibc::core::ics24_host::Path;
 use lcp_types::{Any, Height};
 use light_client::{
-    CreateClientResult, LightClient, LightClientError, LightClientReader, LightClientRegistry,
+    ClientReader, CreateClientResult, LightClient, LightClientError, LightClientRegistry,
     StateVerificationResult, UpdateClientResult,
 };
 use log::*;
@@ -45,7 +45,7 @@ pub struct TendermintLightClient;
 impl LightClient for TendermintLightClient {
     fn create_client(
         &self,
-        _: &dyn LightClientReader,
+        _: &dyn ClientReader,
         any_client_state: Any,
         any_consensus_state: Any,
     ) -> Result<CreateClientResult, LightClientError> {
@@ -108,11 +108,11 @@ impl LightClient for TendermintLightClient {
 
     fn update_client(
         &self,
-        ctx: &dyn LightClientReader,
+        ctx: &dyn ClientReader,
         client_id: ClientId,
         any_header: Any,
     ) -> Result<UpdateClientResult, LightClientError> {
-        let ctx = ctx.as_client_reader();
+        let ctx = ctx.as_ibc_client_reader();
         let (trusted_height, header) = match AnyHeader::try_from(any_header) {
             Ok(AnyHeader::Tendermint(header)) => {
                 (header.trusted_height, AnyHeader::Tendermint(header))
@@ -259,7 +259,7 @@ impl LightClient for TendermintLightClient {
 
     fn verify_client(
         &self,
-        ctx: &dyn ConnectionReader,
+        ctx: &dyn ClientReader,
         client_id: ClientId,
         expected_client_state: Any,
         counterparty_prefix: Vec<u8>,
@@ -268,7 +268,7 @@ impl LightClient for TendermintLightClient {
         proof: Vec<u8>,
     ) -> Result<StateVerificationResult, LightClientError> {
         let (client_def, client_state, consensus_state, prefix, proof) = Self::validate_args(
-            ctx,
+            ctx.as_ibc_client_reader(),
             client_id.clone(),
             counterparty_prefix,
             proof_height,
@@ -311,7 +311,7 @@ impl LightClient for TendermintLightClient {
 
     fn verify_client_consensus(
         &self,
-        ctx: &dyn ConnectionReader,
+        ctx: &dyn ClientReader,
         client_id: ClientId,
         expected_client_consensus_state: Any,
         counterparty_prefix: Vec<u8>,
@@ -321,7 +321,7 @@ impl LightClient for TendermintLightClient {
         proof: Vec<u8>,
     ) -> Result<StateVerificationResult, LightClientError> {
         let (client_def, client_state, consensus_state, prefix, proof) = Self::validate_args(
-            ctx,
+            ctx.as_ibc_client_reader(),
             client_id.clone(),
             counterparty_prefix,
             proof_height,
@@ -373,7 +373,7 @@ impl LightClient for TendermintLightClient {
 
     fn verify_connection(
         &self,
-        ctx: &dyn ConnectionReader,
+        ctx: &dyn ClientReader,
         client_id: ClientId,
         expected_connection_state: ConnectionEnd,
         counterparty_prefix: Vec<u8>,
@@ -382,7 +382,7 @@ impl LightClient for TendermintLightClient {
         proof: Vec<u8>,
     ) -> light_client::Result<StateVerificationResult> {
         let (client_def, client_state, consensus_state, prefix, proof) = Self::validate_args(
-            ctx,
+            ctx.as_ibc_client_reader(),
             client_id.clone(),
             counterparty_prefix,
             proof_height,
@@ -416,7 +416,7 @@ impl LightClient for TendermintLightClient {
 
     fn verify_channel(
         &self,
-        ctx: &dyn ConnectionReader,
+        ctx: &dyn ClientReader,
         client_id: ClientId,
         expected_channel_state: ChannelEnd,
         counterparty_prefix: Vec<u8>,
@@ -426,7 +426,7 @@ impl LightClient for TendermintLightClient {
         proof: Vec<u8>,
     ) -> light_client::Result<StateVerificationResult> {
         let (client_def, client_state, consensus_state, prefix, proof) = Self::validate_args(
-            ctx,
+            ctx.as_ibc_client_reader(),
             client_id.clone(),
             counterparty_prefix,
             proof_height,
@@ -465,7 +465,7 @@ impl LightClient for TendermintLightClient {
 
 impl TendermintLightClient {
     fn validate_args(
-        ctx: &dyn ConnectionReader,
+        ctx: &dyn IBCClientReader,
         client_id: ClientId,
         counterparty_prefix: Vec<u8>,
         proof_height: Height,
@@ -482,20 +482,20 @@ impl TendermintLightClient {
     > {
         let client_state = ctx
             .client_state(&client_id)
-            .map_err(|e| Error::ICS03Error(e).into())?;
+            .map_err(|e| Error::ICS02Error(e).into())?;
 
         if client_state.is_frozen() {
             return Err(Error::ICS02Error(ICS02Error::client_frozen(client_id)).into());
         }
 
         let consensus_state = ctx
-            .client_consensus_state(
+            .consensus_state(
                 &client_id,
                 proof_height
                     .try_into()
                     .map_err(|e| Error::ICS02Error(e).into())?,
             )
-            .map_err(|e| Error::ICS03Error(e).into())?;
+            .map_err(|e| Error::ICS02Error(e).into())?;
 
         let client_def = AnyClient::from_client_type(client_state.client_type());
 

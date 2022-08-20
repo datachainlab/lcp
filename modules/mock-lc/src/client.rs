@@ -12,13 +12,13 @@ use ibc::core::ics02_client::client_type::ClientType;
 use ibc::core::ics02_client::error::Error as ICS02Error;
 use ibc::core::ics02_client::header::{AnyHeader, Header};
 use ibc::core::ics03_connection::connection::ConnectionEnd;
-use ibc::core::ics03_connection::context::ConnectionReader;
 use ibc::core::ics04_channel::channel::ChannelEnd;
 use ibc::core::ics24_host::identifier::{ChannelId, ClientId, ConnectionId, PortId};
 use lcp_types::{Any, Height};
-use light_client::{CreateClientResult, StateVerificationResult, UpdateClientResult};
-use light_client::{LightClient, LightClientRegistry};
-use light_client::{LightClientError, LightClientReader};
+use light_client::{
+    ClientReader, CreateClientResult, LightClient, LightClientError, LightClientRegistry,
+    StateVerificationResult, UpdateClientResult,
+};
 use serde_json::Value;
 use std::boxed::Box;
 use std::string::ToString;
@@ -31,7 +31,7 @@ pub struct MockLightClient;
 impl LightClient for MockLightClient {
     fn create_client(
         &self,
-        _: &dyn LightClientReader,
+        _: &dyn ClientReader,
         any_client_state: Any,
         any_consensus_state: Any,
     ) -> Result<CreateClientResult, LightClientError> {
@@ -87,11 +87,11 @@ impl LightClient for MockLightClient {
 
     fn update_client(
         &self,
-        ctx: &dyn LightClientReader,
+        ctx: &dyn ClientReader,
         client_id: ClientId,
         any_header: Any,
     ) -> Result<UpdateClientResult, LightClientError> {
-        let ctx = ctx.as_client_reader();
+        let ctx = ctx.as_ibc_client_reader();
         let header = match AnyHeader::try_from(any_header) {
             Ok(AnyHeader::Mock(header)) => AnyHeader::Mock(header),
             #[allow(unreachable_patterns)]
@@ -175,7 +175,7 @@ impl LightClient for MockLightClient {
 
     fn verify_client(
         &self,
-        ctx: &dyn ConnectionReader,
+        ctx: &dyn ClientReader,
         client_id: ClientId,
         expected_client_state: Any,
         counterparty_prefix: Vec<u8>,
@@ -188,7 +188,7 @@ impl LightClient for MockLightClient {
 
     fn verify_client_consensus(
         &self,
-        ctx: &dyn ConnectionReader,
+        ctx: &dyn ClientReader,
         client_id: ClientId,
         expected_client_consensus_state: Any,
         counterparty_prefix: Vec<u8>,
@@ -202,7 +202,7 @@ impl LightClient for MockLightClient {
 
     fn verify_connection(
         &self,
-        ctx: &dyn ConnectionReader,
+        ctx: &dyn ClientReader,
         client_id: ClientId,
         expected_connection_state: ConnectionEnd,
         counterparty_prefix: Vec<u8>,
@@ -215,7 +215,7 @@ impl LightClient for MockLightClient {
 
     fn verify_channel(
         &self,
-        ctx: &dyn ConnectionReader,
+        ctx: &dyn ClientReader,
         client_id: ClientId,
         expected_channel_state: ChannelEnd,
         counterparty_prefix: Vec<u8>,
