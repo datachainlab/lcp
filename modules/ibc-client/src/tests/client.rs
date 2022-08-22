@@ -10,13 +10,12 @@ use commitments::{gen_state_id_from_any, UpdateClientCommitment};
 use ibc::core::ics02_client::client_state::ClientState as ICS02ClientState;
 use ibc::core::ics02_client::error::Error as ICS02Error;
 use ibc::core::ics03_connection::connection::ConnectionEnd;
-use ibc::core::ics03_connection::context::ConnectionReader;
 use ibc::core::ics04_channel::channel::ChannelEnd;
 use ibc::core::ics24_host::identifier::{ChannelId, ClientId, ConnectionId, PortId};
 use lcp_types::{Any, Height};
+use light_client::{ClientReader, LightClientError};
 use light_client::{CreateClientResult, StateVerificationResult, UpdateClientResult};
 use light_client::{LightClient, LightClientRegistry};
-use light_client::{LightClientError, LightClientReader};
 use log::*;
 use serde_json::Value;
 use std::boxed::Box;
@@ -34,7 +33,7 @@ pub struct LCPLightClient;
 impl LightClient for LCPLightClient {
     fn create_client(
         &self,
-        ctx: &dyn LightClientReader,
+        ctx: &dyn ClientReader,
         any_client_state: Any,
         any_consensus_state: Any,
     ) -> Result<CreateClientResult, LightClientError> {
@@ -70,7 +69,7 @@ impl LightClient for LCPLightClient {
 
     fn update_client(
         &self,
-        ctx: &dyn LightClientReader,
+        ctx: &dyn ClientReader,
         client_id: ClientId,
         any_header: Any,
     ) -> Result<UpdateClientResult, LightClientError> {
@@ -120,7 +119,7 @@ impl LightClient for LCPLightClient {
 
     fn verify_client(
         &self,
-        ctx: &dyn ConnectionReader,
+        ctx: &dyn ClientReader,
         client_id: ClientId,
         expected_client_state: Any,
         counterparty_prefix: Vec<u8>,
@@ -133,7 +132,7 @@ impl LightClient for LCPLightClient {
 
     fn verify_client_consensus(
         &self,
-        ctx: &dyn ConnectionReader,
+        ctx: &dyn ClientReader,
         client_id: ClientId,
         expected_client_consensus_state: Any,
         counterparty_prefix: Vec<u8>,
@@ -147,7 +146,7 @@ impl LightClient for LCPLightClient {
 
     fn verify_connection(
         &self,
-        ctx: &dyn ConnectionReader,
+        ctx: &dyn ClientReader,
         client_id: ClientId,
         expected_connection_state: ConnectionEnd,
         counterparty_prefix: Vec<u8>,
@@ -160,7 +159,7 @@ impl LightClient for LCPLightClient {
 
     fn verify_channel(
         &self,
-        ctx: &dyn ConnectionReader,
+        ctx: &dyn ClientReader,
         client_id: ClientId,
         expected_channel_state: ChannelEnd,
         counterparty_prefix: Vec<u8>,

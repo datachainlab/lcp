@@ -13,7 +13,7 @@ use ibc::core::ics24_host::identifier::{ChannelId, ClientId, ConnectionId, PortI
 use ibc::core::ics24_host::path::ClientConsensusStatePath;
 use ibc_proto::ibc::core::commitment::v1::MerkleProof;
 use lcp_types::Height;
-use light_client::LightClientReader as ClientReader;
+use light_client::ClientReader;
 use tendermint_proto::Protobuf;
 use validation_context::{validation_predicate, ValidationContext};
 

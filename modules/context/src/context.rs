@@ -6,21 +6,18 @@ use ibc::{
     core::{
         ics02_client::{
             client_consensus::AnyConsensusState, client_state::AnyClientState,
-            client_type::ClientType, context::ClientReader, error::Error as ICS02Error,
-            height::Height as ICS02Height,
+            client_type::ClientType, context::ClientReader as IBCClientReader,
+            error::Error as ICS02Error, height::Height as ICS02Height,
         },
-        ics03_connection::context::ConnectionReader,
-        ics03_connection::error::Error as ICS03Error,
-        ics23_commitment::commitment::CommitmentPrefix,
         ics24_host::{
-            identifier::{ClientId, ConnectionId},
+            identifier::ClientId,
             path::{ClientConsensusStatePath, ClientStatePath, ClientTypePath},
         },
     },
     timestamp::Timestamp,
 };
 use lcp_types::{Any, Height};
-use light_client::{LightClientKeeper, LightClientReader};
+use light_client::{ClientKeeper, ClientReader};
 use log::*;
 use std::format;
 use std::string::String;
@@ -50,7 +47,7 @@ impl<'a, 'e, S> Context<'a, 'e, S> {
     }
 }
 
-impl<'a, 'e, S: KVStore> LightClientReader for Context<'a, 'e, S> {
+impl<'a, 'e, S: KVStore> ClientReader for Context<'a, 'e, S> {
     fn client_type(&self, client_id: &ClientId) -> Result<String, ICS02Error> {
         let value = self
             .store
@@ -94,19 +91,19 @@ impl<'a, 'e, S: KVStore> LightClientReader for Context<'a, 'e, S> {
         Timestamp::from_nanoseconds(self.current_timestamp.unwrap() as u64).unwrap()
     }
 
-    fn as_client_reader(&self) -> &dyn ClientReader {
+    fn as_ibc_client_reader(&self) -> &dyn IBCClientReader {
         self
     }
 }
 
-impl<'a, 'e, S: KVStore> ClientReader for Context<'a, 'e, S> {
+impl<'a, 'e, S: KVStore> IBCClientReader for Context<'a, 'e, S> {
     fn client_type(&self, client_id: &ClientId) -> Result<ClientType, ICS02Error> {
-        let client_type = <Self as LightClientReader>::client_type(&self, client_id)?;
+        let client_type = <Self as ClientReader>::client_type(&self, client_id)?;
         ClientType::from_str(&client_type)
     }
 
     fn client_state(&self, client_id: &ClientId) -> Result<AnyClientState, ICS02Error> {
-        let client_state = <Self as LightClientReader>::client_state(&self, client_id)?;
+        let client_state = <Self as ClientReader>::client_state(&self, client_id)?;
         AnyClientState::try_from(client_state)
     }
 
@@ -116,7 +113,7 @@ impl<'a, 'e, S: KVStore> ClientReader for Context<'a, 'e, S> {
         height: ICS02Height,
     ) -> Result<AnyConsensusState, ICS02Error> {
         let consensus_state =
-            <Self as LightClientReader>::consensus_state(&self, client_id, height.into())?;
+            <Self as ClientReader>::consensus_state(&self, client_id, height.into())?;
         AnyConsensusState::try_from(consensus_state)
     }
 
@@ -129,8 +126,8 @@ impl<'a, 'e, S: KVStore> ClientReader for Context<'a, 'e, S> {
     ) -> Result<Option<AnyConsensusState>, ICS02Error> {
         use ibc::core::ics02_client::error::ErrorDetail;
         debug!("maybe_consensus_state: {:?}", height);
-        match <Self as ClientReader>::consensus_state(&self, client_id, height) {
-            Ok(cs) => Ok(Some(cs)),
+        match <Self as ClientReader>::consensus_state(&self, client_id, height.into()) {
+            Ok(cs) => Ok(Some(cs.try_into()?)),
             Err(e) => match e.detail() {
                 ErrorDetail::ConsensusStateNotFound(_) => Ok(None),
                 _ => Err(e),
@@ -140,32 +137,32 @@ impl<'a, 'e, S: KVStore> ClientReader for Context<'a, 'e, S> {
 
     fn next_consensus_state(
         &self,
-        client_id: &ClientId,
-        height: ICS02Height,
+        _client_id: &ClientId,
+        _height: ICS02Height,
     ) -> Result<Option<AnyConsensusState>, ICS02Error> {
         todo!()
     }
 
     fn prev_consensus_state(
         &self,
-        client_id: &ClientId,
-        height: ICS02Height,
+        _client_id: &ClientId,
+        _height: ICS02Height,
     ) -> Result<Option<AnyConsensusState>, ICS02Error> {
         // TODO implement this
         Ok(None)
     }
 
     fn host_height(&self) -> ICS02Height {
-        <Self as LightClientReader>::host_height(&self)
+        <Self as ClientReader>::host_height(&self)
             .try_into()
             .unwrap()
     }
 
     fn host_timestamp(&self) -> Timestamp {
-        <Self as LightClientReader>::host_timestamp(&self)
+        <Self as ClientReader>::host_timestamp(&self)
     }
 
-    fn host_consensus_state(&self, height: ICS02Height) -> Result<AnyConsensusState, ICS02Error> {
+    fn host_consensus_state(&self, _height: ICS02Height) -> Result<AnyConsensusState, ICS02Error> {
         todo!()
     }
 
@@ -178,52 +175,7 @@ impl<'a, 'e, S: KVStore> ClientReader for Context<'a, 'e, S> {
     }
 }
 
-impl<'a, 'e, S: KVStore> ConnectionReader for Context<'a, 'e, S> {
-    fn connection_end(
-        &self,
-        conn_id: &ConnectionId,
-    ) -> Result<ibc::core::ics03_connection::connection::ConnectionEnd, ICS03Error> {
-        todo!()
-    }
-
-    fn client_state(&self, client_id: &ClientId) -> Result<AnyClientState, ICS03Error> {
-        let client_state = <Self as ClientReader>::client_state(&self, client_id)
-            .map_err(ICS03Error::ics02_client)?;
-        Ok(client_state)
-    }
-
-    fn host_current_height(&self) -> ICS02Height {
-        todo!()
-    }
-
-    fn host_oldest_height(&self) -> ICS02Height {
-        todo!()
-    }
-
-    fn commitment_prefix(&self) -> CommitmentPrefix {
-        todo!()
-    }
-
-    fn client_consensus_state(
-        &self,
-        client_id: &ClientId,
-        height: ICS02Height,
-    ) -> Result<AnyConsensusState, ICS03Error> {
-        let consensus_state = <Self as ClientReader>::consensus_state(&self, client_id, height)
-            .map_err(ICS03Error::ics02_client)?;
-        Ok(consensus_state)
-    }
-
-    fn host_consensus_state(&self, height: ICS02Height) -> Result<AnyConsensusState, ICS03Error> {
-        todo!()
-    }
-
-    fn connection_counter(&self) -> Result<u64, ICS03Error> {
-        todo!()
-    }
-}
-
-impl<'a, 'e, S: KVStore> LightClientKeeper for Context<'a, 'e, S> {
+impl<'a, 'e, S: KVStore> ClientKeeper for Context<'a, 'e, S> {
     fn store_client_type(
         &mut self,
         client_id: ClientId,
@@ -267,18 +219,18 @@ impl<'a, 'e, S: KVStore> LightClientKeeper for Context<'a, 'e, S> {
 
     fn store_update_time(
         &mut self,
-        client_id: ClientId,
-        height: Height,
-        timestamp: Timestamp,
+        _client_id: ClientId,
+        _height: Height,
+        _timestamp: Timestamp,
     ) -> Result<(), ICS02Error> {
         Ok(())
     }
 
     fn store_update_height(
         &mut self,
-        client_id: ClientId,
-        height: Height,
-        host_height: Height,
+        _client_id: ClientId,
+        _height: Height,
+        _host_height: Height,
     ) -> Result<(), ICS02Error> {
         Ok(())
     }
