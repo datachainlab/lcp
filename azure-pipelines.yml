@@ -1,0 +1,41 @@
+# Starter pipeline
+# Start with a minimal pipeline that you can customize to build and deploy your code.
+# Add steps that build, run tests, deploy, and more:
+# https://aka.ms/yaml
+
+# Manual execution only permitted
+trigger: none
+
+# no PR triggers
+pr: none
+
+pool:
+  name: lcp-agent-pool
+
+variables:
+  registry: 'ghcr.io'
+  registry_user: 'datachainlab'
+  sgx_rust_repo: 'sgx-rust'
+  sgx_rust_tag: '2004-1.1.5'
+  lcp_tag: '$(Build.SourceVersion)'
+
+jobs:
+  - job: 'integration_test'
+    steps:
+    - script: |
+        echo $(GH_PAT) | docker login $(registry) -u $(registry_user) --password-stdin
+        docker pull $(registry)/$(registry_user)/$(sgx_rust_repo):$(sgx_rust_tag)
+      displayName: 'Pull the sgx-rust image'
+
+    - script: |
+        docker build -t lcp-ci-it:$(lcp_tag) -f .github/tests/integration/Dockerfile .
+      displayName: 'Build image'
+
+    - script: |
+        docker run \
+          --device /dev/sgx/enclave \
+          --device /dev/sgx/provision \
+          --env IAS_KEY=$(IAS_KEY) \
+          --env SPID=$(SPID) \
+          lcp-ci-it:$(lcp_tag)
+      displayName: 'Run integration test'
