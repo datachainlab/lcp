@@ -37,7 +37,7 @@ impl LightClient for MockLightClient {
     ) -> Result<CreateClientResult, LightClientError> {
         let client_id = gen_client_id(&any_client_state, &any_consensus_state)?;
         let state_id = gen_state_id_from_any(&any_client_state, &any_consensus_state)
-            .map_err(|e| Error::OtherError(e))?;
+            .map_err(Error::OtherError)?;
         let client_state = match AnyClientState::try_from(any_client_state.clone()) {
             Ok(AnyClientState::Mock(client_state)) => AnyClientState::Mock(client_state),
             #[allow(unreachable_patterns)]
@@ -102,16 +102,12 @@ impl LightClient for MockLightClient {
         };
 
         // Read client type from the host chain store. The client should already exist.
-        let client_type = ctx
-            .client_type(&client_id)
-            .map_err(|e| Error::ICS02Error(e))?;
+        let client_type = ctx.client_type(&client_id).map_err(Error::ICS02Error)?;
 
         let client_def = AnyClient::from_client_type(client_type);
 
         // Read client state from the host chain store.
-        let client_state = ctx
-            .client_state(&client_id)
-            .map_err(|e| Error::ICS02Error(e))?;
+        let client_state = ctx.client_state(&client_id).map_err(Error::ICS02Error)?;
 
         if client_state.is_frozen() {
             return Err(Error::ICS02Error(ICS02Error::client_frozen(client_id)).into());
@@ -142,9 +138,9 @@ impl LightClient for MockLightClient {
             })?;
 
         let prev_state_id =
-            gen_state_id(client_state, latest_consensus_state).map_err(|e| Error::OtherError(e))?;
+            gen_state_id(client_state, latest_consensus_state).map_err(Error::OtherError)?;
         let new_state_id = gen_state_id(new_client_state.clone(), new_consensus_state.clone())
-            .map_err(|e| Error::OtherError(e))?;
+            .map_err(Error::OtherError)?;
         let header_timestamp_nanos = header_timestamp
             .into_datetime()
             .unwrap()
