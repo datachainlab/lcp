@@ -25,3 +25,9 @@ pub enum LightClientError {
 }
 
 pub trait LightClientInstanceError: Display + Debug {}
+
+impl<T: 'static + LightClientInstanceError> From<T> for LightClientError {
+    fn from(value: T) -> Self {
+        Self::InstanceError(Arc::new(Box::new(value)))
+    }
+}

@@ -29,9 +29,3 @@ pub enum TendermintError {
 }
 
 impl LightClientInstanceError for TendermintError {}
-
-impl Into<LightClientError> for TendermintError {
-    fn into(self) -> LightClientError {
-        LightClientError::InstanceError(Arc::new(Box::new(self)))
-    }
-}

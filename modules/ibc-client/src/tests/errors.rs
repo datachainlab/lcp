@@ -29,9 +29,3 @@ pub enum LCPLCError {
 }
 
 impl LightClientInstanceError for LCPLCError {}
-
-impl Into<LightClientError> for LCPLCError {
-    fn into(self) -> LightClientError {
-        LightClientError::InstanceError(Arc::new(Box::new(self)))
-    }
-}

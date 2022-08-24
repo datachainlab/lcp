@@ -29,9 +29,3 @@ pub enum MockLCError {
 }
 
 impl LightClientInstanceError for MockLCError {}
-
-impl Into<LightClientError> for MockLCError {
-    fn into(self) -> LightClientError {
-        LightClientError::InstanceError(Arc::new(Box::new(self)))
-    }
-}

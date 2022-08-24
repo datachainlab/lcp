@@ -76,7 +76,7 @@ impl LightClient for TendermintLightClient {
 
         let client_id = gen_client_id(&canonical_client_state, &any_consensus_state)?;
         let state_id = gen_state_id_from_any(&canonical_client_state, &any_consensus_state)
-            .map_err(|e| Error::OtherError(e).into())?;
+            .map_err(|e| Error::OtherError(e))?;
 
         let height = client_state.latest_height().into();
         let timestamp = consensus_state.timestamp();
@@ -127,14 +127,14 @@ impl LightClient for TendermintLightClient {
         // Read client type from the host chain store. The client should already exist.
         let client_type = ctx
             .client_type(&client_id)
-            .map_err(|e| Error::ICS02Error(e).into())?;
+            .map_err(|e| Error::ICS02Error(e))?;
 
         let client_def = AnyClient::from_client_type(client_type);
 
         // Read client state from the host chain store.
         let client_state = ctx
             .client_state(&client_id)
-            .map_err(|e| Error::ICS02Error(e).into())?;
+            .map_err(|e| Error::ICS02Error(e))?;
 
         if client_state.is_frozen() {
             return Err(Error::ICS02Error(ICS02Error::client_frozen(client_id)).into());
@@ -151,7 +151,6 @@ impl LightClient for TendermintLightClient {
                     client_id.clone(),
                     client_state.latest_height(),
                 ))
-                .into()
             })?;
 
         debug!("latest consensus state: {:?}", latest_consensus_state);
@@ -164,7 +163,6 @@ impl LightClient for TendermintLightClient {
                     latest_consensus_state.timestamp(),
                     now,
                 ))
-                .into()
             })?;
 
         if client_state.expired(duration) {
@@ -187,7 +185,6 @@ impl LightClient for TendermintLightClient {
                         client_id.clone(),
                         trusted_height,
                     ))
-                    .into()
                 })?;
 
         // Use client_state to validate the new header against the latest consensus_state.
@@ -196,7 +193,7 @@ impl LightClient for TendermintLightClient {
         let (new_client_state, new_consensus_state) = client_def
             .check_header_and_update_state(ctx, client_id.clone(), client_state.clone(), header)
             .map_err(|e| {
-                Error::ICS02Error(ICS02Error::header_verification_failure(e.to_string())).into()
+                Error::ICS02Error(ICS02Error::header_verification_failure(e.to_string()))
             })?;
         let new_canonical_client_state =
             AnyClientState::Tendermint(canonicalize_state_from_any(new_client_state.clone()));
@@ -222,9 +219,9 @@ impl LightClient for TendermintLightClient {
         };
 
         let prev_state_id = gen_state_id(canonical_client_state, trusted_consensus_state)
-            .map_err(|e| Error::OtherError(e).into())?;
+            .map_err(|e| Error::OtherError(e))?;
         let new_state_id = gen_state_id(new_canonical_client_state, new_consensus_state.clone())
-            .map_err(|e| Error::OtherError(e).into())?;
+            .map_err(|e| Error::OtherError(e))?;
         let header_timestamp_nanos = header_timestamp
             .into_datetime()
             .unwrap()
@@ -277,13 +274,11 @@ impl LightClient for TendermintLightClient {
 
         // TODO replace the following verification logic with owned method
         let expected_client_state = AnyClientState::try_from(expected_client_state.clone())
-            .map_err(|e| Error::ICS02Error(e).into())?;
+            .map_err(|e| Error::ICS02Error(e))?;
         client_def
             .verify_client_full_state(
                 &client_state,
-                proof_height
-                    .try_into()
-                    .map_err(|e| Error::ICS02Error(e).into())?,
+                proof_height.try_into().map_err(|e| Error::ICS02Error(e))?,
                 &prefix,
                 &proof,
                 consensus_state.root(),
@@ -295,7 +290,6 @@ impl LightClient for TendermintLightClient {
                     client_id.clone(),
                     e,
                 ))
-                .into()
             })?;
 
         Ok(StateVerificationResult {
@@ -304,7 +298,7 @@ impl LightClient for TendermintLightClient {
                 value: expected_client_state.encode_vec().unwrap(),
                 height: proof_height,
                 state_id: gen_state_id(client_state, consensus_state)
-                    .map_err(|e| Error::OtherError(e).into())?,
+                    .map_err(|e| Error::OtherError(e))?,
             },
         })
     }
@@ -330,17 +324,15 @@ impl LightClient for TendermintLightClient {
 
         let expected_client_consensus_state =
             AnyConsensusState::try_from(expected_client_consensus_state)
-                .map_err(|e| Error::ICS02Error(e).into())?;
+                .map_err(|e| Error::ICS02Error(e))?;
         let counterparty_consensus_height = counterparty_consensus_height
             .try_into()
-            .map_err(|e| Error::ICS02Error(e).into())?;
+            .map_err(|e| Error::ICS02Error(e))?;
 
         client_def
             .verify_client_consensus_state(
                 &client_state,
-                proof_height
-                    .try_into()
-                    .map_err(|e| Error::ICS02Error(e).into())?,
+                proof_height.try_into().map_err(|e| Error::ICS02Error(e))?,
                 &prefix,
                 &proof,
                 consensus_state.root(),
@@ -353,7 +345,6 @@ impl LightClient for TendermintLightClient {
                     counterparty_consensus_height,
                     e,
                 ))
-                .into()
             })?;
 
         Ok(StateVerificationResult {
@@ -366,7 +357,7 @@ impl LightClient for TendermintLightClient {
                 value: expected_client_consensus_state.encode_vec().unwrap(),
                 height: proof_height,
                 state_id: gen_state_id(client_state, consensus_state)
-                    .map_err(|e| Error::OtherError(e).into())?,
+                    .map_err(|e| Error::OtherError(e))?,
             },
         })
     }
@@ -392,16 +383,14 @@ impl LightClient for TendermintLightClient {
         client_def
             .verify_connection_state(
                 &client_state,
-                proof_height
-                    .try_into()
-                    .map_err(|e| Error::ICS02Error(e).into())?,
+                proof_height.try_into().map_err(|e| Error::ICS02Error(e))?,
                 &prefix,
                 &proof,
                 consensus_state.root(),
                 &counterparty_connection_id,
                 &expected_connection_state,
             )
-            .map_err(|e| Error::ICS03Error(ICS03Error::verify_connection_state(e)).into())?;
+            .map_err(|e| Error::ICS03Error(ICS03Error::verify_connection_state(e)))?;
 
         Ok(StateVerificationResult {
             state_commitment: StateCommitment {
@@ -409,7 +398,7 @@ impl LightClient for TendermintLightClient {
                 value: expected_connection_state.encode_vec().unwrap(),
                 height: proof_height,
                 state_id: gen_state_id(client_state, consensus_state)
-                    .map_err(|e| Error::OtherError(e).into())?,
+                    .map_err(|e| Error::OtherError(e))?,
             },
         })
     }
@@ -436,9 +425,7 @@ impl LightClient for TendermintLightClient {
         client_def
             .verify_channel_state(
                 &client_state,
-                proof_height
-                    .try_into()
-                    .map_err(|e| Error::ICS02Error(e).into())?,
+                proof_height.try_into().map_err(|e| Error::ICS02Error(e))?,
                 &prefix,
                 &proof,
                 consensus_state.root(),
@@ -446,7 +433,7 @@ impl LightClient for TendermintLightClient {
                 &counterparty_channel_id,
                 &expected_channel_state,
             )
-            .map_err(|e| Error::ICS04Error(ICS04Error::verify_channel_failed(e)).into())?;
+            .map_err(|e| Error::ICS04Error(ICS04Error::verify_channel_failed(e)))?;
 
         Ok(StateVerificationResult {
             state_commitment: StateCommitment {
@@ -457,7 +444,7 @@ impl LightClient for TendermintLightClient {
                 value: expected_channel_state.encode_vec().unwrap(),
                 height: proof_height,
                 state_id: gen_state_id(client_state, consensus_state)
-                    .map_err(|e| Error::OtherError(e).into())?,
+                    .map_err(|e| Error::OtherError(e))?,
             },
         })
     }
@@ -482,7 +469,7 @@ impl TendermintLightClient {
     > {
         let client_state = ctx
             .client_state(&client_id)
-            .map_err(|e| Error::ICS02Error(e).into())?;
+            .map_err(|e| Error::ICS02Error(e))?;
 
         if client_state.is_frozen() {
             return Err(Error::ICS02Error(ICS02Error::client_frozen(client_id)).into());
@@ -491,21 +478,17 @@ impl TendermintLightClient {
         let consensus_state = ctx
             .consensus_state(
                 &client_id,
-                proof_height
-                    .try_into()
-                    .map_err(|e| Error::ICS02Error(e).into())?,
+                proof_height.try_into().map_err(|e| Error::ICS02Error(e))?,
             )
-            .map_err(|e| Error::ICS02Error(e).into())?;
+            .map_err(|e| Error::ICS02Error(e))?;
 
         let client_def = AnyClient::from_client_type(client_state.client_type());
 
-        let proof: CommitmentProofBytes = proof
-            .try_into()
-            .map_err(|e| Error::IBCProofError(e).into())?;
+        let proof: CommitmentProofBytes = proof.try_into().map_err(|e| Error::IBCProofError(e))?;
 
         let prefix: CommitmentPrefix = counterparty_prefix
             .try_into()
-            .map_err(|e| Error::ICS23Error(e).into())?;
+            .map_err(|e| Error::ICS23Error(e))?;
 
         Ok((client_def, client_state, consensus_state, prefix, proof))
     }
