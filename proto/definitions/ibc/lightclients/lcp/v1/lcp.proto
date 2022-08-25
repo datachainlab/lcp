@@ -1,6 +1,7 @@
 syntax = "proto3";
 package ibc.lightclients.lcp.v1;
 
+import "gogoproto/gogo.proto";
 import "ibc/core/client/v1/client.proto";
 
 message UpdateClientHeader {
@@ -10,7 +11,7 @@ message UpdateClientHeader {
 }
 
 message ClientState {
-  ibc.core.client.v1.Height latest_height = 1;
+  ibc.core.client.v1.Height latest_height = 1 [(gogoproto.nullable) = false];
   bytes mrenclave = 2;
   uint64 key_expiration = 3;
   repeated bytes keys = 4;

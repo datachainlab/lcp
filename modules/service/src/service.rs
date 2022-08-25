@@ -1,6 +1,6 @@
 use anyhow::Result;
 use enclave_api::Enclave;
-use ibc_proto::ibc::core::client::v1::msg_server::MsgServer;
+use lcp_proto::lcp::service::elc::v1::msg_server::MsgServer as ELCMsgServer;
 use std::{net::SocketAddr, sync::Arc};
 use tokio::runtime::Runtime;
 use tonic::transport::Server;
@@ -16,10 +16,10 @@ impl AppService {
 }
 
 pub fn run_service(srv: AppService, rt: Arc<Runtime>, addr: SocketAddr) -> Result<()> {
-    let srv = MsgServer::new(srv);
+    let elc_srv = ELCMsgServer::new(srv);
     rt.block_on(async {
         Server::builder()
-            .add_service(srv)
+            .add_service(elc_srv)
             .serve(addr)
             .await
             .unwrap();

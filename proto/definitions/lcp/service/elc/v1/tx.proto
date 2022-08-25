@@ -1,0 +1,64 @@
+syntax = "proto3";
+package lcp.service.elc.v1;
+
+import "gogoproto/gogo.proto";
+import "google/protobuf/any.proto";
+import "ibc/core/client/v1/client.proto";
+
+option (gogoproto.goproto_getters_all) = false;
+
+// Msg defines the ELC Msg service.
+service Msg {
+  // CreateClient defines a rpc handler method for MsgCreateClient.
+  rpc CreateClient(MsgCreateClient) returns (MsgCreateClientResponse);
+
+  // UpdateClient defines a rpc handler method for MsgUpdateClient.
+  rpc UpdateClient(MsgUpdateClient) returns (MsgUpdateClientResponse);
+}
+
+// MsgCreateClient defines a message to create an IBC client
+message MsgCreateClient {
+  option (gogoproto.equal)           = false;
+  option (gogoproto.goproto_getters) = false;
+
+  // light client state
+  google.protobuf.Any client_state = 1 [(gogoproto.moretags) = "yaml:\"client_state\""];
+  // consensus state associated with the client that corresponds to a given
+  // height.
+  google.protobuf.Any consensus_state = 2 [(gogoproto.moretags) = "yaml:\"consensus_state\""];
+  // signer address
+  string signer = 3;
+}
+
+// MsgCreateClientResponse defines the Msg/CreateClient response type.
+message MsgCreateClientResponse {
+  option (gogoproto.equal)           = false;
+  option (gogoproto.goproto_getters) = false;
+ 
+  string client_id = 1;
+  bytes commitment = 2;
+  bytes signer = 3;
+  bytes signature = 4;
+}
+
+// MsgUpdateClient defines an sdk.Msg to update a IBC client state using
+// the given header.
+message MsgUpdateClient {
+  option (gogoproto.equal)           = false;
+  option (gogoproto.goproto_getters) = false;
+
+  // client unique identifier
+  string client_id = 1 [(gogoproto.moretags) = "yaml:\"client_id\""];
+  // header to update the light client
+  google.protobuf.Any header = 2;
+}
+
+// MsgUpdateClientResponse defines the Msg/UpdateClient response type.
+message MsgUpdateClientResponse {
+  option (gogoproto.equal)           = false;
+  option (gogoproto.goproto_getters) = false;
+
+  bytes commitment = 1;
+  bytes signer = 2;
+  bytes signature = 3;
+}

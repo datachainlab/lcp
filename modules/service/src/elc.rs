@@ -1,10 +1,10 @@
 use crate::service::AppService;
 use enclave_api::EnclaveProtoAPI;
-use ibc_proto::ibc::core::client::v1::{
-    msg_server::Msg, MsgCreateClient, MsgCreateClientResponse, MsgSubmitMisbehaviour,
-    MsgSubmitMisbehaviourResponse, MsgUpdateClient, MsgUpdateClientResponse, MsgUpgradeClient,
-    MsgUpgradeClientResponse,
+use lcp_proto::lcp::service::elc::v1::{
+    msg_server::Msg, MsgCreateClient, MsgCreateClientResponse, MsgUpdateClient,
+    MsgUpdateClientResponse,
 };
+
 use tonic::{Request, Response, Status};
 
 #[tonic::async_trait]
@@ -27,19 +27,5 @@ impl Msg for AppService {
             Ok(res) => Ok(Response::new(res)),
             Err(e) => Err(Status::aborted(e.to_string())),
         }
-    }
-
-    async fn upgrade_client(
-        &self,
-        _: Request<MsgUpgradeClient>,
-    ) -> Result<Response<MsgUpgradeClientResponse>, Status> {
-        todo!()
-    }
-
-    async fn submit_misbehaviour(
-        &self,
-        _: Request<MsgSubmitMisbehaviour>,
-    ) -> Result<Response<MsgSubmitMisbehaviourResponse>, Status> {
-        todo!()
     }
 }
