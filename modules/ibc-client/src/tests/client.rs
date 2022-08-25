@@ -39,7 +39,7 @@ impl LightClient for LCPLightClient {
     ) -> Result<CreateClientResult, LightClientError> {
         let client_id = gen_client_id(&any_client_state, &any_consensus_state)?;
         let state_id = gen_state_id_from_any(&any_client_state, &any_consensus_state)
-            .map_err(|e| LightClientError::OtherError(e).into())?;
+            .map_err(LightClientError::OtherError)?;
         let client_state = ClientState::try_from(any_client_state.to_proto())
             .map_err(LightClientError::ICS02Error)?;
         let consensus_state = ConsensusState::try_from(any_consensus_state.to_proto())
@@ -104,7 +104,7 @@ impl LightClient for LCPLightClient {
         let (new_client_state, new_consensus_state) = LCPClient {}
             .check_header_and_update_state(ctx, client_id.clone(), client_state, header)
             .map_err(|e| {
-                Error::ICS02Error(ICS02Error::header_verification_failure(e.to_string())).into()
+                Error::ICS02Error(ICS02Error::header_verification_failure(e.to_string()))
             })?;
 
         Ok(UpdateClientResult {
