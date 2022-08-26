@@ -93,6 +93,7 @@ impl CompileCmd {
             .type_attribute(".cosmos.base.v1beta1", attrs_serde)
             .type_attribute(".cosmos.base.query.v1beta1", attrs_serde)
             .type_attribute(".cosmos.bank.v1beta1", attrs_serde)
+            .type_attribute(".lcp.service.enclave.v1", attrs_serde)
             .type_attribute(".lcp.service.elc.v1", attrs_serde)
             .compile(&protos, &includes);
 

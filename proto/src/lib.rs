@@ -54,6 +54,11 @@ pub mod ibc {
 
 pub mod lcp {
     pub mod service {
+        pub mod enclave {
+            pub mod v1 {
+                include_proto!("lcp.service.enclave.v1.rs");
+            }
+        }
         pub mod elc {
             pub mod v1 {
                 include_proto!("lcp.service.elc.v1.rs");
