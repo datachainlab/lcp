@@ -5,6 +5,7 @@ import "gogoproto/gogo.proto";
 import "google/protobuf/any.proto";
 import "ibc/core/client/v1/client.proto";
 
+option go_package = "github.com/datachainlab/lcp/go/relay/elc";
 option (gogoproto.goproto_getters_all) = false;
 
 // Msg defines the ELC Msg service.
