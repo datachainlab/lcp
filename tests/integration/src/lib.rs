@@ -4,10 +4,7 @@ mod tests {
     use super::*;
     use anyhow::anyhow;
     use enclave_api::{Enclave, EnclavePrimitiveAPI};
-    use enclave_commands::{
-        CommandResult, CommitmentProofPair, EnclaveManageResult, LightClientResult,
-        UpdateClientResult,
-    };
+    use enclave_commands::CommitmentProofPair;
     use ibc::core::{
         ics23_commitment::{commitment::CommitmentProofBytes, merkle::MerkleProof},
         ics24_host::identifier::{ChannelId, PortId},
@@ -81,7 +78,7 @@ mod tests {
         let enclave = Enclave::new(enclave, home);
 
         let report = match enclave.init_enclave_key(spid.as_bytes(), ias_key.as_bytes()) {
-            Ok(CommandResult::EnclaveManage(EnclaveManageResult::InitEnclave(res))) => res.report,
+            Ok(res) => res.report,
             Err(e) => {
                 panic!("ECALL Enclave Failed {:?}!", e);
             }
@@ -105,16 +102,11 @@ mod tests {
             initial_height, client_state, consensus_state
         );
 
-        let proof = if let CommandResult::LightClient(LightClientResult::InitClient(res)) = enclave
+        let res = enclave
             .init_client(client_state.into(), consensus_state.into())
-            .unwrap()
-        {
-            res.0
-        } else {
-            panic!("unexpected result type")
-        };
-        let commitment = proof.commitment();
-        let client_id = commitment.client_id;
+            .unwrap();
+        let commitment = res.proof.commitment();
+        let client_id = res.client_id;
 
         info!("generated client id is {}", client_id.as_str().to_string());
 
@@ -133,12 +125,7 @@ mod tests {
 
         info!("update_client's result is {:?}", res);
 
-        let height = match res {
-            CommandResult::LightClient(LightClientResult::UpdateClient(UpdateClientResult(
-                res,
-            ))) => res.commitment().new_height,
-            _ => unreachable!(),
-        };
+        let height = res.0.commitment().new_height;
 
         info!("current height is {}", height);
 

@@ -10,3 +10,5 @@ ibc-proto = { git = "https://github.com/informalsystems/ibc-rs", rev = "e8c98d44
 tendermint-proto = { version = "=0.23.7", default-features = false }
 serde = { version = "1.0", default-features = false, features = ["alloc"] }
 serde_json = { version = "1.0", default-features = false, features = ["alloc"] }
+
+lcp-proto = { path = "../../proto", default-features = false }

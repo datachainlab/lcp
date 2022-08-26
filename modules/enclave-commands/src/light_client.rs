@@ -84,8 +84,10 @@ pub enum LightClientResult {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-#[serde(transparent)]
-pub struct InitClientResult(pub UpdateClientCommitmentProof);
+pub struct InitClientResult {
+    pub client_id: ClientId,
+    pub proof: UpdateClientCommitmentProof,
+}
 
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(transparent)]

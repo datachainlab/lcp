@@ -1,6 +1,6 @@
 use crate::{Enclave, EnclaveAPIError, Result};
 use ibc::core::ics24_host::identifier::ClientId;
-use ibc_proto::ibc::core::client::v1::{
+use lcp_proto::lcp::service::elc::v1::{
     MsgCreateClient, MsgCreateClientResponse, MsgUpdateClient, MsgUpdateClientResponse,
 };
 use std::str::FromStr;
@@ -16,8 +16,14 @@ pub trait EnclaveProtoAPI: EnclavePrimitiveAPI {
             EnclaveAPIError::InvalidArgumentError("consensus_state must be non-nil".into())
         })?;
 
-        let _ = self.init_client(any_client_state.into(), any_consensus_state.into())?;
-        Ok(MsgCreateClientResponse {})
+        let res = self.init_client(any_client_state.into(), any_consensus_state.into())?;
+        let proof = res.proof;
+        Ok(MsgCreateClientResponse {
+            client_id: res.client_id.to_string(),
+            commitment: proof.commitment().to_vec(),
+            signer: proof.signer,
+            signature: proof.signature,
+        })
     }
 
     fn proto_update_client(&self, msg: MsgUpdateClient) -> Result<MsgUpdateClientResponse> {
@@ -27,8 +33,12 @@ pub trait EnclaveProtoAPI: EnclavePrimitiveAPI {
         let client_id = ClientId::from_str(&msg.client_id)
             .map_err(|e| EnclaveAPIError::InvalidArgumentError(e.to_string()))?;
 
-        let _ = self.update_client(client_id, header.into())?;
-        Ok(MsgUpdateClientResponse {})
+        let proof = self.update_client(client_id, header.into())?.0;
+        Ok(MsgUpdateClientResponse {
+            commitment: proof.commitment().to_vec(),
+            signer: proof.signer,
+            signature: proof.signature,
+        })
     }
 }
 

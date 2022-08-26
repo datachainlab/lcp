@@ -61,14 +61,13 @@ impl LightClient for MockLightClient {
         let timestamp = consensus_state.timestamp();
 
         Ok(CreateClientResult {
-            client_id: client_id.clone(),
+            client_id,
             client_type: ClientType::Mock.as_str().to_owned(),
             any_client_state: any_client_state.clone(),
             any_consensus_state,
             height,
             timestamp,
             commitment: UpdateClientCommitment {
-                client_id,
                 prev_state_id: None,
                 new_state_id: state_id,
                 new_state: Some(any_client_state.into()),
@@ -150,13 +149,12 @@ impl LightClient for MockLightClient {
         let new_any_client_state = Any::try_from(new_client_state).unwrap();
 
         Ok(UpdateClientResult {
-            client_id: client_id.clone(),
+            client_id,
             new_any_client_state: new_any_client_state.clone(),
             new_any_consensus_state: Any::try_from(new_consensus_state).unwrap(),
             height,
             timestamp: header_timestamp,
             commitment: UpdateClientCommitment {
-                client_id,
                 prev_state_id: Some(prev_state_id),
                 new_state_id,
                 new_state: new_any_client_state.into(),

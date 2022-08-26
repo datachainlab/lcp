@@ -85,13 +85,15 @@ impl CompileCmd {
             .build_client(true)
             .compile_well_known_types(true)
             .client_mod_attribute(".", r#"#[cfg(feature = "client")]"#)
-            .build_server(false)
+            .server_mod_attribute(".", r#"#[cfg(feature = "server")]"#)
+            .build_server(true)
             .out_dir(out_dir)
             .extern_path(".tendermint", "::tendermint_proto")
             .type_attribute(".cosmos.upgrade.v1beta1", attrs_serde)
             .type_attribute(".cosmos.base.v1beta1", attrs_serde)
             .type_attribute(".cosmos.base.query.v1beta1", attrs_serde)
             .type_attribute(".cosmos.bank.v1beta1", attrs_serde)
+            .type_attribute(".lcp.service.elc.v1", attrs_serde)
             .compile(&protos, &includes);
 
         match compilation {
