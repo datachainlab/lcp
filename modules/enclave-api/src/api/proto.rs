@@ -1,7 +1,8 @@
 use crate::{Enclave, EnclaveAPIError, Result};
 use ibc::core::ics24_host::identifier::ClientId;
-use lcp_proto::lcp::service::elc::v1::{
-    MsgCreateClient, MsgCreateClientResponse, MsgUpdateClient, MsgUpdateClientResponse,
+use lcp_proto::lcp::service::{
+    elc::v1::{MsgCreateClient, MsgCreateClientResponse, MsgUpdateClient, MsgUpdateClientResponse},
+    enclave::v1::{QueryAttestedEnclaveKeyRequest, QueryAttestedEnclaveKeyResponse},
 };
 use std::str::FromStr;
 
@@ -39,6 +40,13 @@ pub trait EnclaveProtoAPI: EnclavePrimitiveAPI {
             signer: proof.signer,
             signature: proof.signature,
         })
+    }
+
+    fn proto_query_attested_enclave_key(
+        &self,
+        request: QueryAttestedEnclaveKeyRequest,
+    ) -> Result<QueryAttestedEnclaveKeyResponse> {
+        todo!()
     }
 }
 
