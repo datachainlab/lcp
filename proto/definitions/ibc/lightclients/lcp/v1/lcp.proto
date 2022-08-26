@@ -4,10 +4,18 @@ package ibc.lightclients.lcp.v1;
 import "gogoproto/gogo.proto";
 import "ibc/core/client/v1/client.proto";
 
+option go_package = "github.com/datachainlab/lcp/go/light-clients/lcp/types";
+option (gogoproto.goproto_getters_all) = false;
+
 message UpdateClientHeader {
   bytes commitment = 1;
   bytes signer = 2;
   bytes signature = 3;
+}
+
+message RegisterEnclaveKeyHeader {
+  bytes report = 1;
+  bytes signature = 2;
 }
 
 message ClientState {

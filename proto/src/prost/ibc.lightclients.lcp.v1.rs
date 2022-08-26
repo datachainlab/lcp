@@ -8,6 +8,13 @@ pub struct UpdateClientHeader {
     pub signature: ::prost::alloc::vec::Vec<u8>,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
+pub struct RegisterEnclaveKeyHeader {
+    #[prost(bytes="vec", tag="1")]
+    pub report: ::prost::alloc::vec::Vec<u8>,
+    #[prost(bytes="vec", tag="2")]
+    pub signature: ::prost::alloc::vec::Vec<u8>,
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ClientState {
     #[prost(message, optional, tag="1")]
     pub latest_height: ::core::option::Option<super::super::super::core::client::v1::Height>,

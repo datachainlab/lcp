@@ -6,7 +6,10 @@ use ibc::core::ics02_client::{
     client_type::ClientType, error::Error, header::AnyHeader, height::Height as ICS02Height,
 };
 use ibc::timestamp::Timestamp;
-use lcp_proto::ibc::lightclients::lcp::v1::UpdateClientHeader as RawUpdateClientHeader;
+use lcp_proto::ibc::lightclients::lcp::v1::{
+    RegisterEnclaveKeyHeader as RawRegisterEnclaveKeyHeader,
+    UpdateClientHeader as RawUpdateClientHeader,
+};
 use lcp_types::{Any, Height};
 use prost_types::Any as ProtoAny;
 use serde::{Deserialize, Serialize};
@@ -60,6 +63,27 @@ impl From<Header> for Any {
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub struct RegisterEnclaveKeyHeader(pub AttestationVerificationReport);
+
+impl Protobuf<RawRegisterEnclaveKeyHeader> for RegisterEnclaveKeyHeader {}
+
+impl TryFrom<RawRegisterEnclaveKeyHeader> for RegisterEnclaveKeyHeader {
+    type Error = Error;
+    fn try_from(value: RawRegisterEnclaveKeyHeader) -> Result<Self, Self::Error> {
+        Ok(RegisterEnclaveKeyHeader(AttestationVerificationReport {
+            body: value.report,
+            signature: value.signature,
+        }))
+    }
+}
+
+impl From<RegisterEnclaveKeyHeader> for RawRegisterEnclaveKeyHeader {
+    fn from(value: RegisterEnclaveKeyHeader) -> Self {
+        RawRegisterEnclaveKeyHeader {
+            report: value.0.body,
+            signature: value.0.signature,
+        }
+    }
+}
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub struct UpdateClientHeader {
