@@ -4,12 +4,10 @@ use crate::CommitmentError as Error;
 use crate::{StateID, STATE_ID_SIZE};
 use anyhow::{anyhow, Error as AnyhowError};
 use core::str::FromStr;
-use ibc::core::ics24_host::identifier::ClientId;
 use ibc::core::ics24_host::Path;
 use lcp_types::{Any, Height};
 use prost::Message;
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
 #[allow(unused_imports)]
 use std::format;
 use std::string::{String, ToString};
@@ -21,7 +19,6 @@ use rlp_derive::{RlpDecodable, RlpEncodable};
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct UpdateClientCommitment {
-    pub client_id: ClientId,
     pub prev_state_id: Option<StateID>,
     pub new_state_id: StateID,
     pub new_state: Option<Any>,
@@ -34,7 +31,6 @@ pub struct UpdateClientCommitment {
 // TODO can we avoid to define a substitute struct for RLP serialization?
 #[derive(RlpEncodable, RlpDecodable, Default, Debug)]
 pub struct RLPUpdateClientCommitment {
-    client_id: String,
     prev_state_id: Vec<u8>,
     new_state_id: Vec<u8>,
     new_state: Vec<u8>,
@@ -47,7 +43,6 @@ pub struct RLPUpdateClientCommitment {
 impl UpdateClientCommitment {
     pub fn to_vec(&self) -> Vec<u8> {
         let c = RLPUpdateClientCommitment {
-            client_id: self.client_id.to_string(),
             prev_state_id: match &self.prev_state_id {
                 Some(state_id) => state_id.to_vec(),
                 None => vec![],
@@ -71,7 +66,6 @@ impl UpdateClientCommitment {
     pub fn from_bytes(bz: &[u8]) -> Result<Self, Error> {
         let rc: RLPUpdateClientCommitment = rlp::decode(bz).map_err(Error::RLPDecoderError)?;
         Ok(Self {
-            client_id: string_to_client_id(rc.client_id)?,
             prev_state_id: match rc.prev_state_id {
                 ref v if v.len() > 0 => Some(bytes_to_state_id(v)?),
                 _ => None,
@@ -128,10 +122,6 @@ pub struct RLPStateCommitment {
     pub value: Vec<u8>,
     pub height: Vec<u8>,
     pub state_id: Vec<u8>,
-}
-
-fn string_to_client_id(client_id: String) -> Result<ClientId, AnyhowError> {
-    Ok(serde_json::from_value::<ClientId>(Value::String(client_id)).unwrap())
 }
 
 fn height_to_bytes(h: Height) -> Vec<u8> {

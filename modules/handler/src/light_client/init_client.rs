@@ -28,10 +28,13 @@ pub fn init_client<'l, S: KVStore, L: LightClientSource<'l>>(
     ctx.increase_client_counter();
     ctx.store_update_time(res.client_id.clone(), res.height, ctx.host_timestamp())
         .map_err(Error::ICS02Error)?;
-    ctx.store_update_height(res.client_id, res.height, ctx.host_height())
+    ctx.store_update_height(res.client_id.clone(), res.height, ctx.host_height())
         .map_err(Error::ICS02Error)?;
 
     let proof =
         prove_update_client_commitment(ek, &res.commitment).map_err(Error::CommitmentError)?;
-    Ok(LightClientResult::InitClient(InitClientResult(proof)))
+    Ok(LightClientResult::InitClient(InitClientResult {
+        client_id: res.client_id,
+        proof,
+    }))
 }

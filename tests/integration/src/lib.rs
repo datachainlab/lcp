@@ -102,12 +102,11 @@ mod tests {
             initial_height, client_state, consensus_state
         );
 
-        let proof = enclave
+        let res = enclave
             .init_client(client_state.into(), consensus_state.into())
-            .unwrap()
-            .0;
-        let commitment = proof.commitment();
-        let client_id = commitment.client_id;
+            .unwrap();
+        let commitment = res.proof.commitment();
+        let client_id = res.client_id;
 
         info!("generated client id is {}", client_id.as_str().to_string());
 

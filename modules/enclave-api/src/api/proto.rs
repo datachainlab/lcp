@@ -16,13 +16,11 @@ pub trait EnclaveProtoAPI: EnclavePrimitiveAPI {
             EnclaveAPIError::InvalidArgumentError("consensus_state must be non-nil".into())
         })?;
 
-        let proof = self
-            .init_client(any_client_state.into(), any_consensus_state.into())?
-            .0;
-        let commitment = proof.commitment();
+        let res = self.init_client(any_client_state.into(), any_consensus_state.into())?;
+        let proof = res.proof;
         Ok(MsgCreateClientResponse {
-            client_id: commitment.client_id.to_string(),
-            commitment: commitment.to_vec(),
+            client_id: res.client_id.to_string(),
+            commitment: proof.commitment().to_vec(),
             signer: proof.signer,
             signature: proof.signature,
         })

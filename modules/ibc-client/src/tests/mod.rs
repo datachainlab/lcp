@@ -63,7 +63,7 @@ mod tests {
         let home = tmp_dir.path().to_str().unwrap().to_string();
 
         // 1. initializes Light Client(Mock) corresponding to the upstream chain on the LCP side
-        let proof0 = {
+        let (upstream_client_id, proof0) = {
             let header = MockHeader::new(ICS02Height::new(0, 1).unwrap());
             let client_state = AnyClientState::Mock(MockClientState::new(header));
             let consensus_state = AnyConsensusState::Mock(MockConsensusState::new(header));
@@ -84,11 +84,12 @@ mod tests {
             );
             assert!(res.is_ok(), "res={:?}", res);
             assert_eq!(lcp_store.revision, 2);
-            if let CommandResult::LightClient(LightClientResult::InitClient(InitClientResult(
+            if let CommandResult::LightClient(LightClientResult::InitClient(InitClientResult {
+                client_id,
                 proof,
-            ))) = res.unwrap()
+            })) = res.unwrap()
             {
-                proof
+                (client_id, proof)
             } else {
                 unreachable!()
             }
@@ -130,11 +131,12 @@ mod tests {
                 ),
             );
             assert!(res.is_ok(), "res={:?}", res);
-            if let CommandResult::LightClient(LightClientResult::InitClient(InitClientResult(
-                proof,
-            ))) = res.unwrap()
+            if let CommandResult::LightClient(LightClientResult::InitClient(InitClientResult {
+                client_id,
+                proof: _,
+            })) = res.unwrap()
             {
-                proof.commitment().client_id
+                client_id
             } else {
                 unreachable!()
             }
@@ -144,7 +146,7 @@ mod tests {
         let proof1 = {
             let header = MockHeader::new(ICS02Height::new(0, 2).unwrap());
             let input = UpdateClientInput {
-                client_id: proof0.commitment().client_id,
+                client_id: upstream_client_id,
                 any_header: Any::from(AnyHeader::Mock(header)).into(),
                 current_timestamp: 0,
             };
