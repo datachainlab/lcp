@@ -22,10 +22,15 @@ impl AppService {
 pub fn run_service(srv: AppService, rt: Arc<Runtime>, addr: SocketAddr) -> Result<()> {
     let elc_srv = ELCMsgServer::new(srv.clone());
     let enclave_srv = EnclaveQueryServer::new(srv);
+    let reflection = tonic_reflection::server::Builder::configure()
+        .register_encoded_file_descriptor_set(lcp_proto::FILE_DESCRIPTOR_SET)
+        .build()
+        .expect("failed to create gRPC reflection servicer");
     rt.block_on(async {
         Server::builder()
             .add_service(elc_srv)
             .add_service(enclave_srv)
+            .add_service(reflection)
             .serve(addr)
             .await
             .unwrap();

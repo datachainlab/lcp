@@ -27,6 +27,10 @@ macro_rules! include_proto {
 /// The version (commit hash) of IBC Go used when generating this library.
 pub const IBC_GO_COMMIT: &str = include_str!("IBC_GO_COMMIT");
 
+/// Protobuf-encoded file descriptor set for all message types, used for gRPC reflection.
+#[cfg(feature = "server")]
+pub const FILE_DESCRIPTOR_SET: &'static [u8] = include_bytes!("descriptor.bin");
+
 pub mod cosmos {
     pub mod upgrade {
         pub mod v1beta1 {

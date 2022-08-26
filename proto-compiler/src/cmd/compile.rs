@@ -18,6 +18,10 @@ pub struct CompileCmd {
     #[argh(option, short = 'o')]
     /// path to output the generated Rust sources into
     out: PathBuf,
+
+    #[argh(option, short = 'd')]
+    /// path to output the proto descriptor into
+    descriptor: PathBuf,
 }
 
 impl CompileCmd {
@@ -26,12 +30,12 @@ impl CompileCmd {
         Self::compile_ibc_protos(&self.ibc, tmp_ibc.as_ref());
 
         let tmp_lcp = TempDir::new("lcp").unwrap();
-        Self::compile_lcp_protos(&self.ibc, tmp_lcp.as_ref());
+        Self::compile_lcp_protos(&self.ibc, tmp_lcp.as_ref(), &self.descriptor);
 
         Self::copy_generated_files(tmp_lcp.as_ref(), tmp_ibc.as_ref(), &self.out);
     }
 
-    fn compile_lcp_protos(ibc_dir: &Path, out_dir: &Path) {
+    fn compile_lcp_protos(ibc_dir: &Path, out_dir: &Path, descriptor_path: &Path) {
         println!(
             "[info ] Compiling LCP .proto files to Rust into '{}'...",
             out_dir.display()
@@ -95,6 +99,7 @@ impl CompileCmd {
             .type_attribute(".cosmos.bank.v1beta1", attrs_serde)
             .type_attribute(".lcp.service.enclave.v1", attrs_serde)
             .type_attribute(".lcp.service.elc.v1", attrs_serde)
+            .file_descriptor_set_path(descriptor_path)
             .compile(&protos, &includes);
 
         match compilation {
