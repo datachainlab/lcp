@@ -1,4 +1,6 @@
+use attestation_report::parse_quote_from_report;
 use commitments::StateCommitmentProof;
+use crypto::{verify_signature_address, Address};
 use ibc::core::ics02_client::client_consensus::AnyConsensusState;
 use ibc::core::ics02_client::client_state::AnyClientState;
 use ibc::core::ics02_client::error::Error as Ics02Error;
@@ -19,9 +21,8 @@ use validation_context::{validation_predicate, ValidationContext};
 
 use crate::client_state::ClientState;
 use crate::consensus_state::ConsensusState;
-use crate::crypto::{verify_signature, Address};
 use crate::header::{Commitment, Header, RegisterEnclaveKeyHeader, UpdateClientHeader};
-use crate::report::{read_enclave_key_from_report, verify_report_and_get_key_expiration};
+use crate::report::verify_report_and_get_key_expiration;
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct LCPClient {}
@@ -78,7 +79,7 @@ impl LCPClient {
         assert!(client_state.contains(&header.signer()));
 
         // check if the `header.signer` matches the commitment prover
-        let signer = verify_signature(&header.commitment_bytes, &header.signature).unwrap();
+        let signer = verify_signature_address(&header.commitment_bytes, &header.signature).unwrap();
         assert!(header.signer() == signer);
 
         // check if proxy's validation context matches our's context
@@ -108,7 +109,10 @@ impl LCPClient {
         let (valid, key_expiration) =
             verify_report_and_get_key_expiration(&vctx, &client_state, &header.0);
         assert!(valid);
-        let key = read_enclave_key_from_report(&header.0.body).unwrap();
+        let key = parse_quote_from_report(&header.0.body)
+            .unwrap()
+            .get_enclave_key_address()
+            .unwrap();
 
         let any_consensus_state = ctx
             .consensus_state(&client_id, client_state.latest_height)
@@ -199,7 +203,7 @@ impl LCPClient {
         assert!(consensus_state.state_id == commitment.state_id);
 
         // check if the `commitment_proof.signer` matches the commitment prover
-        let signer = verify_signature(
+        let signer = verify_signature_address(
             &commitment_proof.commitment_bytes,
             &commitment_proof.signature,
         )

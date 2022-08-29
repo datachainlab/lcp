@@ -8,8 +8,12 @@ log = "0.4.8"
 ibc = { git = "https://github.com/informalsystems/ibc-rs", rev = "e8c98d440949abf971ac45a68ed9dd9e6e9f48ed", default-features = false }
 ibc-proto = { git = "https://github.com/informalsystems/ibc-rs", rev = "e8c98d440949abf971ac45a68ed9dd9e6e9f48ed", default-features = false, features = ["server"] }
 tonic = { version = "0.7", default-features = false }
+tonic-reflection = { version = "0.4.0" }
 tokio = { version = "1.0", features = ["full"] }
 anyhow = { version = "1.0.56" }
+serde_json = { version = "1.0", default-features = false, features = ["alloc"] }
 
 enclave-api = { path = "../enclave-api" }
 lcp-proto = { path = "../../proto", default-features = false }
+attestation-report = { path = "../attestation-report" }
+settings = { path = "../settings" }

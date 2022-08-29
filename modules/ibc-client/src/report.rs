@@ -1,9 +1,9 @@
 use attestation_report::parse_quote_from_report;
 use validation_context::ValidationContext;
 
+use crate::client_state::ClientState;
 #[cfg(feature = "sgx")]
 use crate::sgx_reexport_prelude::*;
-use crate::{client_state::ClientState, crypto::Address};
 use serde::{Deserialize, Serialize};
 use std::vec::Vec;
 
@@ -38,12 +38,4 @@ pub fn verify_report_and_get_key_expiration(
     }
 
     (true, quote.timestamp as u128 + client_state.key_expiration)
-}
-
-// TODO modify Result's right as Error type
-// read_enclave_key_from_report parses a report_data from the specified report body and get an enclave key from it
-pub fn read_enclave_key_from_report(report_body: &[u8]) -> Result<Address, ()> {
-    let quote = parse_quote_from_report(report_body).unwrap();
-    let data = quote.raw.report_body.report_data.d;
-    Ok(Address::from(&data[..20]))
 }

@@ -6,6 +6,7 @@ extern crate sgx_tstd as std;
 use sgx_types::sgx_status_t;
 
 pub static SEALED_ENCLAVE_KEY_PATH: &str = "ek_sealed";
+pub static AVR_KEY_PATH: &str = "avr";
 
 #[allow(dead_code)]
 #[derive(PartialEq, Eq, Debug)]

@@ -178,7 +178,7 @@ fmt:
 
 .PHONY: proto
 proto:
-	@cd proto-compiler && cargo run -- compile --ibc /tmp/cosmos/ibc --out ../proto/src/prost
+	@cd proto-compiler && cargo run -- compile --ibc /tmp/cosmos/ibc --out ../proto/src/prost --descriptor ../proto/src/descriptor.bin
 
 .PHONY: docker
 docker:

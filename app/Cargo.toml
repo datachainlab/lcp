@@ -21,6 +21,7 @@ host = { path = "../modules/host" }
 service = { path = "../modules/service" }
 enclave-api = { path = "../modules/enclave-api" }
 enclave-commands = { path = "../modules/enclave-commands" }
+settings = { path = "../modules/settings" }
 
 [features]
 default = []
