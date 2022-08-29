@@ -15,10 +15,13 @@ base64_sgx = { package = "base64", git = "https://github.com/mesalock-linux/rust
 base64 = { git = "https://github.com/marshallpierce/rust-base64", optional = true }
 pem_sgx = { package = "pem", version = "0.8.2", git = "https://github.com/mesalock-linux/pem-rs-sgx", optional = true }
 pem = { version = "1.0", optional = true }
+log = { version = "0.4.8", optional = true }
+log_sgx = { package = "log", git = "https://github.com/mesalock-linux/log-sgx", optional = true }
 chrono = { version = "0.4.19", default-features = false, features = ["alloc"]}
 serde = { version = "1.0", default-features = false, features = ["alloc"] }
 serde_json = { version = "1.0", default-features = false, features = ["alloc"] }
-log = "0.4.8"
+crypto = { path = "../crypto", default-features = false, optional = true }
+
 
 [features]
 default = ["std"]
@@ -26,7 +29,9 @@ std = [
     "webpki",
     "rustls",
     "base64",
-    "pem"
+    "pem",
+    "log",
+    "crypto/std"
 ]
 sgx = [
     "sgx_tstd",
@@ -34,4 +39,6 @@ sgx = [
     "rustls_sgx",
     "base64_sgx",
     "pem_sgx",
+    "log_sgx",
+    "crypto/sgx"
 ]

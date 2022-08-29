@@ -1,4 +1,5 @@
 use commitments::StateCommitmentProof;
+use crypto::{verify_signature, Address};
 use ibc::core::ics02_client::client_consensus::AnyConsensusState;
 use ibc::core::ics02_client::client_state::AnyClientState;
 use ibc::core::ics02_client::error::Error as Ics02Error;
@@ -19,7 +20,6 @@ use validation_context::{validation_predicate, ValidationContext};
 
 use crate::client_state::ClientState;
 use crate::consensus_state::ConsensusState;
-use crate::crypto::{verify_signature, Address};
 use crate::header::{Commitment, Header, RegisterEnclaveKeyHeader, UpdateClientHeader};
 use crate::report::{read_enclave_key_from_report, verify_report_and_get_key_expiration};
 
