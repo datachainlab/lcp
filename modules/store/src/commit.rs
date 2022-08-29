@@ -3,6 +3,7 @@ use crate::errors::{Result, StoreError as Error};
 use crate::sgx_reexport_prelude::*;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
+use std::vec::Vec;
 
 #[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct CommitID([u8; 32]);
@@ -38,12 +39,7 @@ impl Commit {
         Self { id, revision }
     }
 
-    pub fn as_sign_msg(&self) -> Result<[u8; 32]> {
-        let bz = bincode::serialize(&self).map_err(Error::BincodeError)?;
-        let mut hasher = Sha256::new();
-        hasher.input(&bz);
-        let mut msg: [u8; 32] = Default::default();
-        msg.copy_from_slice(hasher.result().as_slice());
-        Ok(msg)
+    pub fn as_sign_msg(&self) -> Result<Vec<u8>> {
+        bincode::serialize(&self).map_err(Error::BincodeError)
     }
 }

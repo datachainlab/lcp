@@ -12,7 +12,9 @@ pub mod sgx_reexport_prelude {
     pub use thiserror_sgx as thiserror;
 }
 
-pub use crate::secp256k1::{verify_signature, Address, EnclaveKey, EnclavePublicKey};
+pub use crate::secp256k1::{
+    verify_signature, verify_signature_address, Address, EnclaveKey, EnclavePublicKey,
+};
 pub use errors::CryptoError;
 pub use key_manager::KeyManager;
 pub use traits::{SealedKey, Signer, Verifier};

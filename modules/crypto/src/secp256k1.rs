@@ -61,7 +61,7 @@ impl EnclaveKey {
         self.sign_hash(&bz.keccak256())
     }
 
-    pub fn sign_hash(&self, bz: &[u8; 32]) -> Result<Vec<u8>, Error> {
+    fn sign_hash(&self, bz: &[u8; 32]) -> Result<Vec<u8>, Error> {
         let mut s = Scalar::default();
         let _ = s.set_b32(&bz);
         let (sig, rid) = secp256k1::sign(&Message(s), &self.secret_key);
@@ -96,16 +96,9 @@ impl EnclavePublicKey {
         report_data
     }
 
-    pub fn verify(&self, msg: &[u8; 32], signature: &[u8]) -> Result<(), Error> {
-        assert!(signature.len() == 65);
-
-        let mut s = Scalar::default();
-        let _ = s.set_b32(msg);
-
-        let sig = Signature::parse_slice(&signature[..64]).map_err(Error::Secp256k1Error)?;
-        let rid = RecoveryId::parse(signature[64]).map_err(Error::Secp256k1Error)?;
-        let signer = secp256k1::recover(&Message(s), &sig, &rid).map_err(Error::Secp256k1Error)?;
-        if self.0.eq(&signer) {
+    pub fn verify(&self, msg: &[u8], signature: &[u8]) -> Result<(), Error> {
+        let signer = verify_signature(msg, signature)?;
+        if self.eq(&signer) {
             Ok(())
         } else {
             Err(Error::VerificationError(format!(
@@ -154,10 +147,6 @@ impl Signer for EnclaveKey {
         self.sign(msg)
     }
 
-    fn sign_hash(&self, msg: &[u8; 32]) -> Result<Vec<u8>, Error> {
-        self.sign_hash(msg)
-    }
-
     fn use_verifier(&self, f: &mut dyn FnMut(&dyn Verifier)) {
         f(&self.get_pubkey());
     }
@@ -172,7 +161,7 @@ impl Verifier for EnclavePublicKey {
         Address::from(self).into()
     }
 
-    fn verify(&self, msg: &[u8; 32], signature: &[u8]) -> Result<(), Error> {
+    fn verify(&self, msg: &[u8], signature: &[u8]) -> Result<(), Error> {
         self.verify(msg, signature)
     }
 }
@@ -219,7 +208,7 @@ fn open(filepath: &str) -> Result<SecretKey, Error> {
     Ok(SecretKey::parse(&buf).unwrap())
 }
 
-pub fn verify_signature(sign_bytes: &[u8], signature: &[u8]) -> Result<Address, Error> {
+pub fn verify_signature(sign_bytes: &[u8], signature: &[u8]) -> Result<EnclavePublicKey, Error> {
     assert!(signature.len() == 65);
 
     let sign_hash = keccak256(sign_bytes);
@@ -229,7 +218,12 @@ pub fn verify_signature(sign_bytes: &[u8], signature: &[u8]) -> Result<Address, 
     let sig = Signature::parse_slice(&signature[..64]).map_err(Error::Secp256k1Error)?;
     let rid = RecoveryId::parse(signature[64]).map_err(Error::Secp256k1Error)?;
     let signer = secp256k1::recover(&Message(s), &sig, &rid).map_err(Error::Secp256k1Error)?;
-    Ok((&EnclavePublicKey(signer)).into())
+    Ok(EnclavePublicKey(signer))
+}
+
+pub fn verify_signature_address(sign_bytes: &[u8], signature: &[u8]) -> Result<Address, Error> {
+    let pub_key = verify_signature(sign_bytes, signature)?;
+    Ok((&pub_key).into())
 }
 
 fn keccak256(bz: &[u8]) -> [u8; 32] {
