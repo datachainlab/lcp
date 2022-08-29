@@ -36,7 +36,7 @@ impl ServiceCmd {
                 let addr = cmd.address.parse()?;
                 let enclave = load_enclave(opts, cmd.enclave.as_ref())?;
                 let rt = Arc::new(Runtime::new()?);
-                let srv = AppService::builder(enclave);
+                let srv = AppService::new(opts.get_home(), enclave);
 
                 info!("start service");
                 run_service(srv, rt, addr)

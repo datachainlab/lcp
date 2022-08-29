@@ -11,6 +11,9 @@ tonic = { version = "0.7", default-features = false }
 tonic-reflection = { version = "0.4.0" }
 tokio = { version = "1.0", features = ["full"] }
 anyhow = { version = "1.0.56" }
+serde_json = { version = "1.0", default-features = false, features = ["alloc"] }
 
 enclave-api = { path = "../enclave-api" }
 lcp-proto = { path = "../../proto", default-features = false }
+attestation-report = { path = "../attestation-report" }
+settings = { path = "../settings" }

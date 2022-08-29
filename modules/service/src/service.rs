@@ -4,18 +4,22 @@ use lcp_proto::lcp::service::{
     elc::v1::msg_server::MsgServer as ELCMsgServer,
     enclave::v1::query_server::QueryServer as EnclaveQueryServer,
 };
-use std::{net::SocketAddr, sync::Arc};
+use std::{net::SocketAddr, path::PathBuf, sync::Arc};
 use tokio::runtime::Runtime;
 use tonic::transport::Server;
 
 #[derive(Clone)]
 pub struct AppService {
+    pub(crate) home: PathBuf,
     pub(crate) enclave: Enclave,
 }
 
 impl AppService {
-    pub fn builder(enclave: Enclave) -> Self {
-        AppService { enclave }
+    pub fn new<P: Into<PathBuf>>(home: P, enclave: Enclave) -> Self {
+        AppService {
+            home: home.into(),
+            enclave,
+        }
     }
 }
 

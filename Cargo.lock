@@ -3843,11 +3843,14 @@ name = "service"
 version = "0.1.0"
 dependencies = [
  "anyhow 1.0.58",
+ "attestation-report",
  "enclave-api",
  "ibc",
  "ibc-proto",
  "lcp-proto",
  "log 0.4.17",
+ "serde_json",
+ "settings",
  "tokio",
  "tonic",
  "tonic-reflection",
