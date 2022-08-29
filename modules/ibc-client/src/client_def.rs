@@ -1,3 +1,4 @@
+use attestation_report::parse_quote_from_report;
 use commitments::StateCommitmentProof;
 use crypto::{verify_signature_address, Address};
 use ibc::core::ics02_client::client_consensus::AnyConsensusState;
@@ -21,7 +22,7 @@ use validation_context::{validation_predicate, ValidationContext};
 use crate::client_state::ClientState;
 use crate::consensus_state::ConsensusState;
 use crate::header::{Commitment, Header, RegisterEnclaveKeyHeader, UpdateClientHeader};
-use crate::report::{read_enclave_key_from_report, verify_report_and_get_key_expiration};
+use crate::report::verify_report_and_get_key_expiration;
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct LCPClient {}
@@ -108,7 +109,10 @@ impl LCPClient {
         let (valid, key_expiration) =
             verify_report_and_get_key_expiration(&vctx, &client_state, &header.0);
         assert!(valid);
-        let key = read_enclave_key_from_report(&header.0.body).unwrap();
+        let key = parse_quote_from_report(&header.0.body)
+            .unwrap()
+            .get_enclave_key_address()
+            .unwrap();
 
         let any_consensus_state = ctx
             .consensus_state(&client_id, client_state.latest_height)
