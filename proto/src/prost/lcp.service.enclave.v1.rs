@@ -1,12 +1,12 @@
 #[derive(::serde::Serialize, ::serde::Deserialize)]
 #[derive(Clone, PartialEq, ::prost::Message)]
-pub struct QueryAttestedEnclaveKeyRequest {
+pub struct QueryAttestedVerificationReportRequest {
 }
 #[derive(::serde::Serialize, ::serde::Deserialize)]
 #[derive(Clone, PartialEq, ::prost::Message)]
-pub struct QueryAttestedEnclaveKeyResponse {
+pub struct QueryAttestedVerificationReportResponse {
     #[prost(bytes="vec", tag="1")]
-    pub enclave_public_key: ::prost::alloc::vec::Vec<u8>,
+    pub enclave_address: ::prost::alloc::vec::Vec<u8>,
     #[prost(bytes="vec", tag="2")]
     pub report: ::prost::alloc::vec::Vec<u8>,
     #[prost(bytes="vec", tag="3")]
@@ -79,11 +79,13 @@ pub mod query_client {
             self.inner = self.inner.accept_gzip();
             self
         }
-        pub async fn attested_enclave_key(
+        pub async fn attested_verification_report(
             &mut self,
-            request: impl tonic::IntoRequest<super::QueryAttestedEnclaveKeyRequest>,
+            request: impl tonic::IntoRequest<
+                super::QueryAttestedVerificationReportRequest,
+            >,
         ) -> Result<
-            tonic::Response<super::QueryAttestedEnclaveKeyResponse>,
+            tonic::Response<super::QueryAttestedVerificationReportResponse>,
             tonic::Status,
         > {
             self.inner
@@ -97,7 +99,7 @@ pub mod query_client {
                 })?;
             let codec = tonic::codec::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
-                "/lcp.service.enclave.v1.Query/AttestedEnclaveKey",
+                "/lcp.service.enclave.v1.Query/AttestedVerificationReport",
             );
             self.inner.unary(request.into_request(), path, codec).await
         }
@@ -111,11 +113,11 @@ pub mod query_server {
     ///Generated trait containing gRPC methods that should be implemented for use with QueryServer.
     #[async_trait]
     pub trait Query: Send + Sync + 'static {
-        async fn attested_enclave_key(
+        async fn attested_verification_report(
             &self,
-            request: tonic::Request<super::QueryAttestedEnclaveKeyRequest>,
+            request: tonic::Request<super::QueryAttestedVerificationReportRequest>,
         ) -> Result<
-            tonic::Response<super::QueryAttestedEnclaveKeyResponse>,
+            tonic::Response<super::QueryAttestedVerificationReportResponse>,
             tonic::Status,
         >;
     }
@@ -166,14 +168,15 @@ pub mod query_server {
         fn call(&mut self, req: http::Request<B>) -> Self::Future {
             let inner = self.inner.clone();
             match req.uri().path() {
-                "/lcp.service.enclave.v1.Query/AttestedEnclaveKey" => {
+                "/lcp.service.enclave.v1.Query/AttestedVerificationReport" => {
                     #[allow(non_camel_case_types)]
-                    struct AttestedEnclaveKeySvc<T: Query>(pub Arc<T>);
+                    struct AttestedVerificationReportSvc<T: Query>(pub Arc<T>);
                     impl<
                         T: Query,
-                    > tonic::server::UnaryService<super::QueryAttestedEnclaveKeyRequest>
-                    for AttestedEnclaveKeySvc<T> {
-                        type Response = super::QueryAttestedEnclaveKeyResponse;
+                    > tonic::server::UnaryService<
+                        super::QueryAttestedVerificationReportRequest,
+                    > for AttestedVerificationReportSvc<T> {
+                        type Response = super::QueryAttestedVerificationReportResponse;
                         type Future = BoxFuture<
                             tonic::Response<Self::Response>,
                             tonic::Status,
@@ -181,12 +184,12 @@ pub mod query_server {
                         fn call(
                             &mut self,
                             request: tonic::Request<
-                                super::QueryAttestedEnclaveKeyRequest,
+                                super::QueryAttestedVerificationReportRequest,
                             >,
                         ) -> Self::Future {
                             let inner = self.0.clone();
                             let fut = async move {
-                                (*inner).attested_enclave_key(request).await
+                                (*inner).attested_verification_report(request).await
                             };
                             Box::pin(fut)
                         }
@@ -196,7 +199,7 @@ pub mod query_server {
                     let inner = self.inner.clone();
                     let fut = async move {
                         let inner = inner.0;
-                        let method = AttestedEnclaveKeySvc(inner);
+                        let method = AttestedVerificationReportSvc(inner);
                         let codec = tonic::codec::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(
