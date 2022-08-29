@@ -6,6 +6,7 @@ extern crate sgx_types;
 // re-export module to properly feature gate sgx and regular std environment
 #[cfg(feature = "sgx")]
 pub mod sgx_reexport_prelude {
+    pub use anyhow_sgx as anyhow;
     pub use base64_sgx as base64;
     pub use log_sgx as log;
     pub use pem_sgx as pem;
@@ -15,6 +16,7 @@ pub mod sgx_reexport_prelude {
     pub use webpki_sgx as webpki;
 }
 
+pub use errors::AttestationReportError;
 pub use report::{parse_quote_from_report, verify_report, EndorsedAttestationReport};
 
 mod errors;

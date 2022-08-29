@@ -1,19 +1,19 @@
 use crate::errors::AttestationReportError as Error;
 #[cfg(feature = "sgx")]
 use crate::sgx_reexport_prelude::*;
+use anyhow::anyhow;
 use chrono::prelude::DateTime;
 use crypto::Address;
-use log::*;
 use pem;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use sgx_types::{sgx_quote_t, sgx_status_t};
-use std::ptr;
+use sgx_types::sgx_quote_t;
 use std::string::{String, ToString};
 use std::time::SystemTime;
 #[cfg(feature = "sgx")]
 use std::untrusted::time::SystemTimeEx;
 use std::vec::Vec;
+use std::{format, ptr};
 
 pub const IAS_REPORT_CA: &[u8] =
     include_bytes!("../../../enclave/Intel_SGX_Attestation_RootCA.pem");
@@ -46,12 +46,14 @@ pub struct EndorsedAttestationReport {
     pub signing_cert: Vec<u8>,
 }
 
-pub fn verify_report(report: &EndorsedAttestationReport) -> Result<(), sgx_status_t> {
+pub fn verify_report(report: &EndorsedAttestationReport) -> Result<(), Error> {
     let now = match webpki::Time::try_from(SystemTime::now()) {
         Ok(r) => r,
         Err(e) => {
-            error!("webpki::Time::try_from failed with {:?}", e);
-            return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
+            return Err(Error::OtherError(anyhow!(
+                "webpki::Time::try_from failed with {:?}",
+                e
+            )))
         }
     };
 
@@ -61,7 +63,7 @@ pub fn verify_report(report: &EndorsedAttestationReport) -> Result<(), sgx_statu
     let mut root_store = rustls::RootCertStore::empty();
     root_store
         .add(&rustls::Certificate(root_ca.clone()))
-        .unwrap();
+        .map_err(Error::WebPKIError)?;
 
     let trust_anchors: Vec<webpki::TrustAnchor> = root_store
         .roots
@@ -72,32 +74,27 @@ pub fn verify_report(report: &EndorsedAttestationReport) -> Result<(), sgx_statu
     let mut chain: Vec<&[u8]> = Vec::new();
     chain.push(&root_ca);
 
-    let report_cert = webpki::EndEntityCert::from(&report.signing_cert).unwrap();
+    let report_cert =
+        webpki::EndEntityCert::from(&report.signing_cert).map_err(Error::WebPKIError)?;
 
-    match report_cert.verify_is_valid_tls_server_cert(
-        SUPPORTED_SIG_ALGS,
-        &webpki::TLSServerTrustAnchors(&trust_anchors),
-        &chain,
-        now,
-    ) {
-        Ok(r) => r,
-        Err(e) => {
-            error!("verify_is_valid_tls_server_cert failed with {:?}", e);
-            return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
-        }
-    };
+    let _ = report_cert
+        .verify_is_valid_tls_server_cert(
+            SUPPORTED_SIG_ALGS,
+            &webpki::TLSServerTrustAnchors(&trust_anchors),
+            &chain,
+            now,
+        )
+        .map_err(Error::WebPKIError)?;
 
-    match report_cert.verify_signature(
-        &webpki::RSA_PKCS1_2048_8192_SHA256,
-        &report.report,
-        &report.signature,
-    ) {
-        Ok(_) => Ok(()),
-        Err(e) => {
-            error!("verify_signature failed with {:?}", e);
-            Err(sgx_status_t::SGX_ERROR_UNEXPECTED)
-        }
-    }
+    let _ = report_cert
+        .verify_signature(
+            &webpki::RSA_PKCS1_2048_8192_SHA256,
+            &report.report,
+            &report.signature,
+        )
+        .map_err(Error::WebPKIError)?;
+
+    Ok(())
 }
 
 #[derive(Clone)]
@@ -111,7 +108,10 @@ impl Quote {
     pub fn get_enclave_key_address(&self) -> Result<Address, Error> {
         let data = self.raw.report_body.report_data.d;
         if data.len() < 20 {
-            Err(Error::InvalidReportDataError("".into()))
+            Err(Error::InvalidReportDataError(format!(
+                "unexpected report data length: {}",
+                data.len()
+            )))
         } else {
             Ok(Address::from(&data[..20]))
         }

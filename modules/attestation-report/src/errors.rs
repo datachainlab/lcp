@@ -12,4 +12,8 @@ pub enum AttestationReportError {
     InvalidQuoteStatusError(String),
     #[error("InvalidReportDataError: {0}")]
     InvalidReportDataError(String),
+    #[error("WebPKIError")]
+    WebPKIError(#[source] webpki::Error),
+    #[error(transparent)]
+    OtherError(#[from] anyhow::Error),
 }

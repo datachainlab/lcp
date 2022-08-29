@@ -179,6 +179,8 @@ dependencies = [
 name = "attestation-report"
 version = "0.1.0"
 dependencies = [
+ "anyhow 1.0.28",
+ "anyhow 1.0.58",
  "base64 0.13.0 (git+https://github.com/mesalock-linux/rust-base64-sgx)",
  "base64 0.20.0-alpha.1",
  "chrono",
