@@ -1,13 +1,15 @@
+use crate::errors::AttestationReportError as Error;
 #[cfg(feature = "sgx")]
 use crate::sgx_reexport_prelude::*;
 use chrono::prelude::DateTime;
+use crypto::Address;
 use log::*;
 use pem;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sgx_types::{sgx_quote_t, sgx_status_t};
 use std::ptr;
-use std::string::String;
+use std::string::{String, ToString};
 use std::time::SystemTime;
 #[cfg(feature = "sgx")]
 use std::untrusted::time::SystemTimeEx;
@@ -98,13 +100,25 @@ pub fn verify_report(report: &EndorsedAttestationReport) -> Result<(), sgx_statu
     }
 }
 
+#[derive(Clone)]
 pub struct Quote {
     pub raw: sgx_quote_t,
     pub status: String,
     pub timestamp: i64,
 }
 
-pub fn parse_quote_from_report(attn_report: &[u8]) -> Result<Quote, sgx_status_t> {
+impl Quote {
+    pub fn get_enclave_key_address(&self) -> Result<Address, Error> {
+        let data = self.raw.report_body.report_data.d;
+        if data.len() < 20 {
+            Err(Error::InvalidReportDataError("".into()))
+        } else {
+            Ok(Address::from(&data[..20]))
+        }
+    }
+}
+
+pub fn parse_quote_from_report(attn_report: &[u8]) -> Result<Quote, Error> {
     let attn_report: Value = serde_json::from_slice(attn_report).unwrap();
 
     let timestamp = if let Value::String(time) = &attn_report["timestamp"] {
@@ -113,13 +127,17 @@ pub fn parse_quote_from_report(attn_report: &[u8]) -> Result<Quote, sgx_status_t
             .unwrap()
             .timestamp()
     } else {
-        error!("Failed to fetch timestamp from attestation report");
-        return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
+        return Err(Error::InvalidAttestationReportError(
+            "Failed to fetch timestamp from attestation report".into(),
+        ));
     };
 
     if let Value::String(version) = &attn_report["version"] {
         if version != "4" {
-            return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
+            return Err(Error::UnexpectedAttestationReportVersionError(
+                "4".into(),
+                version.into(),
+            ));
         }
     }
 
@@ -132,12 +150,14 @@ pub fn parse_quote_from_report(attn_report: &[u8]) -> Result<Quote, sgx_status_t
             | "CONFIGURATION_NEEDED"
             | "CONFIGURATION_AND_SW_HARDENING_NEEDED" => (),
             _ => {
-                return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
+                return Err(Error::InvalidQuoteStatusError(quote_status.to_string()));
             }
         }
         quote_status
     } else {
-        return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
+        return Err(Error::InvalidAttestationReportError(
+            "Failed to fetch isvEnclaveQuoteStatus from attestation report".into(),
+        ));
     };
 
     match &attn_report["isvEnclaveQuoteBody"] {
@@ -151,9 +171,8 @@ pub fn parse_quote_from_report(attn_report: &[u8]) -> Result<Quote, sgx_status_t
                 timestamp,
             })
         }
-        _ => {
-            error!("Failed to fetch isvEnclaveQuoteBody from attestation report");
-            Err(sgx_status_t::SGX_ERROR_UNEXPECTED)
-        }
+        _ => Err(Error::InvalidAttestationReportError(
+            "Failed to fetch isvEnclaveQuoteStatus from attestation report".into(),
+        )),
     }
 }
