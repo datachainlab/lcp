@@ -7,6 +7,7 @@ extern crate sgx_types;
 #[cfg(feature = "sgx")]
 pub mod sgx_reexport_prelude {
     pub use base64_sgx as base64;
+    pub use log_sgx as log;
     pub use pem_sgx as pem;
     pub use rustls_sgx as rustls;
     pub use sgx_tstd as std;

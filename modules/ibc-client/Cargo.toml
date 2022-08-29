@@ -21,6 +21,7 @@ validation-context = { path = "../validation-context", default-features = false 
 attestation-report = { path = "../attestation-report", default-features = false }
 light-client = { path = "../light-client", default-features = false  }
 lcp-proto = { path = "../../proto", default-features = false }
+crypto = { path = "../crypto" }
 
 log = { version = "0.4.8", optional = true }
 log-sgx = { package = "log", git = "https://github.com/mesalock-linux/log-sgx", optional = true }
@@ -35,7 +36,6 @@ libsecp256k1-sgx = { package = "libsecp256k1", rev = "sgx_1.1.3-patch", git = "h
 lazy_static = { version = "1.1.0", features = ["spin_no_std"] }
 tempdir = "0.3.7"
 mock-lc = { path = "../mock-lc" }
-crypto = { path = "../crypto" }
 handler = { path = "../handler" }
 store = { path = "../store" }
 enclave-commands = { path = "../enclave-commands" }
@@ -51,7 +51,8 @@ std = [
     "commitments/std",
     "validation-context/std",
     "attestation-report/std",
-    "light-client/std"
+    "light-client/std",
+    "crypto/std"
 ]
 sgx = [
     "sgx_tstd",
@@ -63,5 +64,6 @@ sgx = [
     "commitments/sgx",
     "validation-context/sgx",
     "attestation-report/sgx",
-    "light-client/sgx"
+    "light-client/sgx",
+    "crypto/sgx"
 ]

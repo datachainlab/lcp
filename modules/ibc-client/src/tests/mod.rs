@@ -3,14 +3,12 @@ mod errors;
 #[cfg(test)]
 mod tests {
     use super::client::register_implementations;
-    use crate::header::Header;
-    use crate::header::UpdateClientHeader;
-    use crate::{client_state::ClientState, consensus_state::ConsensusState, crypto::Address};
+    use crate::header::{Header, UpdateClientHeader};
+    use crate::{client_state::ClientState, consensus_state::ConsensusState};
     use core::time::Duration;
-    use crypto::EnclaveKey;
-    use enclave_commands::CommandParams;
+    use crypto::{Address, EnclaveKey};
     use enclave_commands::{
-        Command, CommandResult, EnclaveCommand, InitClientInput, InitClientResult,
+        Command, CommandParams, CommandResult, EnclaveCommand, InitClientInput, InitClientResult,
         LightClientCommand, LightClientResult, UpdateClientInput, UpdateClientResult,
     };
     use handler::router;
@@ -27,8 +25,7 @@ mod tests {
     use lazy_static::lazy_static;
     use lcp_types::{Any, Height};
     use light_client::{LightClient, LightClientRegistry, LightClientSource};
-    use std::time::SystemTime;
-    use std::time::UNIX_EPOCH;
+    use std::time::{SystemTime, UNIX_EPOCH};
     use store::memory::MemStore;
     use tempdir::TempDir;
 
@@ -107,10 +104,7 @@ mod tests {
                 latest_height: Height::new(0, 1),
                 mr_enclave: Default::default(),
                 key_expiration: Duration::from_secs(60).as_nanos(),
-                keys: vec![(
-                    expired_at,
-                    Address::from(ek.get_pubkey().get_address().as_slice()),
-                )],
+                keys: vec![(expired_at, Address::from(&ek.get_pubkey()))],
             };
             let initial_consensus_state = ConsensusState {
                 state_id: proof0.commitment().new_state_id,

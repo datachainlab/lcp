@@ -1,9 +1,10 @@
 use attestation_report::parse_quote_from_report;
 use validation_context::ValidationContext;
 
+use crate::client_state::ClientState;
 #[cfg(feature = "sgx")]
 use crate::sgx_reexport_prelude::*;
-use crate::{client_state::ClientState, crypto::Address};
+use crypto::Address;
 use serde::{Deserialize, Serialize};
 use std::vec::Vec;
 

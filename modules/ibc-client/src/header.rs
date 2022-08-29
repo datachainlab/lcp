@@ -1,7 +1,8 @@
+use crate::report::AttestationVerificationReport;
 #[cfg(feature = "sgx")]
 use crate::sgx_reexport_prelude::*;
-use crate::{crypto::Address, report::AttestationVerificationReport};
 use commitments::{StateID, UpdateClientCommitment};
+use crypto::Address;
 use ibc::core::ics02_client::{
     client_type::ClientType, error::Error, header::AnyHeader, height::Height as ICS02Height,
 };

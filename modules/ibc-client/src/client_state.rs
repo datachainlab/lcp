@@ -1,7 +1,7 @@
-use crate::crypto::Address;
 use crate::header::Commitment;
 #[cfg(feature = "sgx")]
 use crate::sgx_reexport_prelude::*;
+use crypto::Address;
 use ibc::core::ics02_client::client_type::ClientType;
 use ibc::core::ics02_client::error::Error;
 use ibc::core::ics02_client::height::Height as ICS02Height;

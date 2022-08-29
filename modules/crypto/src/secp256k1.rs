@@ -10,11 +10,13 @@ use secp256k1::{
     util::{COMPRESSED_PUBLIC_KEY_SIZE, SECRET_KEY_SIZE},
     Message, PublicKey, RecoveryId, SecretKey, Signature,
 };
+use serde::{Deserialize, Serialize};
 use sgx_types::sgx_report_data_t;
 use std::format;
 use std::io::{Read, Write};
 use std::vec;
 use std::vec::Vec;
+use tiny_keccak::Keccak;
 
 #[cfg(feature = "sgx")]
 use crate::sgx::rand::rand_slice;
@@ -59,7 +61,7 @@ impl EnclaveKey {
         self.sign_hash(&bz.keccak256())
     }
 
-    pub fn sign_hash(&self, bz: &[u8; 32]) -> Result<Vec<u8>, Error> {
+    fn sign_hash(&self, bz: &[u8; 32]) -> Result<Vec<u8>, Error> {
         let mut s = Scalar::default();
         let _ = s.set_b32(&bz);
         let (sig, rid) = secp256k1::sign(&Message(s), &self.secret_key);
@@ -73,40 +75,30 @@ impl EnclaveKey {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct EnclavePublicKey(PublicKey);
 
-impl EnclavePublicKey {
-    pub fn from_bytes(bz: &[u8]) -> Result<Self, Error> {
-        let pk = PublicKey::parse_slice(bz, None).map_err(Error::Secp256k1Error)?;
-        Ok(Self(pk))
-    }
+impl TryFrom<&[u8]> for EnclavePublicKey {
+    type Error = Error;
 
+    fn try_from(v: &[u8]) -> Result<Self, Self::Error> {
+        Ok(Self(
+            PublicKey::parse_slice(v, None).map_err(Error::Secp256k1Error)?,
+        ))
+    }
+}
+
+impl EnclavePublicKey {
     pub fn as_bytes(&self) -> [u8; COMPRESSED_PUBLIC_KEY_SIZE] {
         self.0.serialize_compressed()
     }
 
-    pub fn get_address(&self) -> [u8; 20] {
-        let pubkey = &self.as_bytes()[1..];
-        let account_id = &pubkey.keccak256()[12..];
-        let mut res: [u8; 20] = Default::default();
-        res.copy_from_slice(account_id);
-        res
-    }
-
     pub fn as_report_data(&self) -> sgx_report_data_t {
         let mut report_data = sgx_report_data_t::default();
-        report_data.d[..20].copy_from_slice(&self.get_address()[..]);
+        report_data.d[..20].copy_from_slice(Address::from(self).as_ref());
         report_data
     }
 
-    pub fn verify(&self, msg: &[u8; 32], signature: &[u8]) -> Result<(), Error> {
-        assert!(signature.len() == 65);
-
-        let mut s = Scalar::default();
-        let _ = s.set_b32(msg);
-
-        let sig = Signature::parse_slice(&signature[..64]).map_err(Error::Secp256k1Error)?;
-        let rid = RecoveryId::parse(signature[64]).map_err(Error::Secp256k1Error)?;
-        let signer = secp256k1::recover(&Message(s), &sig, &rid).map_err(Error::Secp256k1Error)?;
-        if self.0.eq(&signer) {
+    pub fn verify(&self, msg: &[u8], signature: &[u8]) -> Result<(), Error> {
+        let signer = verify_signature(msg, signature)?;
+        if self.eq(&signer) {
             Ok(())
         } else {
             Err(Error::VerificationError(format!(
@@ -117,13 +109,42 @@ impl EnclavePublicKey {
     }
 }
 
+impl From<&EnclavePublicKey> for Address {
+    fn from(v: &EnclavePublicKey) -> Self {
+        let pubkey = &v.0.serialize_compressed()[1..];
+        let mut res: Address = Default::default();
+        res.0.copy_from_slice(&keccak256(pubkey)[12..]);
+        res
+    }
+}
+
+#[derive(Clone, Default, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Address(pub [u8; 20]);
+
+impl From<&[u8]> for Address {
+    fn from(v: &[u8]) -> Self {
+        assert!(v.len() == 20);
+        let mut addr = Address::default();
+        addr.0.copy_from_slice(v);
+        addr
+    }
+}
+
+impl AsRef<[u8]> for Address {
+    fn as_ref(&self) -> &[u8] {
+        &self.0
+    }
+}
+
+impl From<Address> for Vec<u8> {
+    fn from(v: Address) -> Self {
+        v.as_ref().to_vec()
+    }
+}
+
 impl Signer for EnclaveKey {
     fn sign(&self, msg: &[u8]) -> Result<Vec<u8>, Error> {
         self.sign(msg)
-    }
-
-    fn sign_hash(&self, msg: &[u8; 32]) -> Result<Vec<u8>, Error> {
-        self.sign_hash(msg)
     }
 
     fn use_verifier(&self, f: &mut dyn FnMut(&dyn Verifier)) {
@@ -137,10 +158,10 @@ impl Verifier for EnclavePublicKey {
     }
 
     fn get_address(&self) -> Vec<u8> {
-        self.get_address().to_vec()
+        Address::from(self).into()
     }
 
-    fn verify(&self, msg: &[u8; 32], signature: &[u8]) -> Result<(), Error> {
+    fn verify(&self, msg: &[u8], signature: &[u8]) -> Result<(), Error> {
         self.verify(msg, signature)
     }
 }
@@ -185,4 +206,30 @@ fn open(filepath: &str) -> Result<SecretKey, Error> {
         return Err(Error::FailedUnseal);
     }
     Ok(SecretKey::parse(&buf).unwrap())
+}
+
+pub fn verify_signature(sign_bytes: &[u8], signature: &[u8]) -> Result<EnclavePublicKey, Error> {
+    assert!(signature.len() == 65);
+
+    let sign_hash = keccak256(sign_bytes);
+    let mut s = Scalar::default();
+    let _ = s.set_b32(&sign_hash);
+
+    let sig = Signature::parse_slice(&signature[..64]).map_err(Error::Secp256k1Error)?;
+    let rid = RecoveryId::parse(signature[64]).map_err(Error::Secp256k1Error)?;
+    let signer = secp256k1::recover(&Message(s), &sig, &rid).map_err(Error::Secp256k1Error)?;
+    Ok(EnclavePublicKey(signer))
+}
+
+pub fn verify_signature_address(sign_bytes: &[u8], signature: &[u8]) -> Result<Address, Error> {
+    let pub_key = verify_signature(sign_bytes, signature)?;
+    Ok((&pub_key).into())
+}
+
+fn keccak256(bz: &[u8]) -> [u8; 32] {
+    let mut keccak = Keccak::new_keccak256();
+    let mut result = [0u8; 32];
+    keccak.update(bz);
+    keccak.finalize(result.as_mut());
+    result
 }
