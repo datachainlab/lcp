@@ -2280,6 +2280,7 @@ dependencies = [
  "serde",
  "serde_json",
  "service",
+ "settings",
  "tokio",
 ]
 
