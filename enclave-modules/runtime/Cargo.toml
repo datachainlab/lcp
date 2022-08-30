@@ -22,7 +22,6 @@ thiserror = { git = "https://github.com/mesalock-linux/thiserror-sgx.git" }
 ibc = { git = "https://github.com/informalsystems/ibc-rs", rev = "e8c98d440949abf971ac45a68ed9dd9e6e9f48ed", default-features = false }
 prost-types = { version = "0.10", default-features = false }
 bincode = { git = "https://github.com/bluele/bincode-sgx", branch = "serde" }
-derive_more = { version = "0.99.17", default-features = false, features = ["from", "display"] }
 
 enclave-utils = { path = "../utils" }
 

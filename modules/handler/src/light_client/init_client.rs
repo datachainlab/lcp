@@ -15,9 +15,7 @@ pub fn init_client<'l, S: KVStore, L: LightClientSource<'l>>(
     let any_client_state: Any = input.any_client_state.into();
     let lc = L::get_light_client(&any_client_state.type_url).unwrap();
     let ek = ctx.get_enclave_key();
-    let res = lc
-        .create_client(ctx, any_client_state, input.any_consensus_state.into())
-        .map_err(Error::LightClientError)?;
+    let res = lc.create_client(ctx, any_client_state, input.any_consensus_state.into())?;
 
     ctx.store_client_type(res.client_id.clone(), res.client_type)
         .map_err(Error::ICS02Error)?;
@@ -31,8 +29,7 @@ pub fn init_client<'l, S: KVStore, L: LightClientSource<'l>>(
     ctx.store_update_height(res.client_id.clone(), res.height, ctx.host_height())
         .map_err(Error::ICS02Error)?;
 
-    let proof =
-        prove_update_client_commitment(ek, &res.commitment).map_err(Error::CommitmentError)?;
+    let proof = prove_update_client_commitment(ek, &res.commitment)?;
     Ok(LightClientResult::InitClient(InitClientResult {
         client_id: res.client_id,
         proof,

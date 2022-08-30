@@ -1,16 +1,14 @@
 #[cfg(feature = "sgx")]
 use crate::sgx_reexport_prelude::*;
-use commitments::CommitmentError;
-use derive_more::Display;
-use ibc::core::ics02_client::error::Error as ICS02Error;
-use light_client::LightClientError;
 
-#[derive(thiserror::Error, Debug, Display)]
+#[derive(thiserror::Error, Debug)]
 pub enum LightClientHandlerError {
-    ICS02Error(ICS02Error),
-    LightClientError(LightClientError),
-    CommitmentError(CommitmentError),
-
+    #[error("ICS02Error: {0}")]
+    ICS02Error(ibc::core::ics02_client::error::Error),
+    #[error("LightClientError")]
+    LightClientError(#[from] light_client::LightClientError),
+    #[error("CommitmentError")]
+    CommitmentError(#[from] commitments::CommitmentError),
     #[error(transparent)]
     OtherError(#[from] anyhow::Error),
 }

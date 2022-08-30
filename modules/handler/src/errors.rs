@@ -1,17 +1,17 @@
 #[cfg(feature = "sgx")]
 use crate::sgx_reexport_prelude::*;
-use crypto::CryptoError;
-use derive_more::Display;
 use sgx_types::sgx_status_t;
-use store::StoreError;
 
 pub type Result<T> = std::result::Result<T, HandlerError>;
 
-#[derive(thiserror::Error, Display, Debug)]
+#[derive(thiserror::Error, Debug)]
 pub enum HandlerError {
+    #[error("SGXError: {0}")]
     SGXError(sgx_status_t),
-    StoreError(StoreError),
-    CryptoError(CryptoError),
+    #[error("StoreError")]
+    StoreError(#[from] store::StoreError),
+    #[error("CryptoError")]
+    CryptoError(#[from] crypto::CryptoError),
     #[error(transparent)]
     OtherError(#[from] anyhow::Error),
 }

@@ -37,13 +37,7 @@ impl<'a> KeyManager {
     }
 
     pub fn create_enclave_key(&'a mut self) -> Result<&'a EnclaveKey, Error> {
-        match EnclaveKey::new() {
-            Ok(key) => match self.set_enclave_key(key) {
-                Ok(ek) => Ok(ek),
-                Err(_) => Err(Error::KeyError),
-            },
-            Err(err) => Err(err),
-        }
+        self.set_enclave_key(EnclaveKey::new()?)
     }
 
     pub fn set_enclave_key(&'a mut self, kp: EnclaveKey) -> Result<&'a EnclaveKey, Error> {

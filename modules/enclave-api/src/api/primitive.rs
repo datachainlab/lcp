@@ -40,7 +40,7 @@ impl EnclavePrimitiveAPI for Enclave {
         let output_ptr = output_buf.as_mut_ptr();
         let mut ret = sgx_status_t::SGX_SUCCESS;
 
-        let command_bytes = bincode::serialize(cmd).map_err(Error::BincodeError)?;
+        let command_bytes = bincode::serialize(cmd)?;
         let result = unsafe {
             ffi::ecall_execute_command(
                 self.sgx_enclave.geteid(),
@@ -61,8 +61,7 @@ impl EnclavePrimitiveAPI for Enclave {
             unsafe {
                 output_buf.set_len(output_len as usize);
             }
-            Ok(bincode::deserialize(&output_buf[..output_len as usize])
-                .map_err(Error::BincodeError)?)
+            Ok(bincode::deserialize(&output_buf[..output_len as usize])?)
         }
     }
 

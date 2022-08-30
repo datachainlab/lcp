@@ -4,7 +4,7 @@ use crate::{
     traits::{Keccak256, SealedKey},
     CryptoError as Error, Signer, Verifier,
 };
-use log::*;
+use anyhow::anyhow;
 use secp256k1::curve::Scalar;
 use secp256k1::{
     util::{COMPRESSED_PUBLIC_KEY_SIZE, SECRET_KEY_SIZE},
@@ -179,31 +179,28 @@ impl SealedKey for EnclaveKey {
 }
 
 fn seal(data: &[u8; 32], filepath: &str) -> Result<(), Error> {
-    let mut file = File::create(filepath).map_err(|_err| {
-        error!("error creating file {}: {:?}", filepath, _err);
-        Error::FailedSeal
-    })?;
-
-    file.write_all(data).map_err(|_err| {
-        error!("error writing to path {}: {:?}", filepath, _err);
-        Error::FailedSeal
-    })
+    let mut file = File::create(filepath)
+        .map_err(|e| Error::FailedSeal(e, format!("error creating file: {}", filepath)))?;
+    file.write_all(data)
+        .map_err(|e| Error::FailedSeal(e, format!("error writing to path: {}", filepath)))
 }
 
 fn open(filepath: &str) -> Result<SecretKey, Error> {
-    let mut file = File::open(filepath).map_err(|_err| Error::FailedUnseal)?;
+    let mut file = File::open(filepath)
+        .map_err(|e| Error::FailedUnseal(e, format!("failed to open file: {}", filepath)))?;
 
     let mut buf = [0u8; SECRET_KEY_SIZE];
     let n = file
         .read(buf.as_mut())
-        .map_err(|_err| Error::FailedUnseal)?;
+        .map_err(|e| Error::FailedUnseal(e, format!("failed to read file: {}", filepath)))?;
 
     if n < SECRET_KEY_SIZE {
-        error!(
+        return Err(Error::OtherError(anyhow!(
             "[Enclave] Dramatic read from {} ended prematurely (n = {} < SECRET_KEY_SIZE = {})",
-            filepath, n, SECRET_KEY_SIZE
-        );
-        return Err(Error::FailedUnseal);
+            filepath,
+            n,
+            SECRET_KEY_SIZE
+        )));
     }
     Ok(SecretKey::parse(&buf).unwrap())
 }
@@ -215,9 +212,9 @@ pub fn verify_signature(sign_bytes: &[u8], signature: &[u8]) -> Result<EnclavePu
     let mut s = Scalar::default();
     let _ = s.set_b32(&sign_hash);
 
-    let sig = Signature::parse_slice(&signature[..64]).map_err(Error::Secp256k1Error)?;
-    let rid = RecoveryId::parse(signature[64]).map_err(Error::Secp256k1Error)?;
-    let signer = secp256k1::recover(&Message(s), &sig, &rid).map_err(Error::Secp256k1Error)?;
+    let sig = Signature::parse_slice(&signature[..64])?;
+    let rid = RecoveryId::parse(signature[64])?;
+    let signer = secp256k1::recover(&Message(s), &sig, &rid)?;
     Ok(EnclavePublicKey(signer))
 }
 

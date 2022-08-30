@@ -23,11 +23,9 @@ pub fn dispatch<'l, S: Store, L: LightClientSource<'l>>(
         Command::EnclaveManage(cmd) => enclave_manage::dispatch(cmd, command.params)?,
         cmd => {
             let mut ctx = match ek {
-                None => return Err(Error::OtherError(anyhow!("ek must not be nil"))),
+                None => return Err(anyhow!("ek must not be nil").into()),
                 Some(ek) => {
-                    store
-                        .load_and_verify(&ek.get_pubkey())
-                        .map_err(Error::StoreError)?;
+                    store.load_and_verify(&ek.get_pubkey())?;
                     Context::new(store, ek)
                 }
             };

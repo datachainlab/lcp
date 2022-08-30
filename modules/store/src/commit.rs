@@ -2,7 +2,6 @@ use crate::errors::{Result, StoreError as Error};
 #[cfg(feature = "sgx")]
 use crate::sgx_reexport_prelude::*;
 use serde::{Deserialize, Serialize};
-use sha2::{Digest, Sha256};
 use std::vec::Vec;
 
 #[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]

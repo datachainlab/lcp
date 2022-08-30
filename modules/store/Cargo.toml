@@ -8,7 +8,6 @@ sgx_tstd = { git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = 
 serde = { version = "1.0", default-features = false, features = ["alloc", "derive"] }
 serde_json = { version = "1.0", default-features = false, features = ["alloc"] }
 sha2 = { version = "0.8", default-features = false }
-derive_more = { version = "0.99.17", default-features = false, features = ["from", "display"] }
 crypto = { path = "../crypto", default-features = false }
 
 log-sgx = { package = "log", git = "https://github.com/mesalock-linux/log-sgx", optional = true }

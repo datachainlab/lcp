@@ -10,9 +10,8 @@ sgx_trts = { git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = 
 sgx_rand = { git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
 rand = { version = "0.8", optional = true }
 lazy_static = { version = "1.1.0", features = ["spin_no_std"] }
-derive_more = { version = "0.99.17", default-features = false, features = ["from", "display"] }
 tiny-keccak = "1.4"
-serde = { version = "1.0", default-features = false, features = ["alloc"] }
+serde = { version = "1.0", default-features = false, features = ["alloc", "derive"] }
 
 log = { version = "0.4.8", optional = true }
 log-sgx = { package = "log", git = "https://github.com/mesalock-linux/log-sgx", optional = true }

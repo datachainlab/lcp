@@ -15,9 +15,7 @@ pub fn update_client<'l, S: KVStore, L: LightClientSource<'l>>(
     let lc = get_light_client_by_client_id::<_, L>(ctx, &input.client_id)?;
 
     let ek = ctx.get_enclave_key();
-    let res = lc
-        .update_client(ctx, input.client_id, input.any_header.into())
-        .map_err(Error::LightClientError)?;
+    let res = lc.update_client(ctx, input.client_id, input.any_header.into())?;
 
     ctx.store_any_client_state(res.client_id.clone(), res.new_any_client_state)
         .map_err(Error::ICS02Error)?;
@@ -32,7 +30,6 @@ pub fn update_client<'l, S: KVStore, L: LightClientSource<'l>>(
     ctx.store_update_height(res.client_id, res.height, ctx.host_height())
         .map_err(Error::ICS02Error)?;
 
-    let proof =
-        prove_update_client_commitment(ek, &res.commitment).map_err(Error::CommitmentError)?;
+    let proof = prove_update_client_commitment(ek, &res.commitment)?;
     Ok(LightClientResult::UpdateClient(UpdateClientResult(proof)))
 }

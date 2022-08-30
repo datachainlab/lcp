@@ -37,9 +37,7 @@ pub trait VerifiablePersistentStore: CommitStore + PersistentStore<SignedCommit>
 
     fn commit_and_sign(&mut self, signer: &dyn Signer) -> Result<SignedCommit> {
         let commit = self.commit()?;
-        let sig = signer
-            .sign(&commit.as_sign_msg()?)
-            .map_err(StoreError::CryptoError)?;
+        let sig = signer.sign(&commit.as_sign_msg()?)?;
         let mut pubkey = Default::default();
         signer.use_verifier(&mut |verifier: &dyn Verifier| {
             pubkey = verifier.get_pubkey();

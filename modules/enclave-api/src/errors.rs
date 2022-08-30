@@ -9,8 +9,8 @@ pub enum EnclaveAPIError {
     InvalidArgumentError(String),
     #[error("SGXError: {0}")]
     SGXError(sgx_status_t),
-    #[error("BincodeError: {0}")]
-    BincodeError(BincodeError),
+    #[error("BincodeError")]
+    BincodeError(#[from] BincodeError),
     #[error(transparent)]
     OtherError(#[from] anyhow::Error),
 }

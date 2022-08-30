@@ -5,8 +5,9 @@ use anyhow::anyhow;
 use attestation_report::verify_report;
 use crypto::KeyManager;
 use enclave_commands::{CommandParams, InitEnclaveInput, InitEnclaveResult};
-use enclave_remote_attestation::attestation::create_attestation_report;
-use enclave_remote_attestation::report::verify_quote_status;
+use enclave_remote_attestation::{
+    attestation::create_attestation_report, report::verify_quote_status,
+};
 use log::*;
 use sgx_types::{sgx_quote_sign_type_t, sgx_spid_t};
 use std::format;
@@ -20,9 +21,7 @@ pub fn init_enclave(
     let mut key_manager = KeyManager::new(params.home);
     let kp = match key_manager.get_enclave_key() {
         Some(kp) => kp,
-        None => key_manager
-            .create_enclave_key()
-            .map_err(Error::CryptoError)?,
+        None => key_manager.create_enclave_key()?,
     };
     trace!(
         "ecall_get_attestation_report key pk: {:?}",
@@ -36,7 +35,7 @@ pub fn init_enclave(
     )
     .map_err(Error::SGXError)?;
 
-    verify_report(&report).map_err(Error::AttestationReportError)?;
+    verify_report(&report)?;
     verify_quote_status(&report.report).map_err(Error::SGXError)?;
 
     Ok(InitEnclaveResult { report })
@@ -48,10 +47,7 @@ fn decode_spid(hex: &[u8]) -> Result<sgx_spid_t, Error> {
     let hex = &hex.trim();
 
     if hex.len() < 16 * 2 {
-        Err(Error::OtherError(anyhow!(
-            "Input spid file len ({}) is incorrect!",
-            hex.len()
-        )))
+        Err(anyhow!("Input spid file len ({}) is incorrect!", hex.len()).into())
     } else {
         let decoded_vec = hex::decode(hex).unwrap();
         spid.id.copy_from_slice(&decoded_vec[..16]);

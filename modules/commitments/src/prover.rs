@@ -11,9 +11,7 @@ pub fn prove_update_client_commitment(
     commitment: &UpdateClientCommitment,
 ) -> Result<UpdateClientCommitmentProof, CommitmentError> {
     let commitment_bytes = commitment.to_vec();
-    let signature = signer
-        .sign(&commitment_bytes)
-        .map_err(CommitmentError::CryptoError)?;
+    let signature = signer.sign(&commitment_bytes)?;
     let mut signer_address = Default::default();
     signer.use_verifier(&mut |verifier: &dyn Verifier| {
         signer_address = verifier.get_address();
@@ -30,9 +28,7 @@ pub fn prove_state_commitment(
     commitment: &StateCommitment,
 ) -> Result<StateCommitmentProof, CommitmentError> {
     let commitment_bytes = commitment.to_vec();
-    let signature = signer
-        .sign(&commitment_bytes)
-        .map_err(CommitmentError::CryptoError)?;
+    let signature = signer.sign(&commitment_bytes)?;
     let mut signer_address = Default::default();
     signer.use_verifier(&mut |verifier: &dyn Verifier| {
         signer_address = verifier.get_address();

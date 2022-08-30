@@ -15,22 +15,18 @@ pub fn verify_client_consensus<'l, S: KVStore, L: LightClientSource<'l>>(
     let ek = ctx.get_enclave_key();
     let lc = get_light_client_by_client_id::<_, L>(ctx, &input.client_id)?;
 
-    let res = lc
-        .verify_client_consensus(
-            ctx,
-            input.client_id,
-            input.target_any_client_consensus_state.into(),
-            input.prefix,
-            input.counterparty_client_id,
-            input.counterparty_consensus_height,
-            input.proof.0,
-            input.proof.1,
-        )
-        .map_err(Error::LightClientError)?;
+    let res = lc.verify_client_consensus(
+        ctx,
+        input.client_id,
+        input.target_any_client_consensus_state.into(),
+        input.prefix,
+        input.counterparty_client_id,
+        input.counterparty_consensus_height,
+        input.proof.0,
+        input.proof.1,
+    )?;
 
     Ok(LightClientResult::VerifyClientConsensus(
-        VerifyClientConsensusResult(
-            prove_state_commitment(ek, &res.state_commitment).map_err(Error::CommitmentError)?,
-        ),
+        VerifyClientConsensusResult(prove_state_commitment(ek, &res.state_commitment)?),
     ))
 }

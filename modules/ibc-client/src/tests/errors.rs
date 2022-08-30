@@ -5,10 +5,8 @@ use ibc::core::ics03_connection::error::Error as ICS03Error;
 use ibc::core::ics04_channel::error::Error as ICS04Error;
 use ibc::core::ics23_commitment::error::Error as ICS23Error;
 use ibc::proofs::ProofError;
-use light_client::{LightClientError, LightClientInstanceError};
-use std::boxed::Box;
+use light_client::LightClientInstanceError;
 use std::string::String;
-use std::sync::Arc;
 
 #[derive(thiserror::Error, Debug)]
 pub enum LCPLCError {
