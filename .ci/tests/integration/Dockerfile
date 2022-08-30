@@ -6,7 +6,7 @@ WORKDIR /root
 
 RUN apt-get update -y && apt-get install jq make -y
 
-COPY ./.github/resources/it/entrypoint.sh ./entrypoint.sh
+COPY ./.ci/tests/integration/entrypoint.sh ./entrypoint.sh
 
 COPY ./ ./lcp
 RUN make -C lcp
