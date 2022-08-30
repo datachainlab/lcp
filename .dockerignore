@@ -1,0 +1,4 @@
+bin
+enclave/*_t.*
+app/*_u.*
+lib/*.a

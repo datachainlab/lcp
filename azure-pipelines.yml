@@ -3,17 +3,53 @@
 # Add steps that build, run tests, deploy, and more:
 # https://aka.ms/yaml
 
-trigger: none
-pr: none
+trigger:
+  branches:
+    include:
+      - azure-pipelines
+#pr: none
 
 pool:
   name: lcp-agent-pool
 
+variables:
+  registry: 'ghcr.io'
+  registry_user: 'datachainlab'
+  sgx_rust_repo: 'sgx-rust'
+  sgx_rust_tag: '2004-1.1.5'
+  lcp_tag: '$(Build.SourceVersion)'
+
+
 steps:
-- script: echo Hello, world!
-  displayName: 'Run a one-line script'
+- task: Cache@2
+  displayName: "Cache task"
+  inputs:
+    key: 'docker | "$(Agent.OS)" | cache | $(sgx_rust_repo) | "$(sgx_rust_tag)"'
+    path: $(Pipeline.Workspace)/docker/$(sgx_rust_repo)/$(sgx_rust_tag)
+    cacheHitVar: CACHE_RESTORED_SGX_RUST                #Variable to set to 'true' when the cache is restored
 
 - script: |
-    echo Add other tasks to build, test, and deploy your project.
-    echo See https://aka.ms/yaml
-  displayName: 'Run a multi-line script'
+    docker load -i $(Pipeline.Workspace)/docker/$(sgx_rust_repo)/$(sgx_rust_tag)/cache.tar
+  displayName: 'Docker restore'
+  condition: and(not(canceled()), eq(variables.CACHE_RESTORED_SGX_RUST, 'true'))
+
+- script: |
+    echo $(GH_PAT) | docker login $(registry) -u $(registry_user) --password-stdin
+    docker pull $(registry)/$(registry_user)/$(sgx_rust_repo):$(sgx_rust_tag)
+    mkdir -p $(Pipeline.Workspace)/docker/$(sgx_rust_repo)/$(sgx_rust_tag)
+    docker save -o $(Pipeline.Workspace)/docker/$(sgx_rust_repo)/$(sgx_rust_tag)/cache.tar $(registry)/$(registry_user)/$(sgx_rust_repo):$(sgx_rust_tag)
+  displayName: 'Docker save'
+  condition: and(not(canceled()), or(failed(), ne(variables.CACHE_RESTORED_SGX_RUST, 'true')))
+
+#- script: |
+#    docker buildx build -t lcp-ci-it:$(lcp_tag) -f .github/resources/it/Dockerfile .
+#  displayName: 'Build docker image'
+#
+#- script: |
+#    docker image ls
+#  displayName: 'Show docker images'
+#
+#- script: |
+#    docker run -it --rm --device /dev/sgx_enclave --device /dev/sgx_provision lcp-ci-it:$(lcp_tag)
+#  displayName: 'Run integration test'
+
