@@ -14,8 +14,9 @@ message UpdateClientHeader {
 }
 
 message RegisterEnclaveKeyHeader {
-  bytes report = 1;
+  string report = 1;
   bytes signature = 2;
+  bytes signing_cert = 3;
 }
 
 message ClientState {

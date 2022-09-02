@@ -1,5 +1,5 @@
 use super::ocalls::{ocall_get_ias_socket, ocall_get_quote, ocall_sgx_init_quote};
-use attestation_report::EndorsedAttestationReport;
+use attestation_report::EndorsedAttestationVerificationReport;
 use crypto::sgx::rand::fill_bytes;
 use itertools::Itertools;
 use log::*;
@@ -43,7 +43,7 @@ pub fn create_attestation_report(
     sign_type: sgx_quote_sign_type_t,
     spid: sgx_spid_t,
     api_hex_str_bytes: &[u8],
-) -> Result<EndorsedAttestationReport, sgx_status_t> {
+) -> Result<EndorsedAttestationVerificationReport, sgx_status_t> {
     // Workflow:
     // (1) ocall to get the target_info structure (ti) and epid group id (eg)
     // (1.5) get sigrl
@@ -243,8 +243,8 @@ pub fn create_attestation_report(
     let (attn_report, signature, signing_cert) =
         get_report_from_intel(ias_sock, quote_vec, api_hex_str_bytes);
 
-    Ok(EndorsedAttestationReport {
-        report: attn_report.into_bytes(),
+    Ok(EndorsedAttestationVerificationReport {
+        avr: attn_report,
         signature,
         signing_cert,
     })

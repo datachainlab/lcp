@@ -23,6 +23,8 @@ base64 = { rev = "dc7389e10817b078f289386b3b6a852ab6c4c021", git = "https://gith
 hex = { version = "0.4", default-features = false, features = ["alloc"] }
 httparse = { version = "1.3", default-features = false }
 chrono = { version = "0.4.19", default-features = false, features = ["alloc"]}
+anyhow = { rev = "sgx_1.1.3", git = "https://github.com/mesalock-linux/anyhow-sgx.git" }
+thiserror = { git = "https://github.com/mesalock-linux/thiserror-sgx.git" }
 
 crypto = { path = "../../modules/crypto", default-features = false, features = ["sgx"] }
 attestation-report = { path = "../../modules/attestation-report", default-features = false, features = ["sgx"] }

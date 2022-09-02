@@ -1,19 +1,11 @@
-use attestation_report::parse_quote_from_report;
+use attestation_report::{
+    AttestationVerificationReport, EndorsedAttestationVerificationReport, Quote,
+};
 use validation_context::ValidationContext;
 
 use crate::client_state::ClientState;
 #[cfg(feature = "sgx")]
 use crate::sgx_reexport_prelude::*;
-use serde::{Deserialize, Serialize};
-use std::vec::Vec;
-
-// AttestationVerificationReport represents Intel's Attestation Verification Report
-// https://api.trustedservices.intel.com/documents/sgx-attestation-api-spec.pdf
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
-pub struct AttestationVerificationReport {
-    pub body: Vec<u8>,
-    pub signature: Vec<u8>,
-}
 
 // verify_report_and_get_key_expiration
 // - verifies the Attestation Verification Report
@@ -21,9 +13,9 @@ pub struct AttestationVerificationReport {
 pub fn verify_report_and_get_key_expiration(
     vctx: &ValidationContext,
     client_state: &ClientState,
-    avr: &AttestationVerificationReport,
+    eavr: &EndorsedAttestationVerificationReport,
 ) -> (bool, u128) {
-    let quote = parse_quote_from_report(&avr.body).unwrap();
+    let quote = eavr.get_avr().unwrap().parse_quote().unwrap();
 
     // TODO verify `avr.signature` with Intel SGX Attestation Report Signing CA
 

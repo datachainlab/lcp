@@ -17,7 +17,9 @@ pub mod sgx_reexport_prelude {
 }
 
 pub use errors::AttestationReportError;
-pub use report::{parse_quote_from_report, verify_report, EndorsedAttestationReport};
+pub use report::{
+    verify_report, AttestationVerificationReport, EndorsedAttestationVerificationReport, Quote,
+};
 
 mod errors;
 mod report;

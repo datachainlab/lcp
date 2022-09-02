@@ -1,6 +1,6 @@
 #[cfg(feature = "sgx")]
 use crate::sgx_reexport_prelude::*;
-use attestation_report::EndorsedAttestationReport;
+use attestation_report::EndorsedAttestationVerificationReport;
 use serde::{Deserialize, Serialize};
 use std::vec::Vec;
 
@@ -22,5 +22,5 @@ pub enum EnclaveManageResult {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct InitEnclaveResult {
-    pub report: EndorsedAttestationReport,
+    pub report: EndorsedAttestationVerificationReport,
 }

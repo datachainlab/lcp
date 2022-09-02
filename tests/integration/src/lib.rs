@@ -84,7 +84,7 @@ mod tests {
             }
             _ => unreachable!(),
         };
-        let quote = attestation_report::parse_quote_from_report(&report.report).unwrap();
+        let quote = report.get_avr().unwrap().parse_quote().unwrap();
         info!("report={:?}", quote.raw.report_body.report_data.d);
 
         // register the key into onchain

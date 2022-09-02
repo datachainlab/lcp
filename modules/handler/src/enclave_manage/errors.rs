@@ -10,6 +10,8 @@ pub enum EnclaveManageError {
     CryptoError(#[from] crypto::CryptoError),
     #[error("AttestationReportError")]
     AttestationReportError(#[from] attestation_report::AttestationReportError),
+    #[error("RemoteAttestationError")]
+    RemoteAttestationError(#[from] enclave_remote_attestation::errors::RemoteAttestationError),
     #[error(transparent)]
     OtherError(#[from] anyhow::Error),
 }

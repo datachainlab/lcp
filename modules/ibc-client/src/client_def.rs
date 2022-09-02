@@ -1,4 +1,3 @@
-use attestation_report::parse_quote_from_report;
 use commitments::StateCommitmentProof;
 use crypto::{verify_signature_address, Address};
 use ibc::core::ics02_client::client_consensus::AnyConsensusState;
@@ -106,10 +105,14 @@ impl LCPClient {
         // TODO return an error instead of assertion
 
         let vctx = self.validation_context(ctx);
+        let eavr = header.0;
         let (valid, key_expiration) =
-            verify_report_and_get_key_expiration(&vctx, &client_state, &header.0);
+            verify_report_and_get_key_expiration(&vctx, &client_state, &eavr);
         assert!(valid);
-        let key = parse_quote_from_report(&header.0.body)
+        let key = eavr
+            .get_avr()
+            .unwrap()
+            .parse_quote()
             .unwrap()
             .get_enclave_key_address()
             .unwrap();

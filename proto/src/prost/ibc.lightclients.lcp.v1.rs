@@ -9,10 +9,12 @@ pub struct UpdateClientHeader {
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct RegisterEnclaveKeyHeader {
-    #[prost(bytes="vec", tag="1")]
-    pub report: ::prost::alloc::vec::Vec<u8>,
+    #[prost(string, tag="1")]
+    pub report: ::prost::alloc::string::String,
     #[prost(bytes="vec", tag="2")]
     pub signature: ::prost::alloc::vec::Vec<u8>,
+    #[prost(bytes="vec", tag="3")]
+    pub signing_cert: ::prost::alloc::vec::Vec<u8>,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ClientState {

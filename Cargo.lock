@@ -1191,6 +1191,7 @@ dependencies = [
 name = "enclave-remote-attestation"
 version = "0.1.0"
 dependencies = [
+ "anyhow 1.0.28",
  "attestation-report",
  "base64 0.13.0 (git+https://github.com/mesalock-linux/rust-base64-sgx?rev=dc7389e10817b078f289386b3b6a852ab6c4c021)",
  "chrono",
@@ -1208,6 +1209,7 @@ dependencies = [
  "sgx_tse",
  "sgx_tstd",
  "sgx_types",
+ "thiserror 1.0.9",
  "webpki 0.21.4 (git+https://github.com/mesalock-linux/webpki?branch=mesalock_sgx)",
  "webpki-roots 0.21.0",
 ]

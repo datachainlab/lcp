@@ -7,8 +7,8 @@ pub struct QueryAttestedVerificationReportRequest {
 pub struct QueryAttestedVerificationReportResponse {
     #[prost(bytes="vec", tag="1")]
     pub enclave_address: ::prost::alloc::vec::Vec<u8>,
-    #[prost(bytes="vec", tag="2")]
-    pub report: ::prost::alloc::vec::Vec<u8>,
+    #[prost(string, tag="2")]
+    pub report: ::prost::alloc::string::String,
     #[prost(bytes="vec", tag="3")]
     pub signature: ::prost::alloc::vec::Vec<u8>,
     #[prost(bytes="vec", tag="4")]

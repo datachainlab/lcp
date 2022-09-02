@@ -36,7 +36,7 @@ pub fn init_enclave(
     .map_err(Error::SGXError)?;
 
     verify_report(&report)?;
-    verify_quote_status(&report.report).map_err(Error::SGXError)?;
+    verify_quote_status(&report.get_avr()?)?;
 
     Ok(InitEnclaveResult { report })
 }

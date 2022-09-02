@@ -2,7 +2,7 @@ use std::fs::File;
 use std::io::Read;
 
 use crate::service::AppService;
-use attestation_report::{parse_quote_from_report, EndorsedAttestationReport};
+use attestation_report::EndorsedAttestationVerificationReport;
 use lcp_proto::lcp::service::enclave::v1::{
     query_server::Query, QueryAttestedVerificationReportRequest,
     QueryAttestedVerificationReportResponse,
@@ -20,20 +20,23 @@ impl Query for AppService {
         let mut json = String::new();
         File::open(path)?.read_to_string(&mut json)?;
 
-        let avr: EndorsedAttestationReport =
+        let ereport: EndorsedAttestationVerificationReport =
             serde_json::from_str(&json).map_err(|e| Status::internal(e.to_string()))?;
 
-        let quote =
-            parse_quote_from_report(&avr.report).map_err(|e| Status::internal(e.to_string()))?;
+        let quote = ereport
+            .get_avr()
+            .map_err(|e| Status::internal(e.to_string()))?
+            .parse_quote()
+            .map_err(|e| Status::internal(e.to_string()))?;
         let address = quote
             .get_enclave_key_address()
             .map_err(|e| Status::internal(e.to_string()))?;
 
         Ok(Response::new(QueryAttestedVerificationReportResponse {
             enclave_address: address.into(),
-            report: avr.report,
-            signature: avr.signature,
-            signing_cert: avr.signing_cert,
+            report: ereport.avr,
+            signature: ereport.signature,
+            signing_cert: ereport.signing_cert,
         }))
     }
 }

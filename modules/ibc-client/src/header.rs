@@ -1,6 +1,6 @@
-use crate::report::AttestationVerificationReport;
 #[cfg(feature = "sgx")]
 use crate::sgx_reexport_prelude::*;
+use attestation_report::{AttestationVerificationReport, EndorsedAttestationVerificationReport};
 use commitments::{StateID, UpdateClientCommitment};
 use crypto::Address;
 use ibc::core::ics02_client::{
@@ -63,25 +63,29 @@ impl From<Header> for Any {
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
-pub struct RegisterEnclaveKeyHeader(pub AttestationVerificationReport);
+pub struct RegisterEnclaveKeyHeader(pub EndorsedAttestationVerificationReport);
 
 impl Protobuf<RawRegisterEnclaveKeyHeader> for RegisterEnclaveKeyHeader {}
 
 impl TryFrom<RawRegisterEnclaveKeyHeader> for RegisterEnclaveKeyHeader {
     type Error = Error;
     fn try_from(value: RawRegisterEnclaveKeyHeader) -> Result<Self, Self::Error> {
-        Ok(RegisterEnclaveKeyHeader(AttestationVerificationReport {
-            body: value.report,
-            signature: value.signature,
-        }))
+        Ok(RegisterEnclaveKeyHeader(
+            EndorsedAttestationVerificationReport {
+                avr: value.report,
+                signature: value.signature,
+                signing_cert: value.signing_cert,
+            },
+        ))
     }
 }
 
 impl From<RegisterEnclaveKeyHeader> for RawRegisterEnclaveKeyHeader {
     fn from(value: RegisterEnclaveKeyHeader) -> Self {
         RawRegisterEnclaveKeyHeader {
-            report: value.0.body,
+            report: (&value.0.avr).try_into().unwrap(),
             signature: value.0.signature,
+            signing_cert: value.0.signing_cert,
         }
     }
 }

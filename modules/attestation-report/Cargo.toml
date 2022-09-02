@@ -5,7 +5,7 @@ edition = "2021"
 
 [dependencies]
 sgx_tstd = { git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
-sgx_types = { git = "https://github.com/apache/teaclave-sgx-sdk.git" }
+sgx_types = { git = "https://github.com/apache/teaclave-sgx-sdk.git", features = ["extra_traits"] }
 sgx_trts = { git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 rustls_sgx = { package = "rustls", git = "https://github.com/mesalock-linux/rustls", branch = "mesalock_sgx", optional = true }
 rustls          = { version = "0.19",   optional = true }
