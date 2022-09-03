@@ -21,7 +21,7 @@ use validation_context::{validation_predicate, ValidationContext};
 use crate::client_state::ClientState;
 use crate::consensus_state::ConsensusState;
 use crate::header::{Commitment, Header, RegisterEnclaveKeyHeader, UpdateClientHeader};
-use crate::report::verify_report_and_get_key_expiration;
+use crate::report::verify_report;
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct LCPClient {}
@@ -106,16 +106,7 @@ impl LCPClient {
 
         let vctx = self.validation_context(ctx);
         let eavr = header.0;
-        let (valid, key_expiration) =
-            verify_report_and_get_key_expiration(&vctx, &client_state, &eavr);
-        assert!(valid);
-        let key = eavr
-            .get_avr()
-            .unwrap()
-            .parse_quote()
-            .unwrap()
-            .get_enclave_key_address()
-            .unwrap();
+        let (key, key_expiration) = verify_report(&vctx, &client_state, &eavr).unwrap();
 
         let any_consensus_state = ctx
             .consensus_state(&client_id, client_state.latest_height)
