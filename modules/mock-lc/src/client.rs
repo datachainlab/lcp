@@ -14,7 +14,7 @@ use ibc::core::ics02_client::header::{AnyHeader, Header};
 use ibc::core::ics03_connection::connection::ConnectionEnd;
 use ibc::core::ics04_channel::channel::ChannelEnd;
 use ibc::core::ics24_host::identifier::{ChannelId, ClientId, ConnectionId, PortId};
-use lcp_types::{Any, Height};
+use lcp_types::{Any, Height, Time};
 use light_client::{
     ClientReader, CreateClientResult, LightClient, LightClientError, LightClientRegistry,
     StateVerificationResult, UpdateClientResult,
@@ -58,8 +58,7 @@ impl LightClient for MockLightClient {
         };
 
         let height = client_state.latest_height().into();
-        let timestamp = consensus_state.timestamp();
-
+        let timestamp: Time = consensus_state.timestamp().into();
         Ok(CreateClientResult {
             client_id,
             client_type: ClientType::Mock.as_str().to_owned(),
@@ -73,12 +72,7 @@ impl LightClient for MockLightClient {
                 new_state: Some(any_client_state.into()),
                 prev_height: None,
                 new_height: height,
-                timestamp: timestamp
-                    .into_datetime()
-                    .unwrap()
-                    .unix_timestamp_nanos()
-                    .try_into()
-                    .unwrap(),
+                timestamp,
                 validation_params: ValidationParams::Empty,
             },
         })
@@ -113,7 +107,7 @@ impl LightClient for MockLightClient {
         }
 
         let height = header.height().into();
-        let header_timestamp = header.timestamp();
+        let header_timestamp = header.timestamp().into();
 
         let latest_height = client_state.latest_height();
 
@@ -140,12 +134,6 @@ impl LightClient for MockLightClient {
             gen_state_id(client_state, latest_consensus_state).map_err(Error::OtherError)?;
         let new_state_id = gen_state_id(new_client_state.clone(), new_consensus_state.clone())
             .map_err(Error::OtherError)?;
-        let header_timestamp_nanos = header_timestamp
-            .into_datetime()
-            .unwrap()
-            .unix_timestamp_nanos()
-            .try_into()
-            .unwrap();
         let new_any_client_state = Any::try_from(new_client_state).unwrap();
 
         Ok(UpdateClientResult {
@@ -160,7 +148,7 @@ impl LightClient for MockLightClient {
                 new_state: new_any_client_state.into(),
                 prev_height: Some(latest_height.into()),
                 new_height: height,
-                timestamp: header_timestamp_nanos,
+                timestamp: header_timestamp,
                 validation_params: ValidationParams::Empty,
             },
         })

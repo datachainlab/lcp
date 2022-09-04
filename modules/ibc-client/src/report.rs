@@ -1,11 +1,11 @@
-use crate::errors::IBCClientError as Error;
-use attestation_report::EndorsedAttestationVerificationReport;
-use crypto::Address;
-use validation_context::ValidationContext;
-
 use crate::client_state::ClientState;
+use crate::errors::IBCClientError as Error;
 #[cfg(feature = "sgx")]
 use crate::sgx_reexport_prelude::*;
+use attestation_report::EndorsedAttestationVerificationReport;
+use crypto::Address;
+use lcp_types::Time;
+use validation_context::ValidationContext;
 
 // verify_report
 // - verifies the Attestation Verification Report
@@ -14,15 +14,20 @@ pub fn verify_report(
     vctx: &ValidationContext,
     client_state: &ClientState,
     eavr: &EndorsedAttestationVerificationReport,
-) -> Result<(Address, u128), Error> {
+) -> Result<(Address, Time), Error> {
+    // verify AVR with Intel SGX Attestation Report Signing CA
+    attestation_report::verify_report(eavr, vctx.current_timestamp)?;
+
     let quote = eavr.get_avr()?.parse_quote()?;
 
-    // TODO verify `avr.signature` with Intel SGX Attestation Report Signing CA
-
     // check if attestation report's timestamp is not expired
-    let diff = vctx.current_timestamp - (quote.timestamp as u128);
-    if diff >= client_state.key_expiration {
-        return Err(Error::ExpiredAVRError(diff, client_state.key_expiration));
+    let key_expiration = (quote.timestamp + client_state.key_expiration).unwrap();
+    if vctx.current_timestamp > key_expiration {
+        return Err(Error::ExpiredAVRError {
+            current_timestamp: vctx.current_timestamp,
+            quote_timestamp: quote.timestamp,
+            client_state_key_expiration: client_state.key_expiration,
+        });
     }
 
     // check if `mr_enclave` that is included in the quote matches the expected value
@@ -33,8 +38,5 @@ pub fn verify_report(
         ));
     }
 
-    Ok((
-        quote.get_enclave_key_address()?,
-        quote.timestamp as u128 + client_state.key_expiration,
-    ))
+    Ok((quote.get_enclave_key_address()?, key_expiration))
 }

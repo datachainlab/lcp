@@ -1,31 +1,26 @@
+use super::ocalls;
 use crate::errors::RemoteAttestationError as Error;
 use attestation_report::{AttestationVerificationReport, Quote};
-use chrono::Duration;
+use lcp_types::Time;
 use log::*;
 use settings::RT_ALLOWED_STATUS;
 use sgx_types::{sgx_platform_info_t, sgx_status_t, sgx_update_info_bit_t};
 use std::format;
 use std::string::ToString;
-use std::time::{SystemTime, UNIX_EPOCH};
-use std::untrusted::time::SystemTimeEx;
+use std::time::Duration;
 use std::vec::Vec;
 
-use super::ocalls;
-
-pub fn verify_quote_status(avr: &AttestationVerificationReport) -> Result<Quote, Error> {
+pub fn validate_quote_status(avr: &AttestationVerificationReport) -> Result<Quote, Error> {
     // 1. Verify quote body
     let quote = avr.parse_quote()?;
 
-    // 2. Check timestamp is within 24H
-    let now = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap()
-        .as_secs() as i64;
-    assert!(quote.timestamp >= 0 && now >= 0);
-    info!("Time: now={} ts={}", now, quote.timestamp);
-    if now - quote.timestamp >= Duration::hours(24).num_seconds() {
+    // 2. Check quote's timestamp is within 24H
+    let now = Time::now();
+    info!("Time: now={:?} quote_timestamp={:?}", now, quote.timestamp);
+
+    if now >= (quote.timestamp + Duration::from_secs(60 * 60 * 24)).unwrap() {
         return Err(Error::TooOldReportTimestampError(format!(
-            "The timestamp of the report is too old: now={} ts={}",
+            "The timestamp of the report is too old: now={:?} quote_timestamp={:?}",
             now, quote.timestamp
         )));
     }

@@ -25,6 +25,7 @@ default = ["std"]
 std = [
     "thiserror",
     "anyhow",
+    "lcp-types/std",
     "enclave-commands/std",
     "commitments/std"
 ]
@@ -32,6 +33,7 @@ sgx = [
     "sgx_tstd",
     "thiserror-sgx",
     "anyhow-sgx",
+    "lcp-types/sgx",
     "enclave-commands/sgx",
     "commitments/sgx"
 ]

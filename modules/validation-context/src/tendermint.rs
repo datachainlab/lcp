@@ -2,6 +2,7 @@
 use crate::sgx_reexport_prelude::*;
 use crate::{params::ValidationParams, ValidationContext, ValidationPredicate};
 use core::time::Duration;
+use lcp_types::Time;
 use rlp::{Rlp, RlpStream};
 use serde::{Deserialize, Serialize};
 use std::vec::Vec;
@@ -9,8 +10,8 @@ use std::vec::Vec;
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct TendermintValidationParams {
     pub options: TendermintValidationOptions,
-    pub untrusted_header_timestamp: u128,
-    pub trusted_consensus_state_timestamp: u128,
+    pub untrusted_header_timestamp: Time,
+    pub trusted_consensus_state_timestamp: Time,
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -32,8 +33,12 @@ impl TendermintValidationParams {
         s.begin_list(2)
             .append(&self.options.trusting_period.as_nanos())
             .append(&self.options.clock_drift.as_nanos());
-        s.append(&self.untrusted_header_timestamp);
-        s.append(&self.trusted_consensus_state_timestamp);
+        s.append(&self.untrusted_header_timestamp.as_unix_timestamp_nanos());
+        s.append(
+            &self
+                .trusted_consensus_state_timestamp
+                .as_unix_timestamp_nanos(),
+        );
         s.out().to_vec()
     }
 
@@ -46,8 +51,12 @@ impl TendermintValidationParams {
                 trusting_period: Duration::from_nanos(options.val_at(0).unwrap()),
                 clock_drift: Duration::from_nanos(options.val_at(1).unwrap()),
             },
-            untrusted_header_timestamp: root.val_at(1).unwrap(),
-            trusted_consensus_state_timestamp: root.val_at(2).unwrap(),
+            untrusted_header_timestamp: Time::from_unix_timestamp_nanos(root.val_at(1).unwrap())
+                .unwrap(),
+            trusted_consensus_state_timestamp: Time::from_unix_timestamp_nanos(
+                root.val_at(2).unwrap(),
+            )
+            .unwrap(),
         }
     }
 }
@@ -55,12 +64,16 @@ impl TendermintValidationParams {
 pub struct TendermintValidationPredicate;
 
 impl TendermintValidationPredicate {
-    fn is_within_trust_period(trusted_state_time: u128, trusting_period: u128, now: u128) -> bool {
-        trusted_state_time + trusting_period > now
+    fn is_within_trust_period(
+        trusted_state_time: Time,
+        trusting_period: Duration,
+        now: Time,
+    ) -> bool {
+        (trusted_state_time + trusting_period).unwrap() > now
     }
 
-    fn is_header_from_past(untrusted_header_time: u128, clock_drift: u128, now: u128) -> bool {
-        untrusted_header_time < now + clock_drift
+    fn is_header_from_past(untrusted_header_time: Time, clock_drift: Duration, now: Time) -> bool {
+        (now + clock_drift).unwrap() > untrusted_header_time
     }
 }
 
@@ -76,15 +89,15 @@ impl ValidationPredicate for TendermintValidationPredicate {
         // ensure that trusted consensus state's timestamp hasn't passed the trusting period
         assert!(Self::is_within_trust_period(
             params.trusted_consensus_state_timestamp,
-            params.options.trusting_period.as_nanos(),
-            vctx.current_timestamp,
+            params.options.trusting_period,
+            vctx.current_timestamp.into(),
         ));
 
         // ensure the header isn't from a future time
         assert!(Self::is_header_from_past(
             params.untrusted_header_timestamp,
-            params.options.clock_drift.as_nanos(),
-            vctx.current_timestamp,
+            params.options.clock_drift,
+            vctx.current_timestamp.into(),
         ));
 
         Ok(true)
@@ -94,13 +107,12 @@ impl ValidationPredicate for TendermintValidationPredicate {
 #[cfg(all(test, not(feature = "sgx")))]
 mod tests {
     use super::*;
-    use std::time::{SystemTime, UNIX_EPOCH};
 
     #[test]
     fn serialization_validation_params() {
-        let current_timestamp = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
-        let untrusted_header_timestamp = current_timestamp.as_nanos();
-        let trusted_consensus_state_timestamp = current_timestamp.as_nanos();
+        let current_timestamp = Time::now();
+        let untrusted_header_timestamp = current_timestamp;
+        let trusted_consensus_state_timestamp = current_timestamp;
 
         let params = TendermintValidationParams {
             options: TendermintValidationOptions {

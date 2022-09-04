@@ -9,10 +9,14 @@ serde = { version = "1.0", default-features = false, features = ["alloc"] }
 tendermint-light-client-verifier = { version = "=0.23.7", default-features = false }
 rlp = { version = "0.5.1", default-features = false }
 rlp-derive = { version = "0.1.0" }
+lcp-types = { path = "../types", default-features = false }
 
 [features]
 default = ["std"]
-std = []
+std = [
+    "lcp-types/std"
+]
 sgx = [
     "sgx_tstd",
+    "lcp-types/sgx"
 ]

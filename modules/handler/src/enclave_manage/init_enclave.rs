@@ -6,8 +6,9 @@ use attestation_report::verify_report;
 use crypto::KeyManager;
 use enclave_commands::{CommandParams, InitEnclaveInput, InitEnclaveResult};
 use enclave_remote_attestation::{
-    attestation::create_attestation_report, report::verify_quote_status,
+    attestation::create_attestation_report, report::validate_quote_status,
 };
+use lcp_types::Time;
 use log::*;
 use sgx_types::{sgx_quote_sign_type_t, sgx_spid_t};
 use std::format;
@@ -35,8 +36,9 @@ pub fn init_enclave(
     )
     .map_err(Error::SGXError)?;
 
-    verify_report(&report)?;
-    verify_quote_status(&report.get_avr()?)?;
+    let now = Time::now();
+    verify_report(&report, now)?;
+    validate_quote_status(&report.get_avr()?)?;
 
     Ok(InitEnclaveResult { report })
 }

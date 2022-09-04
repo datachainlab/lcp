@@ -11,7 +11,7 @@ use lcp_proto::ibc::lightclients::lcp::v1::{
     RegisterEnclaveKeyHeader as RawRegisterEnclaveKeyHeader,
     UpdateClientHeader as RawUpdateClientHeader,
 };
-use lcp_types::{Any, Height};
+use lcp_types::{Any, Height, Time};
 use prost_types::Any as ProtoAny;
 use serde::{Deserialize, Serialize};
 use tendermint_proto::Protobuf;
@@ -153,7 +153,7 @@ pub trait Commitment {
         self.commitment().new_state_id
     }
 
-    fn timestamp_as_u128(&self) -> u128 {
+    fn timestamp(&self) -> Time {
         self.commitment().timestamp
     }
 
@@ -170,11 +170,9 @@ impl Header {
         }
     }
 
-    pub fn get_timestamp(&self) -> Option<Timestamp> {
+    pub fn get_timestamp(&self) -> Option<Time> {
         match self {
-            Header::UpdateClient(h) => {
-                Some(Timestamp::from_nanoseconds(h.timestamp_as_u128() as u64).unwrap())
-            }
+            Header::UpdateClient(h) => Some(h.timestamp()),
             _ => None,
         }
     }
@@ -191,7 +189,7 @@ impl ibc::core::ics02_client::header::Header for Header {
     }
 
     fn timestamp(&self) -> Timestamp {
-        self.get_timestamp().unwrap()
+        self.get_timestamp().unwrap().into()
     }
 
     fn wrap_any(self) -> AnyHeader {

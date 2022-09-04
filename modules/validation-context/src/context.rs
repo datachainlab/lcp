@@ -1,20 +1,14 @@
 #[cfg(feature = "sgx")]
 use crate::sgx_reexport_prelude::*;
-use rlp_derive::{RlpDecodable, RlpEncodable};
-use serde::{Deserialize, Serialize};
-use std::vec::Vec;
+use lcp_types::Time;
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, RlpEncodable, RlpDecodable)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct ValidationContext {
-    pub current_timestamp: u128,
+    pub current_timestamp: Time,
 }
 
 impl ValidationContext {
-    pub fn to_vec(&self) -> Vec<u8> {
-        rlp::encode(self).to_vec()
-    }
-
-    pub fn from_bytes(bz: &[u8]) -> Self {
-        rlp::decode(bz).unwrap()
+    pub fn new(current_timestamp: Time) -> Self {
+        ValidationContext { current_timestamp }
     }
 }

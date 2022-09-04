@@ -28,6 +28,7 @@ default = ["std"]
 std = [
     "anyhow",
     "thiserror",
+    "lcp-types/std",
     "commitments/std",
     "attestation-report/std"
 ]
@@ -35,6 +36,7 @@ sgx = [
     "sgx_tstd",
     "anyhow-sgx",
     "thiserror-sgx",
+    "lcp-types/sgx",
     "commitments/sgx",
     "attestation-report/sgx"
 ]

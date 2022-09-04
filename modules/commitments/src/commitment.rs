@@ -5,7 +5,7 @@ use crate::{StateID, STATE_ID_SIZE};
 use anyhow::{anyhow, Error as AnyhowError};
 use core::str::FromStr;
 use ibc::core::ics24_host::Path;
-use lcp_types::{Any, Height};
+use lcp_types::{Any, Height, Time};
 use prost::Message;
 use serde::{Deserialize, Serialize};
 #[allow(unused_imports)]
@@ -17,15 +17,29 @@ use validation_context::ValidationParams;
 
 use rlp_derive::{RlpDecodable, RlpEncodable};
 
-#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct UpdateClientCommitment {
     pub prev_state_id: Option<StateID>,
     pub new_state_id: StateID,
     pub new_state: Option<Any>,
     pub prev_height: Option<Height>,
     pub new_height: Height,
-    pub timestamp: u128,
+    pub timestamp: Time,
     pub validation_params: ValidationParams,
+}
+
+impl Default for UpdateClientCommitment {
+    fn default() -> Self {
+        UpdateClientCommitment {
+            prev_state_id: Default::default(),
+            new_state_id: Default::default(),
+            new_state: Default::default(),
+            prev_height: Default::default(),
+            new_height: Default::default(),
+            timestamp: Time::now(),
+            validation_params: Default::default(),
+        }
+    }
 }
 
 // TODO can we avoid to define a substitute struct for RLP serialization?
@@ -57,7 +71,7 @@ impl UpdateClientCommitment {
                 None => vec![],
             },
             new_height: height_to_bytes(self.new_height),
-            timestamp: self.timestamp,
+            timestamp: self.timestamp.as_unix_timestamp_nanos(),
             validation_params: self.validation_params.to_vec(),
         };
         rlp::encode(&c).to_vec()
@@ -80,7 +94,7 @@ impl UpdateClientCommitment {
                 _ => None,
             },
             new_height: bytes_to_height(&rc.new_height)?,
-            timestamp: rc.timestamp,
+            timestamp: Time::from_unix_timestamp_nanos(rc.timestamp).unwrap(),
             validation_params: ValidationParams::from_bytes(&rc.validation_params),
         })
     }

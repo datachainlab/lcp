@@ -23,7 +23,7 @@ use ibc::core::ics24_host::path::{
     ChannelEndsPath, ClientConsensusStatePath, ClientStatePath, ConnectionsPath,
 };
 use ibc::core::ics24_host::Path;
-use lcp_types::{Any, Height};
+use lcp_types::{Any, Height, Time};
 use light_client::{
     ClientReader, CreateClientResult, LightClient, LightClientError, LightClientRegistry,
     StateVerificationResult, UpdateClientResult,
@@ -79,8 +79,7 @@ impl LightClient for TendermintLightClient {
             .map_err(Error::OtherError)?;
 
         let height = client_state.latest_height().into();
-        let timestamp = consensus_state.timestamp();
-
+        let timestamp: Time = consensus_state.timestamp().into();
         Ok(CreateClientResult {
             client_id,
             client_type: ClientType::Tendermint.as_str().to_owned(),
@@ -94,12 +93,7 @@ impl LightClient for TendermintLightClient {
                 new_state: Some(any_client_state.into()),
                 prev_height: None,
                 new_height: height,
-                timestamp: timestamp
-                    .into_datetime()
-                    .unwrap()
-                    .unix_timestamp_nanos()
-                    .try_into()
-                    .unwrap(),
+                timestamp,
                 validation_params: ValidationParams::Empty,
             },
         })
@@ -171,7 +165,7 @@ impl LightClient for TendermintLightClient {
         }
 
         let height = header.height().into();
-        let header_timestamp = header.timestamp();
+        let header_timestamp: Time = header.timestamp().into();
 
         let trusted_consensus_state =
             ctx.consensus_state(&client_id, trusted_height)
@@ -193,13 +187,7 @@ impl LightClient for TendermintLightClient {
         let new_canonical_client_state =
             AnyClientState::Tendermint(canonicalize_state_from_any(new_client_state.clone()));
 
-        let trusted_consensus_state_timestamp = trusted_consensus_state
-            .timestamp()
-            .into_datetime()
-            .unwrap()
-            .unix_timestamp_nanos()
-            .try_into()
-            .unwrap();
+        let trusted_consensus_state_timestamp: Time = trusted_consensus_state.timestamp().into();
         let options = match client_state {
             AnyClientState::Tendermint(ref client_state) => Options {
                 trust_threshold: TrustThreshold::new(
@@ -217,12 +205,6 @@ impl LightClient for TendermintLightClient {
             .map_err(Error::OtherError)?;
         let new_state_id = gen_state_id(new_canonical_client_state, new_consensus_state.clone())
             .map_err(Error::OtherError)?;
-        let header_timestamp_nanos = header_timestamp
-            .into_datetime()
-            .unwrap()
-            .unix_timestamp_nanos()
-            .try_into()
-            .unwrap();
         Ok(UpdateClientResult {
             client_id,
             new_any_client_state: new_client_state.into(),
@@ -235,13 +217,13 @@ impl LightClient for TendermintLightClient {
                 new_state: None,
                 prev_height: Some(trusted_height.into()),
                 new_height: height,
-                timestamp: header_timestamp_nanos,
+                timestamp: header_timestamp,
                 validation_params: ValidationParams::Tendermint(TendermintValidationParams {
                     options: TendermintValidationOptions {
                         trusting_period: options.trusting_period,
                         clock_drift: options.clock_drift,
                     },
-                    untrusted_header_timestamp: header_timestamp_nanos,
+                    untrusted_header_timestamp: header_timestamp,
                     trusted_consensus_state_timestamp,
                 }),
             },

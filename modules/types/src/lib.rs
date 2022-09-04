@@ -1,10 +1,14 @@
-#![no_std]
+#![cfg_attr(feature = "sgx", no_std)]
 extern crate alloc;
+#[cfg(feature = "sgx")]
+extern crate sgx_tstd as std;
 pub use any::Any;
 pub use height::Height;
+pub use time::Time;
 
 mod any;
 mod height;
+mod time;
 
 mod prelude {
     pub use core::prelude::v1::*;

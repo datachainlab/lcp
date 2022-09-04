@@ -2,17 +2,12 @@
 use crate::sgx_reexport_prelude::*;
 use commitments::StateID;
 use core::convert::Infallible;
-use ibc::{
-    core::{
-        ics02_client::{
-            client_consensus::AnyConsensusState, client_type::ClientType, error::Error,
-        },
-        ics23_commitment::commitment::CommitmentRoot,
-    },
-    timestamp::Timestamp,
+use ibc::core::{
+    ics02_client::{client_consensus::AnyConsensusState, client_type::ClientType, error::Error},
+    ics23_commitment::commitment::CommitmentRoot,
 };
 use lcp_proto::ibc::lightclients::lcp::v1::ConsensusState as RawConsensusState;
-use lcp_types::Any;
+use lcp_types::{Any, Time};
 use prost::Message;
 use prost_types::Any as ProtoAny;
 use serde::{Deserialize, Serialize};
@@ -20,19 +15,15 @@ use tendermint_proto::Protobuf;
 
 pub const LCP_CONSENSUS_STATE_TYPE_URL: &str = "/ibc.lightclients.lcp.v1.ConsensusState";
 
-#[derive(Clone, Default, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ConsensusState {
     pub state_id: StateID,
-    pub timestamp: u128, // means upstream's timestamp
+    pub timestamp: Time, // means upstream's timestamp
 }
 
 impl ConsensusState {
     pub fn is_empty(&self) -> bool {
-        self.state_id.is_zero() && self.timestamp == 0
-    }
-
-    pub fn get_timestamp(&self) -> Timestamp {
-        Timestamp::from_nanoseconds(self.timestamp as u64).unwrap()
+        self.state_id.is_zero()
     }
 }
 
@@ -40,7 +31,7 @@ impl From<ConsensusState> for RawConsensusState {
     fn from(value: ConsensusState) -> Self {
         RawConsensusState {
             state_id: value.state_id.to_vec(),
-            timestamp: value.timestamp as u64,
+            timestamp: value.timestamp.as_unix_timestamp_secs(),
         }
     }
 }
@@ -51,7 +42,7 @@ impl TryFrom<RawConsensusState> for ConsensusState {
     fn try_from(raw: RawConsensusState) -> Result<Self, Self::Error> {
         Ok(ConsensusState {
             state_id: raw.state_id.as_slice().try_into().unwrap(),
-            timestamp: raw.timestamp as u128,
+            timestamp: Time::from_unix_timestamp_secs(raw.timestamp).unwrap(),
         })
     }
 }

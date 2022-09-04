@@ -7,6 +7,7 @@ edition = "2021"
 sgx_tstd = { git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
 sgx_types = { git = "https://github.com/apache/teaclave-sgx-sdk.git", features = ["extra_traits"] }
 sgx_trts = { git = "https://github.com/apache/teaclave-sgx-sdk.git" }
+tendermint = { version = "=0.23.7", default-features = false }
 rustls_sgx = { package = "rustls", git = "https://github.com/mesalock-linux/rustls", branch = "mesalock_sgx", optional = true }
 rustls          = { version = "0.19",   optional = true }
 webpki_sgx = { package = "webpki", git = "https://github.com/mesalock-linux/webpki", branch = "mesalock_sgx", optional = true }
@@ -24,8 +25,8 @@ thiserror_sgx = { package = "thiserror", git = "https://github.com/mesalock-linu
 chrono = { version = "0.4.19", default-features = false, features = ["alloc"]}
 serde = { version = "1.0", default-features = false, features = ["alloc"] }
 serde_json = { version = "1.0", default-features = false, features = ["alloc"] }
-crypto = { path = "../crypto", default-features = false, optional = true }
-
+crypto = { path = "../crypto", default-features = false }
+lcp-types = { path = "../types", default-features = false }
 
 [features]
 default = ["std"]
@@ -37,6 +38,7 @@ std = [
     "log",
     "thiserror",
     "anyhow",
+    "lcp-types/std",
     "crypto/std"
 ]
 sgx = [
@@ -48,5 +50,6 @@ sgx = [
     "log_sgx",
     "thiserror_sgx",
     "anyhow_sgx",
+    "lcp-types/sgx",
     "crypto/sgx"
 ]

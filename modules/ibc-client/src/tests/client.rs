@@ -45,7 +45,7 @@ impl LightClient for LCPLightClient {
         let consensus_state = ConsensusState::try_from(any_consensus_state.to_proto())
             .map_err(LightClientError::ICS02Error)?;
         let height = client_state.latest_height().into();
-        let timestamp = consensus_state.get_timestamp();
+        let timestamp = consensus_state.timestamp;
 
         Ok(CreateClientResult {
             client_id,
@@ -60,7 +60,7 @@ impl LightClient for LCPLightClient {
                 new_state: Some(client_state.into()),
                 prev_height: None,
                 new_height: height,
-                timestamp: timestamp.nanoseconds() as u128,
+                timestamp,
                 validation_params: ValidationParams::Empty,
             },
         })
@@ -95,7 +95,7 @@ impl LightClient for LCPLightClient {
         // }
 
         let height = header.get_height().unwrap_or_default();
-        let header_timestamp = header.get_timestamp().unwrap_or_default();
+        let header_timestamp = header.get_timestamp().unwrap();
 
         // Use client_state to validate the new header against the latest consensus_state.
         // This function will return the new client_state (its latest_height changed) and a

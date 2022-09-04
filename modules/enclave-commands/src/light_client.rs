@@ -4,7 +4,7 @@ use commitments::{StateCommitmentProof, UpdateClientCommitmentProof};
 use ibc::core::ics03_connection::connection::ConnectionEnd;
 use ibc::core::ics04_channel::channel::ChannelEnd;
 use ibc::core::ics24_host::identifier::{ChannelId, ClientId, ConnectionId, PortId};
-use lcp_types::{Any, Height};
+use lcp_types::{Any, Height, Time};
 use serde::{Deserialize, Serialize};
 use std::vec::Vec;
 
@@ -22,14 +22,14 @@ pub enum LightClientCommand {
 pub struct InitClientInput {
     pub any_client_state: Any,
     pub any_consensus_state: Any,
-    pub current_timestamp: u128,
+    pub current_timestamp: Time,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct UpdateClientInput {
     pub client_id: ClientId,
     pub any_header: Any,
-    pub current_timestamp: u128,
+    pub current_timestamp: Time,
 }
 
 #[derive(Serialize, Deserialize, Debug)]

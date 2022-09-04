@@ -33,6 +33,7 @@ std = [
     "log",
     "anyhow",
     "thiserror",
+    "lcp-types/std",
     "commitments/std",
     "validation-context/std",
     "light-client/std"
@@ -42,6 +43,7 @@ sgx = [
     "log-sgx",
     "anyhow-sgx",
     "thiserror-sgx",
+    "lcp-types/sgx",
     "commitments/sgx",
     "validation-context/sgx",
     "light-client/sgx"

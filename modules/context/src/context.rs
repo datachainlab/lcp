@@ -16,7 +16,7 @@ use ibc::{
     },
     timestamp::Timestamp,
 };
-use lcp_types::{Any, Height};
+use lcp_types::{Any, Height, Time};
 use light_client::{ClientKeeper, ClientReader};
 use log::*;
 use std::format;
@@ -26,7 +26,7 @@ use store::KVStore;
 pub struct Context<'a, 'e, S> {
     store: &'a mut S,
     ek: &'e dyn Signer,
-    current_timestamp: Option<u128>,
+    current_timestamp: Option<Time>,
 }
 
 impl<'a, 'e, S> Context<'a, 'e, S> {
@@ -38,8 +38,8 @@ impl<'a, 'e, S> Context<'a, 'e, S> {
         }
     }
 
-    pub fn set_timestamp(&mut self, timestamp: u128) {
-        self.current_timestamp = Some(timestamp);
+    pub fn set_timestamp(&mut self, timestamp: Time) {
+        self.current_timestamp = Some(timestamp)
     }
 
     pub fn get_enclave_key(&self) -> &'e dyn Signer {
@@ -88,7 +88,7 @@ impl<'a, 'e, S: KVStore> ClientReader for Context<'a, 'e, S> {
     }
 
     fn host_timestamp(&self) -> Timestamp {
-        Timestamp::from_nanoseconds(self.current_timestamp.unwrap() as u64).unwrap()
+        self.current_timestamp.unwrap().into()
     }
 
     fn as_ibc_client_reader(&self) -> &dyn IBCClientReader {

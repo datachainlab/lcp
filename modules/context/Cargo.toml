@@ -25,6 +25,7 @@ light-client = { path = "../light-client", default-features = false }
 [features]
 default = ["std"]
 std = [
+    "lcp-types/std",
     "store/std",
     "crypto/std",
     "light-client/std",
@@ -33,6 +34,7 @@ std = [
 ]
 sgx = [
     "sgx_tstd",
+    "lcp-types/sgx",
     "store/sgx",
     "crypto/sgx",
     "light-client/sgx",

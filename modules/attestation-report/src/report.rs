@@ -1,19 +1,17 @@
 use crate::errors::AttestationReportError as Error;
 #[cfg(feature = "sgx")]
 use crate::sgx_reexport_prelude::*;
-use anyhow::anyhow;
 use chrono::prelude::DateTime;
 use core::fmt::Debug;
 use crypto::Address;
+use lcp_types::Time;
 use pem;
 use serde::{Deserialize, Serialize};
 use sgx_types::sgx_quote_t;
 use std::string::String;
-use std::time::SystemTime;
-#[cfg(feature = "sgx")]
-use std::untrusted::time::SystemTimeEx;
 use std::vec::Vec;
 use std::{format, ptr};
+use tendermint::Time as TmTime;
 
 pub const IAS_REPORT_CA: &[u8] =
     include_bytes!("../../../enclave/Intel_SGX_Attestation_RootCA.pem");
@@ -108,9 +106,11 @@ impl AttestationVerificationReport {
         }
 
         let time_fixed = self.timestamp.clone() + "+0000";
-        let timestamp = DateTime::parse_from_str(&time_fixed, "%Y-%m-%dT%H:%M:%S%.f%z")
+        let dt = DateTime::parse_from_str(&time_fixed, "%Y-%m-%dT%H:%M:%S%.f%z").unwrap();
+
+        let timestamp = TmTime::from_unix_timestamp(dt.timestamp(), dt.timestamp_subsec_nanos())
             .unwrap()
-            .timestamp();
+            .into();
 
         let quote = base64::decode(&self.isv_enclave_quote_body)?;
         let sgx_quote: sgx_quote_t = unsafe { ptr::read(quote.as_ptr() as *const _) };
@@ -122,17 +122,19 @@ impl AttestationVerificationReport {
     }
 }
 
-pub fn verify_report(report: &EndorsedAttestationVerificationReport) -> Result<(), Error> {
-    let now = match webpki::Time::try_from(SystemTime::now()) {
-        Ok(r) => r,
-        Err(e) => {
-            return Err(Error::OtherError(anyhow!(
-                "webpki::Time::try_from failed with {:?}",
-                e
-            )))
-        }
+pub fn verify_report(
+    report: &EndorsedAttestationVerificationReport,
+    current_time: Time,
+) -> Result<(), Error> {
+    let current_unix_timestamp = current_time.duration_since(TmTime::unix_epoch()).unwrap();
+    // NOTE: Currently, webpki::Time's constructor only accepts seconds as unix timestamp.
+    // Therefore, the current time are rounded up conservatively.
+    let secs = if current_unix_timestamp.subsec_nanos() > 0 {
+        current_unix_timestamp.as_secs()
+    } else {
+        current_unix_timestamp.as_secs() + 1
     };
-
+    let now = webpki::Time::from_seconds_since_unix_epoch(secs);
     let root_ca_pem = pem::parse(IAS_REPORT_CA).expect("failed to parse pem bytes");
     let root_ca = root_ca_pem.contents;
 
@@ -177,7 +179,7 @@ pub fn verify_report(report: &EndorsedAttestationVerificationReport) -> Result<(
 pub struct Quote {
     pub raw: sgx_quote_t,
     pub status: String,
-    pub timestamp: i64,
+    pub timestamp: Time,
 }
 
 impl Quote {

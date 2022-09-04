@@ -4,11 +4,18 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+sgx_tstd = { git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
 prost-types = { version = "0.10", default-features = false }
 ibc = { git = "https://github.com/informalsystems/ibc-rs", rev = "e8c98d440949abf971ac45a68ed9dd9e6e9f48ed", default-features = false }
 ibc-proto = { git = "https://github.com/informalsystems/ibc-rs", rev = "e8c98d440949abf971ac45a68ed9dd9e6e9f48ed", default-features = false }
+tendermint = { version = "=0.23.7", default-features = false }
 tendermint-proto = { version = "=0.23.7", default-features = false }
-serde = { version = "1.0", default-features = false, features = ["alloc"] }
+serde = { version = "1.0", default-features = false, features = ["alloc", "derive"] }
 serde_json = { version = "1.0", default-features = false, features = ["alloc"] }
 
 lcp-proto = { path = "../../proto", default-features = false }
+
+[features]
+default = ["std"]
+std = []
+sgx = ["sgx_tstd"]

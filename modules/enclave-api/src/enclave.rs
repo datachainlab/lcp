@@ -1,5 +1,5 @@
+use lcp_types::Time;
 use sgx_urts::SgxEnclave;
-use std::time::{SystemTime, UNIX_EPOCH};
 
 #[derive(Clone, Debug, Default)]
 pub struct Enclave {
@@ -16,8 +16,7 @@ impl Enclave {
         self.sgx_enclave.destroy()
     }
 
-    pub fn current_timestamp() -> u128 {
-        let current_timestamp = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
-        current_timestamp.as_nanos()
+    pub fn current_timestamp() -> Time {
+        Time::now()
     }
 }

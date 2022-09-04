@@ -185,6 +185,7 @@ dependencies = [
  "base64 0.20.0-alpha.1",
  "chrono",
  "crypto",
+ "lcp-types",
  "log 0.4.14",
  "log 0.4.17",
  "pem 0.8.2",
@@ -196,6 +197,7 @@ dependencies = [
  "sgx_trts",
  "sgx_tstd",
  "sgx_types",
+ "tendermint",
  "thiserror 1.0.31",
  "thiserror 1.0.9",
  "webpki 0.21.4 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1199,6 +1201,7 @@ dependencies = [
  "hex",
  "httparse",
  "itertools 0.8.2",
+ "lcp-types",
  "log 0.4.14",
  "rustls 0.19.0",
  "serde",
@@ -2350,6 +2353,8 @@ dependencies = [
  "prost-types",
  "serde",
  "serde_json",
+ "sgx_tstd",
+ "tendermint",
  "tendermint-proto",
 ]
 
@@ -5097,6 +5102,7 @@ dependencies = [
 name = "validation-context"
 version = "0.1.0"
 dependencies = [
+ "lcp-types",
  "rlp",
  "rlp-derive",
  "serde",

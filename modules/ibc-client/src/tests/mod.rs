@@ -23,7 +23,7 @@ mod tests {
         Height as ICS02Height,
     };
     use lazy_static::lazy_static;
-    use lcp_types::{Any, Height};
+    use lcp_types::{Any, Height, Time};
     use light_client::{LightClient, LightClientRegistry, LightClientSource};
     use std::time::{SystemTime, UNIX_EPOCH};
     use store::memory::MemStore;
@@ -68,7 +68,7 @@ mod tests {
             let input = InitClientInput {
                 any_client_state: Any::from(client_state).into(),
                 any_consensus_state: Any::from(consensus_state).into(),
-                current_timestamp: 0,
+                current_timestamp: Time::now(),
             };
             assert_eq!(lcp_store.revision, 1);
             let res = router::dispatch::<_, LocalLightClientRegistry>(
@@ -94,16 +94,11 @@ mod tests {
 
         // 2. initializes Light Client for LCP on the downstream side
         let lcp_client_id = {
-            let expired_at = SystemTime::now()
-                .checked_add(Duration::from_secs(60))
-                .unwrap()
-                .duration_since(UNIX_EPOCH)
-                .unwrap()
-                .as_nanos();
+            let expired_at = (Time::now() + Duration::from_secs(60)).unwrap();
             let initial_client_state = ClientState {
                 latest_height: Height::new(0, 1),
                 mr_enclave: Default::default(),
-                key_expiration: Duration::from_secs(60).as_nanos(),
+                key_expiration: Duration::from_secs(60),
                 keys: vec![(expired_at, Address::from(&ek.get_pubkey()))],
             };
             let initial_consensus_state = ConsensusState {
@@ -114,7 +109,7 @@ mod tests {
             let input = InitClientInput {
                 any_client_state: initial_client_state.into(),
                 any_consensus_state: initial_consensus_state.into(),
-                current_timestamp: 0,
+                current_timestamp: Time::now(),
             };
             let res = router::dispatch::<_, LocalLightClientRegistry>(
                 Some(&ek),
@@ -142,7 +137,7 @@ mod tests {
             let input = UpdateClientInput {
                 client_id: upstream_client_id,
                 any_header: Any::from(AnyHeader::Mock(header)).into(),
-                current_timestamp: 0,
+                current_timestamp: Time::now(),
             };
 
             let res = router::dispatch::<_, LocalLightClientRegistry>(
@@ -176,12 +171,7 @@ mod tests {
             let input = UpdateClientInput {
                 client_id: lcp_client_id.clone(),
                 any_header: header.into(),
-                current_timestamp: SystemTime::now()
-                    .checked_add(Duration::from_secs(60))
-                    .unwrap()
-                    .duration_since(UNIX_EPOCH)
-                    .unwrap()
-                    .as_nanos(),
+                current_timestamp: (Time::now() + Duration::from_secs(60)).unwrap(),
             };
             let res = router::dispatch::<_, LocalLightClientRegistry>(
                 Some(&ek),

@@ -89,7 +89,7 @@ impl LCPClient {
         let new_client_state = client_state.with_header(&header);
         let new_consensus_state = ConsensusState {
             state_id: header.state_id(),
-            timestamp: header.timestamp_as_u128(),
+            timestamp: header.timestamp(),
         };
 
         Ok((new_client_state, new_consensus_state))
@@ -129,15 +129,7 @@ impl LCPClient {
     }
 
     fn validation_context(&self, ctx: &dyn ClientReader) -> ValidationContext {
-        ValidationContext {
-            current_timestamp: ctx
-                .host_timestamp()
-                .into_datetime()
-                .unwrap()
-                .unix_timestamp_nanos()
-                .try_into()
-                .unwrap(),
-        }
+        ValidationContext::new(ctx.host_timestamp().into_tm_time().unwrap().into())
     }
 
     // convert_to_state_commitment_proof tries to convert a given proof to StateCommitmentProof
@@ -220,7 +212,7 @@ impl LCPClient {
         // An initial client state's keys must be empty
         assert!(client_state.keys.len() == 0);
         // key_expiration must not be 0
-        assert!(client_state.key_expiration > 0);
+        assert!(!client_state.key_expiration.is_zero());
         // An initial client state's latest height must be empty
         assert!(client_state.latest_height.is_zero());
         // mr_enclave length must be 32
@@ -241,7 +233,7 @@ impl LCPClient {
         // An initial client state's keys must not be empty
         assert!(client_state.keys.len() != 0);
         // key_expiration must not be 0
-        assert!(client_state.key_expiration > 0);
+        assert!(!client_state.key_expiration.is_zero());
         // An initial client state's latest height must be empty
         assert!(client_state.latest_height.is_zero());
         // mr_enclave length must be 0
