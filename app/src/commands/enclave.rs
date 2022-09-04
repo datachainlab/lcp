@@ -4,7 +4,11 @@ use clap::Parser;
 use enclave_api::EnclavePrimitiveAPI;
 use log::*;
 use settings::{AVR_KEY_PATH, SEALED_ENCLAVE_KEY_PATH};
-use std::{fs::OpenOptions, io::Write, path::PathBuf};
+use std::{
+    fs::{remove_file, OpenOptions},
+    io::Write,
+    path::PathBuf,
+};
 
 // `enclave` subcommand
 #[derive(Debug, Parser)]
@@ -42,19 +46,27 @@ impl EnclaveCmd {
                 }
 
                 let ek_path = home.join(SEALED_ENCLAVE_KEY_PATH);
-                if !cmd.force && ek_path.exists() {
-                    bail!(
-                        "Init Key Failed: path of ek {:?} already exists",
-                        ek_path.as_path(),
-                    );
+                if ek_path.exists() {
+                    if cmd.force {
+                        remove_file(&ek_path)?;
+                    } else {
+                        bail!(
+                            "Init Key Failed: path of ek {:?} already exists",
+                            ek_path.as_path(),
+                        );
+                    }
                 }
 
                 let avr_path = home.join(AVR_KEY_PATH);
-                if !cmd.force && avr_path.exists() {
-                    bail!(
-                        "Init Key Failed: path of avr {:?} already exists",
-                        avr_path.as_path(),
-                    );
+                if avr_path.exists() {
+                    if cmd.force {
+                        remove_file(&avr_path)?;
+                    } else {
+                        bail!(
+                            "Init Key Failed: path of avr {:?} already exists",
+                            avr_path.as_path(),
+                        );
+                    }
                 }
 
                 let enclave = load_enclave(opts, cmd.enclave.as_ref())?;
@@ -68,7 +80,7 @@ impl EnclaveCmd {
                         let mut f = OpenOptions::new()
                             .write(true)
                             .create_new(true)
-                            .open(avr_path)?;
+                            .open(&avr_path)?;
                         f.write_all(s.as_bytes())?;
                         f.flush()?;
                         Ok(())
