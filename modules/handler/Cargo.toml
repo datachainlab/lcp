@@ -59,6 +59,8 @@ sgx = [
     "log-sgx",
     "bincode-sgx",
     "lcp-types/sgx",
+    "light-client/sgx",
+    "crypto/sgx",
     "settings/sgx",
     "enclave-commands/sgx",
     "commitments/sgx",

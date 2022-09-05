@@ -25,7 +25,7 @@ thiserror-sgx = { package = "thiserror", git = "https://github.com/mesalock-linu
 thiserror = { version = "1.0.30", optional = true }
 
 lcp-types = { path = "../types", default-features = false }
-validation-context = { path = "../validation-context" }
+validation-context = { path = "../validation-context", default-features = false }
 crypto = { path = "../crypto", default-features = false }
 
 [features]

@@ -21,7 +21,7 @@ validation-context = { path = "../validation-context", default-features = false 
 attestation-report = { path = "../attestation-report", default-features = false }
 light-client = { path = "../light-client", default-features = false  }
 lcp-proto = { path = "../../proto", default-features = false }
-crypto = { path = "../crypto" }
+crypto = { path = "../crypto", default-features = false }
 
 log = { version = "0.4.8", optional = true }
 log-sgx = { package = "log", git = "https://github.com/mesalock-linux/log-sgx", optional = true }
