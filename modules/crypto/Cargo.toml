@@ -12,6 +12,7 @@ rand = { version = "0.8", optional = true }
 lazy_static = { version = "1.1.0", features = ["spin_no_std"] }
 tiny-keccak = "1.4"
 serde = { version = "1.0", default-features = false, features = ["alloc", "derive"] }
+hex = { version = "0.4", default-features = false, features = ["alloc"] }
 
 log = { version = "0.4.8", optional = true }
 log-sgx = { package = "log", git = "https://github.com/mesalock-linux/log-sgx", optional = true }

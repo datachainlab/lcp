@@ -1,11 +1,12 @@
 use crate::{enclave::load_enclave, opts::Opts};
 use anyhow::{bail, Result};
+use attestation_report::EndorsedAttestationVerificationReport;
 use clap::Parser;
 use enclave_api::EnclavePrimitiveAPI;
 use log::*;
 use settings::{AVR_KEY_PATH, SEALED_ENCLAVE_KEY_PATH};
 use std::{
-    fs::{remove_file, OpenOptions},
+    fs::{read, remove_file, File, OpenOptions},
     io::Write,
     path::PathBuf,
 };
@@ -15,6 +16,8 @@ use std::{
 pub enum EnclaveCmd {
     #[clap(about = "Initialize an enclave key")]
     InitKey(InitKey),
+    #[clap(about = "Show the Enclave Key")]
+    ShowKey,
 }
 
 #[derive(Clone, Debug, Parser, PartialEq)]
@@ -31,6 +34,9 @@ pub struct InitKey {
     )]
     pub force: bool,
 }
+
+#[derive(Clone, Debug, Parser, PartialEq)]
+pub struct ShowKey {}
 
 impl EnclaveCmd {
     pub fn run(&self, opts: &Opts) -> Result<()> {
@@ -51,7 +57,7 @@ impl EnclaveCmd {
                         remove_file(&ek_path)?;
                     } else {
                         bail!(
-                            "Init Key Failed: path of ek {:?} already exists",
+                            "Init Key Failed: Enclave Key path {:?} already exists",
                             ek_path.as_path(),
                         );
                     }
@@ -63,7 +69,7 @@ impl EnclaveCmd {
                         remove_file(&avr_path)?;
                     } else {
                         bail!(
-                            "Init Key Failed: path of avr {:?} already exists",
+                            "Init Key Failed: AVR path {:?} already exists",
                             avr_path.as_path(),
                         );
                     }
@@ -87,6 +93,21 @@ impl EnclaveCmd {
                     }
                     Err(e) => bail!("ECALL Enclave Failed {:?}!", e),
                 }
+            }
+            EnclaveCmd::ShowKey => {
+                let home = opts.get_home();
+                if !home.exists() {
+                    bail!("home directory doesn't exist at {:?}", home);
+                }
+                let avr_path = home.join(AVR_KEY_PATH);
+                if !avr_path.exists() {
+                    bail!("AVR doesn't exist at {:?}", avr_path.as_path());
+                }
+                let report: EndorsedAttestationVerificationReport =
+                    serde_json::from_slice(read(avr_path)?.as_slice())?;
+                let address = report.get_avr()?.parse_quote()?.get_enclave_key_address()?;
+                println!("0x{}", address.to_hex_string());
+                Ok(())
             }
         }
     }

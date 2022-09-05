@@ -14,6 +14,7 @@ use serde::{Deserialize, Serialize};
 use sgx_types::sgx_report_data_t;
 use std::format;
 use std::io::{Read, Write};
+use std::string::String;
 use std::vec;
 use std::vec::Vec;
 use tiny_keccak::Keccak;
@@ -120,6 +121,12 @@ impl From<&EnclavePublicKey> for Address {
 
 #[derive(Clone, Default, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Address(pub [u8; 20]);
+
+impl Address {
+    pub fn to_hex_string(&self) -> String {
+        hex::encode(self)
+    }
+}
 
 impl From<&[u8]> for Address {
     fn from(v: &[u8]) -> Self {
