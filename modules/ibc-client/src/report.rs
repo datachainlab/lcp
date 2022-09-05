@@ -21,7 +21,7 @@ pub fn verify_report(
     let quote = eavr.get_avr()?.parse_quote()?;
 
     // check if attestation report's timestamp is not expired
-    let key_expiration = (quote.timestamp + client_state.key_expiration).unwrap();
+    let key_expiration = (quote.timestamp + client_state.key_expiration)?;
     if vctx.current_timestamp > key_expiration {
         return Err(Error::ExpiredAVRError {
             current_timestamp: vctx.current_timestamp,

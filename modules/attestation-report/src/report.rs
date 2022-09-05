@@ -109,7 +109,7 @@ impl AttestationVerificationReport {
         let dt = DateTime::parse_from_str(&time_fixed, "%Y-%m-%dT%H:%M:%S%.f%z").unwrap();
 
         let timestamp = TmTime::from_unix_timestamp(dt.timestamp(), dt.timestamp_subsec_nanos())
-            .unwrap()
+            .map_err(lcp_types::TimeError::TendermintError)?
             .into();
 
         let quote = base64::decode(&self.isv_enclave_quote_body)?;

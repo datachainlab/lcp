@@ -2356,6 +2356,8 @@ dependencies = [
  "sgx_tstd",
  "tendermint",
  "tendermint-proto",
+ "thiserror 1.0.31",
+ "thiserror 1.0.9",
 ]
 
 [[package]]

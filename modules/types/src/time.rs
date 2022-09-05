@@ -1,3 +1,4 @@
+use crate::errors::TimeError as Error;
 use crate::prelude::*;
 use core::ops::Deref;
 use core::ops::{Add, Sub};
@@ -7,7 +8,6 @@ use serde::{Deserialize, Serialize};
 use std::time::{SystemTime, UNIX_EPOCH};
 #[cfg(feature = "sgx")]
 use std::untrusted::time::SystemTimeEx;
-use tendermint::Error;
 use tendermint::Time as TmTime;
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
@@ -20,16 +20,22 @@ impl Time {
         Time(TmTime::from_unix_timestamp(now.as_secs() as i64, now.subsec_nanos()).unwrap())
     }
 
+    pub fn unix_epoch() -> Self {
+        Time(TmTime::unix_epoch())
+    }
+
     pub fn from_unix_timestamp_nanos(timestamp: u128) -> Result<Self, Error> {
         let ut = TmTime::from_unix_timestamp(
             (timestamp / 1_000_000_000) as i64,
             (timestamp % 1_000_000_000) as u32,
-        )?;
+        )
+        .map_err(Error::TendermintError)?;
         Ok(Time(ut))
     }
 
     pub fn from_unix_timestamp_secs(timestamp: u64) -> Result<Self, Error> {
-        let ut = TmTime::from_unix_timestamp(timestamp as i64, 0)?;
+        let ut =
+            TmTime::from_unix_timestamp(timestamp as i64, 0).map_err(Error::TendermintError)?;
         Ok(Time(ut))
     }
 
@@ -77,7 +83,7 @@ impl Add<Duration> for Time {
     type Output = Result<Self, Error>;
 
     fn add(self, rhs: Duration) -> Self::Output {
-        Ok(Self((*self + rhs)?))
+        Ok(Self((*self + rhs).map_err(Error::TendermintError)?))
     }
 }
 
@@ -85,6 +91,6 @@ impl Sub<Duration> for Time {
     type Output = Result<Self, Error>;
 
     fn sub(self, rhs: Duration) -> Self::Output {
-        Ok(Self((*self - rhs)?))
+        Ok(Self((*self - rhs).map_err(Error::TendermintError)?))
     }
 }

@@ -9,6 +9,8 @@ pub enum RemoteAttestationError {
     AttestationReportError(#[from] attestation_report::AttestationReportError),
     #[error("SGXError: status={0} description={1}")]
     SGXError(sgx_status_t, String),
+    #[error("TimeError")]
+    TimeError(#[from] lcp_types::TimeError),
     #[error(transparent)]
     OtherError(#[from] anyhow::Error),
 }

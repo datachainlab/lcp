@@ -12,6 +12,8 @@ pub enum IBCClientError {
     MrenclaveMismatchError(Vec<u8>, Vec<u8>),
     #[error("AttestationReportError")]
     AttestationReportError(#[from] attestation_report::AttestationReportError),
+    #[error("TimeError")]
+    TimeError(#[from] lcp_types::TimeError),
     #[error(transparent)]
     OtherError(#[from] anyhow::Error),
 }

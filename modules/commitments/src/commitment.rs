@@ -36,7 +36,7 @@ impl Default for UpdateClientCommitment {
             new_state: Default::default(),
             prev_height: Default::default(),
             new_height: Default::default(),
-            timestamp: Time::now(),
+            timestamp: Time::unix_epoch(),
             validation_params: Default::default(),
         }
     }
@@ -94,7 +94,7 @@ impl UpdateClientCommitment {
                 _ => None,
             },
             new_height: bytes_to_height(&rc.new_height)?,
-            timestamp: Time::from_unix_timestamp_nanos(rc.timestamp).unwrap(),
+            timestamp: Time::from_unix_timestamp_nanos(rc.timestamp)?,
             validation_params: ValidationParams::from_bytes(&rc.validation_params),
         })
     }

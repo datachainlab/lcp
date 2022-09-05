@@ -16,6 +16,8 @@ pub enum AttestationReportError {
     SerdeJSONError(serde_json::Error),
     #[error("Base64Error")]
     Base64Error(#[from] base64::DecodeError),
+    #[error("TimeError")]
+    TimeError(#[from] lcp_types::TimeError),
     #[error(transparent)]
     OtherError(#[from] anyhow::Error),
 }

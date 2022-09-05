@@ -18,7 +18,7 @@ pub fn validate_quote_status(avr: &AttestationVerificationReport) -> Result<Quot
     let now = Time::now();
     info!("Time: now={:?} quote_timestamp={:?}", now, quote.timestamp);
 
-    if now >= (quote.timestamp + Duration::from_secs(60 * 60 * 24)).unwrap() {
+    if now >= (quote.timestamp + Duration::from_secs(60 * 60 * 24))? {
         return Err(Error::TooOldReportTimestampError(format!(
             "The timestamp of the report is too old: now={:?} quote_timestamp={:?}",
             now, quote.timestamp

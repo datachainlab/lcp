@@ -9,6 +9,8 @@ pub enum CommitmentError {
     ICS24PathError(ibc::core::ics24_host::path::PathError),
     #[error("RLPDecoderError: {0}")]
     RLPDecoderError(rlp::DecoderError),
+    #[error("TimeError")]
+    TimeError(#[from] lcp_types::TimeError),
     #[error(transparent)]
     OtherError(#[from] anyhow::Error),
 }

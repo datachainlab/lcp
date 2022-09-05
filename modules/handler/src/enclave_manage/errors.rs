@@ -12,6 +12,8 @@ pub enum EnclaveManageError {
     AttestationReportError(#[from] attestation_report::AttestationReportError),
     #[error("RemoteAttestationError")]
     RemoteAttestationError(#[from] enclave_remote_attestation::errors::RemoteAttestationError),
+    #[error("TimeError")]
+    TimeError(#[from] lcp_types::TimeError),
     #[error(transparent)]
     OtherError(#[from] anyhow::Error),
 }

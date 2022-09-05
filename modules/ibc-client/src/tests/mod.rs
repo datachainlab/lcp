@@ -25,7 +25,6 @@ mod tests {
     use lazy_static::lazy_static;
     use lcp_types::{Any, Height, Time};
     use light_client::{LightClient, LightClientRegistry, LightClientSource};
-    use std::time::{SystemTime, UNIX_EPOCH};
     use store::memory::MemStore;
     use tempdir::TempDir;
 

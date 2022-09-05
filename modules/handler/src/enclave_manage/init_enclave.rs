@@ -36,8 +36,7 @@ pub fn init_enclave(
     )
     .map_err(Error::SGXError)?;
 
-    let now = Time::now();
-    verify_report(&report, now)?;
+    verify_report(&report, Time::now())?;
     validate_quote_status(&report.get_avr()?)?;
 
     Ok(InitEnclaveResult { report })
