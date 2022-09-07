@@ -68,10 +68,10 @@ impl UpdateClientCommitment {
                 None => vec![],
             },
             prev_height: match self.prev_height {
-                Some(h) => height_to_bytes(h),
+                Some(h) => h.into(),
                 None => vec![],
             },
-            new_height: height_to_bytes(self.new_height),
+            new_height: self.new_height.into(),
             timestamp: self.timestamp.as_unix_timestamp_nanos(),
             validation_params: self.validation_params.to_vec(),
         };
@@ -90,11 +90,11 @@ impl UpdateClientCommitment {
                 v if v.len() > 0 => Some(Any::try_from(v).unwrap()),
                 _ => None,
             },
-            prev_height: match rc.prev_height {
-                ref v if v.len() > 0 => Some(bytes_to_height(v)?),
+            prev_height: match rc.prev_height.as_slice() {
+                v if v.len() > 0 => Some(v.try_into()?),
                 _ => None,
             },
-            new_height: bytes_to_height(&rc.new_height)?,
+            new_height: rc.new_height.as_slice().try_into()?,
             timestamp: Time::from_unix_timestamp_nanos(rc.timestamp)?,
             validation_params: ValidationParams::from_bytes(&rc.validation_params),
         })
@@ -116,7 +116,7 @@ impl StateCommitment {
             prefix: self.prefix.as_bytes().to_vec(),
             path: self.path.to_string(),
             value: self.value.clone(),
-            height: height_to_bytes(self.height),
+            height: self.height.into(),
             state_id: self.state_id.to_vec(),
         };
         rlp::encode(&c).to_vec()
@@ -128,7 +128,7 @@ impl StateCommitment {
             prefix: rc.prefix.try_into().map_err(Error::ICS23Error)?,
             path: Path::from_str(&rc.path).map_err(Error::ICS24PathError)?,
             value: rc.value,
-            height: bytes_to_height(&rc.height)?,
+            height: rc.height.as_slice().try_into()?,
             state_id: bytes_to_state_id(&rc.state_id)?,
         })
     }
@@ -141,25 +141,6 @@ pub struct RLPStateCommitment {
     pub value: Vec<u8>,
     pub height: Vec<u8>,
     pub state_id: Vec<u8>,
-}
-
-fn height_to_bytes(h: Height) -> Vec<u8> {
-    let mut bz: [u8; 16] = Default::default();
-    bz[..8].copy_from_slice(&h.revision_number().to_be_bytes());
-    bz[8..].copy_from_slice(&h.revision_height().to_be_bytes());
-    bz.to_vec()
-}
-
-fn bytes_to_height(bz: &[u8]) -> Result<Height, AnyhowError> {
-    if bz.len() != 16 {
-        return Err(anyhow!("bytes length must be 16, but got {}", bz.len()));
-    }
-    let mut ar: [u8; 8] = Default::default();
-    ar.copy_from_slice(&bz[..8]);
-    let revision_number = u64::from_be_bytes(ar);
-    ar.copy_from_slice(&bz[8..]);
-    let revision_height = u64::from_be_bytes(ar);
-    Ok(Height::new(revision_number, revision_height))
 }
 
 fn bytes_to_state_id(bz: &[u8]) -> Result<StateID, AnyhowError> {

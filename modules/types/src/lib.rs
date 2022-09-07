@@ -3,7 +3,7 @@ extern crate alloc;
 #[cfg(feature = "sgx")]
 extern crate sgx_tstd as std;
 pub use any::Any;
-pub use errors::TimeError;
+pub use errors::{TimeError, TypeError};
 pub use height::Height;
 pub use time::Time;
 
