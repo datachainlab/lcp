@@ -1,3 +1,4 @@
+use crate::errors::TypeError;
 use crate::prelude::*;
 use core::cmp::Ordering;
 use core::str::FromStr;
@@ -170,6 +171,33 @@ impl TryFrom<Height> for ICS02Height {
 impl From<ICS02Height> for Height {
     fn from(height: ICS02Height) -> Self {
         Height::new(height.revision_number(), height.revision_height())
+    }
+}
+
+impl From<Height> for Vec<u8> {
+    fn from(height: Height) -> Self {
+        let mut bz: [u8; 16] = Default::default();
+        bz[..8].copy_from_slice(&height.revision_number().to_be_bytes());
+        bz[8..].copy_from_slice(&height.revision_height().to_be_bytes());
+        bz.to_vec()
+    }
+}
+
+impl TryFrom<&[u8]> for Height {
+    type Error = TypeError;
+    fn try_from(bz: &[u8]) -> Result<Self, Self::Error> {
+        if bz.len() != 16 {
+            return Err(TypeError::HeightConversionError(format!(
+                "bytes length must be 16, but got {}",
+                bz.len()
+            )));
+        }
+        let mut ar: [u8; 8] = Default::default();
+        ar.copy_from_slice(&bz[..8]);
+        let revision_number = u64::from_be_bytes(ar);
+        ar.copy_from_slice(&bz[8..]);
+        let revision_height = u64::from_be_bytes(ar);
+        Ok(Height::new(revision_number, revision_height))
     }
 }
 

@@ -168,6 +168,9 @@ impl LCPClient {
 
         assert!(height == commitment.height);
 
+        // check if `.prefix` matches expected prefix
+        assert!(&commitment.prefix == prefix);
+
         // check if `.path` matches expected path
         assert!(
             commitment.path

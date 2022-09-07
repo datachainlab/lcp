@@ -24,6 +24,6 @@ pub fn verify_connection<'l, S: KVStore, L: LightClientSource<'l>>(
     )?;
 
     Ok(LightClientResult::VerifyConnection(VerifyConnectionResult(
-        prove_state_commitment(ek, &res.state_commitment)?,
+        prove_state_commitment(ek, res.state_commitment)?,
     )))
 }
