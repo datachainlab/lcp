@@ -270,6 +270,7 @@ impl LightClient for TendermintLightClient {
 
         Ok(StateVerificationResult {
             state_commitment: StateCommitment {
+                prefix,
                 path: Path::ClientState(ClientStatePath(client_id)),
                 value: expected_client_state.encode_vec().unwrap(),
                 height: proof_height,
@@ -324,6 +325,7 @@ impl LightClient for TendermintLightClient {
 
         Ok(StateVerificationResult {
             state_commitment: StateCommitment {
+                prefix,
                 path: Path::ClientConsensusState(ClientConsensusStatePath {
                     client_id,
                     epoch: counterparty_consensus_height.revision_number(),
@@ -368,6 +370,7 @@ impl LightClient for TendermintLightClient {
 
         Ok(StateVerificationResult {
             state_commitment: StateCommitment {
+                prefix,
                 path: Path::Connections(ConnectionsPath(counterparty_connection_id)),
                 value: expected_connection_state.encode_vec().unwrap(),
                 height: proof_height,
@@ -410,6 +413,7 @@ impl LightClient for TendermintLightClient {
 
         Ok(StateVerificationResult {
             state_commitment: StateCommitment {
+                prefix,
                 path: Path::ChannelEnds(ChannelEndsPath(
                     counterparty_port_id,
                     counterparty_channel_id,

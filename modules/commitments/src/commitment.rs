@@ -4,6 +4,7 @@ use crate::CommitmentError as Error;
 use crate::{StateID, STATE_ID_SIZE};
 use anyhow::{anyhow, Error as AnyhowError};
 use core::str::FromStr;
+use ibc::core::ics23_commitment::commitment::CommitmentPrefix;
 use ibc::core::ics24_host::Path;
 use lcp_types::{Any, Height, Time};
 use prost::Message;
@@ -102,6 +103,7 @@ impl UpdateClientCommitment {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct StateCommitment {
+    pub prefix: CommitmentPrefix,
     pub path: Path,
     pub value: Vec<u8>,
     pub height: Height,
@@ -111,6 +113,7 @@ pub struct StateCommitment {
 impl StateCommitment {
     pub fn to_vec(&self) -> Vec<u8> {
         let c = RLPStateCommitment {
+            prefix: self.prefix.as_bytes().to_vec(),
             path: self.path.to_string(),
             value: self.value.clone(),
             height: height_to_bytes(self.height),
@@ -122,6 +125,7 @@ impl StateCommitment {
     pub fn from_bytes(bz: &[u8]) -> Result<Self, Error> {
         let rc: RLPStateCommitment = rlp::decode(bz).map_err(Error::RLPDecoderError)?;
         Ok(Self {
+            prefix: rc.prefix.try_into().map_err(Error::ICS23Error)?,
             path: Path::from_str(&rc.path).map_err(Error::ICS24PathError)?,
             value: rc.value,
             height: bytes_to_height(&rc.height)?,
@@ -132,6 +136,7 @@ impl StateCommitment {
 
 #[derive(RlpEncodable, RlpDecodable, Default, Debug)]
 pub struct RLPStateCommitment {
+    pub prefix: Vec<u8>,
     pub path: String,
     pub value: Vec<u8>,
     pub height: Vec<u8>,
