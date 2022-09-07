@@ -1,8 +1,7 @@
 #[cfg(feature = "sgx")]
 use crate::sgx_reexport_prelude::*;
 use crate::CommitmentError as Error;
-use crate::{StateID, STATE_ID_SIZE};
-use anyhow::{anyhow, Error as AnyhowError};
+use crate::StateID;
 use core::str::FromStr;
 use ibc::core::ics23_commitment::commitment::CommitmentPrefix;
 use ibc::core::ics24_host::Path;
@@ -82,10 +81,10 @@ impl UpdateClientCommitment {
         let rc: RLPUpdateClientCommitment = rlp::decode(bz).map_err(Error::RLPDecoderError)?;
         Ok(Self {
             prev_state_id: match rc.prev_state_id {
-                ref v if v.len() > 0 => Some(bytes_to_state_id(v)?),
+                ref v if v.len() > 0 => Some(v.as_slice().try_into()?),
                 _ => None,
             },
-            new_state_id: bytes_to_state_id(&rc.new_state_id)?,
+            new_state_id: rc.new_state_id.as_slice().try_into()?,
             new_state: match rc.new_state {
                 v if v.len() > 0 => Some(Any::try_from(v).unwrap()),
                 _ => None,
@@ -129,7 +128,7 @@ impl StateCommitment {
             path: Path::from_str(&rc.path).map_err(Error::ICS24PathError)?,
             value: rc.value,
             height: rc.height.as_slice().try_into()?,
-            state_id: bytes_to_state_id(&rc.state_id)?,
+            state_id: rc.state_id.as_slice().try_into()?,
         })
     }
 }
@@ -141,17 +140,4 @@ pub struct RLPStateCommitment {
     pub value: Vec<u8>,
     pub height: Vec<u8>,
     pub state_id: Vec<u8>,
-}
-
-fn bytes_to_state_id(bz: &[u8]) -> Result<StateID, AnyhowError> {
-    if bz.len() != STATE_ID_SIZE {
-        return Err(anyhow!(
-            "bytes length must be {}, but got {}",
-            STATE_ID_SIZE,
-            bz.len()
-        ));
-    }
-    let mut ar: [u8; STATE_ID_SIZE] = Default::default();
-    ar.copy_from_slice(bz);
-    Ok(StateID::from_bytes_array(ar))
 }
