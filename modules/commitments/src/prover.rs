@@ -8,7 +8,7 @@ use crypto::{Signer, Verifier};
 
 pub fn prove_update_client_commitment(
     signer: &dyn Signer,
-    commitment: &UpdateClientCommitment,
+    commitment: UpdateClientCommitment,
 ) -> Result<UpdateClientCommitmentProof, CommitmentError> {
     let commitment_bytes = commitment.to_vec();
     let signature = signer.sign(&commitment_bytes)?;
@@ -25,7 +25,7 @@ pub fn prove_update_client_commitment(
 
 pub fn prove_state_commitment(
     signer: &dyn Signer,
-    commitment: &StateCommitment,
+    commitment: StateCommitment,
 ) -> Result<StateCommitmentProof, CommitmentError> {
     let commitment_bytes = commitment.to_vec();
     let signature = signer.sign(&commitment_bytes)?;

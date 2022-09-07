@@ -25,6 +25,6 @@ pub fn verify_channel<'l, S: KVStore, L: LightClientSource<'l>>(
     )?;
 
     Ok(LightClientResult::VerifyChannel(VerifyChannelResult(
-        prove_state_commitment(ek, &res.state_commitment)?,
+        prove_state_commitment(ek, res.state_commitment)?,
     )))
 }

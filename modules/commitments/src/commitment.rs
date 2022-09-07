@@ -110,11 +110,11 @@ pub struct StateCommitment {
 }
 
 impl StateCommitment {
-    pub fn to_vec(&self) -> Vec<u8> {
+    pub fn to_vec(self) -> Vec<u8> {
         let c = RLPStateCommitment {
-            prefix: self.prefix.as_bytes().to_vec(),
+            prefix: self.prefix.into_vec(),
             path: self.path.to_string(),
-            value: self.value.clone(),
+            value: self.value,
             height: self.height.into(),
             state_id: self.state_id.to_vec(),
         };
