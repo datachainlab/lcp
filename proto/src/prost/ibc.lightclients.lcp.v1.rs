@@ -26,11 +26,15 @@ pub struct ClientState {
     pub key_expiration: u64,
     #[prost(bytes="vec", repeated, tag="4")]
     pub keys: ::prost::alloc::vec::Vec<::prost::alloc::vec::Vec<u8>>,
+    /// unix timestamp in seconds
+    #[prost(uint64, repeated, tag="5")]
+    pub attestation_times: ::prost::alloc::vec::Vec<u64>,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ConsensusState {
     #[prost(bytes="vec", tag="1")]
     pub state_id: ::prost::alloc::vec::Vec<u8>,
+    /// unix timestamp in seconds
     #[prost(uint64, tag="2")]
     pub timestamp: u64,
 }
