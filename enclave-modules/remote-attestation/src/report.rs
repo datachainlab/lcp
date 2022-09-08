@@ -16,12 +16,15 @@ pub fn validate_quote_status(avr: &AttestationVerificationReport) -> Result<Quot
 
     // 2. Check quote's timestamp is within 24H
     let now = Time::now();
-    info!("Time: now={:?} quote_timestamp={:?}", now, quote.timestamp);
+    info!(
+        "Time: now={:?} quote_timestamp={:?}",
+        now, quote.attestation_time
+    );
 
-    if now >= (quote.timestamp + Duration::from_secs(60 * 60 * 24))? {
+    if now >= (quote.attestation_time + Duration::from_secs(60 * 60 * 24))? {
         return Err(Error::TooOldReportTimestampError(format!(
-            "The timestamp of the report is too old: now={:?} quote_timestamp={:?}",
-            now, quote.timestamp
+            "The timestamp of the report is too old: now={:?} attestation_time={:?}",
+            now, quote.attestation_time
         )));
     }
 

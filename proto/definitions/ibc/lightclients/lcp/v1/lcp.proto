@@ -24,9 +24,10 @@ message ClientState {
   bytes mrenclave = 2;
   uint64 key_expiration = 3;
   repeated bytes keys = 4;
+  repeated uint64 attestation_times = 5; // unix timestamp in seconds
 }
 
 message ConsensusState {
   bytes state_id = 1;
-  uint64 timestamp = 2;
+  uint64 timestamp = 2; // unix timestamp in seconds
 }

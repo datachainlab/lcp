@@ -98,7 +98,7 @@ mod tests {
                 latest_height: Height::new(0, 1),
                 mr_enclave: Default::default(),
                 key_expiration: Duration::from_secs(60),
-                keys: vec![(expired_at, Address::from(&ek.get_pubkey()))],
+                keys: vec![(Address::from(&ek.get_pubkey()), expired_at)],
             };
             let initial_consensus_state = ConsensusState {
                 state_id: proof0.commitment().new_state_id,

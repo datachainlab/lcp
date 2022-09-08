@@ -106,14 +106,14 @@ impl LCPClient {
 
         let vctx = self.validation_context(ctx);
         let eavr = header.0;
-        let (key, key_expiration) = verify_report(&vctx, &client_state, &eavr).unwrap();
+        let (key, attestation_time) = verify_report(&vctx, &client_state, &eavr).unwrap();
 
         let any_consensus_state = ctx
             .consensus_state(&client_id, client_state.latest_height)
             .unwrap();
         let consensus_state = ConsensusState::try_from(any_consensus_state.to_proto())?;
         // TODO consider to improve sybil attack resistance for persmissionless environment
-        let new_client_state = client_state.with_new_key((key_expiration, key));
+        let new_client_state = client_state.with_new_key((key, attestation_time));
 
         Ok((new_client_state, consensus_state))
     }
@@ -199,8 +199,9 @@ impl LCPClient {
         .unwrap();
         assert!(Address::from(&commitment_proof.signer as &[u8]) == signer);
 
-        // check if the specified signer exists in the client state
-        assert!(client_state.contains(&signer));
+        // check if the specified signer is not expired and exists in the client state
+        let vctx = self.validation_context(ctx);
+        assert!(client_state.is_active_key(vctx.current_timestamp, &signer));
 
         Ok(())
     }

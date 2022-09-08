@@ -108,16 +108,17 @@ impl AttestationVerificationReport {
         let time_fixed = self.timestamp.clone() + "+0000";
         let dt = DateTime::parse_from_str(&time_fixed, "%Y-%m-%dT%H:%M:%S%.f%z").unwrap();
 
-        let timestamp = TmTime::from_unix_timestamp(dt.timestamp(), dt.timestamp_subsec_nanos())
-            .map_err(lcp_types::TimeError::TendermintError)?
-            .into();
+        let attestation_time =
+            TmTime::from_unix_timestamp(dt.timestamp(), dt.timestamp_subsec_nanos())
+                .map_err(lcp_types::TimeError::TendermintError)?
+                .into();
 
         let quote = base64::decode(&self.isv_enclave_quote_body)?;
         let sgx_quote: sgx_quote_t = unsafe { ptr::read(quote.as_ptr() as *const _) };
         Ok(Quote {
             raw: sgx_quote,
             status: self.isv_enclave_quote_status.clone(),
-            timestamp,
+            attestation_time,
         })
     }
 }
@@ -179,7 +180,7 @@ pub fn verify_report(
 pub struct Quote {
     pub raw: sgx_quote_t,
     pub status: String,
-    pub timestamp: Time,
+    pub attestation_time: Time,
 }
 
 impl Quote {

@@ -21,11 +21,11 @@ pub fn verify_report(
     let quote = eavr.get_avr()?.parse_quote()?;
 
     // check if attestation report's timestamp is not expired
-    let key_expiration = (quote.timestamp + client_state.key_expiration)?;
+    let key_expiration = (quote.attestation_time + client_state.key_expiration)?;
     if vctx.current_timestamp > key_expiration {
         return Err(Error::ExpiredAVRError {
             current_timestamp: vctx.current_timestamp,
-            quote_timestamp: quote.timestamp,
+            attestation_time: quote.attestation_time,
             client_state_key_expiration: client_state.key_expiration,
         });
     }
@@ -38,5 +38,5 @@ pub fn verify_report(
         ));
     }
 
-    Ok((quote.get_enclave_key_address()?, key_expiration))
+    Ok((quote.get_enclave_key_address()?, quote.attestation_time))
 }

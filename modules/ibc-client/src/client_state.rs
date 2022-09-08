@@ -23,12 +23,20 @@ pub struct ClientState {
     pub latest_height: Height,
     pub mr_enclave: Vec<u8>,
     pub key_expiration: Duration,
-    pub keys: Vec<(Time, Address)>,
+    pub keys: Vec<(Address, Time)>,
 }
 
 impl ClientState {
     pub fn contains(&self, key: &Address) -> bool {
-        self.keys.iter().find(|k| &k.1 == key).is_some()
+        self.keys.iter().find(|k| &k.0 == key).is_some()
+    }
+
+    pub fn is_active_key(&self, current_time: Time, key: &Address) -> bool {
+        let expired_time = (current_time - self.key_expiration).unwrap();
+        match self.keys.iter().find(|k| &k.0 == key) {
+            Some(entry) => entry.1 > expired_time,
+            None => false,
+        }
     }
 
     pub fn with_header(mut self, header: &dyn Commitment) -> Self {
@@ -38,35 +46,32 @@ impl ClientState {
         self
     }
 
-    pub fn with_new_key(mut self, key: (Time, Address)) -> Self {
-        assert!(!self.contains(&key.1));
-        self.keys.push(key);
+    pub fn with_new_key(mut self, entry: (Address, Time)) -> Self {
+        assert!(!self.contains(&entry.0));
+        self.keys.push(entry);
         self
     }
 }
 
 impl From<ClientState> for RawClientState {
     fn from(value: ClientState) -> Self {
-        let keys = value
-            .keys
-            .iter()
-            .map(|k| {
-                let mut key = vec![0; 36];
-                let ut = k.0.as_unix_timestamp_nanos();
-                key[..16].copy_from_slice(ut.to_be_bytes().as_slice());
-                key[16..].copy_from_slice(&k.1 .0);
-                key
-            })
-            .collect();
-        RawClientState {
+        let mut client_state = RawClientState {
             latest_height: Some(ProtoHeight {
                 revision_number: value.latest_height.revision_number(),
                 revision_height: value.latest_height.revision_height(),
             }),
             mrenclave: value.mr_enclave,
             key_expiration: value.key_expiration.as_secs(),
-            keys,
-        }
+            keys: Vec::with_capacity(value.keys.len()),
+            attestation_times: Vec::with_capacity(value.keys.len()),
+        };
+        value.keys.into_iter().for_each(|k| {
+            client_state.keys.push(k.0.into());
+            client_state
+                .attestation_times
+                .push(k.1.as_unix_timestamp_secs());
+        });
+        client_state
     }
 }
 
@@ -78,14 +83,11 @@ impl TryFrom<RawClientState> for ClientState {
         let keys = raw
             .keys
             .iter()
-            .map(|k| {
-                let ks = k.as_slice();
-                let mut expiration: [u8; 16] = Default::default();
-                expiration.copy_from_slice(&ks[..16]);
-                let expiration = u128::from_be_bytes(expiration);
+            .zip(raw.attestation_times.iter())
+            .map(|entry| {
                 (
-                    Time::from_unix_timestamp_nanos(expiration).unwrap(),
-                    Address::from(&ks[16..]),
+                    Address::from(entry.0.as_slice()),
+                    Time::from_unix_timestamp_secs(*entry.1).unwrap(),
                 )
             })
             .collect();
