@@ -1,4 +1,4 @@
-module github.com/datachainlab/lcp/go/tests/chains/tendermint
+module github.com/datachainlab/lcp/go/simapp
 
 go 1.18
 
@@ -128,4 +128,4 @@ require (
 
 replace github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
 
-replace github.com/datachainlab/lcp/go => ../../..
+replace github.com/datachainlab/lcp/go => ../

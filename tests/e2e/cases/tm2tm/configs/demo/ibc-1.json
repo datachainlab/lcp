@@ -1,0 +1,21 @@
+{
+  "chain": {
+    "@type": "/relayer.chains.tendermint.config.ChainConfig",
+    "key": "testkey",
+    "chain_id": "ibc1",
+    "rpc_addr": "http://localhost:26557",
+    "account_prefix": "cosmos",
+    "gas_adjustment": 1.5,
+    "gas_prices": "0.025stake"
+  },
+  "prover": {
+    "@type": "/relayer.provers.lcp.config.ProverConfig",
+    "upstream_prover": {
+      "@type": "/relayer.chains.tendermint.config.ProverConfig",
+      "trusting_period": "336h"
+    },
+    "lcp_service_address": "localhost:50051",
+    "mrenclave": "0xf5195b15313b441f9b3571c3662d0efe1e4edd41",
+    "upstream_client_id": "07-tendermint-1"
+  }
+}

@@ -20,7 +20,7 @@ PROFPORT=$6
 GRPCPORT=$7
 
 if [ -z "$1" ]; then
-  display_usage "[BINARY] ($BINARY|akash)"
+  display_usage "[BINARY] ($BINARY|simd)"
 fi
 
 if [ -z "$2" ]; then

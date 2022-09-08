@@ -1,0 +1,37 @@
+version: '3.5'
+
+networks:
+  relayer-e2e:
+    name: &network-common relayer-e2e
+
+services:
+  tendermint-chain0:
+    container_name: tendermint-chain0
+    image: tendermint-chain0:${TAG}
+    ports:
+      - 26656:26656
+      - 26657:26657
+      - 6060:6060
+      - 9090:9090
+    healthcheck:
+      test: "wget -q -O - http://localhost:26657/health || exit 1"
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - *network-common
+  tendermint-chain1:
+    container_name: tendermint-chain1
+    image: tendermint-chain1:${TAG}
+    ports:
+      - 26566:26656
+      - 26557:26657
+      - 6061:6060
+      - 9091:9090
+    healthcheck:
+      test: "wget -q -O - http://localhost:26657/health || exit 1"
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - *network-common

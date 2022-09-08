@@ -6,8 +6,8 @@ import (
 
 	svrcmd "github.com/cosmos/cosmos-sdk/server/cmd"
 	"github.com/cosmos/cosmos-sdk/x/genutil/client/cli"
-	"github.com/datachainlab/lcp/go/tests/chains/tendermint/simapp"
-	"github.com/datachainlab/lcp/go/tests/chains/tendermint/simapp/simd/cmd"
+	"github.com/datachainlab/lcp/go/simapp"
+	"github.com/datachainlab/lcp/go/simapp/simd/cmd"
 	"github.com/stretchr/testify/require"
 )
 

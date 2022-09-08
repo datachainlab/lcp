@@ -5,8 +5,8 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/server"
 	svrcmd "github.com/cosmos/cosmos-sdk/server/cmd"
-	"github.com/datachainlab/lcp/go/tests/chains/tendermint/simapp"
-	"github.com/datachainlab/lcp/go/tests/chains/tendermint/simapp/simd/cmd"
+	"github.com/datachainlab/lcp/go/simapp"
+	"github.com/datachainlab/lcp/go/simapp/simd/cmd"
 )
 
 func main() {
