@@ -6,7 +6,7 @@ use enclave_api::EnclavePrimitiveAPI;
 use log::*;
 use settings::{AVR_KEY_PATH, SEALED_ENCLAVE_KEY_PATH};
 use std::{
-    fs::{read, remove_file, File, OpenOptions},
+    fs::{read, remove_file, OpenOptions},
     io::Write,
     path::PathBuf,
 };
@@ -14,10 +14,10 @@ use std::{
 // `enclave` subcommand
 #[derive(Debug, Parser)]
 pub enum EnclaveCmd {
-    #[clap(about = "Initialize an enclave key")]
+    #[clap(about = "Initialize an Enclave Key")]
     InitKey(InitKey),
-    #[clap(about = "Show the Enclave Key")]
-    ShowKey,
+    #[clap(about = "Show the AVR info")]
+    ShowAVR,
 }
 
 #[derive(Clone, Debug, Parser, PartialEq)]
@@ -94,7 +94,7 @@ impl EnclaveCmd {
                     Err(e) => bail!("ECALL Enclave Failed {:?}!", e),
                 }
             }
-            EnclaveCmd::ShowKey => {
+            EnclaveCmd::ShowAVR => {
                 let home = opts.get_home();
                 if !home.exists() {
                     bail!("home directory doesn't exist at {:?}", home);
@@ -105,8 +105,10 @@ impl EnclaveCmd {
                 }
                 let report: EndorsedAttestationVerificationReport =
                     serde_json::from_slice(read(avr_path)?.as_slice())?;
-                let address = report.get_avr()?.parse_quote()?.get_enclave_key_address()?;
-                println!("0x{}", address.to_hex_string());
+                let quote = report.get_avr()?.parse_quote()?;
+                let address = quote.get_enclave_key_address()?;
+                println!("ENCLAVE_KEY=0x{}", address.to_hex_string());
+                println!("MRENCLAVE=0x{}", hex::encode(quote.get_mrenclave().m));
                 Ok(())
             }
         }

@@ -2286,6 +2286,7 @@ dependencies = [
  "enclave-api",
  "enclave-commands",
  "env_logger",
+ "hex",
  "host",
  "log 0.4.17",
  "serde",

@@ -7,7 +7,7 @@ use crypto::Address;
 use lcp_types::Time;
 use pem;
 use serde::{Deserialize, Serialize};
-use sgx_types::sgx_quote_t;
+use sgx_types::{sgx_measurement_t, sgx_quote_t};
 use std::string::String;
 use std::vec::Vec;
 use std::{format, ptr};
@@ -194,6 +194,10 @@ impl Quote {
         } else {
             Ok(Address::from(&data[..20]))
         }
+    }
+
+    pub fn get_mrenclave(&self) -> sgx_measurement_t {
+        self.raw.report_body.mr_enclave
     }
 }
 
