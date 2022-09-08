@@ -56,6 +56,14 @@ impl From<Header> for ProtoAny {
     }
 }
 
+impl TryFrom<Any> for Header {
+    type Error = Error;
+
+    fn try_from(any: Any) -> Result<Self, Self::Error> {
+        TryFrom::<ProtoAny>::try_from(any.into())
+    }
+}
+
 impl From<Header> for Any {
     fn from(value: Header) -> Self {
         ProtoAny::from(value).into()

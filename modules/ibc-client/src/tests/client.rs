@@ -71,8 +71,7 @@ impl LightClient for LCPLightClient {
         client_id: ClientId,
         any_header: Any,
     ) -> Result<UpdateClientResult, LightClientError> {
-        let header =
-            Header::try_from(any_header.to_proto()).map_err(LightClientError::ICS02Error)?;
+        let header = Header::try_from(any_header).map_err(LightClientError::ICS02Error)?;
 
         // Read client type from the host chain store. The client should already exist.
         let client_type = ctx
@@ -85,7 +84,6 @@ impl LightClient for LCPLightClient {
         let client_state = ctx
             .client_state(&client_id)
             .map_err(LightClientError::ICS02Error)?
-            .to_proto()
             .try_into()
             .map_err(LightClientError::ICS02Error)?;
 

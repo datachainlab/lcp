@@ -69,7 +69,6 @@ impl LCPClient {
             // check if the proxy's trusted consensus state exists in the store
             let prev_consensus_state: ConsensusState = ctx
                 .consensus_state(&client_id, header.prev_height().unwrap())?
-                .to_proto()
                 .try_into()?;
             assert!(prev_consensus_state.state_id == header.prev_state_id().unwrap());
         }
