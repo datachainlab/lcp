@@ -129,15 +129,6 @@ impl LCPClient {
         ValidationContext::new(ctx.host_timestamp().into_tm_time().unwrap().into())
     }
 
-    // convert_to_state_commitment_proof tries to convert a given proof to StateCommitmentProof
-    // *Note this spec depends on a specific light client implementation* (e.g. RLP in ethereum, Proto in cosmos)
-    fn convert_to_state_commitment_proof(
-        proof: &CommitmentProofBytes,
-    ) -> Result<StateCommitmentProof, Ics02Error> {
-        let proof: Vec<u8> = proof.clone().into();
-        Ok(serde_json::from_slice(&proof).unwrap())
-    }
-
     /// Verification functions as specified in:
     /// <https://github.com/cosmos/ibc/tree/master/spec/ics-002-client-semantics>
     ///
@@ -160,7 +151,7 @@ impl LCPClient {
         // TODO return an error instead of assertion
 
         // convert `proof` to StateCommitmentProof
-        let commitment_proof = Self::convert_to_state_commitment_proof(proof).unwrap();
+        let commitment_proof: StateCommitmentProof = proof.clone().try_into().unwrap();
         let commitment = commitment_proof.commitment();
 
         // check if `.prefix` matches the counterparty connection's prefix
