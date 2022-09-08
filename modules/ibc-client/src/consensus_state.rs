@@ -74,6 +74,14 @@ impl TryFrom<ProtoAny> for ConsensusState {
     }
 }
 
+impl TryFrom<Any> for ConsensusState {
+    type Error = Error;
+
+    fn try_from(any: Any) -> Result<Self, Self::Error> {
+        TryFrom::<ProtoAny>::try_from(any.into())
+    }
+}
+
 impl From<ConsensusState> for Any {
     fn from(value: ConsensusState) -> Self {
         ProtoAny::from(value).into()

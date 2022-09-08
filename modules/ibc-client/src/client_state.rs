@@ -126,6 +126,14 @@ impl TryFrom<ProtoAny> for ClientState {
     }
 }
 
+impl TryFrom<Any> for ClientState {
+    type Error = Error;
+
+    fn try_from(any: Any) -> Result<Self, Self::Error> {
+        TryFrom::<ProtoAny>::try_from(any.into())
+    }
+}
+
 impl From<ClientState> for Any {
     fn from(value: ClientState) -> Self {
         ProtoAny::from(value).into()

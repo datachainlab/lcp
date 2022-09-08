@@ -16,10 +16,9 @@ use lcp_types::{Any, Height};
 use light_client::{ClientReader, LightClientError};
 use light_client::{CreateClientResult, StateVerificationResult, UpdateClientResult};
 use light_client::{LightClient, LightClientRegistry};
-use log::*;
 use serde_json::Value;
 use std::boxed::Box;
-use std::string::{String, ToString};
+use std::string::ToString;
 use std::vec::Vec;
 use validation_context::ValidationParams;
 
@@ -40,10 +39,10 @@ impl LightClient for LCPLightClient {
         let client_id = gen_client_id(&any_client_state, &any_consensus_state)?;
         let state_id = gen_state_id_from_any(&any_client_state, &any_consensus_state)
             .map_err(LightClientError::OtherError)?;
-        let client_state = ClientState::try_from(any_client_state.to_proto())
-            .map_err(LightClientError::ICS02Error)?;
-        let consensus_state = ConsensusState::try_from(any_consensus_state.to_proto())
-            .map_err(LightClientError::ICS02Error)?;
+        let client_state =
+            ClientState::try_from(any_client_state).map_err(LightClientError::ICS02Error)?;
+        let consensus_state =
+            ConsensusState::try_from(any_consensus_state).map_err(LightClientError::ICS02Error)?;
         let height = client_state.latest_height().into();
         let timestamp = consensus_state.timestamp;
 

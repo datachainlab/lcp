@@ -108,10 +108,8 @@ impl LCPClient {
         let eavr = header.0;
         let (key, attestation_time) = verify_report(&vctx, &client_state, &eavr).unwrap();
 
-        let any_consensus_state = ctx
-            .consensus_state(&client_id, client_state.latest_height)
-            .unwrap();
-        let consensus_state = ConsensusState::try_from(any_consensus_state.to_proto())?;
+        let consensus_state =
+            ConsensusState::try_from(ctx.consensus_state(&client_id, client_state.latest_height)?)?;
         // TODO consider to improve sybil attack resistance for persmissionless environment
         let new_client_state = client_state.with_new_key((key, attestation_time));
 
@@ -166,12 +164,10 @@ impl LCPClient {
         let commitment_proof = Self::convert_to_state_commitment_proof(proof).unwrap();
         let commitment = commitment_proof.commitment();
 
-        assert!(height == commitment.height);
-
-        // check if `.prefix` matches expected prefix
+        // check if `.prefix` matches the counterparty connection's prefix
         assert!(&commitment.prefix == prefix);
 
-        // check if `.path` matches expected path
+        // check if `.path` matches expected the commitment path
         assert!(
             commitment.path
                 == ClientConsensusStatePath {
@@ -182,13 +178,14 @@ impl LCPClient {
                 .into()
         );
 
+        // check if `.height` matches proof height
+        assert!(commitment.height == height);
+
         // check if `.value` matches expected state
-        let value = expected_consensus_state.encode_vec().unwrap();
-        assert!(value == commitment.value);
+        assert!(commitment.value == expected_consensus_state.encode_vec().unwrap());
 
         // check if `.state_id` matches the corresponding stored consensus state's state_id
-        let any_consensus_state = ctx.consensus_state(client_id, height)?;
-        let consensus_state = ConsensusState::try_from(any_consensus_state.to_proto())?;
+        let consensus_state = ConsensusState::try_from(ctx.consensus_state(client_id, height)?)?;
         assert!(consensus_state.state_id == commitment.state_id);
 
         // check if the `commitment_proof.signer` matches the commitment prover
