@@ -2,9 +2,11 @@ package relay
 
 import (
 	"encoding/hex"
+	"fmt"
 	"strings"
 
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
+	lcptypes "github.com/datachainlab/lcp/go/light-clients/lcp/types"
 	"github.com/hyperledger-labs/yui-relayer/core"
 )
 
@@ -42,9 +44,12 @@ func (pc ProverConfig) GetMrenclave() []byte {
 }
 
 func (pc ProverConfig) Validate() error {
-	_, err := decodeMrenclaveHex(pc.Mrenclave)
+	mrenclave, err := decodeMrenclaveHex(pc.Mrenclave)
 	if err != nil {
 		return err
+	}
+	if l := len(mrenclave); l != lcptypes.MrenclaveSize {
+		return fmt.Errorf("MRENCLAVE length must be %v, but got %v", lcptypes.MrenclaveSize, l)
 	}
 	return nil
 }
