@@ -37,15 +37,6 @@ func NewProver(config ProverConfig, upstreamChain core.ChainI, upstreamProver co
 
 // Init initializes the chain
 func (pr *Prover) Init(homePath string, timeout time.Duration, codec codec.ProtoCodecMarshaler, debug bool) error {
-	conn, err := grpc.Dial(
-		pr.config.LcpServiceAddress,
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-		grpc.WithBlock(),
-	)
-	if err != nil {
-		return err
-	}
-	pr.client = NewLCPServiceClient(conn)
 	return nil
 }
 
@@ -57,6 +48,15 @@ func (pr *Prover) SetRelayInfo(path *core.PathEnd, counterparty *core.ProvableCh
 
 // SetupForRelay performs chain-specific setup before starting the relay
 func (pr *Prover) SetupForRelay(ctx context.Context) error {
+	conn, err := grpc.Dial(
+		pr.config.LcpServiceAddress,
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithBlock(),
+	)
+	if err != nil {
+		return err
+	}
+	pr.client = NewLCPServiceClient(conn)
 	return nil
 }
 
