@@ -4,10 +4,23 @@ import (
 	"encoding/hex"
 	"strings"
 
+	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	"github.com/hyperledger-labs/yui-relayer/core"
 )
 
 var _ core.ProverConfigI = (*ProverConfig)(nil)
+
+var _ codectypes.UnpackInterfacesMessage = (*ProverConfig)(nil)
+
+func (cfg *ProverConfig) UnpackInterfaces(unpacker codectypes.AnyUnpacker) error {
+	if cfg == nil {
+		return nil
+	}
+	if err := unpacker.UnpackAny(cfg.UpstreamProver, new(core.ProverConfigI)); err != nil {
+		return err
+	}
+	return nil
+}
 
 func (pc ProverConfig) Build(chain core.ChainI) (core.ProverI, error) {
 	if err := pc.Validate(); err != nil {
