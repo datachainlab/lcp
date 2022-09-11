@@ -19,7 +19,7 @@ import (
 
 const (
 	ModuleName    = "lcp"
-	ClientTypeLCP = "lcp"
+	ClientTypeLCP = "lcp-client"
 	MrenclaveSize = 32
 )
 
