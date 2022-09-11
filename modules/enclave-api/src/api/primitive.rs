@@ -52,16 +52,21 @@ impl EnclavePrimitiveAPI for Enclave {
                 &mut output_len,
             )
         };
-        if ret != sgx_status_t::SGX_SUCCESS {
-            Err(Error::SGXError(ret))
-        } else if result != sgx_status_t::SGX_SUCCESS {
+        if result != sgx_status_t::SGX_SUCCESS {
             Err(Error::SGXError(result))
         } else {
             assert!((output_len as usize) < output_maxlen);
             unsafe {
                 output_buf.set_len(output_len as usize);
             }
-            Ok(bincode::deserialize(&output_buf[..output_len as usize])?)
+            let res = bincode::deserialize(&output_buf[..output_len as usize])?;
+            if ret == sgx_status_t::SGX_SUCCESS {
+                Ok(res)
+            } else if let CommandResult::CommandError(descr) = res {
+                Err(Error::CommandError(ret, descr))
+            } else {
+                unreachable!()
+            }
         }
     }
 

@@ -1170,22 +1170,13 @@ dependencies = [
 name = "enclave-commands"
 version = "0.1.0"
 dependencies = [
- "anyhow 1.0.28",
- "anyhow 1.0.58",
  "attestation-report",
  "commitments",
- "hex",
  "ibc",
  "lcp-types",
- "log 0.4.17",
- "prost-types",
- "rlp",
- "rlp-derive",
  "serde",
  "serde_json",
- "sgx_trts",
  "sgx_tstd",
- "sgx_types",
  "thiserror 1.0.31",
  "thiserror 1.0.9",
 ]
