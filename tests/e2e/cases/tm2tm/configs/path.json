@@ -1,7 +1,7 @@
 {
   "src": {
     "chain-id": "ibc0",
-    "client-id": "07-tendermint-0",
+    "client-id": "lcp-client-0",
     "connection-id": "connection-0",
     "channel-id": "channel-0",
     "port-id": "transfer",
@@ -10,7 +10,7 @@
   },
   "dst": {
     "chain-id": "ibc1",
-    "client-id": "07-tendermint-0",
+    "client-id": "lcp-client-0",
     "connection-id": "connection-0",
     "channel-id": "channel-0",
     "port-id": "transfer",
