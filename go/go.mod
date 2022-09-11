@@ -9,7 +9,7 @@ require (
 	github.com/gogo/protobuf v1.3.3
 	github.com/gorilla/mux v1.8.0
 	github.com/grpc-ecosystem/grpc-gateway v1.16.0
-	github.com/hyperledger-labs/yui-relayer v0.2.0-rc2.0.20220808104300-dbba4827f421
+	github.com/hyperledger-labs/yui-relayer v0.2.1-0.20220911134427-39634453a601
 	github.com/oasisprotocol/oasis-core/go v0.2201.11
 	github.com/spf13/cobra v1.5.0
 	github.com/spf13/viper v1.12.0
