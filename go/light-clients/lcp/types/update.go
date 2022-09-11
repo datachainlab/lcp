@@ -43,11 +43,11 @@ func (cs ClientState) CheckHeaderAndUpdateForUpdateClient(ctx sdk.Context, cdc c
 			return nil, nil, sdkerrors.Wrapf(clienttypes.ErrInvalidHeader, "unexpected StateID: expected=%v actual=%v", prevConsensusState.StateId, commitment.PrevStateID[:])
 		}
 	default:
-		return nil, nil, sdkerrors.Wrapf(clienttypes.ErrInvalidHeader, "invalid header %T", header)
+		return nil, nil, sdkerrors.Wrapf(clienttypes.ErrInvalidHeader, "invalid header %v", header)
 	}
 
 	if !cs.Contains(header.Signer) {
-		return nil, nil, sdkerrors.Wrapf(clienttypes.ErrInvalidHeader, "signer %v already exists", header.Signer)
+		return nil, nil, sdkerrors.Wrapf(clienttypes.ErrInvalidHeader, "signer '%v' already exists", header.Signer)
 	}
 
 	if err := VerifySignatureWithSignBytes(header.Commitment, header.Signature, header.Signer); err != nil {
@@ -64,11 +64,11 @@ func (cs ClientState) CheckHeaderAndUpdateForRegisterEnclaveKey(ctx sdk.Context,
 	// TODO define error types
 
 	if err := ias.VerifyReport(header.Report, header.Signature, header.SigningCert, ctx.BlockTime()); err != nil {
-		return nil, nil, sdkerrors.Wrapf(clienttypes.ErrInvalidHeader, "invalid header %T", header)
+		return nil, nil, sdkerrors.Wrapf(clienttypes.ErrInvalidHeader, "invalid header: header=%v, err=%v", header, err)
 	}
 	avr, err := ias.ParseAndValidateAVR(header.Report)
 	if err != nil {
-		return nil, nil, sdkerrors.Wrapf(clienttypes.ErrInvalidHeader, "invalid AVR %v", header.Report)
+		return nil, nil, sdkerrors.Wrapf(clienttypes.ErrInvalidHeader, "invalid AVR: report=%v err=%v", header.Report, err)
 	}
 	quote, err := avr.Quote()
 	if err != nil {
