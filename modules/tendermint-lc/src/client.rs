@@ -29,9 +29,8 @@ use light_client::{
     StateVerificationResult, UpdateClientResult,
 };
 use log::*;
-use serde_json::Value;
 use std::boxed::Box;
-use std::string::ToString;
+use std::string::{String, ToString};
 use std::vec::Vec;
 use tendermint_light_client_verifier::options::Options;
 use tendermint_light_client_verifier::types::TrustThreshold;
@@ -74,15 +73,12 @@ impl LightClient for TendermintLightClient {
             Err(e) => return Err(Error::ICS02Error(e).into()),
         };
 
-        let client_id = gen_client_id(&canonical_client_state, &any_consensus_state)?;
         let state_id = gen_state_id_from_any(&canonical_client_state, &any_consensus_state)
             .map_err(Error::OtherError)?;
 
         let height = client_state.latest_height().into();
         let timestamp: Time = consensus_state.timestamp().into();
         Ok(CreateClientResult {
-            client_id,
-            client_type: ClientType::Tendermint.as_str().to_owned(),
             any_client_state: any_client_state.clone(),
             any_consensus_state,
             height,
@@ -424,6 +420,10 @@ impl LightClient for TendermintLightClient {
             },
         })
     }
+
+    fn client_type(&self) -> String {
+        ClientType::Tendermint.as_str().to_owned()
+    }
 }
 
 impl TendermintLightClient {
@@ -473,15 +473,6 @@ pub fn register_implementations(registry: &mut LightClientRegistry) {
             Box::new(TendermintLightClient),
         )
         .unwrap()
-}
-
-pub fn gen_client_id(
-    any_client_state: &Any,
-    any_consensus_state: &Any,
-) -> Result<ClientId, LightClientError> {
-    let state_id = gen_state_id_from_any(any_client_state, any_consensus_state)
-        .map_err(LightClientError::OtherError)?;
-    Ok(serde_json::from_value::<ClientId>(Value::String(state_id.to_string())).unwrap())
 }
 
 // canonicalize_state canonicalizes some fields of specified client state

@@ -9,6 +9,8 @@ pub enum LightClientHandlerError {
     LightClientError(#[from] light_client::LightClientError),
     #[error("CommitmentError")]
     CommitmentError(#[from] commitments::CommitmentError),
+    #[error("ICS24ValidationError: {0}")]
+    ICS24ValidationError(ibc::core::ics24_host::error::ValidationError),
     #[error(transparent)]
     OtherError(#[from] anyhow::Error),
 }

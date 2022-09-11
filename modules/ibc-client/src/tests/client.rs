@@ -16,7 +16,6 @@ use lcp_types::{Any, Height};
 use light_client::{ClientReader, LightClientError};
 use light_client::{CreateClientResult, StateVerificationResult, UpdateClientResult};
 use light_client::{LightClient, LightClientRegistry};
-use serde_json::Value;
 use std::boxed::Box;
 use std::string::ToString;
 use std::vec::Vec;
@@ -32,11 +31,10 @@ pub struct LCPLightClient;
 impl LightClient for LCPLightClient {
     fn create_client(
         &self,
-        ctx: &dyn ClientReader,
+        _ctx: &dyn ClientReader,
         any_client_state: Any,
         any_consensus_state: Any,
     ) -> Result<CreateClientResult, LightClientError> {
-        let client_id = gen_client_id(&any_client_state, &any_consensus_state)?;
         let state_id = gen_state_id_from_any(&any_client_state, &any_consensus_state)
             .map_err(LightClientError::OtherError)?;
         let client_state =
@@ -47,8 +45,6 @@ impl LightClient for LCPLightClient {
         let timestamp = consensus_state.timestamp;
 
         Ok(CreateClientResult {
-            client_id,
-            client_type: LCP_CLIENT_TYPE.to_owned(),
             any_client_state: client_state.clone().into(),
             any_consensus_state: consensus_state.into(),
             height,
@@ -166,6 +162,10 @@ impl LightClient for LCPLightClient {
     ) -> Result<StateVerificationResult, LightClientError> {
         todo!()
     }
+
+    fn client_type(&self) -> String {
+        LCP_CLIENT_TYPE.to_owned()
+    }
 }
 
 pub fn register_implementations(registry: &mut LightClientRegistry) {
@@ -175,13 +175,4 @@ pub fn register_implementations(registry: &mut LightClientRegistry) {
             Box::new(LCPLightClient),
         )
         .unwrap()
-}
-
-pub fn gen_client_id(
-    any_client_state: &Any,
-    any_consensus_state: &Any,
-) -> Result<ClientId, LightClientError> {
-    let state_id = gen_state_id_from_any(any_client_state, any_consensus_state)
-        .map_err(LightClientError::OtherError)?;
-    Ok(serde_json::from_value::<ClientId>(Value::String(state_id.to_string())).unwrap())
 }

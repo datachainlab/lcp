@@ -12,6 +12,7 @@ use std::string::String;
 use std::vec::Vec;
 
 pub trait LightClient {
+    fn client_type(&self) -> String;
     fn create_client(
         &self,
         ctx: &dyn ClientReader,
@@ -70,8 +71,6 @@ pub trait LightClient {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct CreateClientResult {
-    pub client_id: ClientId,
-    pub client_type: String,
     pub any_client_state: Any,
     pub any_consensus_state: Any,
     pub height: Height,
