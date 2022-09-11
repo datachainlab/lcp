@@ -12,9 +12,11 @@ mod tests {
         LightClientCommand, LightClientResult, UpdateClientInput, UpdateClientResult,
     };
     use handler::router;
+    use ibc::core::ics24_host::identifier::ClientId;
     use ibc::{
         core::ics02_client::{
-            client_consensus::AnyConsensusState, client_state::AnyClientState, header::AnyHeader,
+            client_consensus::AnyConsensusState, client_state::AnyClientState,
+            client_type::ClientType, header::AnyHeader,
         },
         mock::{
             client_state::{MockClientState, MockConsensusState},
@@ -85,6 +87,7 @@ mod tests {
                 proof,
             })) = res.unwrap()
             {
+                assert!(ClientId::new(ClientType::Mock, 0).unwrap() == client_id);
                 (client_id, proof)
             } else {
                 unreachable!()

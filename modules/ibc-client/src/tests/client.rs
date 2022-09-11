@@ -16,7 +16,6 @@ use lcp_types::{Any, Height};
 use light_client::{ClientReader, LightClientError};
 use light_client::{CreateClientResult, StateVerificationResult, UpdateClientResult};
 use light_client::{LightClient, LightClientRegistry};
-use serde_json::Value;
 use std::boxed::Box;
 use std::string::ToString;
 use std::vec::Vec;
@@ -32,11 +31,10 @@ pub struct LCPLightClient;
 impl LightClient for LCPLightClient {
     fn create_client(
         &self,
-        ctx: &dyn ClientReader,
+        _ctx: &dyn ClientReader,
         any_client_state: Any,
         any_consensus_state: Any,
     ) -> Result<CreateClientResult, LightClientError> {
-        let client_id = gen_client_id(&any_client_state, &any_consensus_state)?;
         let state_id = gen_state_id_from_any(&any_client_state, &any_consensus_state)
             .map_err(LightClientError::OtherError)?;
         let client_state =
@@ -47,8 +45,6 @@ impl LightClient for LCPLightClient {
         let timestamp = consensus_state.timestamp;
 
         Ok(CreateClientResult {
-            client_id,
-            client_type: LCP_CLIENT_TYPE.to_owned(),
             any_client_state: client_state.clone().into(),
             any_consensus_state: consensus_state.into(),
             height,
@@ -98,13 +94,12 @@ impl LightClient for LCPLightClient {
         // This function will return the new client_state (its latest_height changed) and a
         // consensus_state obtained from header. These will be later persisted by the keeper.
         let (new_client_state, new_consensus_state) = LCPClient {}
-            .check_header_and_update_state(ctx, client_id.clone(), client_state, header)
+            .check_header_and_update_state(ctx, client_id, client_state, header)
             .map_err(|e| {
                 Error::ICS02Error(ICS02Error::header_verification_failure(e.to_string()))
             })?;
 
         Ok(UpdateClientResult {
-            client_id,
             new_any_client_state: Any::new(new_client_state),
             new_any_consensus_state: Any::new(new_consensus_state),
             height,
@@ -166,6 +161,10 @@ impl LightClient for LCPLightClient {
     ) -> Result<StateVerificationResult, LightClientError> {
         todo!()
     }
+
+    fn client_type(&self) -> String {
+        LCP_CLIENT_TYPE.to_owned()
+    }
 }
 
 pub fn register_implementations(registry: &mut LightClientRegistry) {
@@ -175,13 +174,4 @@ pub fn register_implementations(registry: &mut LightClientRegistry) {
             Box::new(LCPLightClient),
         )
         .unwrap()
-}
-
-pub fn gen_client_id(
-    any_client_state: &Any,
-    any_consensus_state: &Any,
-) -> Result<ClientId, LightClientError> {
-    let state_id = gen_state_id_from_any(any_client_state, any_consensus_state)
-        .map_err(LightClientError::OtherError)?;
-    Ok(serde_json::from_value::<ClientId>(Value::String(state_id.to_string())).unwrap())
 }

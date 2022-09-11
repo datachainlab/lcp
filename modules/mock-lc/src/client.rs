@@ -19,7 +19,6 @@ use light_client::{
     ClientReader, CreateClientResult, LightClient, LightClientError, LightClientRegistry,
     StateVerificationResult, UpdateClientResult,
 };
-use serde_json::Value;
 use std::boxed::Box;
 use std::string::ToString;
 use std::vec::Vec;
@@ -35,7 +34,6 @@ impl LightClient for MockLightClient {
         any_client_state: Any,
         any_consensus_state: Any,
     ) -> Result<CreateClientResult, LightClientError> {
-        let client_id = gen_client_id(&any_client_state, &any_consensus_state)?;
         let state_id = gen_state_id_from_any(&any_client_state, &any_consensus_state)
             .map_err(Error::OtherError)?;
         let client_state = match AnyClientState::try_from(any_client_state.clone()) {
@@ -60,8 +58,6 @@ impl LightClient for MockLightClient {
         let height = client_state.latest_height().into();
         let timestamp: Time = consensus_state.timestamp().into();
         Ok(CreateClientResult {
-            client_id,
-            client_type: ClientType::Mock.as_str().to_owned(),
             any_client_state: any_client_state.clone(),
             any_consensus_state,
             height,
@@ -125,7 +121,7 @@ impl LightClient for MockLightClient {
         // This function will return the new client_state (its latest_height changed) and a
         // consensus_state obtained from header. These will be later persisted by the keeper.
         let (new_client_state, new_consensus_state) = client_def
-            .check_header_and_update_state(ctx, client_id.clone(), client_state.clone(), header)
+            .check_header_and_update_state(ctx, client_id, client_state.clone(), header)
             .map_err(|e| {
                 Error::ICS02Error(ICS02Error::header_verification_failure(e.to_string()))
             })?;
@@ -137,7 +133,6 @@ impl LightClient for MockLightClient {
         let new_any_client_state = Any::try_from(new_client_state).unwrap();
 
         Ok(UpdateClientResult {
-            client_id,
             new_any_client_state: new_any_client_state.clone(),
             new_any_consensus_state: Any::try_from(new_consensus_state).unwrap(),
             height,
@@ -207,6 +202,10 @@ impl LightClient for MockLightClient {
     ) -> light_client::Result<StateVerificationResult> {
         todo!()
     }
+
+    fn client_type(&self) -> String {
+        ClientType::Mock.as_str().to_owned()
+    }
 }
 
 pub fn register_implementations(registry: &mut LightClientRegistry) {
@@ -216,13 +215,4 @@ pub fn register_implementations(registry: &mut LightClientRegistry) {
             Box::new(MockLightClient),
         )
         .unwrap()
-}
-
-pub fn gen_client_id(
-    any_client_state: &Any,
-    any_consensus_state: &Any,
-) -> Result<ClientId, LightClientError> {
-    let state_id = gen_state_id_from_any(any_client_state, any_consensus_state)
-        .map_err(LightClientError::OtherError)?;
-    Ok(serde_json::from_value::<ClientId>(Value::String(state_id.to_string())).unwrap())
 }
