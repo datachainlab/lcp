@@ -34,14 +34,27 @@ func registerEnclaveKeyCmd(ctx *config.Context) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			var target *core.ProvableChain
+			path, err := ctx.Config.Paths.Get(args[0])
+			if err != nil {
+				return err
+			}
+			var (
+				pathEnd *core.PathEnd
+				target  *core.ProvableChain
+			)
 			if viper.GetBool(flagSrc) {
+				pathEnd = path.Src
 				target = c[src]
 			} else {
+				pathEnd = path.Dst
 				target = c[dst]
 			}
 			prover := target.ProverI.(*Prover)
-			return registerEnclaveKey(prover)
+			if err := prover.initServiceClient(); err != nil {
+				return err
+			}
+			// TODO add debug option
+			return registerEnclaveKey(pathEnd, prover, true)
 		},
 	}
 	return srcFlag(cmd)
