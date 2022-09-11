@@ -52,6 +52,9 @@ impl<'a, 'e, S: KVStore> ClientReader for Context<'a, 'e, S> {
         let value = self
             .store
             .get(format!("{}", ClientTypePath(client_id.clone())).as_bytes());
+        if value.is_none() {
+            return Err(ICS02Error::client_not_found(client_id.clone()));
+        }
         Ok(String::from_utf8(value.unwrap()).unwrap())
     }
 
@@ -59,6 +62,9 @@ impl<'a, 'e, S: KVStore> ClientReader for Context<'a, 'e, S> {
         let value = self
             .store
             .get(format!("{}", ClientStatePath(client_id.clone())).as_bytes());
+        if value.is_none() {
+            return Err(ICS02Error::client_not_found(client_id.clone()));
+        }
         Ok(bincode::deserialize(&value.unwrap()).unwrap())
     }
 
@@ -72,7 +78,6 @@ impl<'a, 'e, S: KVStore> ClientReader for Context<'a, 'e, S> {
         let value = match self.store.get(format!("{}", path).as_bytes()) {
             Some(value) => value,
             None => {
-                // TODO fix
                 return Err(ICS02Error::consensus_state_not_found(
                     client_id.clone(),
                     height.try_into()?,
