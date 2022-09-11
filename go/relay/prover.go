@@ -130,12 +130,35 @@ func (pr *Prover) CreateMsgCreateClient(clientID string, dstHeader core.HeaderI,
 
 // SetupHeader creates a new header based on a given header
 func (pr *Prover) SetupHeader(dst core.LightClientIBCQueryierI, baseSrcHeader core.HeaderI) (core.HeaderI, error) {
-	panic("not implemented") // TODO: Implement
+	if err := pr.initServiceClient(); err != nil {
+		return nil, err
+	}
+	baseSrcHeader, err := pr.upstreamProver.SetupHeader(dst, baseSrcHeader)
+	if err != nil {
+		return nil, err
+	}
+	anyHeader, err := clienttypes.PackHeader(baseSrcHeader)
+	if err != nil {
+		return nil, err
+	}
+	msg := elc.MsgUpdateClient{
+		ClientId: pr.config.UpstreamClientId,
+		Header:   anyHeader,
+	}
+	res, err := pr.client.UpdateClient(context.TODO(), &msg)
+	if err != nil {
+		return nil, err
+	}
+	return &lcptypes.UpdateClientHeader{
+		Commitment: res.Commitment,
+		Signer:     res.Signer,
+		Signature:  res.Signature,
+	}, nil
 }
 
 // UpdateLightWithHeader updates a header on the light client and returns the header and height corresponding to the chain
 func (pr *Prover) UpdateLightWithHeader() (header core.HeaderI, provableHeight int64, queryableHeight int64, err error) {
-	panic("not implemented") // TODO: Implement
+	return pr.upstreamProver.UpdateLightWithHeader()
 }
 
 // QueryClientConsensusState returns the ClientConsensusState and its proof
