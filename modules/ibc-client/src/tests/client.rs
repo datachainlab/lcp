@@ -94,13 +94,12 @@ impl LightClient for LCPLightClient {
         // This function will return the new client_state (its latest_height changed) and a
         // consensus_state obtained from header. These will be later persisted by the keeper.
         let (new_client_state, new_consensus_state) = LCPClient {}
-            .check_header_and_update_state(ctx, client_id.clone(), client_state, header)
+            .check_header_and_update_state(ctx, client_id, client_state, header)
             .map_err(|e| {
                 Error::ICS02Error(ICS02Error::header_verification_failure(e.to_string()))
             })?;
 
         Ok(UpdateClientResult {
-            client_id,
             new_any_client_state: Any::new(new_client_state),
             new_any_consensus_state: Any::new(new_consensus_state),
             height,

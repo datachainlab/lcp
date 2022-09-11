@@ -121,7 +121,7 @@ impl LightClient for MockLightClient {
         // This function will return the new client_state (its latest_height changed) and a
         // consensus_state obtained from header. These will be later persisted by the keeper.
         let (new_client_state, new_consensus_state) = client_def
-            .check_header_and_update_state(ctx, client_id.clone(), client_state.clone(), header)
+            .check_header_and_update_state(ctx, client_id, client_state.clone(), header)
             .map_err(|e| {
                 Error::ICS02Error(ICS02Error::header_verification_failure(e.to_string()))
             })?;
@@ -133,7 +133,6 @@ impl LightClient for MockLightClient {
         let new_any_client_state = Any::try_from(new_client_state).unwrap();
 
         Ok(UpdateClientResult {
-            client_id,
             new_any_client_state: new_any_client_state.clone(),
             new_any_consensus_state: Any::try_from(new_consensus_state).unwrap(),
             height,

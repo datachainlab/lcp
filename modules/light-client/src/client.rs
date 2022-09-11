@@ -80,7 +80,6 @@ pub struct CreateClientResult {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct UpdateClientResult {
-    pub client_id: ClientId,
     pub new_any_client_state: Any,
     pub new_any_consensus_state: Any,
     pub height: Height,

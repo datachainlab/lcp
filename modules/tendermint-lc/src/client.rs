@@ -176,7 +176,7 @@ impl LightClient for TendermintLightClient {
         // This function will return the new client_state (its latest_height changed) and a
         // consensus_state obtained from header. These will be later persisted by the keeper.
         let (new_client_state, new_consensus_state) = client_def
-            .check_header_and_update_state(ctx, client_id.clone(), client_state.clone(), header)
+            .check_header_and_update_state(ctx, client_id, client_state.clone(), header)
             .map_err(|e| {
                 Error::ICS02Error(ICS02Error::header_verification_failure(e.to_string()))
             })?;
@@ -202,7 +202,6 @@ impl LightClient for TendermintLightClient {
         let new_state_id = gen_state_id(new_canonical_client_state, new_consensus_state.clone())
             .map_err(Error::OtherError)?;
         Ok(UpdateClientResult {
-            client_id,
             new_any_client_state: new_client_state.into(),
             new_any_consensus_state: new_consensus_state.into(),
             height,
