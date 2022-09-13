@@ -683,6 +683,7 @@ dependencies = [
  "ibc",
  "ibc-proto",
  "lcp-types",
+ "log 0.4.14",
  "log 0.4.17",
  "prost",
  "prost-types",

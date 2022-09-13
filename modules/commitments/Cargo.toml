@@ -13,7 +13,8 @@ prost = { version = "0.10", default-features = false }
 prost-types = { version = "0.10", default-features = false }
 ibc = { git = "https://github.com/informalsystems/ibc-rs", rev = "e8c98d440949abf971ac45a68ed9dd9e6e9f48ed", default-features = false }
 ibc-proto = { git = "https://github.com/informalsystems/ibc-rs", rev = "e8c98d440949abf971ac45a68ed9dd9e6e9f48ed", default-features = false }
-log = "0.4.8"
+log = { version = "0.4.8", optional = true }
+log-sgx = { package = "log", git = "https://github.com/mesalock-linux/log-sgx", optional = true }
 hex = { version = "0.4", default-features = false, features = ["alloc"] }
 sha2 = { version = "0.8", default-features = false }
 store = { path = "../store", default-features = false }
@@ -33,6 +34,7 @@ default = ["std"]
 std = [
     "anyhow",
     "thiserror",
+    "log",
     "lcp-types/std",
     "validation-context/std",
     "store/std",
@@ -42,6 +44,7 @@ sgx = [
     "sgx_tstd",
     "anyhow-sgx",
     "thiserror-sgx",
+    "log-sgx",
     "lcp-types/sgx",
     "validation-context/sgx",
     "store/sgx",

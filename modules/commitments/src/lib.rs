@@ -7,6 +7,7 @@ extern crate sgx_types;
 #[cfg(feature = "sgx")]
 pub mod sgx_reexport_prelude {
     pub use anyhow_sgx as anyhow;
+    pub use log_sgx as log;
     pub use sgx_tstd as std;
     pub use thiserror_sgx as thiserror;
 }
