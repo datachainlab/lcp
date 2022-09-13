@@ -11,19 +11,20 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/crypto/secp256k1"
 	"github.com/ethereum/go-ethereum/rlp"
-	"golang.org/x/crypto/sha3"
 )
 
 // Note: currently, LCP supports only secp256k1
 
-func VerifySignature(msg [32]byte, signature [65]byte, signer common.Address) error {
-	pubKey, err := secp256k1.RecoverPubkey(msg[:], signature[:])
+func VerifySignature(msg []byte, signature []byte, signer common.Address) error {
+	pubKey, err := secp256k1.RecoverPubkey(msg, signature)
 	if err != nil {
 		return err
 	}
-	var addr common.Address
-	copy(addr[:], crypto.Keccak256(pubKey[1:][12:]))
-
+	pub, err := crypto.UnmarshalPubkey(pubKey)
+	if err != nil {
+		return err
+	}
+	addr := crypto.PubkeyToAddress(*pub)
 	if signer == addr {
 		return nil
 	} else {
@@ -38,15 +39,8 @@ func VerifySignatureWithSignBytes(signBytes []byte, signature []byte, expectedSi
 	if l := len(expectedSigner); l != common.AddressLength {
 		return fmt.Errorf("invalid signer length: expected=%v actual=%v", common.AddressLength, l)
 	}
-
-	var (
-		sig    [65]byte
-		signer common.Address
-	)
-	copy(sig[:], signature)
-	copy(signer[:], expectedSigner)
-
-	return VerifySignature(sha3.Sum256(signBytes), sig, signer)
+	msg := crypto.Keccak256(signBytes)
+	return VerifySignature(msg, signature, common.BytesToAddress(expectedSigner))
 }
 
 type StateID [32]byte
@@ -80,12 +74,14 @@ func (c *RLPUpdateClientCommitment) ToUpdateClientCommitment() (*UpdateClientCom
 		commitment UpdateClientCommitment
 		err        error
 	)
-	if len(c.PrevStateID) == 0 {
-		copy(commitment.PrevStateID[:], c.PrevStateID)
+	if l := len(c.PrevStateID); l == 32 {
+		commitment.PrevStateID = (*StateID)(c.PrevStateID)
+	} else if l > 0 {
+		return nil, fmt.Errorf("PrevStateID length must be 0 or 32, but got %v", l)
 	}
 	commitment.NewStateID = c.NewStateID
 	commitment.NewState = c.NewState
-	if len(c.PrevHeight) == 0 {
+	if len(c.PrevHeight) > 0 {
 		commitment.PrevHeight, err = bzToHeight(c.PrevHeight)
 		if err != nil {
 			return nil, err
