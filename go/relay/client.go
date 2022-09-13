@@ -6,14 +6,22 @@ import (
 	"google.golang.org/grpc"
 )
 
+type (
+	ELCMsgClient       = elc.MsgClient
+	ELCQueryClient     = elc.QueryClient
+	EnclaveQueryClient = enclave.QueryClient
+)
+
 type LCPServiceClient struct {
-	elc.MsgClient
-	enclave.QueryClient
+	ELCMsgClient
+	ELCQueryClient
+	EnclaveQueryClient
 }
 
 func NewLCPServiceClient(conn *grpc.ClientConn) LCPServiceClient {
 	return LCPServiceClient{
-		MsgClient:   elc.NewMsgClient(conn),
-		QueryClient: enclave.NewQueryClient(conn),
+		ELCMsgClient:       elc.NewMsgClient(conn),
+		ELCQueryClient:     elc.NewQueryClient(conn),
+		EnclaveQueryClient: enclave.NewQueryClient(conn),
 	}
 }
