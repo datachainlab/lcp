@@ -9,12 +9,11 @@ require (
 	github.com/gogo/protobuf v1.3.3
 	github.com/gorilla/mux v1.8.0
 	github.com/grpc-ecosystem/grpc-gateway v1.16.0
-	github.com/hyperledger-labs/yui-relayer v0.2.1-0.20220911134427-39634453a601
+	github.com/hyperledger-labs/yui-relayer v0.2.1-0.20220913144855-e51bc1f7a6d9
 	github.com/oasisprotocol/oasis-core/go v0.2201.11
 	github.com/spf13/cobra v1.5.0
 	github.com/spf13/viper v1.12.0
 	github.com/stretchr/testify v1.8.0
-	golang.org/x/crypto v0.0.0-20220525230936-793ad666bf5e
 	google.golang.org/grpc v1.48.0
 )
 
@@ -100,6 +99,7 @@ require (
 	github.com/tendermint/tm-db v0.6.6 // indirect
 	github.com/zondax/hid v0.9.0 // indirect
 	go.etcd.io/bbolt v1.3.6 // indirect
+	golang.org/x/crypto v0.0.0-20220525230936-793ad666bf5e // indirect
 	golang.org/x/net v0.0.0-20220617184016-355a448f1bc9 // indirect
 	golang.org/x/sync v0.0.0-20220513210516-0976fa681c29 // indirect
 	golang.org/x/sys v0.0.0-20220615213510-4f61da869c0c // indirect
