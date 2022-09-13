@@ -31,10 +31,10 @@ func (cs ClientState) CheckHeaderAndUpdateForUpdateClient(ctx sdk.Context, cdc c
 		return nil, nil, err
 	}
 
-	switch {
-	case commitment.PrevHeight == nil && commitment.PrevStateID == nil && !cs.LatestHeight.IsZero():
-		// nop
-	case commitment.PrevHeight != nil && commitment.PrevStateID != nil:
+	if !cs.LatestHeight.IsZero() {
+		if commitment.PrevHeight == nil || commitment.PrevStateID == nil {
+			return nil, nil, sdkerrors.Wrapf(clienttypes.ErrInvalidHeader, "invalid header %v", header)
+		}
 		prevConsensusState, err := GetConsensusState(store, cdc, commitment.PrevHeight)
 		if err != nil {
 			return nil, nil, err
@@ -42,8 +42,6 @@ func (cs ClientState) CheckHeaderAndUpdateForUpdateClient(ctx sdk.Context, cdc c
 		if !bytes.Equal(prevConsensusState.StateId, commitment.PrevStateID[:]) {
 			return nil, nil, sdkerrors.Wrapf(clienttypes.ErrInvalidHeader, "unexpected StateID: expected=%v actual=%v", prevConsensusState.StateId, commitment.PrevStateID[:])
 		}
-	default:
-		return nil, nil, sdkerrors.Wrapf(clienttypes.ErrInvalidHeader, "invalid header %v", header)
 	}
 
 	if !cs.Contains(header.Signer) {
