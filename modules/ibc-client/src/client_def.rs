@@ -61,12 +61,10 @@ impl LCPClient {
     ) -> Result<(ClientState, ConsensusState), Ics02Error> {
         // TODO return an error instead of assertion
 
-        if header.prev_height().is_none() && header.prev_state_id().is_none() {
-            // if header.prev_* is nil, the client state's latest_height must be zero
-            assert!(client_state.latest_height.is_zero());
-        } else {
+        if !client_state.latest_height.is_zero() {
+            // if the client state's latest height is zero, the header's prev_* must be non-nil
             assert!(header.prev_height().is_some() && header.prev_state_id().is_some());
-            // check if the proxy's trusted consensus state exists in the store
+            // check if the previous consensus state exists in the store
             let prev_consensus_state: ConsensusState = ctx
                 .consensus_state(&client_id, header.prev_height().unwrap())?
                 .try_into()?;
