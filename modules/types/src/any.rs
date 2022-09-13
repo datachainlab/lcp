@@ -70,6 +70,15 @@ impl From<LCPProtoAny> for Any {
     }
 }
 
+impl From<Any> for LCPProtoAny {
+    fn from(v: Any) -> Self {
+        LCPProtoAny {
+            type_url: v.0.type_url,
+            value: v.0.value,
+        }
+    }
+}
+
 impl TryFrom<Any> for AnyClientState {
     type Error = Error;
 

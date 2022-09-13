@@ -16,6 +16,8 @@ pub enum LightClientCommand {
     VerifyClientConsensus(VerifyClientConsensusInput),
     VerifyConnection(VerifyConnectionInput),
     VerifyChannel(VerifyChannelInput),
+
+    QueryClient(QueryClientInput),
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -74,6 +76,11 @@ pub struct VerifyChannelInput {
 pub struct CommitmentProofPair(pub Height, pub Vec<u8>);
 
 #[derive(Serialize, Deserialize, Debug)]
+pub struct QueryClientInput {
+    pub client_id: ClientId,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
 pub enum LightClientResult {
     InitClient(InitClientResult),
     UpdateClient(UpdateClientResult),
@@ -81,6 +88,8 @@ pub enum LightClientResult {
     VerifyClientConsensus(VerifyClientConsensusResult),
     VerifyConnection(VerifyConnectionResult),
     VerifyChannel(VerifyChannelResult),
+
+    QueryClient(QueryClientResult),
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -104,3 +113,9 @@ pub struct VerifyConnectionResult(pub StateCommitmentProof);
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct VerifyChannelResult(pub StateCommitmentProof);
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct QueryClientResult {
+    pub any_client_state: Any,
+    pub any_consensus_state: Any,
+}

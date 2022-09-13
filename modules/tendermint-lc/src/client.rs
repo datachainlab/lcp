@@ -423,6 +423,16 @@ impl LightClient for TendermintLightClient {
     fn client_type(&self) -> String {
         ClientType::Tendermint.as_str().to_owned()
     }
+
+    fn latest_height(
+        &self,
+        ctx: &dyn ClientReader,
+        client_id: &ClientId,
+    ) -> Result<Height, LightClientError> {
+        let ctx = ctx.as_ibc_client_reader();
+        let client_state = ctx.client_state(client_id).map_err(Error::ICS02Error)?;
+        Ok(client_state.latest_height().into())
+    }
 }
 
 impl TendermintLightClient {

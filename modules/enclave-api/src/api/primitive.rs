@@ -2,8 +2,8 @@ use crate::{ffi, Enclave, EnclaveAPIError as Error, Result};
 use enclave_commands::{
     Command, CommandParams, CommandResult, CommitmentProofPair, EnclaveCommand,
     EnclaveManageCommand, EnclaveManageResult, InitClientInput, InitClientResult, InitEnclaveInput,
-    InitEnclaveResult, LightClientCommand, LightClientResult, UpdateClientInput,
-    UpdateClientResult, VerifyChannelInput, VerifyChannelResult,
+    InitEnclaveResult, LightClientCommand, LightClientResult, QueryClientInput, QueryClientResult,
+    UpdateClientInput, UpdateClientResult, VerifyChannelInput, VerifyChannelResult,
 };
 use ibc::core::{
     ics04_channel::channel::ChannelEnd,
@@ -30,6 +30,8 @@ pub trait EnclavePrimitiveAPI {
         counterparty_channel_id: ChannelId,
         proof: CommitmentProofPair,
     ) -> Result<VerifyChannelResult>;
+
+    fn query_client(&self, client_id: ClientId) -> Result<QueryClientResult>;
 }
 
 impl EnclavePrimitiveAPI for Enclave {
@@ -140,6 +142,19 @@ impl EnclavePrimitiveAPI for Enclave {
             cmd,
         ))? {
             CommandResult::LightClient(LightClientResult::VerifyChannel(res)) => Ok(res),
+            _ => unreachable!(),
+        }
+    }
+
+    fn query_client(&self, client_id: ClientId) -> Result<QueryClientResult> {
+        let cmd = Command::LightClient(LightClientCommand::QueryClient(QueryClientInput {
+            client_id,
+        }));
+        match self.execute_command(&EnclaveCommand::new(
+            CommandParams::new(self.home.clone()),
+            cmd,
+        ))? {
+            CommandResult::LightClient(LightClientResult::QueryClient(res)) => Ok(res),
             _ => unreachable!(),
         }
     }

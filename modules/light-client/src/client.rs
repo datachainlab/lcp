@@ -13,6 +13,13 @@ use std::vec::Vec;
 
 pub trait LightClient {
     fn client_type(&self) -> String;
+
+    fn latest_height(
+        &self,
+        ctx: &dyn ClientReader,
+        client_id: &ClientId,
+    ) -> Result<Height, LightClientError>;
+
     fn create_client(
         &self,
         ctx: &dyn ClientReader,

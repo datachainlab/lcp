@@ -15,9 +15,9 @@ pub use enclave_manage::{
 };
 pub use light_client::{
     CommitmentProofPair, InitClientInput, InitClientResult, LightClientCommand, LightClientResult,
-    UpdateClientInput, UpdateClientResult, VerifyChannelInput, VerifyChannelResult,
-    VerifyClientConsensusInput, VerifyClientConsensusResult, VerifyClientInput, VerifyClientResult,
-    VerifyConnectionInput, VerifyConnectionResult,
+    QueryClientInput, QueryClientResult, UpdateClientInput, UpdateClientResult, VerifyChannelInput,
+    VerifyChannelResult, VerifyClientConsensusInput, VerifyClientConsensusResult,
+    VerifyClientInput, VerifyClientResult, VerifyConnectionInput, VerifyConnectionResult,
 };
 
 mod enclave_manage;

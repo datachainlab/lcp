@@ -2,6 +2,7 @@ use crate::{Enclave, EnclaveAPIError, Result};
 use ibc::core::ics24_host::identifier::ClientId;
 use lcp_proto::lcp::service::elc::v1::{
     MsgCreateClient, MsgCreateClientResponse, MsgUpdateClient, MsgUpdateClientResponse,
+    QueryClientRequest, QueryClientResponse,
 };
 use std::str::FromStr;
 
@@ -38,6 +39,16 @@ pub trait EnclaveProtoAPI: EnclavePrimitiveAPI {
             commitment: proof.commitment().to_vec(),
             signer: proof.signer,
             signature: proof.signature,
+        })
+    }
+
+    fn proto_query_client(&self, query: QueryClientRequest) -> Result<QueryClientResponse> {
+        let client_id = ClientId::from_str(&query.client_id)
+            .map_err(|e| EnclaveAPIError::InvalidArgumentError(e.to_string()))?;
+        let res = self.query_client(client_id)?;
+        Ok(QueryClientResponse {
+            client_state: Some(res.any_client_state.into()),
+            consensus_state: Some(res.any_consensus_state.into()),
         })
     }
 }
