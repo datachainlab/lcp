@@ -165,6 +165,19 @@ impl LightClient for LCPLightClient {
     fn client_type(&self) -> String {
         LCP_CLIENT_TYPE.to_owned()
     }
+
+    fn latest_height(
+        &self,
+        ctx: &dyn ClientReader,
+        client_id: &ClientId,
+    ) -> Result<Height, LightClientError> {
+        let client_state: ClientState = ctx
+            .client_state(&client_id)
+            .map_err(LightClientError::ICS02Error)?
+            .try_into()
+            .map_err(LightClientError::ICS02Error)?;
+        Ok(client_state.latest_height)
+    }
 }
 
 pub fn register_implementations(registry: &mut LightClientRegistry) {

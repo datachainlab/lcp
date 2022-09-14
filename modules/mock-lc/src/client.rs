@@ -206,6 +206,18 @@ impl LightClient for MockLightClient {
     fn client_type(&self) -> String {
         ClientType::Mock.as_str().to_owned()
     }
+
+    fn latest_height(
+        &self,
+        ctx: &dyn ClientReader,
+        client_id: &ClientId,
+    ) -> Result<Height, LightClientError> {
+        let client_state = ctx
+            .as_ibc_client_reader()
+            .client_state(client_id)
+            .map_err(Error::ICS02Error)?;
+        Ok(client_state.latest_height().into())
+    }
 }
 
 pub fn register_implementations(registry: &mut LightClientRegistry) {
