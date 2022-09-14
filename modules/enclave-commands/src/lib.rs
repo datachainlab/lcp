@@ -13,6 +13,7 @@ use std::string::String;
 pub use enclave_manage::{
     EnclaveManageCommand, EnclaveManageResult, InitEnclaveInput, InitEnclaveResult,
 };
+pub use errors::EnclaveCommandError;
 pub use light_client::{
     CommitmentProofPair, InitClientInput, InitClientResult, LightClientCommand, LightClientResult,
     QueryClientInput, QueryClientResult, UpdateClientInput, UpdateClientResult, VerifyChannelInput,
@@ -21,6 +22,7 @@ pub use light_client::{
 };
 
 mod enclave_manage;
+mod errors;
 mod light_client;
 
 #[derive(Serialize, Deserialize, Debug)]

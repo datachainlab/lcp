@@ -4,7 +4,10 @@ mod tests {
     use super::*;
     use anyhow::anyhow;
     use enclave_api::{Enclave, EnclavePrimitiveAPI};
-    use enclave_commands::CommitmentProofPair;
+    use enclave_commands::{
+        CommitmentProofPair, InitClientInput, InitEnclaveInput, UpdateClientInput,
+        VerifyChannelInput,
+    };
     use ibc::core::{
         ics23_commitment::{commitment::CommitmentProofBytes, merkle::MerkleProof},
         ics24_host::identifier::{ChannelId, PortId},
@@ -13,6 +16,7 @@ mod tests {
         run_binary_channel_test, BinaryChannelTest, ChainHandle, Config, ConnectedChains,
         ConnectedChannel, Error, RelayerDriver, TestConfig, TestOverrides,
     };
+    use lcp_types::Time;
     use log::*;
     use relay_tendermint::Relayer;
     use std::{str::FromStr, sync::Arc};
@@ -25,7 +29,7 @@ mod tests {
     struct ELCStateVerificationTest;
 
     impl TestOverrides for ELCStateVerificationTest {
-        fn modify_relayer_config(&self, config: &mut Config) {}
+        fn modify_relayer_config(&self, _config: &mut Config) {}
     }
 
     impl BinaryChannelTest for ELCStateVerificationTest {
@@ -77,7 +81,10 @@ mod tests {
         let home = tmp_dir.path().to_str().unwrap().to_string();
         let enclave = Enclave::new(enclave, home);
 
-        let report = match enclave.init_enclave_key(spid.as_bytes(), ias_key.as_bytes()) {
+        let report = match enclave.init_enclave_key(InitEnclaveInput {
+            spid: spid.as_bytes().to_vec(),
+            ias_key: ias_key.as_bytes().to_vec(),
+        }) {
             Ok(res) => res.report,
             Err(e) => {
                 panic!("ECALL Enclave Failed {:?}!", e);
@@ -103,7 +110,11 @@ mod tests {
         );
 
         let res = enclave
-            .init_client(client_state.into(), consensus_state.into())
+            .init_client(InitClientInput {
+                any_client_state: client_state.into(),
+                any_consensus_state: consensus_state.into(),
+                current_timestamp: Time::now(),
+            })
             .unwrap();
         let commitment = res.proof.commitment();
         let client_id = res.client_id;
@@ -121,7 +132,11 @@ mod tests {
                 .try_into()
                 .map_err(|e| anyhow!("{:?}", e))?,
         )?;
-        let res = enclave.update_client(client_id.clone(), target_header.into())?;
+        let res = enclave.update_client(UpdateClientInput {
+            client_id: client_id.clone(),
+            any_header: target_header.into(),
+            current_timestamp: Time::now(),
+        })?;
 
         info!("update_client's result is {:?}", res);
 
@@ -141,17 +156,17 @@ mod tests {
 
         info!("expected channel is {:?}", res.0);
 
-        let _ = enclave.verify_channel(
-            client_id.clone(),
-            res.0,
-            "ibc".into(),
-            port_id,
-            channel_id,
-            CommitmentProofPair(
+        let _ = enclave.verify_channel(VerifyChannelInput {
+            client_id,
+            expected_channel: res.0,
+            prefix: "ibc".into(),
+            counterparty_port_id: port_id,
+            counterparty_channel_id: channel_id,
+            proof: CommitmentProofPair(
                 res.2.try_into().map_err(|e| anyhow!("{:?}", e))?,
                 merkle_proof_to_bytes(res.1)?,
             ),
-        )?;
+        })?;
 
         enclave.destroy();
         Ok(())

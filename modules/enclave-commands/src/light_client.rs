@@ -1,9 +1,12 @@
+use crate::errors::EnclaveCommandError as Error;
 #[cfg(feature = "sgx")]
 use crate::sgx_reexport_prelude::*;
 use commitments::{StateCommitmentProof, UpdateClientCommitmentProof};
+use core::str::FromStr;
 use ibc::core::ics03_connection::connection::ConnectionEnd;
 use ibc::core::ics04_channel::channel::ChannelEnd;
 use ibc::core::ics24_host::identifier::{ChannelId, ClientId, ConnectionId, PortId};
+use lcp_proto::lcp::service::elc::v1::{MsgCreateClient, MsgUpdateClient, QueryClientRequest};
 use lcp_types::{Any, Height, Time};
 use serde::{Deserialize, Serialize};
 use std::vec::Vec;
@@ -27,11 +30,46 @@ pub struct InitClientInput {
     pub current_timestamp: Time,
 }
 
+impl TryFrom<MsgCreateClient> for InitClientInput {
+    type Error = Error;
+    fn try_from(msg: MsgCreateClient) -> Result<Self, Error> {
+        let any_client_state = msg
+            .client_state
+            .ok_or_else(|| Error::InvalidArgumentError("client_state must be non-nil".into()))?
+            .into();
+        let any_consensus_state = msg
+            .consensus_state
+            .ok_or_else(|| Error::InvalidArgumentError("consensus_state must be non-nil".into()))?
+            .into();
+        Ok(Self {
+            any_client_state,
+            any_consensus_state,
+            current_timestamp: Time::now(),
+        })
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug)]
 pub struct UpdateClientInput {
     pub client_id: ClientId,
     pub any_header: Any,
     pub current_timestamp: Time,
+}
+
+impl TryFrom<MsgUpdateClient> for UpdateClientInput {
+    type Error = Error;
+    fn try_from(msg: MsgUpdateClient) -> Result<Self, Error> {
+        let any_header = msg
+            .header
+            .ok_or_else(|| Error::InvalidArgumentError("header must be non-nil".into()))?
+            .into();
+        let client_id = ClientId::from_str(&msg.client_id).map_err(Error::ICS24ValidationError)?;
+        Ok(Self {
+            client_id,
+            any_header,
+            current_timestamp: Time::now(),
+        })
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -78,6 +116,15 @@ pub struct CommitmentProofPair(pub Height, pub Vec<u8>);
 #[derive(Serialize, Deserialize, Debug)]
 pub struct QueryClientInput {
     pub client_id: ClientId,
+}
+
+impl TryFrom<QueryClientRequest> for QueryClientInput {
+    type Error = Error;
+    fn try_from(query: QueryClientRequest) -> Result<Self, Error> {
+        let client_id =
+            ClientId::from_str(&query.client_id).map_err(Error::ICS24ValidationError)?;
+        Ok(Self { client_id })
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug)]
