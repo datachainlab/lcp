@@ -5,6 +5,8 @@ use crate::sgx_reexport_prelude::*;
 pub enum CommitmentError {
     #[error("CryptoError")]
     CryptoError(#[from] crypto::CryptoError),
+    #[error("ICS02Error: {0}")]
+    ICS02Error(ibc::core::ics02_client::error::Error),
     #[error("ICS23Error: {0}")]
     ICS23Error(ibc::core::ics23_commitment::error::Error),
     #[error("ICS24PathError: {0}")]
@@ -17,4 +19,10 @@ pub enum CommitmentError {
     TimeError(#[from] lcp_types::TimeError),
     #[error(transparent)]
     OtherError(#[from] anyhow::Error),
+}
+
+impl From<rlp::DecoderError> for CommitmentError {
+    fn from(e: rlp::DecoderError) -> Self {
+        CommitmentError::RLPDecoderError(e)
+    }
 }
