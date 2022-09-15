@@ -130,12 +130,16 @@ type StateCommitmentProof struct {
 	Signature       []byte
 }
 
-func (p StateCommitmentProof) GetCommitment() (*StateCommitment, error) {
-	var commitment StateCommitment
-	if err := rlp.DecodeBytes(p.CommitmentBytes, &commitment); err != nil {
-		return nil, err
+func (p StateCommitmentProof) ToRLPBytes() []byte {
+	bz, err := rlp.EncodeToBytes(p)
+	if err != nil {
+		panic(err)
 	}
-	return &commitment, nil
+	return bz
+}
+
+func (p StateCommitmentProof) GetCommitment() (*StateCommitment, error) {
+	return ParseStateCommitment(p.CommitmentBytes)
 }
 
 func ParseStateCommitmentProof(bz []byte) (*StateCommitmentProof, error) {
@@ -144,4 +148,38 @@ func ParseStateCommitmentProof(bz []byte) (*StateCommitmentProof, error) {
 		return nil, err
 	}
 	return &proof, nil
+}
+
+func ParseStateCommitment(bz []byte) (*StateCommitment, error) {
+	var commitment StateCommitment
+	buf := bytes.NewBuffer(bz)
+	st := rlp.NewStream(buf, 0)
+	if _, err := st.List(); err != nil {
+		return nil, err
+	}
+	if err := st.Decode(&commitment.Prefix); err != nil {
+		return nil, err
+	}
+	if err := st.Decode(&commitment.Path); err != nil {
+		return nil, err
+	}
+	if err := st.Decode(&commitment.Value); err != nil {
+		return nil, err
+	}
+	heightBytes, err := st.Bytes()
+	if err != nil {
+		return nil, err
+	}
+	height, err := bzToHeight(heightBytes)
+	if err != nil {
+		return nil, err
+	}
+	commitment.Height = *height
+	if err := st.Decode(&commitment.StateID); err != nil {
+		return nil, err
+	}
+	if err := st.ListEnd(); err != nil {
+		return nil, err
+	}
+	return &commitment, nil
 }
