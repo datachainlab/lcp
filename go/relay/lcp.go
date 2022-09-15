@@ -18,7 +18,7 @@ func registerEnclaveKey(pathEnd *core.PathEnd, prover *Prover, debug bool) error
 		ias.SetAllowDebugEnclaves()
 		defer ias.UnsetAllowDebugEnclaves()
 	}
-	res, err := prover.client.AttestedVerificationReport(context.TODO(), &enclave.QueryAttestedVerificationReportRequest{})
+	res, err := prover.lcpServiceClient.AttestedVerificationReport(context.TODO(), &enclave.QueryAttestedVerificationReportRequest{})
 	if err != nil {
 		return err
 	}
@@ -57,7 +57,7 @@ func activateClient(pathEnd *core.PathEnd, srcProver *Prover, dst *core.Provable
 		return err
 	}
 
-	lcpQueryier := NewLCPClientQueryier(srcProver.client, srcProver.config.ElcClientId)
+	lcpQueryier := NewLCPClientQueryier(srcProver.lcpServiceClient, srcProver.config.ElcClientId)
 	header2, err := srcProver.originProver.SetupHeader(lcpQueryier, header)
 	if err != nil {
 		return err
@@ -69,7 +69,7 @@ func activateClient(pathEnd *core.PathEnd, srcProver *Prover, dst *core.Provable
 
 	// 2. send a request that contains a header from 1 to update the client in ELC
 
-	res, err := srcProver.client.UpdateClient(context.TODO(), &elc.MsgUpdateClient{
+	res, err := srcProver.lcpServiceClient.UpdateClient(context.TODO(), &elc.MsgUpdateClient{
 		ClientId: srcProver.config.ElcClientId,
 		Header:   anyHeader,
 	})

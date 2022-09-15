@@ -24,9 +24,9 @@ type Prover struct {
 	originChain  core.ChainI
 	originProver core.ProverI
 
-	codec  codec.ProtoCodecMarshaler
-	path   *core.PathEnd
-	client LCPServiceClient
+	codec            codec.ProtoCodecMarshaler
+	path             *core.PathEnd
+	lcpServiceClient LCPServiceClient
 }
 
 var (
@@ -50,7 +50,7 @@ func (pr *Prover) initServiceClient() error {
 	if err != nil {
 		return err
 	}
-	pr.client = NewLCPServiceClient(conn)
+	pr.lcpServiceClient = NewLCPServiceClient(conn)
 	return nil
 }
 
@@ -95,7 +95,7 @@ func (pr *Prover) CreateMsgCreateClient(clientID string, dstHeader core.HeaderI,
 	if err != nil {
 		return nil, err
 	}
-	res, err := pr.client.CreateClient(context.TODO(), &elc.MsgCreateClient{
+	res, err := pr.lcpServiceClient.CreateClient(context.TODO(), &elc.MsgCreateClient{
 		ClientState:    msg.ClientState,
 		ConsensusState: msg.ConsensusState,
 		Signer:         "", // TODO remove this field from the proto def
@@ -152,7 +152,7 @@ func (pr *Prover) SetupHeader(dst core.LightClientIBCQueryierI, baseSrcHeader co
 		ClientId: pr.config.ElcClientId,
 		Header:   anyHeader,
 	}
-	res, err := pr.client.UpdateClient(context.TODO(), &msg)
+	res, err := pr.lcpServiceClient.UpdateClient(context.TODO(), &msg)
 	if err != nil {
 		return nil, err
 	}
@@ -178,7 +178,7 @@ func (pr *Prover) QueryClientConsensusStateWithProof(height int64, dstClientCons
 		return nil, err
 	}
 
-	res2, err := pr.client.ELCMsgClient.VerifyClientConsensus(context.TODO(), &elc.MsgVerifyClientConsensus{
+	res2, err := pr.lcpServiceClient.VerifyClientConsensus(context.TODO(), &elc.MsgVerifyClientConsensus{
 		ClientId:                      pr.config.ElcClientId,
 		TargetAnyClientConsensusState: res.ConsensusState,
 		Prefix:                        []byte(host.StoreKey),
@@ -208,7 +208,7 @@ func (pr *Prover) QueryClientStateWithProof(height int64) (*clienttypes.QueryCli
 		return nil, err
 	}
 
-	res2, err := pr.client.ELCMsgClient.VerifyClient(context.TODO(), &elc.MsgVerifyClient{
+	res2, err := pr.lcpServiceClient.VerifyClient(context.TODO(), &elc.MsgVerifyClient{
 		ClientId:             pr.config.ElcClientId,
 		TargetAnyClientState: res.ClientState,
 		Prefix:               []byte(host.StoreKey),
@@ -242,7 +242,7 @@ func (pr *Prover) QueryConnectionWithProof(height int64) (*conntypes.QueryConnec
 		return res, nil
 	}
 
-	res2, err := pr.client.ELCMsgClient.VerifyConnection(context.TODO(), &elc.MsgVerifyConnection{
+	res2, err := pr.lcpServiceClient.VerifyConnection(context.TODO(), &elc.MsgVerifyConnection{
 		ClientId:                 pr.config.ElcClientId,
 		ExpectedConnection:       *res.Connection,
 		Prefix:                   []byte(host.StoreKey),
@@ -276,7 +276,7 @@ func (pr *Prover) QueryChannelWithProof(height int64) (chanRes *chantypes.QueryC
 		return res, nil
 	}
 
-	res2, err := pr.client.ELCMsgClient.VerifyChannel(context.TODO(), &elc.MsgVerifyChannel{
+	res2, err := pr.lcpServiceClient.VerifyChannel(context.TODO(), &elc.MsgVerifyChannel{
 		ClientId:              pr.config.ElcClientId,
 		ExpectedChannel:       *res.Channel,
 		Prefix:                []byte(host.StoreKey),
