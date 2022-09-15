@@ -130,6 +130,10 @@ type StateCommitmentProof struct {
 	Signature       []byte
 }
 
+func NewStateCommitmentProof(commitmentBytes, signer, signature []byte) StateCommitmentProof {
+	return StateCommitmentProof{CommitmentBytes: commitmentBytes, Signer: signer, Signature: signature}
+}
+
 func (p StateCommitmentProof) ToRLPBytes() []byte {
 	bz, err := rlp.EncodeToBytes(p)
 	if err != nil {

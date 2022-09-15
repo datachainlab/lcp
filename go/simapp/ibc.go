@@ -13,6 +13,7 @@ import (
 	"github.com/cosmos/ibc-go/v4/modules/core/exported"
 	ibckeeper "github.com/cosmos/ibc-go/v4/modules/core/keeper"
 	tenderminttypes "github.com/cosmos/ibc-go/v4/modules/light-clients/07-tendermint/types"
+	lcptypes "github.com/datachainlab/lcp/go/light-clients/lcp/types"
 )
 
 func overrideIBCClientKeeper(k ibckeeper.Keeper, cdc codec.BinaryCodec, key sdk.StoreKey, paramSpace paramtypes.Subspace) *ibckeeper.Keeper {
@@ -38,6 +39,8 @@ func (k ClientKeeper) ValidateSelfClient(ctx sdk.Context, clientState exported.C
 	switch cs := clientState.(type) {
 	case *tenderminttypes.ClientState:
 		return k.Keeper.ValidateSelfClient(ctx, cs)
+	case *lcptypes.ClientState:
+		return nil
 	// case *mocktypes.ClientState:
 	// return nil
 	default:
