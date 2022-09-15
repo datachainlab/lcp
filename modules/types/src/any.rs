@@ -5,7 +5,6 @@ use ibc::core::ics02_client::client_state::AnyClientState;
 use ibc::core::ics02_client::error::Error;
 use ibc::core::ics02_client::header::AnyHeader;
 use ibc_proto::google::protobuf::Any as IBCAny;
-use lcp_proto::google::protobuf::Any as LCPProtoAny;
 use prost_types::Any as ProtoAny;
 use serde::{Deserialize, Serialize};
 use tendermint_proto::Protobuf;
@@ -58,24 +57,6 @@ impl From<IBCAny> for Any {
             type_url: v.type_url,
             value: v.value,
         })
-    }
-}
-
-impl From<LCPProtoAny> for Any {
-    fn from(v: LCPProtoAny) -> Self {
-        Any(ProtoAny {
-            type_url: v.type_url,
-            value: v.value,
-        })
-    }
-}
-
-impl From<Any> for LCPProtoAny {
-    fn from(v: Any) -> Self {
-        LCPProtoAny {
-            type_url: v.0.type_url,
-            value: v.0.value,
-        }
     }
 }
 

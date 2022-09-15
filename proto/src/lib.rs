@@ -9,8 +9,6 @@
 #![allow(rustdoc::bare_urls)]
 #![forbid(unsafe_code)]
 
-pub mod google;
-
 extern crate alloc;
 
 #[cfg(not(feature = "std"))]
@@ -31,22 +29,10 @@ pub const IBC_GO_COMMIT: &str = include_str!("IBC_GO_COMMIT");
 #[cfg(feature = "server")]
 pub const FILE_DESCRIPTOR_SET: &'static [u8] = include_bytes!("descriptor.bin");
 
-pub mod cosmos {
-    pub mod upgrade {
-        pub mod v1beta1 {
-            include_proto!("cosmos.upgrade.v1beta1.rs");
-        }
-    }
-}
+pub use ibc_proto::{cosmos, google};
 
 pub mod ibc {
-    pub mod core {
-        pub mod client {
-            pub mod v1 {
-                include_proto!("ibc.core.client.v1.rs");
-            }
-        }
-    }
+    pub use ibc_proto::ibc::core;
     pub mod lightclients {
         pub mod lcp {
             pub mod v1 {
@@ -55,6 +41,8 @@ pub mod ibc {
         }
     }
 }
+
+pub use ibc_proto::ics23;
 
 pub mod lcp {
     pub mod service {

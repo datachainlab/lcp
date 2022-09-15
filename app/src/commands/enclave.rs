@@ -3,6 +3,7 @@ use anyhow::{bail, Result};
 use attestation_report::EndorsedAttestationVerificationReport;
 use clap::Parser;
 use enclave_api::EnclavePrimitiveAPI;
+use enclave_commands::InitEnclaveInput;
 use log::*;
 use settings::{AVR_KEY_PATH, SEALED_ENCLAVE_KEY_PATH};
 use std::{
@@ -76,7 +77,10 @@ impl EnclaveCmd {
                 }
 
                 let enclave = load_enclave(opts, cmd.enclave.as_ref())?;
-                match enclave.init_enclave_key(spid.as_bytes(), ias_key.as_bytes()) {
+                match enclave.init_enclave_key(InitEnclaveInput {
+                    spid: spid.as_bytes().to_vec(),
+                    ias_key: ias_key.as_bytes().to_vec(),
+                }) {
                     Ok(res) => {
                         let s = serde_json::to_string(&res.report)?;
                         info!("successfully got the AVR");
