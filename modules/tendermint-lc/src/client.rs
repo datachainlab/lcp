@@ -130,8 +130,7 @@ impl LightClient for TendermintLightClient {
             return Err(Error::ICS02Error(ICS02Error::client_frozen(client_id)).into());
         }
 
-        let canonical_client_state =
-            AnyClientState::Tendermint(canonicalize_state_from_any(client_state.clone()));
+        let canonical_client_state = canonicalize_state_from_any(client_state.clone());
 
         // Read consensus state from the host chain store.
         let latest_consensus_state = ctx
@@ -185,8 +184,7 @@ impl LightClient for TendermintLightClient {
             .map_err(|e| {
                 Error::ICS02Error(ICS02Error::header_verification_failure(e.to_string()))
             })?;
-        let new_canonical_client_state =
-            AnyClientState::Tendermint(canonicalize_state_from_any(new_client_state.clone()));
+        let new_canonical_client_state = canonicalize_state_from_any(new_client_state.clone());
 
         let trusted_consensus_state_timestamp: Time = trusted_consensus_state.timestamp().into();
         let options = match client_state {
@@ -248,7 +246,7 @@ impl LightClient for TendermintLightClient {
             proof,
         )?;
 
-        let path = ClientStatePath(counterparty_client_id);
+        let path = Path::ClientState(ClientStatePath(counterparty_client_id));
         let value = expected_client_state
             .encode_vec()
             .map_err(ICS02Error::invalid_any_client_state)
@@ -268,7 +266,7 @@ impl LightClient for TendermintLightClient {
             &prefix,
             &proof,
             consensus_state.root(),
-            path,
+            path.clone(),
             value,
         )
         .map_err(|e| {
@@ -281,10 +279,11 @@ impl LightClient for TendermintLightClient {
         Ok(StateVerificationResult {
             state_commitment: StateCommitment {
                 prefix,
-                path: Path::ClientState(ClientStatePath(client_id)),
+                path,
                 value: expected_client_state.encode_vec().unwrap(),
                 height: proof_height,
-                state_id: gen_state_id(client_state, consensus_state).map_err(Error::OtherError)?,
+                state_id: gen_state_id(canonicalize_state_from_any(client_state), consensus_state)
+                    .map_err(Error::OtherError)?,
             },
         })
     }
@@ -308,11 +307,11 @@ impl LightClient for TendermintLightClient {
             proof,
         )?;
 
-        let path = ClientConsensusStatePath {
+        let path = Path::ClientConsensusState(ClientConsensusStatePath {
             client_id: counterparty_client_id.clone(),
             epoch: counterparty_consensus_height.revision_number(),
             height: counterparty_consensus_height.revision_height(),
-        };
+        });
         let value = expected_client_consensus_state
             .encode_vec()
             .map_err(ICS02Error::invalid_any_consensus_state)
@@ -332,8 +331,8 @@ impl LightClient for TendermintLightClient {
             &prefix,
             &proof,
             consensus_state.root(),
-            path,
-            value,
+            path.clone(),
+            value.clone(),
         )
         .map_err(|e| {
             Error::ICS03Error(ICS03Error::client_state_verification_failure(
@@ -345,14 +344,11 @@ impl LightClient for TendermintLightClient {
         Ok(StateVerificationResult {
             state_commitment: StateCommitment {
                 prefix,
-                path: Path::ClientConsensusState(ClientConsensusStatePath {
-                    client_id,
-                    epoch: counterparty_consensus_height.revision_number(),
-                    height: counterparty_consensus_height.revision_height(),
-                }),
-                value: expected_client_consensus_state.encode_vec().unwrap(),
+                path,
+                value,
                 height: proof_height,
-                state_id: gen_state_id(client_state, consensus_state).map_err(Error::OtherError)?,
+                state_id: gen_state_id(canonicalize_state_from_any(client_state), consensus_state)
+                    .map_err(Error::OtherError)?,
             },
         })
     }
@@ -393,7 +389,8 @@ impl LightClient for TendermintLightClient {
                 path: Path::Connections(ConnectionsPath(counterparty_connection_id)),
                 value: expected_connection_state.encode_vec().unwrap(),
                 height: proof_height,
-                state_id: gen_state_id(client_state, consensus_state).map_err(Error::OtherError)?,
+                state_id: gen_state_id(canonicalize_state_from_any(client_state), consensus_state)
+                    .map_err(Error::OtherError)?,
             },
         })
     }
@@ -439,7 +436,8 @@ impl LightClient for TendermintLightClient {
                 )),
                 value: expected_channel_state.encode_vec().unwrap(),
                 height: proof_height,
-                state_id: gen_state_id(client_state, consensus_state).map_err(Error::OtherError)?,
+                state_id: gen_state_id(canonicalize_state_from_any(client_state), consensus_state)
+                    .map_err(Error::OtherError)?,
             },
         })
     }
@@ -517,10 +515,10 @@ pub fn canonicalize_state(mut client_state: TendermintClientState) -> Tendermint
 }
 
 // wrapper function for canonicalize_state
-pub fn canonicalize_state_from_any(client_state: AnyClientState) -> TendermintClientState {
+pub fn canonicalize_state_from_any(client_state: AnyClientState) -> AnyClientState {
     #[allow(irrefutable_let_patterns)]
     if let AnyClientState::Tendermint(tm_client_state) = client_state {
-        canonicalize_state(tm_client_state)
+        AnyClientState::Tendermint(canonicalize_state(tm_client_state))
     } else {
         unreachable!()
     }
