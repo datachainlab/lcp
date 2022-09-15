@@ -2347,7 +2347,6 @@ version = "0.1.0"
 dependencies = [
  "ibc",
  "ibc-proto",
- "lcp-proto",
  "prost-types",
  "serde",
  "serde_json",
