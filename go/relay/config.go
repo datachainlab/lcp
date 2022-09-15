@@ -18,7 +18,7 @@ func (cfg *ProverConfig) UnpackInterfaces(unpacker codectypes.AnyUnpacker) error
 	if cfg == nil {
 		return nil
 	}
-	if err := unpacker.UnpackAny(cfg.UpstreamProver, new(core.ProverConfigI)); err != nil {
+	if err := unpacker.UnpackAny(cfg.OriginProver, new(core.ProverConfigI)); err != nil {
 		return err
 	}
 	return nil
@@ -28,7 +28,7 @@ func (pc ProverConfig) Build(chain core.ChainI) (core.ProverI, error) {
 	if err := pc.Validate(); err != nil {
 		return nil, err
 	}
-	prover, err := pc.UpstreamProver.GetCachedValue().(core.ProverConfigI).Build(chain)
+	prover, err := pc.OriginProver.GetCachedValue().(core.ProverConfigI).Build(chain)
 	if err != nil {
 		return nil, err
 	}

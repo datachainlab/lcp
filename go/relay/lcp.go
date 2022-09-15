@@ -57,7 +57,7 @@ func activateClient(pathEnd *core.PathEnd, srcProver *Prover, dst *core.Provable
 		return err
 	}
 
-	lcpQueryier := NewLCPClientQueryier(srcProver.client, srcProver.config.UpstreamClientId)
+	lcpQueryier := NewLCPClientQueryier(srcProver.client, srcProver.config.ElcClientId)
 	header2, err := srcProver.originProver.SetupHeader(lcpQueryier, header)
 	if err != nil {
 		return err
@@ -70,7 +70,7 @@ func activateClient(pathEnd *core.PathEnd, srcProver *Prover, dst *core.Provable
 	// 2. send a request that contains a header from 1 to update the client in ELC
 
 	res, err := srcProver.client.UpdateClient(context.TODO(), &elc.MsgUpdateClient{
-		ClientId: srcProver.config.UpstreamClientId,
+		ClientId: srcProver.config.ElcClientId,
 		Header:   anyHeader,
 	})
 	if err != nil {

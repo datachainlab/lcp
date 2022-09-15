@@ -105,8 +105,8 @@ func (pr *Prover) CreateMsgCreateClient(clientID string, dstHeader core.HeaderI,
 	}
 
 	// TODO relayer should persist res.ClientId
-	if pr.config.UpstreamClientId != res.ClientId {
-		return nil, fmt.Errorf("you must specify '%v' as upstream_client_id, but got %v", res.ClientId, pr.config.UpstreamClientId)
+	if pr.config.ElcClientId != res.ClientId {
+		return nil, fmt.Errorf("you must specify '%v' as elc_client_id, but got %v", res.ClientId, pr.config.ElcClientId)
 	}
 
 	clientState := &lcptypes.ClientState{
@@ -149,7 +149,7 @@ func (pr *Prover) SetupHeader(dst core.LightClientIBCQueryierI, baseSrcHeader co
 		return nil, err
 	}
 	msg := elc.MsgUpdateClient{
-		ClientId: pr.config.UpstreamClientId,
+		ClientId: pr.config.ElcClientId,
 		Header:   anyHeader,
 	}
 	res, err := pr.client.UpdateClient(context.TODO(), &msg)
@@ -179,7 +179,7 @@ func (pr *Prover) QueryClientConsensusStateWithProof(height int64, dstClientCons
 	}
 
 	res2, err := pr.client.ELCMsgClient.VerifyClientConsensus(context.TODO(), &elc.MsgVerifyClientConsensus{
-		ClientId:                      pr.config.UpstreamClientId,
+		ClientId:                      pr.config.ElcClientId,
 		TargetAnyClientConsensusState: res.ConsensusState,
 		Prefix:                        []byte(host.StoreKey),
 		CounterpartyClientId:          pr.path.ClientID,
@@ -209,7 +209,7 @@ func (pr *Prover) QueryClientStateWithProof(height int64) (*clienttypes.QueryCli
 	}
 
 	res2, err := pr.client.ELCMsgClient.VerifyClient(context.TODO(), &elc.MsgVerifyClient{
-		ClientId:             pr.config.UpstreamClientId,
+		ClientId:             pr.config.ElcClientId,
 		TargetAnyClientState: res.ClientState,
 		Prefix:               []byte(host.StoreKey),
 		CounterpartyClientId: pr.path.ClientID,
@@ -243,7 +243,7 @@ func (pr *Prover) QueryConnectionWithProof(height int64) (*conntypes.QueryConnec
 	}
 
 	res2, err := pr.client.ELCMsgClient.VerifyConnection(context.TODO(), &elc.MsgVerifyConnection{
-		ClientId:                 pr.config.UpstreamClientId,
+		ClientId:                 pr.config.ElcClientId,
 		ExpectedConnection:       *res.Connection,
 		Prefix:                   []byte(host.StoreKey),
 		CounterpartyConnectionId: pr.path.ConnectionID,
@@ -277,7 +277,7 @@ func (pr *Prover) QueryChannelWithProof(height int64) (chanRes *chantypes.QueryC
 	}
 
 	res2, err := pr.client.ELCMsgClient.VerifyChannel(context.TODO(), &elc.MsgVerifyChannel{
-		ClientId:              pr.config.UpstreamClientId,
+		ClientId:              pr.config.ElcClientId,
 		ExpectedChannel:       *res.Channel,
 		Prefix:                []byte(host.StoreKey),
 		CounterpartyPortId:    pr.path.PortID,
