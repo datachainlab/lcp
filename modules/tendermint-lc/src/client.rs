@@ -3,6 +3,7 @@ use crate::errors::TendermintError as Error;
 use crate::sgx_reexport_prelude::*;
 use alloc::borrow::ToOwned;
 use commitments::{gen_state_id, gen_state_id_from_any, StateCommitment, UpdateClientCommitment};
+use crypto::Keccak256;
 use ibc::clients::ics07_tendermint::client_state::ClientState as TendermintClientState;
 use ibc::clients::ics07_tendermint::error::Error as TendermintError;
 use ibc::core::ics02_client::client_consensus::{AnyConsensusState, ConsensusState};
@@ -261,6 +262,7 @@ impl LightClient for TendermintLightClient {
             .verify_height(proof_height.try_into().map_err(Error::ICS02Error)?)
             .map_err(|e| Error::ICS02Error(e.into()))?;
 
+        let commitment_value = value.keccak256();
         verify_membership(
             tm_client_state,
             &prefix,
@@ -277,14 +279,14 @@ impl LightClient for TendermintLightClient {
         })?;
 
         Ok(StateVerificationResult {
-            state_commitment: StateCommitment {
+            state_commitment: StateCommitment::new(
                 prefix,
                 path,
-                value: expected_client_state.encode_vec().unwrap(),
-                height: proof_height,
-                state_id: gen_state_id(canonicalize_state_from_any(client_state), consensus_state)
+                commitment_value,
+                proof_height,
+                gen_state_id(canonicalize_state_from_any(client_state), consensus_state)
                     .map_err(Error::OtherError)?,
-            },
+            ),
         })
     }
 
@@ -326,13 +328,14 @@ impl LightClient for TendermintLightClient {
             .verify_height(proof_height.try_into().map_err(Error::ICS02Error)?)
             .map_err(|e| Error::ICS02Error(e.into()))?;
 
+        let commitment_value = value.keccak256();
         verify_membership(
             tm_client_state,
             &prefix,
             &proof,
             consensus_state.root(),
             path.clone(),
-            value.clone(),
+            value,
         )
         .map_err(|e| {
             Error::ICS03Error(ICS03Error::client_state_verification_failure(
@@ -342,14 +345,14 @@ impl LightClient for TendermintLightClient {
         })?;
 
         Ok(StateVerificationResult {
-            state_commitment: StateCommitment {
+            state_commitment: StateCommitment::new(
                 prefix,
                 path,
-                value,
-                height: proof_height,
-                state_id: gen_state_id(canonicalize_state_from_any(client_state), consensus_state)
+                commitment_value,
+                proof_height,
+                gen_state_id(canonicalize_state_from_any(client_state), consensus_state)
                     .map_err(Error::OtherError)?,
-            },
+            ),
         })
     }
 
@@ -384,14 +387,14 @@ impl LightClient for TendermintLightClient {
             .map_err(|e| Error::ICS03Error(ICS03Error::verify_connection_state(e)))?;
 
         Ok(StateVerificationResult {
-            state_commitment: StateCommitment {
+            state_commitment: StateCommitment::new(
                 prefix,
-                path: Path::Connections(ConnectionsPath(counterparty_connection_id)),
-                value: expected_connection_state.encode_vec().unwrap(),
-                height: proof_height,
-                state_id: gen_state_id(canonicalize_state_from_any(client_state), consensus_state)
+                Path::Connections(ConnectionsPath(counterparty_connection_id)),
+                expected_connection_state.encode_vec().unwrap().keccak256(),
+                proof_height,
+                gen_state_id(canonicalize_state_from_any(client_state), consensus_state)
                     .map_err(Error::OtherError)?,
-            },
+            ),
         })
     }
 
@@ -428,17 +431,17 @@ impl LightClient for TendermintLightClient {
             .map_err(|e| Error::ICS04Error(ICS04Error::verify_channel_failed(e)))?;
 
         Ok(StateVerificationResult {
-            state_commitment: StateCommitment {
+            state_commitment: StateCommitment::new(
                 prefix,
-                path: Path::ChannelEnds(ChannelEndsPath(
+                Path::ChannelEnds(ChannelEndsPath(
                     counterparty_port_id,
                     counterparty_channel_id,
                 )),
-                value: expected_channel_state.encode_vec().unwrap(),
-                height: proof_height,
-                state_id: gen_state_id(canonicalize_state_from_any(client_state), consensus_state)
+                expected_channel_state.encode_vec().unwrap().keccak256(),
+                proof_height,
+                gen_state_id(canonicalize_state_from_any(client_state), consensus_state)
                     .map_err(Error::OtherError)?,
-            },
+            ),
         })
     }
 

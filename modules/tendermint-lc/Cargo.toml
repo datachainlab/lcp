@@ -27,6 +27,7 @@ lcp-types = { path = "../types", default-features = false }
 light-client = { path = "../light-client", default-features = false }
 commitments = { path = "../commitments", default-features = false }
 validation-context = { path = "../validation-context", default-features = false }
+crypto = { path = "../crypto", default-features = false }
 
 [features]
 default = ["std"]
@@ -37,7 +38,8 @@ std = [
     "lcp-types/std",
     "commitments/std",
     "validation-context/std",
-    "light-client/std"
+    "light-client/std",
+    "crypto/std"
 ]
 sgx = [
     "sgx_tstd",
@@ -47,5 +49,6 @@ sgx = [
     "lcp-types/sgx",
     "commitments/sgx",
     "validation-context/sgx",
-    "light-client/sgx"
+    "light-client/sgx",
+    "crypto/sgx"
 ]

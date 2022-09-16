@@ -15,6 +15,7 @@ import (
 	host "github.com/cosmos/ibc-go/v4/modules/core/24-host"
 	"github.com/cosmos/ibc-go/v4/modules/core/exported"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
 )
 
 const (
@@ -275,6 +276,8 @@ func (cs ClientState) VerifyMembership(
 	if err != nil {
 		return err
 	}
+	commitmentValue := crypto.Keccak256Hash(value)
+
 	if !height.EQ(commitment.Height) {
 		return sdkerrors.Wrapf(ErrInvalidStateCommitment, "invalid height: expected=%v got=%v", height, commitment.Height)
 	}
@@ -284,8 +287,8 @@ func (cs ClientState) VerifyMembership(
 	if !bytes.Equal(commitmentPath, commitment.Path) {
 		return sdkerrors.Wrapf(ErrInvalidStateCommitment, "invalid path: expected=%v got=%v", string(commitmentPath), string(commitment.Path))
 	}
-	if !bytes.Equal(value, commitment.Value) {
-		return sdkerrors.Wrapf(ErrInvalidStateCommitment, "invalid value: expected=%v got=%v", value, commitment.Value)
+	if commitmentValue != commitment.Value {
+		return sdkerrors.Wrapf(ErrInvalidStateCommitment, "invalid value: expected=%X got=%X", commitmentValue[:], commitment.Value)
 	}
 	if !commitment.StateID.EqualBytes(consensusState.StateId) {
 		return sdkerrors.Wrapf(ErrInvalidStateCommitment, "invalid state ID: expected=%v got=%v", consensusState.StateId, commitment.StateID)

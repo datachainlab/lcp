@@ -1,5 +1,6 @@
 #[cfg(feature = "sgx")]
 use crate::sgx_reexport_prelude::*;
+use std::string::String;
 
 #[derive(thiserror::Error, Debug)]
 pub enum CommitmentError {
@@ -13,6 +14,8 @@ pub enum CommitmentError {
     ICS24PathError(ibc::core::ics24_host::path::PathError),
     #[error("RLPDecoderError: {0}")]
     RLPDecoderError(rlp::DecoderError),
+    #[error("InvalidCommitmentFormatError: {0}")]
+    InvalidCommitmentFormatError(String),
     #[error("TypeError")]
     TypeError(#[from] lcp_types::TypeError),
     #[error("TimeError")]

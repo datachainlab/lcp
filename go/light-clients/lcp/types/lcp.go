@@ -119,7 +119,7 @@ func ParseUpdateClientCommitment(bz []byte) (*UpdateClientCommitment, error) {
 type StateCommitment struct {
 	Prefix  []byte
 	Path    []byte
-	Value   []byte
+	Value   [32]byte
 	Height  clienttypes.Height
 	StateID StateID
 }
