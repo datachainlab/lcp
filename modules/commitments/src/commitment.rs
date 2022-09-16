@@ -87,7 +87,7 @@ impl UpdateClientCommitment {
             new_height: r.at(4)?.as_val::<Vec<u8>>()?.as_slice().try_into()?,
             timestamp: Time::from_unix_timestamp_nanos(u128_from_bytes(
                 r.at(5)?.as_val::<Vec<u8>>()?.as_slice(),
-            ))?,
+            )?)?,
             validation_params: ValidationParams::from_bytes(
                 r.at(6)?.as_val::<Vec<u8>>()?.as_slice(),
             ),
@@ -99,17 +99,33 @@ impl UpdateClientCommitment {
 pub struct StateCommitment {
     pub prefix: CommitmentPrefix,
     pub path: Path,
-    pub value: Vec<u8>,
+    pub value: [u8; 32],
     pub height: Height,
     pub state_id: StateID,
 }
 
 impl StateCommitment {
+    pub fn new(
+        prefix: CommitmentPrefix,
+        path: Path,
+        value: [u8; 32],
+        height: Height,
+        state_id: StateID,
+    ) -> Self {
+        Self {
+            prefix,
+            path,
+            value,
+            height,
+            state_id,
+        }
+    }
+
     pub fn to_vec(self) -> Vec<u8> {
         let mut st = rlp::RlpStream::new_list(5);
         st.append(&self.prefix.as_bytes());
         st.append(&self.path.to_string());
-        st.append(&self.value);
+        st.append(&self.value.as_slice());
         st.append(&Into::<Vec<u8>>::into(self.height));
         st.append(&self.state_id.to_vec());
         st.out().to_vec()
@@ -124,17 +140,37 @@ impl StateCommitment {
                 .try_into()
                 .map_err(Error::ICS23Error)?,
             path: Path::from_str(&r.at(1)?.as_val::<String>()?).map_err(Error::ICS24PathError)?,
-            value: r.at(2)?.as_val::<Vec<u8>>()?,
+            value: bytes_to_array(r.at(2)?.as_val::<Vec<u8>>()?.as_slice())?,
             height: r.at(3)?.as_val::<Vec<u8>>()?.as_slice().try_into()?,
             state_id: r.at(4)?.as_val::<Vec<u8>>()?.as_slice().try_into()?,
         })
     }
 }
 
-fn u128_from_bytes(bz: &[u8]) -> u128 {
-    let mut ar: [u8; 16] = Default::default();
-    ar.copy_from_slice(bz);
-    u128::from_be_bytes(ar)
+fn u128_from_bytes(bz: &[u8]) -> Result<u128, Error> {
+    if bz.len() == 16 {
+        let mut ar: [u8; 16] = Default::default();
+        ar.copy_from_slice(bz);
+        Ok(u128::from_be_bytes(ar))
+    } else {
+        Err(Error::InvalidCommitmentFormatError(format!(
+            "bytes length must be 16, but got {}",
+            bz.len()
+        )))
+    }
+}
+
+fn bytes_to_array(bz: &[u8]) -> Result<[u8; 32], Error> {
+    if bz.len() == 32 {
+        let mut ar: [u8; 32] = Default::default();
+        ar.copy_from_slice(bz);
+        Ok(ar)
+    } else {
+        Err(Error::InvalidCommitmentFormatError(format!(
+            "bytes length must be 32, but got {}",
+            bz.len()
+        )))
+    }
 }
 
 #[cfg(test)]
@@ -176,7 +212,7 @@ mod tests {
                 path: Path::ClientType(ibc::core::ics24_host::path::ClientTypePath(
                     ClientId::new(ClientType::Tendermint, thread_rng().gen()).unwrap(),
                 )),
-                value: gen_rand_vec(32),
+                value: bytes_to_array(gen_rand_vec(32).as_slice()).unwrap(),
                 height: gen_rand_height(),
                 state_id: gen_rand_state_id(),
             };

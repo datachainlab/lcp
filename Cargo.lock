@@ -4361,6 +4361,7 @@ dependencies = [
  "anyhow 1.0.28",
  "anyhow 1.0.58",
  "commitments",
+ "crypto",
  "ibc",
  "ibc-proto",
  "lazy_static",
