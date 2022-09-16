@@ -10,12 +10,12 @@
   },
   "prover": {
     "@type": "/relayer.provers.lcp.config.ProverConfig",
-    "upstream_prover": {
+    "origin_prover": {
       "@type": "/relayer.chains.tendermint.config.ProverConfig",
       "trusting_period": "336h"
     },
     "lcp_service_address": "localhost:50051",
     "mrenclave": "0xd79043bb9d2690dacb96c1b4c340200c9e6eae2c78a3f02f271e2f3a448316ae",
-    "upstream_client_id": "07-tendermint-0"
+    "elc_client_id": "07-tendermint-0"
   }
 }
