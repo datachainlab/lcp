@@ -38,5 +38,12 @@ retry 5 $RLY lcp-tendermint light init $CHAINID_TWO -f
 $RLY paths add $CHAINID_ONE $CHAINID_TWO $PATH_NAME --file=./configs/path.json
 
 retry 5 $RLY tx clients $PATH_NAME
+
+retry 5 $RLY lcp register-key $PATH_NAME --src=true
+retry 5 $RLY lcp register-key $PATH_NAME --src=false
+
+retry 5 $RLY lcp activate-client $PATH_NAME --src=true
+retry 5 $RLY lcp activate-client $PATH_NAME --src=false
+
 retry 5 $RLY tx connection $PATH_NAME
 retry 5 $RLY tx channel $PATH_NAME

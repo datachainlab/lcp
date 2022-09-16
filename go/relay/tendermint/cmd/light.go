@@ -42,7 +42,7 @@ func initLightCmd(ctx *config.Context) *cobra.Command {
 				return err
 			}
 			chain := c.ChainI.(*tendermint.Chain)
-			prover := c.ProverI.(*relay.Prover).GetUpstreamProver().(*tendermint.Prover)
+			prover := c.ProverI.(*relay.Prover).GetOriginProver().(*tendermint.Prover)
 			db, df, err := prover.NewLightDB()
 			if err != nil {
 				return err
@@ -96,7 +96,7 @@ func updateLightCmd(ctx *config.Context) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			prover := c.ProverI.(*relay.Prover).GetUpstreamProver().(*tendermint.Prover)
+			prover := c.ProverI.(*relay.Prover).GetOriginProver().(*tendermint.Prover)
 			bh, err := prover.GetLatestLightHeader()
 			if err != nil {
 				return err
@@ -129,7 +129,7 @@ func lightHeaderCmd(ctx *config.Context) *cobra.Command {
 				return err
 			}
 			chain := c.ChainI.(*tendermint.Chain)
-			prover := c.ProverI.(*relay.Prover).GetUpstreamProver().(*tendermint.Prover)
+			prover := c.ProverI.(*relay.Prover).GetOriginProver().(*tendermint.Prover)
 
 			var header *tmclient.Header
 			switch len(args) {
@@ -186,7 +186,7 @@ func deleteLightCmd(ctx *config.Context) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			prover := c.ProverI.(*relay.Prover).GetUpstreamProver().(*tendermint.Prover)
+			prover := c.ProverI.(*relay.Prover).GetOriginProver().(*tendermint.Prover)
 			err = prover.DeleteLightDB()
 			if err != nil {
 				return err

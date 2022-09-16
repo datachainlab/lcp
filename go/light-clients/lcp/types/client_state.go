@@ -121,20 +121,22 @@ func (cs ClientState) VerifyClientState(store sdk.KVStore, cdc codec.BinaryCodec
 }
 
 func (cs ClientState) VerifyClientConsensusState(store sdk.KVStore, cdc codec.BinaryCodec, height exported.Height, counterpartyClientIdentifier string, consensusHeight exported.Height, prefix exported.Prefix, proof []byte, consensusState exported.ConsensusState) error {
-	merklePath := commitmenttypes.NewMerklePath(host.FullConsensusStatePath(counterpartyClientIdentifier, consensusHeight))
-	merklePath, err := commitmenttypes.ApplyPrefix(prefix, merklePath)
-	if err != nil {
-		return err
-	}
-	path, err := cdc.Marshal(&merklePath)
-	if err != nil {
-		return err
-	}
-	bz, err := cdc.MarshalInterface(consensusState)
-	if err != nil {
-		return err
-	}
-	return cs.VerifyMembership(fakeBlockTime(), store, cdc, height, 0, 0, proof, path, bz)
+	// TODO implement
+	// merklePath := commitmenttypes.NewMerklePath(host.FullConsensusStatePath(counterpartyClientIdentifier, consensusHeight))
+	// merklePath, err := commitmenttypes.ApplyPrefix(prefix, merklePath)
+	// if err != nil {
+	// 	return err
+	// }
+	// path, err := cdc.Marshal(&merklePath)
+	// if err != nil {
+	// 	return err
+	// }
+	// bz, err := cdc.MarshalInterface(consensusState)
+	// if err != nil {
+	// 	return err
+	// }
+	// return cs.VerifyMembership(fakeBlockTime(), store, cdc, height, 0, 0, proof, path, bz)
+	return nil
 }
 
 func (cs ClientState) VerifyConnectionState(store sdk.KVStore, cdc codec.BinaryCodec, height exported.Height, prefix exported.Prefix, proof []byte, connectionID string, counterpartyConnection exported.ConnectionI) error {
@@ -280,7 +282,7 @@ func (cs ClientState) VerifyMembership(
 		return sdkerrors.Wrapf(ErrInvalidStateCommitment, "invalid prefix: expected=%v got=%v", prefixBytes, commitment.Prefix)
 	}
 	if !bytes.Equal(commitmentPath, commitment.Path) {
-		return sdkerrors.Wrapf(ErrInvalidStateCommitment, "invalid path: expected=%v got=%v", commitmentPath, commitment.Path)
+		return sdkerrors.Wrapf(ErrInvalidStateCommitment, "invalid path: expected=%v got=%v", string(commitmentPath), string(commitment.Path))
 	}
 	if !bytes.Equal(value, commitment.Value) {
 		return sdkerrors.Wrapf(ErrInvalidStateCommitment, "invalid value: expected=%v got=%v", value, commitment.Value)
