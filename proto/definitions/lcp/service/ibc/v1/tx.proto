@@ -1,0 +1,145 @@
+
+syntax = "proto3";
+package lcp.service.ibc.v1;
+
+import "gogoproto/gogo.proto";
+import "google/protobuf/any.proto";
+import "ibc/core/client/v1/client.proto";
+import "ibc/core/connection/v1/connection.proto";
+import "ibc/core/channel/v1/channel.proto";
+import "ibc/core/commitment/v1/commitment.proto";
+
+option go_package = "github.com/datachainlab/lcp/go/relay/ibc";
+option (gogoproto.goproto_getters_all) = false;
+
+// Msg defines the ELC Msg service.
+service Msg {
+  rpc VerifyClient(MsgVerifyClient) returns (MsgVerificationResponse);
+
+  rpc VerifyClientConsensus(MsgVerifyClientConsensus) returns (MsgVerificationResponse);
+
+  rpc VerifyConnection(MsgVerifyConnection) returns (MsgVerificationResponse);
+
+  rpc VerifyChannel(MsgVerifyChannel) returns (MsgVerificationResponse);
+
+  rpc VerifyPacket(MsgVerifyPacket) returns (MsgVerificationResponse);
+
+  rpc VerifyPacketAcknowledgement(MsgVerifyPacketAcknowledgement) returns (MsgVerificationResponse);
+
+  rpc VerifyPacketReceiptAbsense(MsgVerifyPacketReceiptAbsense) returns (MsgVerificationResponse);
+
+  rpc VerifyNextSequenceRecv(MsgVerifyNextSequenceRecv) returns (MsgVerificationResponse);
+}
+
+message MsgVerificationResponse {
+  option (gogoproto.equal)           = false;
+  option (gogoproto.goproto_getters) = false;
+
+  bytes commitment = 1;
+  bytes signer = 2;
+  bytes signature = 3;
+}
+
+message MsgVerifyClient {
+  option (gogoproto.equal)           = false;
+  option (gogoproto.goproto_getters) = false;
+
+  string client_id = 1;
+  bytes prefix = 2;
+  string counterparty_client_id = 3;
+  .google.protobuf.Any target_any_client_state = 4;
+  .ibc.core.client.v1.Height proof_height = 5 [(gogoproto.nullable) = false];
+  bytes proof = 6;
+}
+
+message MsgVerifyClientConsensus {
+  option (gogoproto.equal)           = false;
+  option (gogoproto.goproto_getters) = false;
+
+  string client_id = 1;
+  bytes prefix = 2;
+  string counterparty_client_id = 3;
+  .ibc.core.client.v1.Height counterparty_consensus_height = 4 [(gogoproto.nullable) = false];
+  .google.protobuf.Any target_any_client_consensus_state = 5;
+  .ibc.core.client.v1.Height proof_height = 6 [(gogoproto.nullable) = false];
+  bytes proof = 7;
+}
+
+message MsgVerifyConnection {
+  option (gogoproto.equal)           = false;
+  option (gogoproto.goproto_getters) = false;
+
+  string client_id = 1;
+  bytes prefix = 2;
+  string counterparty_connection_id = 3;
+  .ibc.core.connection.v1.ConnectionEnd expected_connection = 4 [(gogoproto.nullable) = false];
+  .ibc.core.client.v1.Height proof_height = 5 [(gogoproto.nullable) = false];
+  bytes proof = 6;
+}
+
+message MsgVerifyChannel {
+  option (gogoproto.equal)           = false;
+  option (gogoproto.goproto_getters) = false;
+
+  string client_id = 1;
+  bytes prefix = 2;
+  string counterparty_port_id = 3;
+  string counterparty_channel_id = 4;
+  .ibc.core.channel.v1.Channel expected_channel = 5 [(gogoproto.nullable) = false];
+  .ibc.core.client.v1.Height proof_height = 6 [(gogoproto.nullable) = false];
+  bytes proof = 7;
+}
+
+message MsgVerifyPacket {
+  option (gogoproto.equal)           = false;
+  option (gogoproto.goproto_getters) = false;
+  
+  string client_id = 1;
+  bytes prefix = 2;
+  string port_id = 3;
+  string channel_id = 4;
+  uint64 sequence = 5;
+  .ibc.core.channel.v1.Packet packet = 6 [(gogoproto.nullable) = false];
+  .ibc.core.client.v1.Height proof_height = 7 [(gogoproto.nullable) = false];
+  bytes proof = 8;
+}
+
+message MsgVerifyPacketAcknowledgement {
+  option (gogoproto.equal)           = false;
+  option (gogoproto.goproto_getters) = false;
+  
+  string client_id = 1;
+  bytes prefix = 2;
+  string port_id = 3;
+  string channel_id = 4;
+  uint64 sequence = 5;
+  bytes acknowledgement = 6;
+  .ibc.core.client.v1.Height proof_height = 7 [(gogoproto.nullable) = false];
+  bytes proof = 8;
+}
+
+message MsgVerifyPacketReceiptAbsense {
+  option (gogoproto.equal)           = false;
+  option (gogoproto.goproto_getters) = false;
+  
+  string client_id = 1;
+  bytes prefix = 2;
+  string port_id = 3;
+  string channel_id = 4;
+  uint64 sequence = 5;
+  .ibc.core.client.v1.Height proof_height = 6 [(gogoproto.nullable) = false];
+  bytes proof = 7;
+}
+
+message MsgVerifyNextSequenceRecv {
+  option (gogoproto.equal)           = false;
+  option (gogoproto.goproto_getters) = false;
+  
+  string client_id = 1;
+  bytes prefix = 2;
+  string port_id = 3;
+  string channel_id = 4;
+  uint64 next_sequence_recv = 5;
+  .ibc.core.client.v1.Height proof_height = 6 [(gogoproto.nullable) = false];
+  bytes proof = 7;
+}

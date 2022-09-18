@@ -2,30 +2,26 @@ use crate::errors::EnclaveCommandError as Error;
 #[cfg(feature = "sgx")]
 use crate::sgx_reexport_prelude::*;
 use commitments::{StateCommitmentProof, UpdateClientCommitmentProof};
-use core::convert::{TryFrom, TryInto};
+use core::convert::TryFrom;
 use core::str::FromStr;
-use ibc::core::ics03_connection::connection::ConnectionEnd;
-use ibc::core::ics04_channel::channel::ChannelEnd;
-use ibc::core::ics24_host::identifier::{ChannelId, ClientId, ConnectionId, PortId};
+use ibc::core::ics24_host::identifier::ClientId;
 use lcp_proto::lcp::service::elc::v1::{
     MsgCreateClient, MsgCreateClientResponse, MsgUpdateClient, MsgUpdateClientResponse,
-    MsgVerifyChannel, MsgVerifyChannelResponse, MsgVerifyClient, MsgVerifyClientConsensus,
-    MsgVerifyClientConsensusResponse, MsgVerifyClientResponse, MsgVerifyConnection,
-    MsgVerifyConnectionResponse, QueryClientRequest, QueryClientResponse,
+    MsgVerifyMembership, MsgVerifyMembershipResponse, MsgVerifyNonMembership,
+    MsgVerifyNonMembershipResponse, QueryClientRequest, QueryClientResponse,
 };
 use lcp_types::{Any, Height, Time};
 use serde::{Deserialize, Serialize};
-use std::string::ToString;
+use std::string::{String, ToString};
 use std::vec::Vec;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub enum LightClientCommand {
     InitClient(InitClientInput),
     UpdateClient(UpdateClientInput),
-    VerifyClient(VerifyClientInput),
-    VerifyClientConsensus(VerifyClientConsensusInput),
-    VerifyConnection(VerifyConnectionInput),
-    VerifyChannel(VerifyChannelInput),
+
+    VerifyMembership(VerifyMembershipInput),
+    VerifyNonMembership(VerifyNonMembershipInput),
 
     QueryClient(QueryClientInput),
 }
@@ -80,27 +76,19 @@ impl TryFrom<MsgUpdateClient> for UpdateClientInput {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct VerifyClientInput {
+pub struct VerifyMembershipInput {
     pub client_id: ClientId,
-    pub target_any_client_state: Any,
     pub prefix: Vec<u8>,
-    pub counterparty_client_id: ClientId,
+    pub path: String,
+    pub value: Vec<u8>,
     pub proof: CommitmentProofPair,
 }
 
-impl TryFrom<MsgVerifyClient> for VerifyClientInput {
+impl TryFrom<MsgVerifyMembership> for VerifyMembershipInput {
     type Error = Error;
 
-    fn try_from(msg: MsgVerifyClient) -> Result<Self, Self::Error> {
+    fn try_from(msg: MsgVerifyMembership) -> Result<Self, Self::Error> {
         let client_id = ClientId::from_str(&msg.client_id).map_err(Error::ICS24ValidationError)?;
-        let target_any_client_state = msg
-            .target_any_client_state
-            .ok_or_else(|| {
-                Error::InvalidArgumentError("target_any_client_state must be non-nil".into())
-            })?
-            .into();
-        let counterparty_client_id =
-            ClientId::from_str(&msg.counterparty_client_id).map_err(Error::ICS24ValidationError)?;
         let proof = CommitmentProofPair(
             msg.proof_height
                 .ok_or_else(|| Error::InvalidArgumentError("proof_height must be non-nil".into()))?
@@ -109,45 +97,27 @@ impl TryFrom<MsgVerifyClient> for VerifyClientInput {
         );
         Ok(Self {
             client_id,
-            target_any_client_state,
             prefix: msg.prefix,
-            counterparty_client_id,
             proof,
+            path: msg.path,
+            value: msg.value,
         })
     }
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct VerifyClientConsensusInput {
+pub struct VerifyNonMembershipInput {
     pub client_id: ClientId,
-    pub target_any_client_consensus_state: Any,
     pub prefix: Vec<u8>,
-    pub counterparty_client_id: ClientId,
-    pub counterparty_consensus_height: Height,
+    pub path: String,
     pub proof: CommitmentProofPair,
 }
 
-impl TryFrom<MsgVerifyClientConsensus> for VerifyClientConsensusInput {
+impl TryFrom<MsgVerifyNonMembership> for VerifyNonMembershipInput {
     type Error = Error;
 
-    fn try_from(msg: MsgVerifyClientConsensus) -> Result<Self, Self::Error> {
+    fn try_from(msg: MsgVerifyNonMembership) -> Result<Self, Self::Error> {
         let client_id = ClientId::from_str(&msg.client_id).map_err(Error::ICS24ValidationError)?;
-        let target_any_client_consensus_state = msg
-            .target_any_client_consensus_state
-            .ok_or_else(|| {
-                Error::InvalidArgumentError(
-                    "target_any_client_consensus_state must be non-nil".into(),
-                )
-            })?
-            .into();
-        let counterparty_client_id =
-            ClientId::from_str(&msg.counterparty_client_id).map_err(Error::ICS24ValidationError)?;
-        let counterparty_consensus_height = msg
-            .counterparty_consensus_height
-            .ok_or_else(|| {
-                Error::InvalidArgumentError("counterparty_consensus_height must be non-nil".into())
-            })?
-            .into();
         let proof = CommitmentProofPair(
             msg.proof_height
                 .ok_or_else(|| Error::InvalidArgumentError("proof_height must be non-nil".into()))?
@@ -156,91 +126,9 @@ impl TryFrom<MsgVerifyClientConsensus> for VerifyClientConsensusInput {
         );
         Ok(Self {
             client_id,
-            target_any_client_consensus_state,
             prefix: msg.prefix,
-            counterparty_client_id,
-            counterparty_consensus_height,
             proof,
-        })
-    }
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct VerifyConnectionInput {
-    pub client_id: ClientId,
-    pub expected_connection: ConnectionEnd,
-    pub prefix: Vec<u8>,
-    pub counterparty_connection_id: ConnectionId,
-    pub proof: CommitmentProofPair,
-}
-
-impl TryFrom<MsgVerifyConnection> for VerifyConnectionInput {
-    type Error = Error;
-
-    fn try_from(msg: MsgVerifyConnection) -> Result<Self, Self::Error> {
-        let client_id = ClientId::from_str(&msg.client_id).map_err(Error::ICS24ValidationError)?;
-        let proof = CommitmentProofPair(
-            msg.proof_height
-                .ok_or_else(|| Error::InvalidArgumentError("proof_height must be non-nil".into()))?
-                .into(),
-            msg.proof,
-        );
-        let counterparty_connection_id = ConnectionId::from_str(&msg.counterparty_connection_id)
-            .map_err(Error::ICS24ValidationError)?;
-        let expected_connection: ConnectionEnd = msg
-            .expected_connection
-            .ok_or_else(|| {
-                Error::InvalidArgumentError("expected_connection must be non-nil".into())
-            })?
-            .try_into()
-            .map_err(Error::ICS03Error)?;
-        Ok(Self {
-            client_id,
-            expected_connection,
-            prefix: msg.prefix,
-            counterparty_connection_id,
-            proof,
-        })
-    }
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct VerifyChannelInput {
-    pub client_id: ClientId,
-    pub expected_channel: ChannelEnd,
-    pub prefix: Vec<u8>,
-    pub counterparty_port_id: PortId,
-    pub counterparty_channel_id: ChannelId,
-    pub proof: CommitmentProofPair,
-}
-
-impl TryFrom<MsgVerifyChannel> for VerifyChannelInput {
-    type Error = Error;
-
-    fn try_from(msg: MsgVerifyChannel) -> Result<Self, Self::Error> {
-        let client_id = ClientId::from_str(&msg.client_id).map_err(Error::ICS24ValidationError)?;
-        let counterparty_port_id =
-            PortId::from_str(&msg.counterparty_port_id).map_err(Error::ICS24ValidationError)?;
-        let counterparty_channel_id = ChannelId::from_str(&msg.counterparty_channel_id)
-            .map_err(Error::ICS24ValidationError)?;
-        let proof = CommitmentProofPair(
-            msg.proof_height
-                .ok_or_else(|| Error::InvalidArgumentError("proof_height must be non-nil".into()))?
-                .into(),
-            msg.proof,
-        );
-        let expected_channel: ChannelEnd = msg
-            .expected_channel
-            .ok_or_else(|| Error::InvalidArgumentError("expected_channel must be non-nil".into()))?
-            .try_into()
-            .map_err(Error::ICS04Error)?;
-        Ok(Self {
-            client_id,
-            expected_channel,
-            prefix: msg.prefix,
-            counterparty_port_id,
-            counterparty_channel_id,
-            proof,
+            path: msg.path,
         })
     }
 }
@@ -266,10 +154,9 @@ impl TryFrom<QueryClientRequest> for QueryClientInput {
 pub enum LightClientResult {
     InitClient(InitClientResult),
     UpdateClient(UpdateClientResult),
-    VerifyClient(VerifyClientResult),
-    VerifyClientConsensus(VerifyClientConsensusResult),
-    VerifyConnection(VerifyConnectionResult),
-    VerifyChannel(VerifyChannelResult),
+
+    VerifyMembership(VerifyMembershipResult),
+    VerifyNonMembership(VerifyNonMembershipResult),
 
     QueryClient(QueryClientResult),
 }
@@ -306,10 +193,10 @@ impl From<UpdateClientResult> for MsgUpdateClientResponse {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct VerifyClientResult(pub StateCommitmentProof);
+pub struct VerifyMembershipResult(pub StateCommitmentProof);
 
-impl From<VerifyClientResult> for MsgVerifyClientResponse {
-    fn from(res: VerifyClientResult) -> Self {
+impl From<VerifyMembershipResult> for MsgVerifyMembershipResponse {
+    fn from(res: VerifyMembershipResult) -> Self {
         Self {
             commitment: res.0.commitment_bytes,
             signer: res.0.signer,
@@ -319,36 +206,10 @@ impl From<VerifyClientResult> for MsgVerifyClientResponse {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct VerifyClientConsensusResult(pub StateCommitmentProof);
+pub struct VerifyNonMembershipResult(pub StateCommitmentProof);
 
-impl From<VerifyClientConsensusResult> for MsgVerifyClientConsensusResponse {
-    fn from(res: VerifyClientConsensusResult) -> Self {
-        Self {
-            commitment: res.0.commitment_bytes,
-            signer: res.0.signer,
-            signature: res.0.signature,
-        }
-    }
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct VerifyConnectionResult(pub StateCommitmentProof);
-
-impl From<VerifyConnectionResult> for MsgVerifyConnectionResponse {
-    fn from(res: VerifyConnectionResult) -> Self {
-        Self {
-            commitment: res.0.commitment_bytes,
-            signer: res.0.signer,
-            signature: res.0.signature,
-        }
-    }
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct VerifyChannelResult(pub StateCommitmentProof);
-
-impl From<VerifyChannelResult> for MsgVerifyChannelResponse {
-    fn from(res: VerifyChannelResult) -> Self {
+impl From<VerifyNonMembershipResult> for MsgVerifyNonMembershipResponse {
+    fn from(res: VerifyNonMembershipResult) -> Self {
         Self {
             commitment: res.0.commitment_bytes,
             signer: res.0.signer,

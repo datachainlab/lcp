@@ -2203,6 +2203,7 @@ dependencies = [
  "relay-tendermint",
  "settings",
  "tempdir",
+ "tendermint-proto",
  "tendermint-rpc",
  "thiserror 1.0.31",
  "tokio",
@@ -2333,11 +2334,13 @@ version = "0.1.0"
 dependencies = [
  "base64 0.13.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "bytes",
+ "ibc",
  "ibc-proto",
  "prost",
  "prost-types",
  "schemars",
  "serde",
+ "sha2 0.8.2",
  "tonic",
 ]
 

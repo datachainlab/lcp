@@ -6,11 +6,15 @@ mod tests {
     use enclave_api::{Enclave, EnclavePrimitiveAPI};
     use enclave_commands::{
         CommitmentProofPair, InitClientInput, InitEnclaveInput, UpdateClientInput,
-        VerifyChannelInput,
+        VerifyMembershipInput,
     };
     use ibc::core::{
         ics23_commitment::{commitment::CommitmentProofBytes, merkle::MerkleProof},
-        ics24_host::identifier::{ChannelId, PortId},
+        ics24_host::{
+            identifier::{ChannelId, PortId},
+            path::ChannelEndsPath,
+            Path,
+        },
     };
     use ibc_test_framework::prelude::{
         run_binary_channel_test, BinaryChannelTest, ChainHandle, Config, ConnectedChains,
@@ -21,6 +25,7 @@ mod tests {
     use relay_tendermint::Relayer;
     use std::{str::FromStr, sync::Arc};
     use tempdir::TempDir;
+    use tendermint_proto::Protobuf;
     use tokio::runtime::Runtime as TokioRuntime;
 
     static ENCLAVE_FILE: &'static str = "../../bin/enclave.signed.so";
@@ -156,12 +161,11 @@ mod tests {
 
         info!("expected channel is {:?}", res.0);
 
-        let _ = enclave.verify_channel(VerifyChannelInput {
+        let _ = enclave.verify_membership(VerifyMembershipInput {
             client_id,
-            expected_channel: res.0,
             prefix: "ibc".into(),
-            counterparty_port_id: port_id,
-            counterparty_channel_id: channel_id,
+            path: Path::ChannelEnds(ChannelEndsPath(port_id, channel_id)).to_string(),
+            value: res.0.encode_vec().unwrap(),
             proof: CommitmentProofPair(
                 res.2.try_into().map_err(|e| anyhow!("{:?}", e))?,
                 merkle_proof_to_bytes(res.1)?,

@@ -2,9 +2,8 @@ use crate::service::AppService;
 use enclave_api::EnclaveProtoAPI;
 use lcp_proto::lcp::service::elc::v1::{
     msg_server::Msg, query_server::Query, MsgCreateClient, MsgCreateClientResponse,
-    MsgUpdateClient, MsgUpdateClientResponse, MsgVerifyChannel, MsgVerifyChannelResponse,
-    MsgVerifyClient, MsgVerifyClientConsensus, MsgVerifyClientConsensusResponse,
-    MsgVerifyClientResponse, MsgVerifyConnection, MsgVerifyConnectionResponse, QueryClientRequest,
+    MsgUpdateClient, MsgUpdateClientResponse, MsgVerifyMembership, MsgVerifyMembershipResponse,
+    MsgVerifyNonMembership, MsgVerifyNonMembershipResponse, QueryClientRequest,
     QueryClientResponse,
 };
 use tonic::{Request, Response, Status};
@@ -31,44 +30,24 @@ impl Msg for AppService {
         }
     }
 
-    async fn verify_client(
+    async fn verify_membership(
         &self,
-        request: Request<MsgVerifyClient>,
-    ) -> Result<Response<MsgVerifyClientResponse>, Status> {
-        match self.enclave.proto_verify_client(request.into_inner()) {
+        request: Request<MsgVerifyMembership>,
+    ) -> Result<Response<MsgVerifyMembershipResponse>, Status> {
+        match self.enclave.proto_verify_membership(request.into_inner()) {
             Ok(res) => Ok(Response::new(res)),
             Err(e) => Err(Status::aborted(e.to_string())),
         }
     }
 
-    async fn verify_client_consensus(
+    async fn verify_non_membership(
         &self,
-        request: Request<MsgVerifyClientConsensus>,
-    ) -> Result<Response<MsgVerifyClientConsensusResponse>, Status> {
+        request: Request<MsgVerifyNonMembership>,
+    ) -> Result<Response<MsgVerifyNonMembershipResponse>, Status> {
         match self
             .enclave
-            .proto_verify_client_consensus(request.into_inner())
+            .proto_verify_non_membership(request.into_inner())
         {
-            Ok(res) => Ok(Response::new(res)),
-            Err(e) => Err(Status::aborted(e.to_string())),
-        }
-    }
-
-    async fn verify_connection(
-        &self,
-        request: Request<MsgVerifyConnection>,
-    ) -> Result<Response<MsgVerifyConnectionResponse>, Status> {
-        match self.enclave.proto_verify_connection(request.into_inner()) {
-            Ok(res) => Ok(Response::new(res)),
-            Err(e) => Err(Status::aborted(e.to_string())),
-        }
-    }
-
-    async fn verify_channel(
-        &self,
-        request: Request<MsgVerifyChannel>,
-    ) -> Result<Response<MsgVerifyChannelResponse>, Status> {
-        match self.enclave.proto_verify_channel(request.into_inner()) {
             Ok(res) => Ok(Response::new(res)),
             Err(e) => Err(Status::aborted(e.to_string())),
         }

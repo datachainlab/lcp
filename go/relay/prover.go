@@ -14,6 +14,7 @@ import (
 	ibcexported "github.com/cosmos/ibc-go/v4/modules/core/exported"
 	lcptypes "github.com/datachainlab/lcp/go/light-clients/lcp/types"
 	"github.com/datachainlab/lcp/go/relay/elc"
+	"github.com/datachainlab/lcp/go/relay/ibc"
 	"github.com/hyperledger-labs/yui-relayer/core"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -50,7 +51,7 @@ func (pr *Prover) initServiceClient() error {
 	if err != nil {
 		return err
 	}
-	pr.lcpServiceClient = NewLCPServiceClient(conn)
+	pr.lcpServiceClient = NewLCPServiceClient(conn, pr.codec)
 	return nil
 }
 
@@ -177,16 +178,18 @@ func (pr *Prover) QueryClientConsensusStateWithProof(height int64, dstClientCons
 	if err != nil {
 		return nil, err
 	}
-
-	res2, err := pr.lcpServiceClient.VerifyClientConsensus(context.TODO(), &elc.MsgVerifyClientConsensus{
-		ClientId:                      pr.config.ElcClientId,
-		TargetAnyClientConsensusState: res.ConsensusState,
-		Prefix:                        []byte(host.StoreKey),
-		CounterpartyClientId:          pr.path.ClientID,
-		CounterpartyConsensusHeight:   dstClientConsHeight.(clienttypes.Height),
-		ProofHeight:                   res.ProofHeight,
-		Proof:                         res.Proof,
-	})
+	res2, err := pr.lcpServiceClient.VerifyClientConsensus(
+		context.TODO(),
+		&ibc.MsgVerifyClientConsensus{
+			ClientId:                      pr.config.ElcClientId,
+			TargetAnyClientConsensusState: res.ConsensusState,
+			Prefix:                        []byte(host.StoreKey),
+			CounterpartyClientId:          pr.path.ClientID,
+			CounterpartyConsensusHeight:   dstClientConsHeight.(clienttypes.Height),
+			ProofHeight:                   res.ProofHeight,
+			Proof:                         res.Proof,
+		},
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -208,14 +211,17 @@ func (pr *Prover) QueryClientStateWithProof(height int64) (*clienttypes.QueryCli
 		return nil, err
 	}
 
-	res2, err := pr.lcpServiceClient.VerifyClient(context.TODO(), &elc.MsgVerifyClient{
-		ClientId:             pr.config.ElcClientId,
-		TargetAnyClientState: res.ClientState,
-		Prefix:               []byte(host.StoreKey),
-		CounterpartyClientId: pr.path.ClientID,
-		ProofHeight:          res.ProofHeight,
-		Proof:                res.Proof,
-	})
+	res2, err := pr.lcpServiceClient.VerifyClient(
+		context.TODO(),
+		&ibc.MsgVerifyClient{
+			ClientId:             pr.config.ElcClientId,
+			TargetAnyClientState: res.ClientState,
+			Prefix:               []byte(host.StoreKey),
+			CounterpartyClientId: pr.path.ClientID,
+			ProofHeight:          res.ProofHeight,
+			Proof:                res.Proof,
+		},
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -242,14 +248,17 @@ func (pr *Prover) QueryConnectionWithProof(height int64) (*conntypes.QueryConnec
 		return res, nil
 	}
 
-	res2, err := pr.lcpServiceClient.VerifyConnection(context.TODO(), &elc.MsgVerifyConnection{
-		ClientId:                 pr.config.ElcClientId,
-		ExpectedConnection:       *res.Connection,
-		Prefix:                   []byte(host.StoreKey),
-		CounterpartyConnectionId: pr.path.ConnectionID,
-		ProofHeight:              res.ProofHeight,
-		Proof:                    res.Proof,
-	})
+	res2, err := pr.lcpServiceClient.VerifyConnection(
+		context.TODO(),
+		&ibc.MsgVerifyConnection{
+			ClientId:                 pr.config.ElcClientId,
+			ExpectedConnection:       *res.Connection,
+			Prefix:                   []byte(host.StoreKey),
+			CounterpartyConnectionId: pr.path.ConnectionID,
+			ProofHeight:              res.ProofHeight,
+			Proof:                    res.Proof,
+		},
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -276,15 +285,18 @@ func (pr *Prover) QueryChannelWithProof(height int64) (chanRes *chantypes.QueryC
 		return res, nil
 	}
 
-	res2, err := pr.lcpServiceClient.VerifyChannel(context.TODO(), &elc.MsgVerifyChannel{
-		ClientId:              pr.config.ElcClientId,
-		ExpectedChannel:       *res.Channel,
-		Prefix:                []byte(host.StoreKey),
-		CounterpartyPortId:    pr.path.PortID,
-		CounterpartyChannelId: pr.path.ChannelID,
-		ProofHeight:           res.ProofHeight,
-		Proof:                 res.Proof,
-	})
+	res2, err := pr.lcpServiceClient.VerifyChannel(
+		context.TODO(),
+		&ibc.MsgVerifyChannel{
+			ClientId:              pr.config.ElcClientId,
+			ExpectedChannel:       *res.Channel,
+			Prefix:                []byte(host.StoreKey),
+			CounterpartyPortId:    pr.path.PortID,
+			CounterpartyChannelId: pr.path.ChannelID,
+			ProofHeight:           res.ProofHeight,
+			Proof:                 res.Proof,
+		},
+	)
 	if err != nil {
 		return nil, err
 	}

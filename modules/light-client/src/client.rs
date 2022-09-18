@@ -2,11 +2,7 @@
 use crate::sgx_reexport_prelude::*;
 use crate::{context::ClientReader, LightClientError};
 use commitments::{StateCommitment, UpdateClientCommitment};
-use ibc::core::{
-    ics03_connection::connection::ConnectionEnd,
-    ics04_channel::channel::ChannelEnd,
-    ics24_host::identifier::{ChannelId, ClientId, ConnectionId, PortId},
-};
+use ibc::core::ics24_host::identifier::ClientId;
 use lcp_types::{Any, Height, Time};
 use std::string::String;
 use std::vec::Vec;
@@ -26,51 +22,31 @@ pub trait LightClient {
         any_client_state: Any,
         any_consensus_state: Any,
     ) -> Result<CreateClientResult, LightClientError>;
+
     fn update_client(
         &self,
         ctx: &dyn ClientReader,
         client_id: ClientId,
         any_header: Any,
     ) -> Result<UpdateClientResult, LightClientError>;
-    fn verify_client(
+
+    fn verify_membership(
         &self,
         ctx: &dyn ClientReader,
         client_id: ClientId,
-        expected_client_state: Any,
-        counterparty_prefix: Vec<u8>,
-        counterparty_client_id: ClientId,
+        prefix: Vec<u8>,
+        path: String,
+        value: Vec<u8>,
         proof_height: Height,
         proof: Vec<u8>,
     ) -> Result<StateVerificationResult, LightClientError>;
-    fn verify_client_consensus(
+
+    fn verify_non_membership(
         &self,
         ctx: &dyn ClientReader,
         client_id: ClientId,
-        expected_client_consensus_state: Any,
-        counterparty_prefix: Vec<u8>,
-        counterparty_client_id: ClientId,
-        counterparty_consensus_height: Height,
-        proof_height: Height,
-        proof: Vec<u8>,
-    ) -> Result<StateVerificationResult, LightClientError>;
-    fn verify_connection(
-        &self,
-        ctx: &dyn ClientReader,
-        client_id: ClientId,
-        expected_connection_state: ConnectionEnd,
-        counterparty_prefix: Vec<u8>,
-        counterparty_connection_id: ConnectionId,
-        proof_height: Height,
-        proof: Vec<u8>,
-    ) -> Result<StateVerificationResult, LightClientError>;
-    fn verify_channel(
-        &self,
-        ctx: &dyn ClientReader,
-        client_id: ClientId,
-        expected_channel_state: ChannelEnd,
-        counterparty_prefix: Vec<u8>,
-        counterparty_port_id: PortId,
-        counterparty_channel_id: ChannelId,
+        prefix: Vec<u8>,
+        path: String,
         proof_height: Height,
         proof: Vec<u8>,
     ) -> Result<StateVerificationResult, LightClientError>;
