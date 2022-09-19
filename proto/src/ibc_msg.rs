@@ -15,7 +15,6 @@ use ibc::core::ics24_host::path::{
     ConnectionsPath, SeqRecvsPath,
 };
 use ibc::core::ics24_host::Path;
-use ibc_proto::ibc::core::client::v1::Height;
 use prost::Message;
 use sha2::Digest;
 use tonic::Status;
@@ -149,42 +148,15 @@ impl TryFrom<MsgVerifyPacket> for MsgVerifyMembership {
             sequence: msg.sequence.into(),
         })
         .to_string();
-        let packet = msg
-            .packet
-            .ok_or(Status::invalid_argument("packet must be non-nil"))?;
-        let timeout_height = packet
-            .timeout_height
-            .ok_or(Status::invalid_argument("timeout_height must be non-nil"))?;
-        let value = packet_commitment(&packet.data, timeout_height, packet.timeout_timestamp);
-
         Ok(Self {
             client_id: msg.client_id,
             prefix: msg.prefix,
             path,
-            value,
+            value: msg.commitment,
             proof_height: msg.proof_height,
             proof: msg.proof,
         })
     }
-}
-
-fn packet_commitment(
-    packet_data: &[u8],
-    timeout_height: Height,
-    timeout_timestamp: u64,
-) -> Vec<u8> {
-    let mut hash_input = timeout_timestamp.to_be_bytes().to_vec();
-
-    let revision_number = timeout_height.revision_number.to_be_bytes();
-    hash_input.append(&mut revision_number.to_vec());
-
-    let revision_height = timeout_height.revision_height.to_be_bytes();
-    hash_input.append(&mut revision_height.to_vec());
-
-    let packet_data_hash = sha2::Sha256::digest(packet_data).to_vec();
-    hash_input.append(&mut packet_data_hash.to_vec());
-
-    sha2::Sha256::digest(&hash_input).to_vec()
 }
 
 impl TryFrom<MsgVerifyPacketAcknowledgement> for MsgVerifyMembership {

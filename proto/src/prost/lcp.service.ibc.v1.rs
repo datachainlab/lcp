@@ -83,8 +83,8 @@ pub struct MsgVerifyPacket {
     pub channel_id: ::prost::alloc::string::String,
     #[prost(uint64, tag="5")]
     pub sequence: u64,
-    #[prost(message, optional, tag="6")]
-    pub packet: ::core::option::Option<super::super::super::super::ibc::core::channel::v1::Packet>,
+    #[prost(bytes="vec", tag="6")]
+    pub commitment: ::prost::alloc::vec::Vec<u8>,
     #[prost(message, optional, tag="7")]
     pub proof_height: ::core::option::Option<super::super::super::super::ibc::core::client::v1::Height>,
     #[prost(bytes="vec", tag="8")]
