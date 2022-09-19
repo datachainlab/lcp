@@ -1,9 +1,8 @@
 use crate::{Enclave, Result};
 use lcp_proto::lcp::service::elc::v1::{
     MsgCreateClient, MsgCreateClientResponse, MsgUpdateClient, MsgUpdateClientResponse,
-    MsgVerifyChannel, MsgVerifyChannelResponse, MsgVerifyClient, MsgVerifyClientConsensus,
-    MsgVerifyClientConsensusResponse, MsgVerifyClientResponse, MsgVerifyConnection,
-    MsgVerifyConnectionResponse, QueryClientRequest, QueryClientResponse,
+    MsgVerifyMembership, MsgVerifyMembershipResponse, MsgVerifyNonMembership,
+    MsgVerifyNonMembershipResponse, QueryClientRequest, QueryClientResponse,
 };
 
 use super::primitive::EnclavePrimitiveAPI;
@@ -17,26 +16,18 @@ pub trait EnclaveProtoAPI: EnclavePrimitiveAPI {
         Ok(self.update_client(msg.try_into()?)?.into())
     }
 
-    fn proto_verify_client(&self, msg: MsgVerifyClient) -> Result<MsgVerifyClientResponse> {
-        Ok(self.verify_client(msg.try_into()?)?.into())
-    }
-
-    fn proto_verify_client_consensus(
+    fn proto_verify_membership(
         &self,
-        msg: MsgVerifyClientConsensus,
-    ) -> Result<MsgVerifyClientConsensusResponse> {
-        Ok(self.verify_client_consensus(msg.try_into()?)?.into())
+        msg: MsgVerifyMembership,
+    ) -> Result<MsgVerifyMembershipResponse> {
+        Ok(self.verify_membership(msg.try_into()?)?.into())
     }
 
-    fn proto_verify_connection(
+    fn proto_verify_non_membership(
         &self,
-        msg: MsgVerifyConnection,
-    ) -> Result<MsgVerifyConnectionResponse> {
-        Ok(self.verify_connection(msg.try_into()?)?.into())
-    }
-
-    fn proto_verify_channel(&self, msg: MsgVerifyChannel) -> Result<MsgVerifyChannelResponse> {
-        Ok(self.verify_channel(msg.try_into()?)?.into())
+        msg: MsgVerifyNonMembership,
+    ) -> Result<MsgVerifyNonMembershipResponse> {
+        Ok(self.verify_non_membership(msg.try_into()?)?.into())
     }
 
     fn proto_query_client(&self, query: QueryClientRequest) -> Result<QueryClientResponse> {

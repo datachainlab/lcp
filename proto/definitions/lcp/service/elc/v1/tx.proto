@@ -4,9 +4,6 @@ package lcp.service.elc.v1;
 import "gogoproto/gogo.proto";
 import "google/protobuf/any.proto";
 import "ibc/core/client/v1/client.proto";
-import "ibc/core/connection/v1/connection.proto";
-import "ibc/core/channel/v1/channel.proto";
-import "ibc/core/commitment/v1/commitment.proto";
 
 option go_package = "github.com/datachainlab/lcp/go/relay/elc";
 option (gogoproto.goproto_getters_all) = false;
@@ -19,13 +16,11 @@ service Msg {
   // UpdateClient defines a rpc handler method for MsgUpdateClient.
   rpc UpdateClient(MsgUpdateClient) returns (MsgUpdateClientResponse);
 
-  rpc VerifyClient(MsgVerifyClient) returns (MsgVerifyClientResponse);
+  // VerifyMembership defines a rpc handler method for MsgVerifyMembership
+  rpc VerifyMembership(MsgVerifyMembership) returns (MsgVerifyMembershipResponse);
 
-  rpc VerifyClientConsensus(MsgVerifyClientConsensus) returns (MsgVerifyClientConsensusResponse);
-
-  rpc VerifyConnection(MsgVerifyConnection) returns (MsgVerifyConnectionResponse);
-
-  rpc VerifyChannel(MsgVerifyChannel) returns (MsgVerifyChannelResponse);
+  // VerifyNonMembership defines a rpc handler method for MsgVerifyNonMembership
+  rpc VerifyNonMembership(MsgVerifyNonMembership) returns (MsgVerifyNonMembershipResponse);
 }
 
 // MsgCreateClient defines a message to create an IBC client
@@ -75,19 +70,19 @@ message MsgUpdateClientResponse {
   bytes signature = 3;
 }
 
-message MsgVerifyClient {
+message MsgVerifyMembership {
   option (gogoproto.equal)           = false;
   option (gogoproto.goproto_getters) = false;
 
   string client_id = 1;
-  google.protobuf.Any target_any_client_state = 2;
-  bytes prefix = 3;
-  string counterparty_client_id = 4;
+  bytes prefix = 2;
+  string path = 3;
+  bytes value = 4;
   ibc.core.client.v1.Height proof_height = 5 [(gogoproto.nullable) = false];
   bytes proof = 6;
 }
 
-message MsgVerifyClientResponse {
+message MsgVerifyMembershipResponse {
   option (gogoproto.equal)           = false;
   option (gogoproto.goproto_getters) = false;
 
@@ -96,63 +91,18 @@ message MsgVerifyClientResponse {
   bytes signature = 3;
 }
 
-message MsgVerifyClientConsensus {
+message MsgVerifyNonMembership {
   option (gogoproto.equal)           = false;
   option (gogoproto.goproto_getters) = false;
 
   string client_id = 1;
-  google.protobuf.Any target_any_client_consensus_state = 2;
-  bytes prefix = 3;
-  string counterparty_client_id = 4;
-  ibc.core.client.v1.Height counterparty_consensus_height = 5 [(gogoproto.nullable) = false];
-  ibc.core.client.v1.Height proof_height = 6 [(gogoproto.nullable) = false];
-  bytes proof = 7;
+  bytes prefix = 2;
+  string path = 3;
+  ibc.core.client.v1.Height proof_height = 4 [(gogoproto.nullable) = false];
+  bytes proof = 5;
 }
 
-message MsgVerifyClientConsensusResponse {
-  option (gogoproto.equal)           = false;
-  option (gogoproto.goproto_getters) = false;
-
-  bytes commitment = 1;
-  bytes signer = 2;
-  bytes signature = 3;
-}
-
-message MsgVerifyConnection {
-  option (gogoproto.equal)           = false;
-  option (gogoproto.goproto_getters) = false;
-
-  string client_id = 1;
-  ibc.core.connection.v1.ConnectionEnd expected_connection = 2 [(gogoproto.nullable) = false];
-  bytes prefix = 3;
-  string counterparty_connection_id = 4;
-  ibc.core.client.v1.Height proof_height = 5 [(gogoproto.nullable) = false];
-  bytes proof = 6;
-}
-
-message MsgVerifyConnectionResponse {
-  option (gogoproto.equal)           = false;
-  option (gogoproto.goproto_getters) = false;
-
-  bytes commitment = 1;
-  bytes signer = 2;
-  bytes signature = 3;
-}
-
-message MsgVerifyChannel {
-  option (gogoproto.equal)           = false;
-  option (gogoproto.goproto_getters) = false;
-
-  string client_id = 1;
-  ibc.core.channel.v1.Channel expected_channel = 2 [(gogoproto.nullable) = false];
-  bytes prefix = 3;
-  string counterparty_port_id = 4;
-  string counterparty_channel_id = 5;
-  ibc.core.client.v1.Height proof_height = 6 [(gogoproto.nullable) = false];
-  bytes proof = 7;
-}
-
-message MsgVerifyChannelResponse {
+message MsgVerifyNonMembershipResponse {
   option (gogoproto.equal)           = false;
   option (gogoproto.goproto_getters) = false;
 

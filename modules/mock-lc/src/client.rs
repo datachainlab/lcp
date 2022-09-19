@@ -11,9 +11,7 @@ use ibc::core::ics02_client::client_state::{
 use ibc::core::ics02_client::client_type::ClientType;
 use ibc::core::ics02_client::error::Error as ICS02Error;
 use ibc::core::ics02_client::header::{AnyHeader, Header};
-use ibc::core::ics03_connection::connection::ConnectionEnd;
-use ibc::core::ics04_channel::channel::ChannelEnd;
-use ibc::core::ics24_host::identifier::{ChannelId, ClientId, ConnectionId, PortId};
+use ibc::core::ics24_host::identifier::ClientId;
 use lcp_types::{Any, Height, Time};
 use light_client::{
     ClientReader, CreateClientResult, LightClient, LightClientError, LightClientRegistry,
@@ -149,57 +147,28 @@ impl LightClient for MockLightClient {
         })
     }
 
-    fn verify_client(
+    fn verify_membership(
         &self,
         ctx: &dyn ClientReader,
         client_id: ClientId,
-        expected_client_state: Any,
-        counterparty_prefix: Vec<u8>,
-        counterparty_client_id: ClientId,
+        prefix: Vec<u8>,
+        path: String,
+        value: Vec<u8>,
         proof_height: Height,
         proof: Vec<u8>,
     ) -> Result<StateVerificationResult, LightClientError> {
         todo!()
     }
 
-    fn verify_client_consensus(
+    fn verify_non_membership(
         &self,
         ctx: &dyn ClientReader,
         client_id: ClientId,
-        expected_client_consensus_state: Any,
-        counterparty_prefix: Vec<u8>,
-        counterparty_client_id: ClientId,
-        counterparty_consensus_height: Height,
+        prefix: Vec<u8>,
+        path: String,
         proof_height: Height,
         proof: Vec<u8>,
     ) -> Result<StateVerificationResult, LightClientError> {
-        todo!()
-    }
-
-    fn verify_connection(
-        &self,
-        ctx: &dyn ClientReader,
-        client_id: ClientId,
-        expected_connection_state: ConnectionEnd,
-        counterparty_prefix: Vec<u8>,
-        counterparty_connection_id: ConnectionId,
-        proof_height: Height,
-        proof: Vec<u8>,
-    ) -> light_client::Result<StateVerificationResult> {
-        todo!()
-    }
-
-    fn verify_channel(
-        &self,
-        ctx: &dyn ClientReader,
-        client_id: ClientId,
-        expected_channel_state: ChannelEnd,
-        counterparty_prefix: Vec<u8>,
-        counterparty_port_id: PortId,
-        counterparty_channel_id: ChannelId,
-        proof_height: Height,
-        proof: Vec<u8>,
-    ) -> light_client::Result<StateVerificationResult> {
         todo!()
     }
 

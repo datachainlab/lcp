@@ -108,60 +108,6 @@ impl LightClient for LCPLightClient {
         })
     }
 
-    fn verify_client(
-        &self,
-        ctx: &dyn ClientReader,
-        client_id: ClientId,
-        expected_client_state: Any,
-        counterparty_prefix: Vec<u8>,
-        counterparty_client_id: ClientId,
-        proof_height: Height,
-        proof: Vec<u8>,
-    ) -> Result<StateVerificationResult, LightClientError> {
-        todo!()
-    }
-
-    fn verify_client_consensus(
-        &self,
-        ctx: &dyn ClientReader,
-        client_id: ClientId,
-        expected_client_consensus_state: Any,
-        counterparty_prefix: Vec<u8>,
-        counterparty_client_id: ClientId,
-        counterparty_consensus_height: Height,
-        proof_height: Height,
-        proof: Vec<u8>,
-    ) -> Result<StateVerificationResult, LightClientError> {
-        todo!()
-    }
-
-    fn verify_connection(
-        &self,
-        ctx: &dyn ClientReader,
-        client_id: ClientId,
-        expected_connection_state: ConnectionEnd,
-        counterparty_prefix: Vec<u8>,
-        counterparty_connection_id: ConnectionId,
-        proof_height: Height,
-        proof: Vec<u8>,
-    ) -> Result<StateVerificationResult, LightClientError> {
-        todo!()
-    }
-
-    fn verify_channel(
-        &self,
-        ctx: &dyn ClientReader,
-        client_id: ClientId,
-        expected_channel_state: ChannelEnd,
-        counterparty_prefix: Vec<u8>,
-        counterparty_port_id: PortId,
-        counterparty_channel_id: ChannelId,
-        proof_height: Height,
-        proof: Vec<u8>,
-    ) -> Result<StateVerificationResult, LightClientError> {
-        todo!()
-    }
-
     fn client_type(&self) -> String {
         LCP_CLIENT_TYPE.to_owned()
     }
@@ -177,6 +123,31 @@ impl LightClient for LCPLightClient {
             .try_into()
             .map_err(LightClientError::ICS02Error)?;
         Ok(client_state.latest_height)
+    }
+
+    fn verify_membership(
+        &self,
+        ctx: &dyn ClientReader,
+        client_id: ClientId,
+        prefix: Vec<u8>,
+        path: String,
+        value: Vec<u8>,
+        proof_height: Height,
+        proof: Vec<u8>,
+    ) -> Result<StateVerificationResult, LightClientError> {
+        todo!()
+    }
+
+    fn verify_non_membership(
+        &self,
+        ctx: &dyn ClientReader,
+        client_id: ClientId,
+        prefix: Vec<u8>,
+        path: String,
+        proof_height: Height,
+        proof: Vec<u8>,
+    ) -> Result<StateVerificationResult, LightClientError> {
+        todo!()
     }
 }
 

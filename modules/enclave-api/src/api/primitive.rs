@@ -3,9 +3,8 @@ use enclave_commands::{
     Command, CommandParams, CommandResult, EnclaveCommand, EnclaveManageCommand,
     EnclaveManageResult, InitClientInput, InitClientResult, InitEnclaveInput, InitEnclaveResult,
     LightClientCommand, LightClientResult, QueryClientInput, QueryClientResult, UpdateClientInput,
-    UpdateClientResult, VerifyChannelInput, VerifyChannelResult, VerifyClientConsensusInput,
-    VerifyClientConsensusResult, VerifyClientInput, VerifyClientResult, VerifyConnectionInput,
-    VerifyConnectionResult,
+    UpdateClientResult, VerifyMembershipInput, VerifyMembershipResult, VerifyNonMembershipInput,
+    VerifyNonMembershipResult,
 };
 use sgx_types::sgx_status_t;
 
@@ -22,21 +21,16 @@ pub trait EnclavePrimitiveAPI {
     /// update_client updates the ELC instance corresponding to client_id
     fn update_client(&self, input: UpdateClientInput) -> Result<UpdateClientResult>;
 
-    /// verify_client verifies the client state of the upstream chain and generates the state commitment of its result
-    fn verify_client(&self, input: VerifyClientInput) -> Result<VerifyClientResult>;
+    /// verify_membership verifies the existence of the state in the upstream chain and generates the state commitment of its result
+    fn verify_membership(&self, input: VerifyMembershipInput) -> Result<VerifyMembershipResult>;
 
-    /// verify_client_consensus verifies the consensus state of the upstream chain and generates the state commitment of its result
-    fn verify_client_consensus(
+    /// verify_non_membership verifies the non-existence of the state in the upstream chain and generates the state commitment of its result
+    fn verify_non_membership(
         &self,
-        input: VerifyClientConsensusInput,
-    ) -> Result<VerifyClientConsensusResult>;
+        input: VerifyNonMembershipInput,
+    ) -> Result<VerifyNonMembershipResult>;
 
-    /// verify_connection verifies the connection state of the upstream chain and generates the state commitment of its result
-    fn verify_connection(&self, input: VerifyConnectionInput) -> Result<VerifyConnectionResult>;
-
-    /// verify_channel verifies the channel state of the upstream chain and generates the state commitment of its result
-    fn verify_channel(&self, input: VerifyChannelInput) -> Result<VerifyChannelResult>;
-
+    /// query_client queries the client state and consensus state
     fn query_client(&self, input: QueryClientInput) -> Result<QueryClientResult>;
 }
 
@@ -108,45 +102,25 @@ impl EnclavePrimitiveAPI for Enclave {
         }
     }
 
-    fn verify_client(&self, input: VerifyClientInput) -> Result<VerifyClientResult> {
+    fn verify_membership(&self, input: VerifyMembershipInput) -> Result<VerifyMembershipResult> {
         match self.execute_command(&EnclaveCommand::new(
             CommandParams::new(self.home.clone()),
-            Command::LightClient(LightClientCommand::VerifyClient(input)),
+            Command::LightClient(LightClientCommand::VerifyMembership(input)),
         ))? {
-            CommandResult::LightClient(LightClientResult::VerifyClient(res)) => Ok(res),
+            CommandResult::LightClient(LightClientResult::VerifyMembership(res)) => Ok(res),
             _ => unreachable!(),
         }
     }
 
-    fn verify_client_consensus(
+    fn verify_non_membership(
         &self,
-        input: VerifyClientConsensusInput,
-    ) -> Result<VerifyClientConsensusResult> {
+        input: VerifyNonMembershipInput,
+    ) -> Result<VerifyNonMembershipResult> {
         match self.execute_command(&EnclaveCommand::new(
             CommandParams::new(self.home.clone()),
-            Command::LightClient(LightClientCommand::VerifyClientConsensus(input)),
+            Command::LightClient(LightClientCommand::VerifyNonMembership(input)),
         ))? {
-            CommandResult::LightClient(LightClientResult::VerifyClientConsensus(res)) => Ok(res),
-            _ => unreachable!(),
-        }
-    }
-
-    fn verify_connection(&self, input: VerifyConnectionInput) -> Result<VerifyConnectionResult> {
-        match self.execute_command(&EnclaveCommand::new(
-            CommandParams::new(self.home.clone()),
-            Command::LightClient(LightClientCommand::VerifyConnection(input)),
-        ))? {
-            CommandResult::LightClient(LightClientResult::VerifyConnection(res)) => Ok(res),
-            _ => unreachable!(),
-        }
-    }
-
-    fn verify_channel(&self, input: VerifyChannelInput) -> Result<VerifyChannelResult> {
-        match self.execute_command(&EnclaveCommand::new(
-            CommandParams::new(self.home.clone()),
-            Command::LightClient(LightClientCommand::VerifyChannel(input)),
-        ))? {
-            CommandResult::LightClient(LightClientResult::VerifyChannel(res)) => Ok(res),
+            CommandResult::LightClient(LightClientResult::VerifyNonMembership(res)) => Ok(res),
             _ => unreachable!(),
         }
     }

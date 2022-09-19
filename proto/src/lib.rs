@@ -22,6 +22,9 @@ macro_rules! include_proto {
     };
 }
 
+#[cfg(feature = "server")]
+mod ibc_msg;
+
 /// The version (commit hash) of IBC Go used when generating this library.
 pub const IBC_GO_COMMIT: &str = include_str!("IBC_GO_COMMIT");
 
@@ -54,6 +57,13 @@ pub mod lcp {
         pub mod elc {
             pub mod v1 {
                 include_proto!("lcp.service.elc.v1.rs");
+            }
+        }
+        pub mod ibc {
+            pub mod v1 {
+                include_proto!("lcp.service.ibc.v1.rs");
+                #[cfg(feature = "server")]
+                pub use crate::ibc_msg::*;
             }
         }
     }

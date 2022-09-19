@@ -51,15 +51,15 @@ pub struct MsgUpdateClientResponse {
 }
 #[derive(::serde::Serialize, ::serde::Deserialize)]
 #[derive(Clone, PartialEq, ::prost::Message)]
-pub struct MsgVerifyClient {
+pub struct MsgVerifyMembership {
     #[prost(string, tag="1")]
     pub client_id: ::prost::alloc::string::String,
-    #[prost(message, optional, tag="2")]
-    pub target_any_client_state: ::core::option::Option<super::super::super::super::google::protobuf::Any>,
-    #[prost(bytes="vec", tag="3")]
+    #[prost(bytes="vec", tag="2")]
     pub prefix: ::prost::alloc::vec::Vec<u8>,
-    #[prost(string, tag="4")]
-    pub counterparty_client_id: ::prost::alloc::string::String,
+    #[prost(string, tag="3")]
+    pub path: ::prost::alloc::string::String,
+    #[prost(bytes="vec", tag="4")]
+    pub value: ::prost::alloc::vec::Vec<u8>,
     #[prost(message, optional, tag="5")]
     pub proof_height: ::core::option::Option<super::super::super::super::ibc::core::client::v1::Height>,
     #[prost(bytes="vec", tag="6")]
@@ -67,7 +67,7 @@ pub struct MsgVerifyClient {
 }
 #[derive(::serde::Serialize, ::serde::Deserialize)]
 #[derive(Clone, PartialEq, ::prost::Message)]
-pub struct MsgVerifyClientResponse {
+pub struct MsgVerifyMembershipResponse {
     #[prost(bytes="vec", tag="1")]
     pub commitment: ::prost::alloc::vec::Vec<u8>,
     #[prost(bytes="vec", tag="2")]
@@ -77,79 +77,21 @@ pub struct MsgVerifyClientResponse {
 }
 #[derive(::serde::Serialize, ::serde::Deserialize)]
 #[derive(Clone, PartialEq, ::prost::Message)]
-pub struct MsgVerifyClientConsensus {
+pub struct MsgVerifyNonMembership {
     #[prost(string, tag="1")]
     pub client_id: ::prost::alloc::string::String,
-    #[prost(message, optional, tag="2")]
-    pub target_any_client_consensus_state: ::core::option::Option<super::super::super::super::google::protobuf::Any>,
-    #[prost(bytes="vec", tag="3")]
-    pub prefix: ::prost::alloc::vec::Vec<u8>,
-    #[prost(string, tag="4")]
-    pub counterparty_client_id: ::prost::alloc::string::String,
-    #[prost(message, optional, tag="5")]
-    pub counterparty_consensus_height: ::core::option::Option<super::super::super::super::ibc::core::client::v1::Height>,
-    #[prost(message, optional, tag="6")]
-    pub proof_height: ::core::option::Option<super::super::super::super::ibc::core::client::v1::Height>,
-    #[prost(bytes="vec", tag="7")]
-    pub proof: ::prost::alloc::vec::Vec<u8>,
-}
-#[derive(::serde::Serialize, ::serde::Deserialize)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct MsgVerifyClientConsensusResponse {
-    #[prost(bytes="vec", tag="1")]
-    pub commitment: ::prost::alloc::vec::Vec<u8>,
     #[prost(bytes="vec", tag="2")]
-    pub signer: ::prost::alloc::vec::Vec<u8>,
-    #[prost(bytes="vec", tag="3")]
-    pub signature: ::prost::alloc::vec::Vec<u8>,
-}
-#[derive(::serde::Serialize, ::serde::Deserialize)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct MsgVerifyConnection {
-    #[prost(string, tag="1")]
-    pub client_id: ::prost::alloc::string::String,
-    #[prost(message, optional, tag="2")]
-    pub expected_connection: ::core::option::Option<super::super::super::super::ibc::core::connection::v1::ConnectionEnd>,
-    #[prost(bytes="vec", tag="3")]
     pub prefix: ::prost::alloc::vec::Vec<u8>,
-    #[prost(string, tag="4")]
-    pub counterparty_connection_id: ::prost::alloc::string::String,
-    #[prost(message, optional, tag="5")]
+    #[prost(string, tag="3")]
+    pub path: ::prost::alloc::string::String,
+    #[prost(message, optional, tag="4")]
     pub proof_height: ::core::option::Option<super::super::super::super::ibc::core::client::v1::Height>,
-    #[prost(bytes="vec", tag="6")]
+    #[prost(bytes="vec", tag="5")]
     pub proof: ::prost::alloc::vec::Vec<u8>,
 }
 #[derive(::serde::Serialize, ::serde::Deserialize)]
 #[derive(Clone, PartialEq, ::prost::Message)]
-pub struct MsgVerifyConnectionResponse {
-    #[prost(bytes="vec", tag="1")]
-    pub commitment: ::prost::alloc::vec::Vec<u8>,
-    #[prost(bytes="vec", tag="2")]
-    pub signer: ::prost::alloc::vec::Vec<u8>,
-    #[prost(bytes="vec", tag="3")]
-    pub signature: ::prost::alloc::vec::Vec<u8>,
-}
-#[derive(::serde::Serialize, ::serde::Deserialize)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct MsgVerifyChannel {
-    #[prost(string, tag="1")]
-    pub client_id: ::prost::alloc::string::String,
-    #[prost(message, optional, tag="2")]
-    pub expected_channel: ::core::option::Option<super::super::super::super::ibc::core::channel::v1::Channel>,
-    #[prost(bytes="vec", tag="3")]
-    pub prefix: ::prost::alloc::vec::Vec<u8>,
-    #[prost(string, tag="4")]
-    pub counterparty_port_id: ::prost::alloc::string::String,
-    #[prost(string, tag="5")]
-    pub counterparty_channel_id: ::prost::alloc::string::String,
-    #[prost(message, optional, tag="6")]
-    pub proof_height: ::core::option::Option<super::super::super::super::ibc::core::client::v1::Height>,
-    #[prost(bytes="vec", tag="7")]
-    pub proof: ::prost::alloc::vec::Vec<u8>,
-}
-#[derive(::serde::Serialize, ::serde::Deserialize)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct MsgVerifyChannelResponse {
+pub struct MsgVerifyNonMembershipResponse {
     #[prost(bytes="vec", tag="1")]
     pub commitment: ::prost::alloc::vec::Vec<u8>,
     #[prost(bytes="vec", tag="2")]
@@ -263,10 +205,11 @@ pub mod msg_client {
             );
             self.inner.unary(request.into_request(), path, codec).await
         }
-        pub async fn verify_client(
+        /// VerifyMembership defines a rpc handler method for MsgVerifyMembership
+        pub async fn verify_membership(
             &mut self,
-            request: impl tonic::IntoRequest<super::MsgVerifyClient>,
-        ) -> Result<tonic::Response<super::MsgVerifyClientResponse>, tonic::Status> {
+            request: impl tonic::IntoRequest<super::MsgVerifyMembership>,
+        ) -> Result<tonic::Response<super::MsgVerifyMembershipResponse>, tonic::Status> {
             self.inner
                 .ready()
                 .await
@@ -278,15 +221,16 @@ pub mod msg_client {
                 })?;
             let codec = tonic::codec::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
-                "/lcp.service.elc.v1.Msg/VerifyClient",
+                "/lcp.service.elc.v1.Msg/VerifyMembership",
             );
             self.inner.unary(request.into_request(), path, codec).await
         }
-        pub async fn verify_client_consensus(
+        /// VerifyNonMembership defines a rpc handler method for MsgVerifyNonMembership
+        pub async fn verify_non_membership(
             &mut self,
-            request: impl tonic::IntoRequest<super::MsgVerifyClientConsensus>,
+            request: impl tonic::IntoRequest<super::MsgVerifyNonMembership>,
         ) -> Result<
-            tonic::Response<super::MsgVerifyClientConsensusResponse>,
+            tonic::Response<super::MsgVerifyNonMembershipResponse>,
             tonic::Status,
         > {
             self.inner
@@ -300,45 +244,7 @@ pub mod msg_client {
                 })?;
             let codec = tonic::codec::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
-                "/lcp.service.elc.v1.Msg/VerifyClientConsensus",
-            );
-            self.inner.unary(request.into_request(), path, codec).await
-        }
-        pub async fn verify_connection(
-            &mut self,
-            request: impl tonic::IntoRequest<super::MsgVerifyConnection>,
-        ) -> Result<tonic::Response<super::MsgVerifyConnectionResponse>, tonic::Status> {
-            self.inner
-                .ready()
-                .await
-                .map_err(|e| {
-                    tonic::Status::new(
-                        tonic::Code::Unknown,
-                        format!("Service was not ready: {}", e.into()),
-                    )
-                })?;
-            let codec = tonic::codec::ProstCodec::default();
-            let path = http::uri::PathAndQuery::from_static(
-                "/lcp.service.elc.v1.Msg/VerifyConnection",
-            );
-            self.inner.unary(request.into_request(), path, codec).await
-        }
-        pub async fn verify_channel(
-            &mut self,
-            request: impl tonic::IntoRequest<super::MsgVerifyChannel>,
-        ) -> Result<tonic::Response<super::MsgVerifyChannelResponse>, tonic::Status> {
-            self.inner
-                .ready()
-                .await
-                .map_err(|e| {
-                    tonic::Status::new(
-                        tonic::Code::Unknown,
-                        format!("Service was not ready: {}", e.into()),
-                    )
-                })?;
-            let codec = tonic::codec::ProstCodec::default();
-            let path = http::uri::PathAndQuery::from_static(
-                "/lcp.service.elc.v1.Msg/VerifyChannel",
+                "/lcp.service.elc.v1.Msg/VerifyNonMembership",
             );
             self.inner.unary(request.into_request(), path, codec).await
         }
@@ -362,25 +268,19 @@ pub mod msg_server {
             &self,
             request: tonic::Request<super::MsgUpdateClient>,
         ) -> Result<tonic::Response<super::MsgUpdateClientResponse>, tonic::Status>;
-        async fn verify_client(
+        /// VerifyMembership defines a rpc handler method for MsgVerifyMembership
+        async fn verify_membership(
             &self,
-            request: tonic::Request<super::MsgVerifyClient>,
-        ) -> Result<tonic::Response<super::MsgVerifyClientResponse>, tonic::Status>;
-        async fn verify_client_consensus(
+            request: tonic::Request<super::MsgVerifyMembership>,
+        ) -> Result<tonic::Response<super::MsgVerifyMembershipResponse>, tonic::Status>;
+        /// VerifyNonMembership defines a rpc handler method for MsgVerifyNonMembership
+        async fn verify_non_membership(
             &self,
-            request: tonic::Request<super::MsgVerifyClientConsensus>,
+            request: tonic::Request<super::MsgVerifyNonMembership>,
         ) -> Result<
-            tonic::Response<super::MsgVerifyClientConsensusResponse>,
+            tonic::Response<super::MsgVerifyNonMembershipResponse>,
             tonic::Status,
         >;
-        async fn verify_connection(
-            &self,
-            request: tonic::Request<super::MsgVerifyConnection>,
-        ) -> Result<tonic::Response<super::MsgVerifyConnectionResponse>, tonic::Status>;
-        async fn verify_channel(
-            &self,
-            request: tonic::Request<super::MsgVerifyChannel>,
-        ) -> Result<tonic::Response<super::MsgVerifyChannelResponse>, tonic::Status>;
     }
     /// Msg defines the ELC Msg service.
     #[derive(Debug)]
@@ -506,23 +406,23 @@ pub mod msg_server {
                     };
                     Box::pin(fut)
                 }
-                "/lcp.service.elc.v1.Msg/VerifyClient" => {
+                "/lcp.service.elc.v1.Msg/VerifyMembership" => {
                     #[allow(non_camel_case_types)]
-                    struct VerifyClientSvc<T: Msg>(pub Arc<T>);
-                    impl<T: Msg> tonic::server::UnaryService<super::MsgVerifyClient>
-                    for VerifyClientSvc<T> {
-                        type Response = super::MsgVerifyClientResponse;
+                    struct VerifyMembershipSvc<T: Msg>(pub Arc<T>);
+                    impl<T: Msg> tonic::server::UnaryService<super::MsgVerifyMembership>
+                    for VerifyMembershipSvc<T> {
+                        type Response = super::MsgVerifyMembershipResponse;
                         type Future = BoxFuture<
                             tonic::Response<Self::Response>,
                             tonic::Status,
                         >;
                         fn call(
                             &mut self,
-                            request: tonic::Request<super::MsgVerifyClient>,
+                            request: tonic::Request<super::MsgVerifyMembership>,
                         ) -> Self::Future {
                             let inner = self.0.clone();
                             let fut = async move {
-                                (*inner).verify_client(request).await
+                                (*inner).verify_membership(request).await
                             };
                             Box::pin(fut)
                         }
@@ -532,7 +432,7 @@ pub mod msg_server {
                     let inner = self.inner.clone();
                     let fut = async move {
                         let inner = inner.0;
-                        let method = VerifyClientSvc(inner);
+                        let method = VerifyMembershipSvc(inner);
                         let codec = tonic::codec::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(
@@ -544,25 +444,25 @@ pub mod msg_server {
                     };
                     Box::pin(fut)
                 }
-                "/lcp.service.elc.v1.Msg/VerifyClientConsensus" => {
+                "/lcp.service.elc.v1.Msg/VerifyNonMembership" => {
                     #[allow(non_camel_case_types)]
-                    struct VerifyClientConsensusSvc<T: Msg>(pub Arc<T>);
+                    struct VerifyNonMembershipSvc<T: Msg>(pub Arc<T>);
                     impl<
                         T: Msg,
-                    > tonic::server::UnaryService<super::MsgVerifyClientConsensus>
-                    for VerifyClientConsensusSvc<T> {
-                        type Response = super::MsgVerifyClientConsensusResponse;
+                    > tonic::server::UnaryService<super::MsgVerifyNonMembership>
+                    for VerifyNonMembershipSvc<T> {
+                        type Response = super::MsgVerifyNonMembershipResponse;
                         type Future = BoxFuture<
                             tonic::Response<Self::Response>,
                             tonic::Status,
                         >;
                         fn call(
                             &mut self,
-                            request: tonic::Request<super::MsgVerifyClientConsensus>,
+                            request: tonic::Request<super::MsgVerifyNonMembership>,
                         ) -> Self::Future {
                             let inner = self.0.clone();
                             let fut = async move {
-                                (*inner).verify_client_consensus(request).await
+                                (*inner).verify_non_membership(request).await
                             };
                             Box::pin(fut)
                         }
@@ -572,83 +472,7 @@ pub mod msg_server {
                     let inner = self.inner.clone();
                     let fut = async move {
                         let inner = inner.0;
-                        let method = VerifyClientConsensusSvc(inner);
-                        let codec = tonic::codec::ProstCodec::default();
-                        let mut grpc = tonic::server::Grpc::new(codec)
-                            .apply_compression_config(
-                                accept_compression_encodings,
-                                send_compression_encodings,
-                            );
-                        let res = grpc.unary(method, req).await;
-                        Ok(res)
-                    };
-                    Box::pin(fut)
-                }
-                "/lcp.service.elc.v1.Msg/VerifyConnection" => {
-                    #[allow(non_camel_case_types)]
-                    struct VerifyConnectionSvc<T: Msg>(pub Arc<T>);
-                    impl<T: Msg> tonic::server::UnaryService<super::MsgVerifyConnection>
-                    for VerifyConnectionSvc<T> {
-                        type Response = super::MsgVerifyConnectionResponse;
-                        type Future = BoxFuture<
-                            tonic::Response<Self::Response>,
-                            tonic::Status,
-                        >;
-                        fn call(
-                            &mut self,
-                            request: tonic::Request<super::MsgVerifyConnection>,
-                        ) -> Self::Future {
-                            let inner = self.0.clone();
-                            let fut = async move {
-                                (*inner).verify_connection(request).await
-                            };
-                            Box::pin(fut)
-                        }
-                    }
-                    let accept_compression_encodings = self.accept_compression_encodings;
-                    let send_compression_encodings = self.send_compression_encodings;
-                    let inner = self.inner.clone();
-                    let fut = async move {
-                        let inner = inner.0;
-                        let method = VerifyConnectionSvc(inner);
-                        let codec = tonic::codec::ProstCodec::default();
-                        let mut grpc = tonic::server::Grpc::new(codec)
-                            .apply_compression_config(
-                                accept_compression_encodings,
-                                send_compression_encodings,
-                            );
-                        let res = grpc.unary(method, req).await;
-                        Ok(res)
-                    };
-                    Box::pin(fut)
-                }
-                "/lcp.service.elc.v1.Msg/VerifyChannel" => {
-                    #[allow(non_camel_case_types)]
-                    struct VerifyChannelSvc<T: Msg>(pub Arc<T>);
-                    impl<T: Msg> tonic::server::UnaryService<super::MsgVerifyChannel>
-                    for VerifyChannelSvc<T> {
-                        type Response = super::MsgVerifyChannelResponse;
-                        type Future = BoxFuture<
-                            tonic::Response<Self::Response>,
-                            tonic::Status,
-                        >;
-                        fn call(
-                            &mut self,
-                            request: tonic::Request<super::MsgVerifyChannel>,
-                        ) -> Self::Future {
-                            let inner = self.0.clone();
-                            let fut = async move {
-                                (*inner).verify_channel(request).await
-                            };
-                            Box::pin(fut)
-                        }
-                    }
-                    let accept_compression_encodings = self.accept_compression_encodings;
-                    let send_compression_encodings = self.send_compression_encodings;
-                    let inner = self.inner.clone();
-                    let fut = async move {
-                        let inner = inner.0;
-                        let method = VerifyChannelSvc(inner);
+                        let method = VerifyNonMembershipSvc(inner);
                         let codec = tonic::codec::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(
