@@ -287,7 +287,48 @@ impl LightClient for TendermintLightClient {
         proof_height: Height,
         proof: Vec<u8>,
     ) -> Result<StateVerificationResult, LightClientError> {
-        todo!()
+        let (_, client_state, consensus_state, prefix, path, proof) = Self::validate_args(
+            ctx.as_ibc_client_reader(),
+            client_id.clone(),
+            prefix,
+            path,
+            proof_height,
+            proof,
+        )?;
+
+        let tm_client_state = match client_state {
+            AnyClientState::Tendermint(ref cs) => cs,
+            _ => unreachable!(),
+        };
+
+        tm_client_state
+            .verify_height(proof_height.try_into().map_err(Error::ICS02Error)?)
+            .map_err(|e| Error::ICS02Error(e.into()))?;
+
+        verify_non_membership(
+            tm_client_state,
+            &prefix,
+            &proof,
+            consensus_state.root(),
+            path.clone(),
+        )
+        .map_err(|e| {
+            Error::ICS03Error(ICS03Error::client_state_verification_failure(
+                client_id.clone(),
+                e,
+            ))
+        })?;
+
+        Ok(StateVerificationResult {
+            state_commitment: StateCommitment::new(
+                prefix,
+                path,
+                None,
+                proof_height,
+                gen_state_id(canonicalize_state_from_any(client_state), consensus_state)
+                    .map_err(Error::OtherError)?,
+            ),
+        })
     }
 
     fn client_type(&self) -> String {
@@ -404,5 +445,22 @@ fn verify_membership(
             value,
             0,
         )
+        .map_err(|e| ICS02Error::tendermint(TendermintError::ics23_error(e)))
+}
+
+fn verify_non_membership(
+    client_state: &TendermintClientState,
+    prefix: &CommitmentPrefix,
+    proof: &CommitmentProofBytes,
+    root: &CommitmentRoot,
+    path: impl Into<Path>,
+) -> Result<(), ICS02Error> {
+    let merkle_path = apply_prefix(prefix, vec![path.into().to_string()]);
+    let merkle_proof: MerkleProof = RawMerkleProof::try_from(proof.clone())
+        .map_err(ICS02Error::invalid_commitment_proof)?
+        .into();
+
+    merkle_proof
+        .verify_non_membership(&client_state.proof_specs, root.clone().into(), merkle_path)
         .map_err(|e| ICS02Error::tendermint(TendermintError::ics23_error(e)))
 }
