@@ -171,7 +171,9 @@ impl LCPClient {
         assert!(commitment.height == height);
 
         // check if `.value` matches expected state
-        assert!(commitment.value == expected_consensus_state.encode_vec().unwrap().keccak256());
+        assert!(
+            commitment.value == Some(expected_consensus_state.encode_vec().unwrap().keccak256())
+        );
 
         // check if `.state_id` matches the corresponding stored consensus state's state_id
         let consensus_state = ConsensusState::try_from(ctx.consensus_state(client_id, height)?)?;

@@ -270,7 +270,7 @@ impl LightClient for TendermintLightClient {
             state_commitment: StateCommitment::new(
                 prefix,
                 path,
-                value.keccak256(),
+                Some(value.keccak256()),
                 proof_height,
                 gen_state_id(canonicalize_state_from_any(client_state), consensus_state)
                     .map_err(Error::OtherError)?,

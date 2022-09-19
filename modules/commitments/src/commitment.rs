@@ -99,7 +99,7 @@ impl UpdateClientCommitment {
 pub struct StateCommitment {
     pub prefix: CommitmentPrefix,
     pub path: Path,
-    pub value: [u8; 32],
+    pub value: Option<[u8; 32]>,
     pub height: Height,
     pub state_id: StateID,
 }
@@ -108,7 +108,7 @@ impl StateCommitment {
     pub fn new(
         prefix: CommitmentPrefix,
         path: Path,
-        value: [u8; 32],
+        value: Option<[u8; 32]>,
         height: Height,
         state_id: StateID,
     ) -> Self {
@@ -125,7 +125,11 @@ impl StateCommitment {
         let mut st = rlp::RlpStream::new_list(5);
         st.append(&self.prefix.as_bytes());
         st.append(&self.path.to_string());
-        st.append(&self.value.as_slice());
+        if let Some(value) = self.value {
+            st.append(&value.as_slice());
+        } else {
+            st.append_empty_data();
+        }
         st.append(&Into::<Vec<u8>>::into(self.height));
         st.append(&self.state_id.to_vec());
         st.out().to_vec()
@@ -140,7 +144,10 @@ impl StateCommitment {
                 .try_into()
                 .map_err(Error::ICS23Error)?,
             path: Path::from_str(&r.at(1)?.as_val::<String>()?).map_err(Error::ICS24PathError)?,
-            value: bytes_to_array(r.at(2)?.as_val::<Vec<u8>>()?.as_slice())?,
+            value: match r.at(2)?.as_val::<Vec<u8>>()?.as_slice() {
+                bz if bz.len() > 0 => Some(bytes_to_array(bz)?),
+                _ => None,
+            },
             height: r.at(3)?.as_val::<Vec<u8>>()?.as_slice().try_into()?,
             state_id: r.at(4)?.as_val::<Vec<u8>>()?.as_slice().try_into()?,
         })
@@ -212,7 +219,7 @@ mod tests {
                 path: Path::ClientType(ibc::core::ics24_host::path::ClientTypePath(
                     ClientId::new(ClientType::Tendermint, thread_rng().gen()).unwrap(),
                 )),
-                value: bytes_to_array(gen_rand_vec(32).as_slice()).unwrap(),
+                value: rand_or_none(|| bytes_to_array(gen_rand_vec(32).as_slice()).unwrap()),
                 height: gen_rand_height(),
                 state_id: gen_rand_state_id(),
             };
