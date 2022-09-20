@@ -16,7 +16,7 @@ pub struct MsgVerifyClient {
     #[prost(string, tag="3")]
     pub counterparty_client_id: ::prost::alloc::string::String,
     #[prost(message, optional, tag="4")]
-    pub target_any_client_state: ::core::option::Option<super::super::super::super::google::protobuf::Any>,
+    pub expected_any_client_state: ::core::option::Option<super::super::super::super::google::protobuf::Any>,
     #[prost(message, optional, tag="5")]
     pub proof_height: ::core::option::Option<super::super::super::super::ibc::core::client::v1::Height>,
     #[prost(bytes="vec", tag="6")]
@@ -31,9 +31,9 @@ pub struct MsgVerifyClientConsensus {
     #[prost(string, tag="3")]
     pub counterparty_client_id: ::prost::alloc::string::String,
     #[prost(message, optional, tag="4")]
-    pub counterparty_consensus_height: ::core::option::Option<super::super::super::super::ibc::core::client::v1::Height>,
+    pub consensus_height: ::core::option::Option<super::super::super::super::ibc::core::client::v1::Height>,
     #[prost(message, optional, tag="5")]
-    pub target_any_client_consensus_state: ::core::option::Option<super::super::super::super::google::protobuf::Any>,
+    pub expected_any_client_consensus_state: ::core::option::Option<super::super::super::super::google::protobuf::Any>,
     #[prost(message, optional, tag="6")]
     pub proof_height: ::core::option::Option<super::super::super::super::ibc::core::client::v1::Height>,
     #[prost(bytes="vec", tag="7")]
@@ -46,7 +46,7 @@ pub struct MsgVerifyConnection {
     #[prost(bytes="vec", tag="2")]
     pub prefix: ::prost::alloc::vec::Vec<u8>,
     #[prost(string, tag="3")]
-    pub counterparty_connection_id: ::prost::alloc::string::String,
+    pub connection_id: ::prost::alloc::string::String,
     #[prost(message, optional, tag="4")]
     pub expected_connection: ::core::option::Option<super::super::super::super::ibc::core::connection::v1::ConnectionEnd>,
     #[prost(message, optional, tag="5")]
@@ -61,9 +61,9 @@ pub struct MsgVerifyChannel {
     #[prost(bytes="vec", tag="2")]
     pub prefix: ::prost::alloc::vec::Vec<u8>,
     #[prost(string, tag="3")]
-    pub counterparty_port_id: ::prost::alloc::string::String,
+    pub port_id: ::prost::alloc::string::String,
     #[prost(string, tag="4")]
-    pub counterparty_channel_id: ::prost::alloc::string::String,
+    pub channel_id: ::prost::alloc::string::String,
     #[prost(message, optional, tag="5")]
     pub expected_channel: ::core::option::Option<super::super::super::super::ibc::core::channel::v1::Channel>,
     #[prost(message, optional, tag="6")]
@@ -103,7 +103,7 @@ pub struct MsgVerifyPacketAcknowledgement {
     #[prost(uint64, tag="5")]
     pub sequence: u64,
     #[prost(bytes="vec", tag="6")]
-    pub acknowledgement: ::prost::alloc::vec::Vec<u8>,
+    pub commitment: ::prost::alloc::vec::Vec<u8>,
     #[prost(message, optional, tag="7")]
     pub proof_height: ::core::option::Option<super::super::super::super::ibc::core::client::v1::Height>,
     #[prost(bytes="vec", tag="8")]
@@ -209,6 +209,7 @@ pub mod msg_client {
             self.inner = self.inner.accept_gzip();
             self
         }
+        /// VerifyClient defines a rpc handler method for MsgVerifyClient
         pub async fn verify_client(
             &mut self,
             request: impl tonic::IntoRequest<super::MsgVerifyClient>,
@@ -228,6 +229,7 @@ pub mod msg_client {
             );
             self.inner.unary(request.into_request(), path, codec).await
         }
+        /// VerifyClientConsensus defines a rpc handler method for MsgVerifyClientConsensus
         pub async fn verify_client_consensus(
             &mut self,
             request: impl tonic::IntoRequest<super::MsgVerifyClientConsensus>,
@@ -247,6 +249,7 @@ pub mod msg_client {
             );
             self.inner.unary(request.into_request(), path, codec).await
         }
+        /// VerifyConnection defines a rpc handler method for MsgVerifyConnection
         pub async fn verify_connection(
             &mut self,
             request: impl tonic::IntoRequest<super::MsgVerifyConnection>,
@@ -266,6 +269,7 @@ pub mod msg_client {
             );
             self.inner.unary(request.into_request(), path, codec).await
         }
+        /// VerifyChannel defines a rpc handler method for MsgVerifyChannel
         pub async fn verify_channel(
             &mut self,
             request: impl tonic::IntoRequest<super::MsgVerifyChannel>,
@@ -285,6 +289,7 @@ pub mod msg_client {
             );
             self.inner.unary(request.into_request(), path, codec).await
         }
+        /// VerifyPacket defines a rpc handler method for MsgVerifyPacket
         pub async fn verify_packet(
             &mut self,
             request: impl tonic::IntoRequest<super::MsgVerifyPacket>,
@@ -304,6 +309,7 @@ pub mod msg_client {
             );
             self.inner.unary(request.into_request(), path, codec).await
         }
+        /// VerifyPacketAcknowledgement defines a rpc handler method for MsgVerifyPacketAcknowledgement
         pub async fn verify_packet_acknowledgement(
             &mut self,
             request: impl tonic::IntoRequest<super::MsgVerifyPacketAcknowledgement>,
@@ -323,6 +329,7 @@ pub mod msg_client {
             );
             self.inner.unary(request.into_request(), path, codec).await
         }
+        /// VerifyPacketReceiptAbsense defines a rpc handler method for MsgVerifyPacketReceiptAbsense
         pub async fn verify_packet_receipt_absense(
             &mut self,
             request: impl tonic::IntoRequest<super::MsgVerifyPacketReceiptAbsense>,
@@ -342,6 +349,7 @@ pub mod msg_client {
             );
             self.inner.unary(request.into_request(), path, codec).await
         }
+        /// VerifyNextSequenceRecv defines a rpc handler method for MsgVerifyNextSequenceRecv
         pub async fn verify_next_sequence_recv(
             &mut self,
             request: impl tonic::IntoRequest<super::MsgVerifyNextSequenceRecv>,
@@ -371,34 +379,42 @@ pub mod msg_server {
     ///Generated trait containing gRPC methods that should be implemented for use with MsgServer.
     #[async_trait]
     pub trait Msg: Send + Sync + 'static {
+        /// VerifyClient defines a rpc handler method for MsgVerifyClient
         async fn verify_client(
             &self,
             request: tonic::Request<super::MsgVerifyClient>,
         ) -> Result<tonic::Response<super::MsgVerificationResponse>, tonic::Status>;
+        /// VerifyClientConsensus defines a rpc handler method for MsgVerifyClientConsensus
         async fn verify_client_consensus(
             &self,
             request: tonic::Request<super::MsgVerifyClientConsensus>,
         ) -> Result<tonic::Response<super::MsgVerificationResponse>, tonic::Status>;
+        /// VerifyConnection defines a rpc handler method for MsgVerifyConnection
         async fn verify_connection(
             &self,
             request: tonic::Request<super::MsgVerifyConnection>,
         ) -> Result<tonic::Response<super::MsgVerificationResponse>, tonic::Status>;
+        /// VerifyChannel defines a rpc handler method for MsgVerifyChannel
         async fn verify_channel(
             &self,
             request: tonic::Request<super::MsgVerifyChannel>,
         ) -> Result<tonic::Response<super::MsgVerificationResponse>, tonic::Status>;
+        /// VerifyPacket defines a rpc handler method for MsgVerifyPacket
         async fn verify_packet(
             &self,
             request: tonic::Request<super::MsgVerifyPacket>,
         ) -> Result<tonic::Response<super::MsgVerificationResponse>, tonic::Status>;
+        /// VerifyPacketAcknowledgement defines a rpc handler method for MsgVerifyPacketAcknowledgement
         async fn verify_packet_acknowledgement(
             &self,
             request: tonic::Request<super::MsgVerifyPacketAcknowledgement>,
         ) -> Result<tonic::Response<super::MsgVerificationResponse>, tonic::Status>;
+        /// VerifyPacketReceiptAbsense defines a rpc handler method for MsgVerifyPacketReceiptAbsense
         async fn verify_packet_receipt_absense(
             &self,
             request: tonic::Request<super::MsgVerifyPacketReceiptAbsense>,
         ) -> Result<tonic::Response<super::MsgVerificationResponse>, tonic::Status>;
+        /// VerifyNextSequenceRecv defines a rpc handler method for MsgVerifyNextSequenceRecv
         async fn verify_next_sequence_recv(
             &self,
             request: tonic::Request<super::MsgVerifyNextSequenceRecv>,

@@ -28,9 +28,9 @@ impl TryFrom<MsgVerifyClient> for MsgVerifyMembership {
             })?;
         let path = Path::ClientState(ClientStatePath(counterparty_client_id)).to_string();
         let value = msg
-            .target_any_client_state
+            .expected_any_client_state
             .ok_or(Status::invalid_argument(
-                "target_any_client_state must be non-nil",
+                "expected_any_client_state must be non-nil",
             ))?
             .encode_to_vec();
         Ok(Self {
@@ -52,21 +52,19 @@ impl TryFrom<MsgVerifyClientConsensus> for MsgVerifyMembership {
             ClientId::from_str(&msg.counterparty_client_id).map_err(|e| {
                 Status::invalid_argument(format!("invalid counterparty_client_id: err={}", e))
             })?;
-        let counterparty_consensus_height =
-            msg.counterparty_consensus_height
-                .ok_or(Status::invalid_argument(
-                    "counterparty_consensus_height must be non-nil",
-                ))?;
+        let consensus_height = msg
+            .consensus_height
+            .ok_or(Status::invalid_argument("consensus_height must be non-nil"))?;
         let path = Path::ClientConsensusState(ClientConsensusStatePath {
             client_id: counterparty_client_id,
-            epoch: counterparty_consensus_height.revision_number,
-            height: counterparty_consensus_height.revision_height,
+            epoch: consensus_height.revision_number,
+            height: consensus_height.revision_height,
         })
         .to_string();
         let value = msg
-            .target_any_client_consensus_state
+            .expected_any_client_consensus_state
             .ok_or(Status::invalid_argument(
-                "target_any_client_state must be non-nil",
+                "expected_any_client_consensus_state must be non-nil",
             ))?
             .encode_to_vec();
         Ok(Self {
@@ -84,11 +82,9 @@ impl TryFrom<MsgVerifyConnection> for MsgVerifyMembership {
     type Error = Status;
 
     fn try_from(msg: MsgVerifyConnection) -> Result<Self, Status> {
-        let counterparty_connection_id = ConnectionId::from_str(&msg.counterparty_connection_id)
-            .map_err(|e| {
-                Status::invalid_argument(format!("invalid counterparty_connection_id: err={}", e))
-            })?;
-        let path = Path::Connections(ConnectionsPath(counterparty_connection_id)).to_string();
+        let connection_id = ConnectionId::from_str(&msg.connection_id)
+            .map_err(|e| Status::invalid_argument(format!("invalid connection_id: err={}", e)))?;
+        let path = Path::Connections(ConnectionsPath(connection_id)).to_string();
 
         let value = msg
             .expected_connection
@@ -112,9 +108,9 @@ impl TryFrom<MsgVerifyChannel> for MsgVerifyMembership {
     type Error = Status;
 
     fn try_from(msg: MsgVerifyChannel) -> Result<Self, Status> {
-        let port_id = PortId::from_str(&msg.counterparty_port_id)
+        let port_id = PortId::from_str(&msg.port_id)
             .map_err(|e| Status::invalid_argument(format!("invalid port_id: err={}", e)))?;
-        let channel_id = ChannelId::from_str(&msg.counterparty_channel_id)
+        let channel_id = ChannelId::from_str(&msg.channel_id)
             .map_err(|e| Status::invalid_argument(format!("invalid channel_id: err={}", e)))?;
         let path = Path::ChannelEnds(ChannelEndsPath(port_id, channel_id)).to_string();
         let value = msg
@@ -178,7 +174,7 @@ impl TryFrom<MsgVerifyPacketAcknowledgement> for MsgVerifyMembership {
             client_id: msg.client_id,
             prefix: msg.prefix,
             path,
-            value: msg.acknowledgement,
+            value: msg.commitment,
             proof_height: msg.proof_height,
             proof: msg.proof,
         })

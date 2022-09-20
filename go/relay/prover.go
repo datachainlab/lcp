@@ -186,13 +186,13 @@ func (pr *Prover) QueryClientConsensusStateWithProof(height int64, dstClientCons
 	res2, err := pr.lcpServiceClient.VerifyClientConsensus(
 		context.TODO(),
 		&ibc.MsgVerifyClientConsensus{
-			ClientId:                      pr.config.ElcClientId,
-			TargetAnyClientConsensusState: res.ConsensusState,
-			Prefix:                        []byte(host.StoreKey),
-			CounterpartyClientId:          pr.path.ClientID,
-			CounterpartyConsensusHeight:   dstClientConsHeight.(clienttypes.Height),
-			ProofHeight:                   res.ProofHeight,
-			Proof:                         res.Proof,
+			ClientId:                        pr.config.ElcClientId,
+			Prefix:                          []byte(host.StoreKey),
+			CounterpartyClientId:            pr.path.ClientID,
+			ConsensusHeight:                 dstClientConsHeight.(clienttypes.Height),
+			ExpectedAnyClientConsensusState: res.ConsensusState,
+			ProofHeight:                     res.ProofHeight,
+			Proof:                           res.Proof,
 		},
 	)
 	if err != nil {
@@ -219,12 +219,12 @@ func (pr *Prover) QueryClientStateWithProof(height int64) (*clienttypes.QueryCli
 	res2, err := pr.lcpServiceClient.VerifyClient(
 		context.TODO(),
 		&ibc.MsgVerifyClient{
-			ClientId:             pr.config.ElcClientId,
-			TargetAnyClientState: res.ClientState,
-			Prefix:               []byte(host.StoreKey),
-			CounterpartyClientId: pr.path.ClientID,
-			ProofHeight:          res.ProofHeight,
-			Proof:                res.Proof,
+			ClientId:               pr.config.ElcClientId,
+			Prefix:                 []byte(host.StoreKey),
+			CounterpartyClientId:   pr.path.ClientID,
+			ExpectedAnyClientState: res.ClientState,
+			ProofHeight:            res.ProofHeight,
+			Proof:                  res.Proof,
 		},
 	)
 	if err != nil {
@@ -256,12 +256,12 @@ func (pr *Prover) QueryConnectionWithProof(height int64) (*conntypes.QueryConnec
 	res2, err := pr.lcpServiceClient.VerifyConnection(
 		context.TODO(),
 		&ibc.MsgVerifyConnection{
-			ClientId:                 pr.config.ElcClientId,
-			ExpectedConnection:       *res.Connection,
-			Prefix:                   []byte(host.StoreKey),
-			CounterpartyConnectionId: pr.path.ConnectionID,
-			ProofHeight:              res.ProofHeight,
-			Proof:                    res.Proof,
+			ClientId:           pr.config.ElcClientId,
+			Prefix:             []byte(host.StoreKey),
+			ConnectionId:       pr.path.ConnectionID,
+			ExpectedConnection: *res.Connection,
+			ProofHeight:        res.ProofHeight,
+			Proof:              res.Proof,
 		},
 	)
 	if err != nil {
@@ -293,13 +293,13 @@ func (pr *Prover) QueryChannelWithProof(height int64) (chanRes *chantypes.QueryC
 	res2, err := pr.lcpServiceClient.VerifyChannel(
 		context.TODO(),
 		&ibc.MsgVerifyChannel{
-			ClientId:              pr.config.ElcClientId,
-			ExpectedChannel:       *res.Channel,
-			Prefix:                []byte(host.StoreKey),
-			CounterpartyPortId:    pr.path.PortID,
-			CounterpartyChannelId: pr.path.ChannelID,
-			ProofHeight:           res.ProofHeight,
-			Proof:                 res.Proof,
+			ClientId:        pr.config.ElcClientId,
+			Prefix:          []byte(host.StoreKey),
+			PortId:          pr.path.PortID,
+			ChannelId:       pr.path.ChannelID,
+			ExpectedChannel: *res.Channel,
+			ProofHeight:     res.ProofHeight,
+			Proof:           res.Proof,
 		},
 	)
 	if err != nil {
@@ -371,14 +371,14 @@ func (pr *Prover) QueryPacketAcknowledgementCommitmentWithProof(height int64, se
 	res2, err := pr.lcpServiceClient.VerifyPacketAcknowledgement(
 		context.TODO(),
 		&ibc.MsgVerifyPacketAcknowledgement{
-			ClientId:        pr.config.ElcClientId,
-			Prefix:          []byte(host.StoreKey),
-			PortId:          pr.path.PortID,
-			ChannelId:       pr.path.ChannelID,
-			Sequence:        seq,
-			Acknowledgement: res.Acknowledgement,
-			ProofHeight:     res.ProofHeight,
-			Proof:           res.Proof,
+			ClientId:    pr.config.ElcClientId,
+			Prefix:      []byte(host.StoreKey),
+			PortId:      pr.path.PortID,
+			ChannelId:   pr.path.ChannelID,
+			Sequence:    seq,
+			Commitment:  res.Acknowledgement,
+			ProofHeight: res.ProofHeight,
+			Proof:       res.Proof,
 		},
 	)
 	if err != nil {
