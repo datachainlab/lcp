@@ -16,7 +16,6 @@ use ibc::core::ics24_host::path::{
 };
 use ibc::core::ics24_host::Path;
 use prost::Message;
-use sha2::Digest;
 use tonic::Status;
 
 impl TryFrom<MsgVerifyClient> for MsgVerifyMembership {
@@ -175,13 +174,11 @@ impl TryFrom<MsgVerifyPacketAcknowledgement> for MsgVerifyMembership {
         })
         .to_string();
 
-        let value = sha2::Sha256::digest(&msg.acknowledgement).to_vec();
-
         Ok(Self {
             client_id: msg.client_id,
             prefix: msg.prefix,
             path,
-            value,
+            value: msg.acknowledgement,
             proof_height: msg.proof_height,
             proof: msg.proof,
         })

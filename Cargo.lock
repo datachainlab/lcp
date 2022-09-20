@@ -2340,7 +2340,6 @@ dependencies = [
  "prost-types",
  "schemars",
  "serde",
- "sha2 0.8.2",
  "tonic",
 ]
 

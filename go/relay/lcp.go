@@ -2,16 +2,60 @@ package relay
 
 import (
 	"context"
+	"log"
 	"time"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	clienttypes "github.com/cosmos/ibc-go/v4/modules/core/02-client/types"
+	"github.com/cosmos/ibc-go/v4/modules/core/exported"
 	lcptypes "github.com/datachainlab/lcp/go/light-clients/lcp/types"
 	"github.com/datachainlab/lcp/go/relay/elc"
 	"github.com/datachainlab/lcp/go/relay/enclave"
 	"github.com/datachainlab/lcp/go/sgx/ias"
 	"github.com/hyperledger-labs/yui-relayer/core"
 )
+
+func (pr *Prover) syncUpstreamHeader(height int64) (*elc.MsgUpdateClientResponse, error) {
+
+	// 1. check if the latest height of the client is less than the given height
+
+	res, err := pr.lcpServiceClient.Client(context.TODO(), &elc.QueryClientRequest{ClientId: pr.config.ElcClientId})
+	if err != nil {
+		return nil, err
+	}
+	var clientState exported.ClientState
+	if err := pr.codec.UnpackAny(res.ClientState, &clientState); err != nil {
+		return nil, err
+	}
+	if clientState.GetLatestHeight().GetRevisionHeight() >= uint64(height) {
+		return nil, nil
+	}
+
+	log.Printf("syncUpstreamHeader try to update the client in ELC: latest=%v got=%v", clientState.GetLatestHeight().GetRevisionHeight(), height)
+
+	// 2. query the header from the upstream chain
+
+	lcpQuerier := NewLCPClientQueryier(pr.lcpServiceClient, pr.config.ElcClientId)
+	h, err := pr.originProver.QueryHeader(height)
+	if err != nil {
+		return nil, err
+	}
+	header, err := pr.originProver.SetupHeader(lcpQuerier, h)
+	if err != nil {
+		return nil, err
+	}
+	anyHeader, err := clienttypes.PackHeader(header)
+	if err != nil {
+		return nil, err
+	}
+
+	// 3. send a request that contains a header from 2 to update the client in ELC
+
+	return pr.lcpServiceClient.UpdateClient(context.TODO(), &elc.MsgUpdateClient{
+		ClientId: pr.config.ElcClientId,
+		Header:   anyHeader,
+	})
+}
 
 func registerEnclaveKey(pathEnd *core.PathEnd, prover *Prover, debug bool) error {
 	if debug {
@@ -47,37 +91,24 @@ func registerEnclaveKey(pathEnd *core.PathEnd, prover *Prover, debug bool) error
 	return nil
 }
 
-func activateClient(pathEnd *core.PathEnd, srcProver *Prover, dst *core.ProvableChain) error {
+func activateClient(pathEnd *core.PathEnd, src, dst *core.ProvableChain) error {
+	latestHeight, err := src.GetLatestHeight()
+	if err != nil {
+		return err
+	}
+	srcProver := src.ProverI.(*Prover)
+	if err := srcProver.initServiceClient(); err != nil {
+		return err
+	}
 
-	// 1. query the latest header from the upstream chain
+	// LCP synchronizes with the latest header of the upstream chain
 
-	// TODO use latest or given height as option?
-	header, err := srcProver.QueryLatestHeader() // origin prover's latest header
+	res, err := srcProver.syncUpstreamHeader(latestHeight)
 	if err != nil {
 		return err
 	}
 
-	lcpQueryier := NewLCPClientQueryier(srcProver.lcpServiceClient, srcProver.config.ElcClientId)
-	header2, err := srcProver.originProver.SetupHeader(lcpQueryier, header)
-	if err != nil {
-		return err
-	}
-	anyHeader, err := clienttypes.PackHeader(header2)
-	if err != nil {
-		return err
-	}
-
-	// 2. send a request that contains a header from 1 to update the client in ELC
-
-	res, err := srcProver.lcpServiceClient.UpdateClient(context.TODO(), &elc.MsgUpdateClient{
-		ClientId: srcProver.config.ElcClientId,
-		Header:   anyHeader,
-	})
-	if err != nil {
-		return err
-	}
-
-	// 3. make MsgUpdateClient with the result of 2 and send it to the downstream chain
+	// make MsgUpdateClient with the result of 2 and send it to the downstream chain
 
 	updateClientHeader := &lcptypes.UpdateClientHeader{
 		Commitment: res.Commitment,
