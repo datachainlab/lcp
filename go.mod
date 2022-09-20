@@ -1,4 +1,4 @@
-module github.com/datachainlab/lcp/go
+module github.com/datachainlab/lcp
 
 go 1.18
 
