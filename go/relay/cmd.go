@@ -87,11 +87,7 @@ func activateClientCmd(ctx *config.Context) *cobra.Command {
 				pathEnd = path.Dst
 				target, counterparty = c[dst], c[src]
 			}
-			prover := target.ProverI.(*Prover)
-			if err := prover.initServiceClient(); err != nil {
-				return err
-			}
-			return activateClient(pathEnd, prover, counterparty)
+			return activateClient(pathEnd, target, counterparty)
 		},
 	}
 	return srcFlag(cmd)

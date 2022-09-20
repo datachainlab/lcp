@@ -77,6 +77,11 @@ func (pr *Prover) GetChainID() string {
 	return pr.originChain.ChainID()
 }
 
+// QueryHeader returns the header corresponding to the height
+func (pr *Prover) QueryHeader(height int64) (out core.HeaderI, err error) {
+	return pr.originProver.QueryHeader(height)
+}
+
 // QueryLatestHeader returns the latest header from the chain
 func (pr *Prover) QueryLatestHeader() (out core.HeaderI, err error) {
 	return pr.originProver.QueryLatestHeader()
@@ -314,10 +319,78 @@ func (pr *Prover) QueryChannelWithProof(height int64) (chanRes *chantypes.QueryC
 
 // QueryPacketCommitmentWithProof returns the packet commitment and its proof
 func (pr *Prover) QueryPacketCommitmentWithProof(height int64, seq uint64) (comRes *chantypes.QueryPacketCommitmentResponse, err error) {
-	panic("not implemented") // TODO: Implement
+	if err := pr.initServiceClient(); err != nil {
+		return nil, err
+	}
+	if _, err := pr.syncUpstreamHeader(height); err != nil {
+		return nil, err
+	}
+
+	res, err := pr.originProver.QueryPacketCommitmentWithProof(height, seq)
+	if err != nil {
+		return nil, err
+	}
+
+	res2, err := pr.lcpServiceClient.VerifyPacket(context.TODO(), &ibc.MsgVerifyPacket{
+		ClientId:    pr.config.ElcClientId,
+		Prefix:      []byte(host.StoreKey),
+		PortId:      pr.path.PortID,
+		ChannelId:   pr.path.ChannelID,
+		Sequence:    seq,
+		Commitment:  res.Commitment,
+		ProofHeight: res.ProofHeight,
+		Proof:       res.Proof,
+	})
+	if err != nil {
+		return nil, err
+	}
+	commitment, err := lcptypes.ParseStateCommitment(res2.Commitment)
+	if err != nil {
+		return nil, err
+	}
+	return &chantypes.QueryPacketCommitmentResponse{
+		Commitment:  res.Commitment,
+		Proof:       lcptypes.NewStateCommitmentProof(res2.Commitment, res2.Signer, res2.Signature).ToRLPBytes(),
+		ProofHeight: commitment.Height,
+	}, nil
 }
 
 // QueryPacketAcknowledgementCommitmentWithProof returns the packet acknowledgement commitment and its proof
 func (pr *Prover) QueryPacketAcknowledgementCommitmentWithProof(height int64, seq uint64) (ackRes *chantypes.QueryPacketAcknowledgementResponse, err error) {
-	panic("not implemented") // TODO: Implement
+	if err := pr.initServiceClient(); err != nil {
+		return nil, err
+	}
+	if _, err := pr.syncUpstreamHeader(height); err != nil {
+		return nil, err
+	}
+
+	res, err := pr.originProver.QueryPacketAcknowledgementCommitmentWithProof(height, seq)
+	if err != nil {
+		return nil, err
+	}
+	res2, err := pr.lcpServiceClient.VerifyPacketAcknowledgement(
+		context.TODO(),
+		&ibc.MsgVerifyPacketAcknowledgement{
+			ClientId:        pr.config.ElcClientId,
+			Prefix:          []byte(host.StoreKey),
+			PortId:          pr.path.PortID,
+			ChannelId:       pr.path.ChannelID,
+			Sequence:        seq,
+			Acknowledgement: res.Acknowledgement,
+			ProofHeight:     res.ProofHeight,
+			Proof:           res.Proof,
+		},
+	)
+	if err != nil {
+		return nil, err
+	}
+	commitment, err := lcptypes.ParseStateCommitment(res2.Commitment)
+	if err != nil {
+		return nil, err
+	}
+	return &chantypes.QueryPacketAcknowledgementResponse{
+		Acknowledgement: res.Acknowledgement,
+		Proof:           lcptypes.NewStateCommitmentProof(res2.Commitment, res2.Signer, res2.Signature).ToRLPBytes(),
+		ProofHeight:     commitment.Height,
+	}, err
 }
