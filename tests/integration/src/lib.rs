@@ -121,18 +121,14 @@ mod tests {
                 current_timestamp: Time::now(),
             })
             .unwrap();
-        let commitment = res.proof.commitment();
+        assert!(!res.proof.is_proven());
         let client_id = res.client_id;
 
         info!("generated client id is {}", client_id.as_str().to_string());
 
         let target_header = rly.create_header(
-            commitment
-                .new_height
-                .try_into()
-                .map_err(|e| anyhow!("{:?}", e))?,
-            commitment
-                .new_height
+            initial_height.try_into().map_err(|e| anyhow!("{:?}", e))?,
+            initial_height
                 .increment()
                 .try_into()
                 .map_err(|e| anyhow!("{:?}", e))?,
@@ -141,9 +137,10 @@ mod tests {
             client_id: client_id.clone(),
             any_header: target_header.into(),
             current_timestamp: Time::now(),
+            include_state: true,
         })?;
-
         info!("update_client's result is {:?}", res);
+        assert!(res.0.is_proven());
 
         let height = res.0.commitment().new_height;
 

@@ -1,6 +1,6 @@
 use super::registry::get_light_client_by_client_id;
 use crate::light_client::LightClientHandlerError as Error;
-use commitments::prover::prove_update_client_commitment;
+use commitments::{prover::prove_update_client_commitment, UpdateClientCommitmentProof};
 use context::Context;
 use enclave_commands::{LightClientResult, UpdateClientInput, UpdateClientResult};
 use light_client::{ClientKeeper, ClientReader, LightClientSource};
@@ -33,6 +33,10 @@ pub fn update_client<'l, S: KVStore, L: LightClientSource<'l>>(
     ctx.store_update_height(input.client_id, res.height, ctx.host_height())
         .map_err(Error::ICS02Error)?;
 
-    let proof = prove_update_client_commitment(ek, res.commitment)?;
+    let proof = if res.prove {
+        prove_update_client_commitment(ek, res.commitment)?
+    } else {
+        UpdateClientCommitmentProof::new_with_no_signature(res.commitment.to_vec())
+    };
     Ok(LightClientResult::UpdateClient(UpdateClientResult(proof)))
 }

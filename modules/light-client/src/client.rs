@@ -59,6 +59,8 @@ pub struct CreateClientResult {
     pub height: Height,
     pub timestamp: Time,
     pub commitment: UpdateClientCommitment,
+    /// if true, sign the commitment with Enclave Key
+    pub prove: bool,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -68,6 +70,8 @@ pub struct UpdateClientResult {
     pub height: Height,
     pub timestamp: Time,
     pub commitment: UpdateClientCommitment,
+    /// if true, sign the commitment with Enclave Key
+    pub prove: bool,
 }
 
 #[derive(Clone, Debug, PartialEq)]

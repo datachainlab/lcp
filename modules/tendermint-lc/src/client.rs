@@ -92,6 +92,7 @@ impl LightClient for TendermintLightClient {
                 timestamp,
                 validation_params: ValidationParams::Empty,
             },
+            prove: false,
         })
     }
 
@@ -220,6 +221,7 @@ impl LightClient for TendermintLightClient {
                     trusted_consensus_state_timestamp,
                 }),
             },
+            prove: true,
         })
     }
 

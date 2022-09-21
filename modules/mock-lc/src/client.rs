@@ -69,6 +69,7 @@ impl LightClient for MockLightClient {
                 timestamp,
                 validation_params: ValidationParams::Empty,
             },
+            prove: false,
         })
     }
 
@@ -144,6 +145,7 @@ impl LightClient for MockLightClient {
                 timestamp: header_timestamp,
                 validation_params: ValidationParams::Empty,
             },
+            prove: true,
         })
     }
 

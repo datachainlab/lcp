@@ -60,6 +60,7 @@ impl LightClient for LCPLightClient {
                 timestamp,
                 validation_params: ValidationParams::Empty,
             },
+            prove: false,
         })
     }
 
@@ -107,6 +108,7 @@ impl LightClient for LCPLightClient {
             height,
             timestamp: header_timestamp,
             commitment: UpdateClientCommitment::default(),
+            prove: true,
         })
     }
 
