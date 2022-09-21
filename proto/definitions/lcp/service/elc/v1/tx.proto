@@ -58,6 +58,8 @@ message MsgUpdateClient {
   string client_id = 1 [(gogoproto.moretags) = "yaml:\"client_id\""];
   // header to update the light client
   google.protobuf.Any header = 2;
+  // request to include state in a commitment
+  bool include_state = 3;
 }
 
 // MsgUpdateClientResponse defines the Msg/UpdateClient response type.

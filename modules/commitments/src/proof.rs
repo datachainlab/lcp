@@ -15,8 +15,27 @@ pub struct UpdateClientCommitmentProof {
 }
 
 impl UpdateClientCommitmentProof {
+    pub fn new(commitment_bytes: Vec<u8>, signer: Vec<u8>, signature: Vec<u8>) -> Self {
+        Self {
+            commitment_bytes,
+            signer,
+            signature,
+        }
+    }
+
+    pub fn new_with_no_signature(commitment_bytes: Vec<u8>) -> Self {
+        Self {
+            commitment_bytes,
+            ..Default::default()
+        }
+    }
+
     pub fn commitment(&self) -> UpdateClientCommitment {
         UpdateClientCommitment::from_bytes(&self.commitment_bytes).unwrap()
+    }
+
+    pub fn is_proven(&self) -> bool {
+        !self.signature.is_empty()
     }
 }
 

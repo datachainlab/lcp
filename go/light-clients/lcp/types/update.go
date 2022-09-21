@@ -31,9 +31,13 @@ func (cs ClientState) CheckHeaderAndUpdateForUpdateClient(ctx sdk.Context, cdc c
 		return nil, nil, err
 	}
 
-	if !cs.LatestHeight.IsZero() {
+	if cs.LatestHeight.IsZero() {
+		if len(commitment.NewState) == 0 {
+			return nil, nil, sdkerrors.Wrapf(clienttypes.ErrInvalidHeader, "invalid header %v: the commitment's `NewState` must be non-nil", header)
+		}
+	} else {
 		if commitment.PrevHeight == nil || commitment.PrevStateID == nil {
-			return nil, nil, sdkerrors.Wrapf(clienttypes.ErrInvalidHeader, "invalid header %v", header)
+			return nil, nil, sdkerrors.Wrapf(clienttypes.ErrInvalidHeader, "invalid header %v: the commitment's `PrevHeight` and `PrevStateID` must be non-nil", header)
 		}
 		prevConsensusState, err := GetConsensusState(store, cdc, commitment.PrevHeight)
 		if err != nil {

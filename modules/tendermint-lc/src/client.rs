@@ -62,7 +62,10 @@ impl LightClient for TendermintLightClient {
                 }
                 Err(e) => return Err(Error::ICS02Error(e).into()),
             };
-        let consensus_state = match AnyConsensusState::try_from(any_consensus_state.clone()) {
+
+        let state_id = gen_state_id_from_any(&canonical_client_state, &any_consensus_state)
+            .map_err(Error::OtherError)?;
+        let consensus_state = match AnyConsensusState::try_from(any_consensus_state) {
             Ok(AnyConsensusState::Tendermint(consensus_state)) => {
                 AnyConsensusState::Tendermint(consensus_state)
             }
@@ -73,16 +76,10 @@ impl LightClient for TendermintLightClient {
             Err(e) => return Err(Error::ICS02Error(e).into()),
         };
 
-        let state_id = gen_state_id_from_any(&canonical_client_state, &any_consensus_state)
-            .map_err(Error::OtherError)?;
-
         let height = client_state.latest_height().into();
         let timestamp: Time = consensus_state.timestamp().into();
         Ok(CreateClientResult {
-            any_client_state: any_client_state.clone(),
-            any_consensus_state,
             height,
-            timestamp,
             commitment: UpdateClientCommitment {
                 prev_state_id: None,
                 new_state_id: state_id,
@@ -92,6 +89,7 @@ impl LightClient for TendermintLightClient {
                 timestamp,
                 validation_params: ValidationParams::Empty,
             },
+            prove: false,
         })
     }
 
@@ -203,7 +201,6 @@ impl LightClient for TendermintLightClient {
             new_any_client_state: new_client_state.into(),
             new_any_consensus_state: new_consensus_state.into(),
             height,
-            timestamp: header_timestamp,
             commitment: UpdateClientCommitment {
                 prev_state_id: Some(prev_state_id),
                 new_state_id,
@@ -220,6 +217,7 @@ impl LightClient for TendermintLightClient {
                     trusted_consensus_state_timestamp,
                 }),
             },
+            prove: true,
         })
     }
 

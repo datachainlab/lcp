@@ -322,7 +322,7 @@ func (pr *Prover) QueryPacketCommitmentWithProof(height int64, seq uint64) (comR
 	if err := pr.initServiceClient(); err != nil {
 		return nil, err
 	}
-	if _, err := pr.syncUpstreamHeader(height); err != nil {
+	if _, err := pr.syncUpstreamHeader(height, false); err != nil {
 		return nil, err
 	}
 
@@ -360,7 +360,7 @@ func (pr *Prover) QueryPacketAcknowledgementCommitmentWithProof(height int64, se
 	if err := pr.initServiceClient(); err != nil {
 		return nil, err
 	}
-	if _, err := pr.syncUpstreamHeader(height); err != nil {
+	if _, err := pr.syncUpstreamHeader(height, false); err != nil {
 		return nil, err
 	}
 
