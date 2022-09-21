@@ -4,7 +4,7 @@ DOCKER_REPO    ?= ""
 DOCKER_TAG     ?= latest
 DOCKER_BUILD   ?= $(DOCKER) build --rm --no-cache --pull
 
-RLY_BIN ?= ../../../../go/build/yrly
+RLY_BIN ?= ../../../../bin/yrly
 
 .PHONY: network
 network:

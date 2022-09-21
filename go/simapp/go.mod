@@ -5,7 +5,7 @@ go 1.18
 require (
 	github.com/cosmos/cosmos-sdk v0.45.7
 	github.com/cosmos/ibc-go/v4 v4.0.0
-	github.com/datachainlab/lcp/go v0.0.0
+	github.com/datachainlab/lcp v0.0.0
 	github.com/gorilla/mux v1.8.0
 	github.com/rakyll/statik v0.1.7
 	github.com/spf13/cast v1.5.0
@@ -128,4 +128,4 @@ require (
 
 replace github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
 
-replace github.com/datachainlab/lcp/go => ../
+replace github.com/datachainlab/lcp => ../../
