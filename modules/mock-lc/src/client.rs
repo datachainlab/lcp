@@ -42,7 +42,7 @@ impl LightClient for MockLightClient {
             }
             Err(e) => return Err(Error::ICS02Error(e).into()),
         };
-        let consensus_state = match AnyConsensusState::try_from(any_consensus_state.clone()) {
+        let consensus_state = match AnyConsensusState::try_from(any_consensus_state) {
             Ok(AnyConsensusState::Mock(consensus_state)) => {
                 AnyConsensusState::Mock(consensus_state)
             }
@@ -56,10 +56,7 @@ impl LightClient for MockLightClient {
         let height = client_state.latest_height().into();
         let timestamp: Time = consensus_state.timestamp().into();
         Ok(CreateClientResult {
-            any_client_state: any_client_state.clone(),
-            any_consensus_state,
             height,
-            timestamp,
             commitment: UpdateClientCommitment {
                 prev_state_id: None,
                 new_state_id: state_id,
@@ -135,7 +132,6 @@ impl LightClient for MockLightClient {
             new_any_client_state: new_any_client_state.clone(),
             new_any_consensus_state: Any::try_from(new_consensus_state).unwrap(),
             height,
-            timestamp: header_timestamp,
             commitment: UpdateClientCommitment {
                 prev_state_id: Some(prev_state_id),
                 new_state_id,

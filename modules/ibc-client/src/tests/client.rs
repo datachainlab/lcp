@@ -47,10 +47,7 @@ impl LightClient for LCPLightClient {
             .map_err(LightClientError::ICS02Error)?;
 
         Ok(CreateClientResult {
-            any_client_state: client_state.clone().into(),
-            any_consensus_state: consensus_state.into(),
             height,
-            timestamp,
             commitment: UpdateClientCommitment {
                 prev_state_id: None,
                 new_state_id: state_id,
@@ -106,7 +103,6 @@ impl LightClient for LCPLightClient {
             new_any_client_state: Any::new(new_client_state),
             new_any_consensus_state: Any::new(new_consensus_state),
             height,
-            timestamp: header_timestamp,
             commitment: UpdateClientCommitment::default(),
             prove: true,
         })
