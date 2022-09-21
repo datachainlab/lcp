@@ -37,6 +37,9 @@ pub struct MsgUpdateClient {
     /// header to update the light client
     #[prost(message, optional, tag="2")]
     pub header: ::core::option::Option<super::super::super::super::google::protobuf::Any>,
+    /// request to include state in a commitment
+    #[prost(bool, tag="3")]
+    pub include_state: bool,
 }
 /// MsgUpdateClientResponse defines the Msg/UpdateClient response type.
 #[derive(::serde::Serialize, ::serde::Deserialize)]

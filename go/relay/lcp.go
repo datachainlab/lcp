@@ -15,7 +15,7 @@ import (
 	"github.com/hyperledger-labs/yui-relayer/core"
 )
 
-func (pr *Prover) syncUpstreamHeader(height int64) (*elc.MsgUpdateClientResponse, error) {
+func (pr *Prover) syncUpstreamHeader(height int64, includeState bool) (*elc.MsgUpdateClientResponse, error) {
 
 	// 1. check if the latest height of the client is less than the given height
 
@@ -52,8 +52,9 @@ func (pr *Prover) syncUpstreamHeader(height int64) (*elc.MsgUpdateClientResponse
 	// 3. send a request that contains a header from 2 to update the client in ELC
 
 	return pr.lcpServiceClient.UpdateClient(context.TODO(), &elc.MsgUpdateClient{
-		ClientId: pr.config.ElcClientId,
-		Header:   anyHeader,
+		ClientId:     pr.config.ElcClientId,
+		Header:       anyHeader,
+		IncludeState: includeState,
 	})
 }
 
@@ -103,7 +104,7 @@ func activateClient(pathEnd *core.PathEnd, src, dst *core.ProvableChain) error {
 
 	// LCP synchronizes with the latest header of the upstream chain
 
-	res, err := srcProver.syncUpstreamHeader(latestHeight)
+	res, err := srcProver.syncUpstreamHeader(latestHeight, true)
 	if err != nil {
 		return err
 	}

@@ -15,7 +15,10 @@ pub fn update_client<'l, S: KVStore, L: LightClientSource<'l>>(
     let lc = get_light_client_by_client_id::<_, L>(ctx, &input.client_id)?;
 
     let ek = ctx.get_enclave_key();
-    let res = lc.update_client(ctx, input.client_id.clone(), input.any_header.into())?;
+    let mut res = lc.update_client(ctx, input.client_id.clone(), input.any_header.into())?;
+    if input.include_state && res.commitment.new_state.is_none() {
+        res.commitment.new_state = Some(res.new_any_client_state.clone());
+    }
 
     ctx.store_any_client_state(input.client_id.clone(), res.new_any_client_state)
         .map_err(Error::ICS02Error)?;

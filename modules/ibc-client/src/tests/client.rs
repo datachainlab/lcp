@@ -9,9 +9,7 @@ use alloc::borrow::ToOwned;
 use commitments::{gen_state_id_from_any, UpdateClientCommitment};
 use ibc::core::ics02_client::client_state::ClientState as ICS02ClientState;
 use ibc::core::ics02_client::error::Error as ICS02Error;
-use ibc::core::ics03_connection::connection::ConnectionEnd;
-use ibc::core::ics04_channel::channel::ChannelEnd;
-use ibc::core::ics24_host::identifier::{ChannelId, ClientId, ConnectionId, PortId};
+use ibc::core::ics24_host::identifier::ClientId;
 use lcp_types::{Any, Height};
 use light_client::{ClientReader, LightClientError};
 use light_client::{CreateClientResult, StateVerificationResult, UpdateClientResult};
@@ -43,6 +41,10 @@ impl LightClient for LCPLightClient {
             ConsensusState::try_from(any_consensus_state).map_err(LightClientError::ICS02Error)?;
         let height = client_state.latest_height().into();
         let timestamp = consensus_state.timestamp;
+
+        LCPClient {}
+            .initialise(&client_state, &consensus_state)
+            .map_err(LightClientError::ICS02Error)?;
 
         Ok(CreateClientResult {
             any_client_state: client_state.clone().into(),
@@ -127,25 +129,25 @@ impl LightClient for LCPLightClient {
 
     fn verify_membership(
         &self,
-        ctx: &dyn ClientReader,
-        client_id: ClientId,
-        prefix: Vec<u8>,
-        path: String,
-        value: Vec<u8>,
-        proof_height: Height,
-        proof: Vec<u8>,
+        _ctx: &dyn ClientReader,
+        _client_id: ClientId,
+        _prefix: Vec<u8>,
+        _path: String,
+        _value: Vec<u8>,
+        _proof_height: Height,
+        _proof: Vec<u8>,
     ) -> Result<StateVerificationResult, LightClientError> {
         todo!()
     }
 
     fn verify_non_membership(
         &self,
-        ctx: &dyn ClientReader,
-        client_id: ClientId,
-        prefix: Vec<u8>,
-        path: String,
-        proof_height: Height,
-        proof: Vec<u8>,
+        _ctx: &dyn ClientReader,
+        _client_id: ClientId,
+        _prefix: Vec<u8>,
+        _path: String,
+        _proof_height: Height,
+        _proof: Vec<u8>,
     ) -> Result<StateVerificationResult, LightClientError> {
         todo!()
     }

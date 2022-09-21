@@ -56,6 +56,7 @@ impl TryFrom<MsgCreateClient> for InitClientInput {
 pub struct UpdateClientInput {
     pub client_id: ClientId,
     pub any_header: Any,
+    pub include_state: bool,
     pub current_timestamp: Time,
 }
 
@@ -70,6 +71,7 @@ impl TryFrom<MsgUpdateClient> for UpdateClientInput {
         Ok(Self {
             client_id,
             any_header,
+            include_state: msg.include_state,
             current_timestamp: Time::now(),
         })
     }
