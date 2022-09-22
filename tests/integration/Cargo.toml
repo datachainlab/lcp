@@ -10,6 +10,7 @@ ibc-relayer = { git = "https://github.com/informalsystems/ibc-rs", rev = "e8c98d
 ibc-proto = { git = "https://github.com/informalsystems/ibc-rs", rev = "e8c98d440949abf971ac45a68ed9dd9e6e9f48ed", default-features = false }
 ibc-integration-test = { git = "https://github.com/informalsystems/ibc-rs", rev = "e8c98d440949abf971ac45a68ed9dd9e6e9f48ed", default-features = false }
 ibc-test-framework = { git = "https://github.com/informalsystems/ibc-rs", rev = "e8c98d440949abf971ac45a68ed9dd9e6e9f48ed", default-features = false }
+tendermint-proto = { version = "=0.23.7", default-features = false }
 tendermint-rpc  = { version = "=0.23.7", features = ["http-client", "websocket-client"] }
 tempdir = "0.3.7"
 prost-types = { version = "0.10", default-features = false }
@@ -20,6 +21,7 @@ log = "0.4.8"
 env_logger = "0.9.0"
 envconfig = "0.10.0"
 
+lcp-types = { path = "../../modules/types" }
 host = { path = "../../modules/host" }
 enclave-api = { path = "../../modules/enclave-api" }
 enclave-commands = { path = "../../modules/enclave-commands" }

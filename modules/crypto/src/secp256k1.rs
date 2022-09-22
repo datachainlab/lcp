@@ -112,7 +112,7 @@ impl EnclavePublicKey {
 
 impl From<&EnclavePublicKey> for Address {
     fn from(v: &EnclavePublicKey) -> Self {
-        let pubkey = &v.0.serialize_compressed()[1..];
+        let pubkey = &v.0.serialize()[1..];
         let mut res: Address = Default::default();
         res.0.copy_from_slice(&keccak256(pubkey)[12..]);
         res

@@ -5,28 +5,19 @@ edition = "2021"
 
 [dependencies]
 sgx_tstd = { git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
-sgx_types = { git = "https://github.com/apache/teaclave-sgx-sdk.git" }
-sgx_trts = { git = "https://github.com/apache/teaclave-sgx-sdk.git" }
-serde = { version = "1.0", default-features = false, features = ["alloc"] }
+serde = { version = "1.0", default-features = false, features = ["alloc", "derive"] }
 serde_json = { version = "1.0", default-features = false, features = ["alloc"] }
-prost-types = { version = "0.10", default-features = false }
 ibc = { git = "https://github.com/informalsystems/ibc-rs", rev = "e8c98d440949abf971ac45a68ed9dd9e6e9f48ed", default-features = false }
-log = "0.4.8"
-hex = { version = "0.4", default-features = false, features = ["alloc"] }
-rlp = { version = "0.5.1", default-features = false }
-rlp-derive = { version = "0.1.0" }
-anyhow-sgx = { package = "anyhow", rev = "sgx_1.1.3", git = "https://github.com/mesalock-linux/anyhow-sgx.git", optional = true }
-anyhow = { version = "1.0.56", optional = true }
 thiserror-sgx = { package = "thiserror", git = "https://github.com/mesalock-linux/thiserror-sgx.git", optional = true }
 thiserror = { version = "1.0.30", optional = true }
 commitments = { path = "../commitments", default-features = false }
 lcp-types = { path = "../types", default-features = false }
 attestation-report = { path = "../attestation-report", default-features = false }
+lcp-proto = { path = "../../proto", default-features = false }
 
 [features]
 default = ["std"]
 std = [
-    "anyhow",
     "thiserror",
     "lcp-types/std",
     "commitments/std",
@@ -34,7 +25,6 @@ std = [
 ]
 sgx = [
     "sgx_tstd",
-    "anyhow-sgx",
     "thiserror-sgx",
     "lcp-types/sgx",
     "commitments/sgx",

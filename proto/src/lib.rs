@@ -9,8 +9,6 @@
 #![allow(rustdoc::bare_urls)]
 #![forbid(unsafe_code)]
 
-pub mod google;
-
 extern crate alloc;
 
 #[cfg(not(feature = "std"))]
@@ -24,6 +22,9 @@ macro_rules! include_proto {
     };
 }
 
+#[cfg(feature = "server")]
+mod ibc_msg;
+
 /// The version (commit hash) of IBC Go used when generating this library.
 pub const IBC_GO_COMMIT: &str = include_str!("IBC_GO_COMMIT");
 
@@ -31,22 +32,10 @@ pub const IBC_GO_COMMIT: &str = include_str!("IBC_GO_COMMIT");
 #[cfg(feature = "server")]
 pub const FILE_DESCRIPTOR_SET: &'static [u8] = include_bytes!("descriptor.bin");
 
-pub mod cosmos {
-    pub mod upgrade {
-        pub mod v1beta1 {
-            include_proto!("cosmos.upgrade.v1beta1.rs");
-        }
-    }
-}
+pub use ibc_proto::{cosmos, google};
 
 pub mod ibc {
-    pub mod core {
-        pub mod client {
-            pub mod v1 {
-                include_proto!("ibc.core.client.v1.rs");
-            }
-        }
-    }
+    pub use ibc_proto::ibc::core;
     pub mod lightclients {
         pub mod lcp {
             pub mod v1 {
@@ -55,6 +44,8 @@ pub mod ibc {
         }
     }
 }
+
+pub use ibc_proto::ics23;
 
 pub mod lcp {
     pub mod service {
@@ -66,6 +57,13 @@ pub mod lcp {
         pub mod elc {
             pub mod v1 {
                 include_proto!("lcp.service.elc.v1.rs");
+            }
+        }
+        pub mod ibc {
+            pub mod v1 {
+                include_proto!("lcp.service.ibc.v1.rs");
+                #[cfg(feature = "server")]
+                pub use crate::ibc_msg::*;
             }
         }
     }

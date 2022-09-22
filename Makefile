@@ -119,10 +119,20 @@ Signed_RustEnclave_Name := bin/enclave.signed.so
 
 ######## Test Settings ########
 
+DOCKER        ?= docker
+DOCKER_BUILD  ?= $(DOCKER) build --rm --no-cache --pull
 GAIAD_VERSION ?= v7.0.3
+
+######## Targets ########
 
 .PHONY: all
 all: $(App_Path) $(Signed_RustEnclave_Name)
+
+.PHONY: clean
+clean:
+	@rm -f $(App_Dir)/* $(RustEnclave_Name) $(Signed_RustEnclave_Name) enclave/*_t.* app/*_u.* lib/*.a
+	@cd enclave && cargo clean && rm -f Cargo.lock
+	@cargo clean && rm -f Cargo.lock
 
 ######## EDL Objects ########
 
@@ -166,12 +176,6 @@ enclave:
 	@cd enclave && RUSTFLAGS=$(RUSTFLAGS) cargo build $(CARGO_TARGET) $(CARGO_FEATURES)
 	@cp enclave/target/$(OUTPUT_PATH)/libproxy_enclave.a ./lib/libenclave.a
 
-.PHONY: clean
-clean:
-	@rm -f $(App_Dir)/* $(RustEnclave_Name) $(Signed_RustEnclave_Name) enclave/*_t.* app/*_u.* lib/*.a
-	@cd enclave && cargo clean && rm -f Cargo.lock
-	@cargo clean && rm -f Cargo.lock
-
 .PHONY: fmt
 fmt:
 	@cargo fmt --all && cd ./enclave && cargo fmt --all
@@ -180,9 +184,9 @@ fmt:
 proto:
 	@cd proto-compiler && cargo run -- compile --ibc /tmp/cosmos/ibc --out ../proto/src/prost --descriptor ../proto/src/descriptor.bin
 
-.PHONY: docker
-docker:
-	@cd rust-sgx-sdk/dockerfile && docker build --no-cache -t datachainlab/sgx-rust:2004-1.1.5 -f Dockerfile.2004.nightly .
+.PHONY: yrly
+yrly:
+	go build -o ./bin/yrly ./go/relay/bin
 
 .PHONY: test
 test:
@@ -198,3 +202,12 @@ test-setup-nodes: bin/gaiad
 
 bin/gaiad:
 	curl -o ./bin/gaiad -LO https://github.com/cosmos/gaia/releases/download/$(GAIAD_VERSION)/gaiad-$(GAIAD_VERSION)-linux-amd64 && chmod +x ./bin/gaiad
+
+.PHONY: docker
+sgx-docker:
+	@cd rust-sgx-sdk/dockerfile && docker build --no-cache -t datachainlab/sgx-rust:2004-1.1.5 -f Dockerfile.2004.nightly .
+
+.PHONY: tendermint-docker
+tendermint-docker:
+	$(DOCKER_BUILD) --build-arg CHAINID=ibc0 --tag tendermint-chain0 -f ./go/simapp/Dockerfile .
+	$(DOCKER_BUILD) --build-arg CHAINID=ibc1 --tag tendermint-chain1 -f ./go/simapp/Dockerfile .

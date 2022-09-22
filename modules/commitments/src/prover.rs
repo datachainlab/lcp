@@ -16,11 +16,11 @@ pub fn prove_update_client_commitment(
     signer.use_verifier(&mut |verifier: &dyn Verifier| {
         signer_address = verifier.get_address();
     });
-    Ok(UpdateClientCommitmentProof {
+    Ok(UpdateClientCommitmentProof::new(
         commitment_bytes,
-        signer: signer_address,
+        signer_address,
         signature,
-    })
+    ))
 }
 
 pub fn prove_state_commitment(

@@ -41,7 +41,7 @@ pub fn dispatch<'l, S: Store, L: LightClientSource<'l>>(
                     Err(e) => {
                         store.rollback();
                         return Err(Error::OtherError(anyhow!(
-                            "failed to execute the command: {}",
+                            "failed to execute the command: {:?}",
                             e
                         )));
                     }

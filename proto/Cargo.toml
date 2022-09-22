@@ -19,10 +19,12 @@ tonic       = { version = "0.7", optional = true, default-features = false }
 serde       = { version = "1.0", default-features = false }
 schemars    = { version = "0.8", optional = true }
 base64      = { version = "0.13", default-features = false, features = ["alloc"] }
+ibc         = { git = "https://github.com/informalsystems/ibc-rs", rev = "e8c98d440949abf971ac45a68ed9dd9e6e9f48ed", default-features = false, optional = true }
+ibc-proto   = { git = "https://github.com/informalsystems/ibc-rs", rev = "e8c98d440949abf971ac45a68ed9dd9e6e9f48ed", default-features = false }
 
 [features]
 default     = ["std", "client"]
 std         = []
 client      = ["std", "tonic", "tonic/codegen", "tonic/transport", "tonic/prost"]
 json-schema = ["std", "schemars"]
-server      = ["std", "tonic", "tonic/codegen", "tonic/transport", "tonic/prost"]
+server      = ["std", "tonic", "tonic/codegen", "tonic/transport", "tonic/prost", "ibc"]

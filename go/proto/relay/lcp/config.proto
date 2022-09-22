@@ -1,0 +1,15 @@
+syntax = "proto3";
+package relayer.provers.lcp.config;
+
+import "gogoproto/gogo.proto";
+import "google/protobuf/any.proto";
+
+option go_package = "github.com/datachainlab/lcp/go/relay";
+option (gogoproto.goproto_getters_all) = false;
+
+message ProverConfig {
+    google.protobuf.Any origin_prover = 1;
+    string lcp_service_address = 2;
+    string mrenclave = 3;
+    string elc_client_id = 4;
+}

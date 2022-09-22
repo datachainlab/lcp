@@ -2,67 +2,57 @@
 use crate::sgx_reexport_prelude::*;
 use crate::{context::ClientReader, LightClientError};
 use commitments::{StateCommitment, UpdateClientCommitment};
-use ibc::core::{
-    ics03_connection::connection::ConnectionEnd,
-    ics04_channel::channel::ChannelEnd,
-    ics24_host::identifier::{ChannelId, ClientId, ConnectionId, PortId},
-};
-use lcp_types::{Any, Height, Time};
+use ibc::core::ics24_host::identifier::ClientId;
+use lcp_types::{Any, Height};
 use std::string::String;
 use std::vec::Vec;
 
 pub trait LightClient {
+    /// client_type returns a client type of the light client
+    fn client_type(&self) -> String;
+
+    /// latest_height returns the latest height that the light client tracks
+    fn latest_height(
+        &self,
+        ctx: &dyn ClientReader,
+        client_id: &ClientId,
+    ) -> Result<Height, LightClientError>;
+
+    /// create_client creates a new light client
     fn create_client(
         &self,
         ctx: &dyn ClientReader,
         any_client_state: Any,
         any_consensus_state: Any,
     ) -> Result<CreateClientResult, LightClientError>;
+
+    /// update_client updates the light client with a header
     fn update_client(
         &self,
         ctx: &dyn ClientReader,
         client_id: ClientId,
         any_header: Any,
     ) -> Result<UpdateClientResult, LightClientError>;
-    fn verify_client(
+
+    /// verify_membership is a generic proof verification method which verifies a proof of the existence of a value at a given path at the specified height.
+    fn verify_membership(
         &self,
         ctx: &dyn ClientReader,
         client_id: ClientId,
-        expected_client_state: Any,
-        counterparty_prefix: Vec<u8>,
-        counterparty_client_id: ClientId,
+        prefix: Vec<u8>,
+        path: String,
+        value: Vec<u8>,
         proof_height: Height,
         proof: Vec<u8>,
     ) -> Result<StateVerificationResult, LightClientError>;
-    fn verify_client_consensus(
+
+    /// verify_non_membership is a generic proof verification method which verifies the absence of a given path at a specified height.
+    fn verify_non_membership(
         &self,
         ctx: &dyn ClientReader,
         client_id: ClientId,
-        expected_client_consensus_state: Any,
-        counterparty_prefix: Vec<u8>,
-        counterparty_client_id: ClientId,
-        counterparty_consensus_height: Height,
-        proof_height: Height,
-        proof: Vec<u8>,
-    ) -> Result<StateVerificationResult, LightClientError>;
-    fn verify_connection(
-        &self,
-        ctx: &dyn ClientReader,
-        client_id: ClientId,
-        expected_connection_state: ConnectionEnd,
-        counterparty_prefix: Vec<u8>,
-        counterparty_connection_id: ConnectionId,
-        proof_height: Height,
-        proof: Vec<u8>,
-    ) -> Result<StateVerificationResult, LightClientError>;
-    fn verify_channel(
-        &self,
-        ctx: &dyn ClientReader,
-        client_id: ClientId,
-        expected_channel_state: ChannelEnd,
-        counterparty_prefix: Vec<u8>,
-        counterparty_port_id: PortId,
-        counterparty_channel_id: ChannelId,
+        prefix: Vec<u8>,
+        path: String,
         proof_height: Height,
         proof: Vec<u8>,
     ) -> Result<StateVerificationResult, LightClientError>;
@@ -70,26 +60,30 @@ pub trait LightClient {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct CreateClientResult {
-    pub client_id: ClientId,
-    pub client_type: String,
-    pub any_client_state: Any,
-    pub any_consensus_state: Any,
+    /// height corresponding to the updated state
     pub height: Height,
-    pub timestamp: Time,
+    /// commitment represents a state transition of the client
     pub commitment: UpdateClientCommitment,
+    /// if true, sign the commitment with Enclave Key
+    pub prove: bool,
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct UpdateClientResult {
-    pub client_id: ClientId,
+    /// updated client state
     pub new_any_client_state: Any,
+    /// updated consensus state
     pub new_any_consensus_state: Any,
+    /// height corresponding to the updated state
     pub height: Height,
-    pub timestamp: Time,
+    /// commitment represents a state transition of the client
     pub commitment: UpdateClientCommitment,
+    /// if true, sign the commitment with Enclave Key
+    pub prove: bool,
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct StateVerificationResult {
+    /// state commitment represents a result of the state verification
     pub state_commitment: StateCommitment,
 }

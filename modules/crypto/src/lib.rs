@@ -17,7 +17,7 @@ pub use crate::secp256k1::{
 };
 pub use errors::CryptoError;
 pub use key_manager::KeyManager;
-pub use traits::{SealedKey, Signer, Verifier};
+pub use traits::{Keccak256, SealedKey, Signer, Verifier};
 
 mod errors;
 mod key_manager;

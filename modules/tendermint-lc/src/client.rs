@@ -3,7 +3,10 @@ use crate::errors::TendermintError as Error;
 use crate::sgx_reexport_prelude::*;
 use alloc::borrow::ToOwned;
 use commitments::{gen_state_id, gen_state_id_from_any, StateCommitment, UpdateClientCommitment};
+use core::str::FromStr;
+use crypto::Keccak256;
 use ibc::clients::ics07_tendermint::client_state::ClientState as TendermintClientState;
+use ibc::clients::ics07_tendermint::error::Error as TendermintError;
 use ibc::core::ics02_client::client_consensus::{AnyConsensusState, ConsensusState};
 use ibc::core::ics02_client::client_def::{AnyClient, ClientDef};
 use ibc::core::ics02_client::client_state::{
@@ -13,29 +16,25 @@ use ibc::core::ics02_client::client_type::ClientType;
 use ibc::core::ics02_client::context::ClientReader as IBCClientReader;
 use ibc::core::ics02_client::error::Error as ICS02Error;
 use ibc::core::ics02_client::header::{AnyHeader, Header};
-use ibc::core::ics03_connection::connection::ConnectionEnd;
 use ibc::core::ics03_connection::error::Error as ICS03Error;
-use ibc::core::ics04_channel::channel::ChannelEnd;
-use ibc::core::ics04_channel::error::Error as ICS04Error;
-use ibc::core::ics23_commitment::commitment::{CommitmentPrefix, CommitmentProofBytes};
-use ibc::core::ics24_host::identifier::{ChannelId, ClientId, ConnectionId, PortId};
-use ibc::core::ics24_host::path::{
-    ChannelEndsPath, ClientConsensusStatePath, ClientStatePath, ConnectionsPath,
+use ibc::core::ics23_commitment::commitment::{
+    CommitmentPrefix, CommitmentProofBytes, CommitmentRoot,
 };
+use ibc::core::ics23_commitment::merkle::{apply_prefix, MerkleProof};
+use ibc::core::ics24_host::identifier::ClientId;
 use ibc::core::ics24_host::Path;
+use ibc_proto::ibc::core::commitment::v1::MerkleProof as RawMerkleProof;
 use lcp_types::{Any, Height, Time};
 use light_client::{
     ClientReader, CreateClientResult, LightClient, LightClientError, LightClientRegistry,
     StateVerificationResult, UpdateClientResult,
 };
 use log::*;
-use serde_json::Value;
 use std::boxed::Box;
-use std::string::ToString;
+use std::string::{String, ToString};
 use std::vec::Vec;
 use tendermint_light_client_verifier::options::Options;
 use tendermint_light_client_verifier::types::TrustThreshold;
-use tendermint_proto::Protobuf;
 use validation_context::tendermint::{TendermintValidationOptions, TendermintValidationParams};
 use validation_context::ValidationParams;
 
@@ -63,7 +62,10 @@ impl LightClient for TendermintLightClient {
                 }
                 Err(e) => return Err(Error::ICS02Error(e).into()),
             };
-        let consensus_state = match AnyConsensusState::try_from(any_consensus_state.clone()) {
+
+        let state_id = gen_state_id_from_any(&canonical_client_state, &any_consensus_state)
+            .map_err(Error::OtherError)?;
+        let consensus_state = match AnyConsensusState::try_from(any_consensus_state) {
             Ok(AnyConsensusState::Tendermint(consensus_state)) => {
                 AnyConsensusState::Tendermint(consensus_state)
             }
@@ -74,19 +76,10 @@ impl LightClient for TendermintLightClient {
             Err(e) => return Err(Error::ICS02Error(e).into()),
         };
 
-        let client_id = gen_client_id(&canonical_client_state, &any_consensus_state)?;
-        let state_id = gen_state_id_from_any(&canonical_client_state, &any_consensus_state)
-            .map_err(Error::OtherError)?;
-
         let height = client_state.latest_height().into();
         let timestamp: Time = consensus_state.timestamp().into();
         Ok(CreateClientResult {
-            client_id,
-            client_type: ClientType::Tendermint.as_str().to_owned(),
-            any_client_state: any_client_state.clone(),
-            any_consensus_state,
             height,
-            timestamp,
             commitment: UpdateClientCommitment {
                 prev_state_id: None,
                 new_state_id: state_id,
@@ -96,6 +89,7 @@ impl LightClient for TendermintLightClient {
                 timestamp,
                 validation_params: ValidationParams::Empty,
             },
+            prove: false,
         })
     }
 
@@ -129,8 +123,7 @@ impl LightClient for TendermintLightClient {
             return Err(Error::ICS02Error(ICS02Error::client_frozen(client_id)).into());
         }
 
-        let canonical_client_state =
-            AnyClientState::Tendermint(canonicalize_state_from_any(client_state.clone()));
+        let canonical_client_state = canonicalize_state_from_any(client_state.clone());
 
         // Read consensus state from the host chain store.
         let latest_consensus_state = ctx
@@ -180,12 +173,11 @@ impl LightClient for TendermintLightClient {
         // This function will return the new client_state (its latest_height changed) and a
         // consensus_state obtained from header. These will be later persisted by the keeper.
         let (new_client_state, new_consensus_state) = client_def
-            .check_header_and_update_state(ctx, client_id.clone(), client_state.clone(), header)
+            .check_header_and_update_state(ctx, client_id, client_state.clone(), header)
             .map_err(|e| {
                 Error::ICS02Error(ICS02Error::header_verification_failure(e.to_string()))
             })?;
-        let new_canonical_client_state =
-            AnyClientState::Tendermint(canonicalize_state_from_any(new_client_state.clone()));
+        let new_canonical_client_state = canonicalize_state_from_any(new_client_state.clone());
 
         let trusted_consensus_state_timestamp: Time = trusted_consensus_state.timestamp().into();
         let options = match client_state {
@@ -206,11 +198,9 @@ impl LightClient for TendermintLightClient {
         let new_state_id = gen_state_id(new_canonical_client_state, new_consensus_state.clone())
             .map_err(Error::OtherError)?;
         Ok(UpdateClientResult {
-            client_id,
             new_any_client_state: new_client_state.into(),
             new_any_consensus_state: new_consensus_state.into(),
             height,
-            timestamp: header_timestamp,
             commitment: UpdateClientCommitment {
                 prev_state_id: Some(prev_state_id),
                 new_state_id,
@@ -227,202 +217,130 @@ impl LightClient for TendermintLightClient {
                     trusted_consensus_state_timestamp,
                 }),
             },
+            prove: true,
         })
     }
 
-    fn verify_client(
+    fn verify_membership(
         &self,
         ctx: &dyn ClientReader,
         client_id: ClientId,
-        expected_client_state: Any,
-        counterparty_prefix: Vec<u8>,
-        counterparty_client_id: ClientId,
+        prefix: Vec<u8>,
+        path: String,
+        value: Vec<u8>,
         proof_height: Height,
         proof: Vec<u8>,
     ) -> Result<StateVerificationResult, LightClientError> {
-        let (client_def, client_state, consensus_state, prefix, proof) = Self::validate_args(
+        let (_, client_state, consensus_state, prefix, path, proof) = Self::validate_args(
             ctx.as_ibc_client_reader(),
             client_id.clone(),
-            counterparty_prefix,
+            prefix,
+            path,
             proof_height,
             proof,
         )?;
 
-        // TODO replace the following verification logic with owned method
-        let expected_client_state =
-            AnyClientState::try_from(expected_client_state.clone()).map_err(Error::ICS02Error)?;
-        client_def
-            .verify_client_full_state(
-                &client_state,
-                proof_height.try_into().map_err(Error::ICS02Error)?,
-                &prefix,
-                &proof,
-                consensus_state.root(),
-                &counterparty_client_id,
-                &expected_client_state,
-            )
-            .map_err(|e| {
-                Error::ICS03Error(ICS03Error::client_state_verification_failure(
-                    client_id.clone(),
-                    e,
-                ))
-            })?;
+        let tm_client_state = match client_state {
+            AnyClientState::Tendermint(ref cs) => cs,
+            _ => unreachable!(),
+        };
+
+        tm_client_state
+            .verify_height(proof_height.try_into().map_err(Error::ICS02Error)?)
+            .map_err(|e| Error::ICS02Error(e.into()))?;
+
+        verify_membership(
+            tm_client_state,
+            &prefix,
+            &proof,
+            consensus_state.root(),
+            path.clone(),
+            value.to_vec(),
+        )
+        .map_err(|e| {
+            Error::ICS03Error(ICS03Error::client_state_verification_failure(
+                client_id.clone(),
+                e,
+            ))
+        })?;
 
         Ok(StateVerificationResult {
-            state_commitment: StateCommitment {
+            state_commitment: StateCommitment::new(
                 prefix,
-                path: Path::ClientState(ClientStatePath(client_id)),
-                value: expected_client_state.encode_vec().unwrap(),
-                height: proof_height,
-                state_id: gen_state_id(client_state, consensus_state).map_err(Error::OtherError)?,
-            },
+                path,
+                Some(value.keccak256()),
+                proof_height,
+                gen_state_id(canonicalize_state_from_any(client_state), consensus_state)
+                    .map_err(Error::OtherError)?,
+            ),
         })
     }
 
-    fn verify_client_consensus(
+    fn verify_non_membership(
         &self,
         ctx: &dyn ClientReader,
         client_id: ClientId,
-        expected_client_consensus_state: Any,
-        counterparty_prefix: Vec<u8>,
-        counterparty_client_id: ClientId,
-        counterparty_consensus_height: Height,
+        prefix: Vec<u8>,
+        path: String,
         proof_height: Height,
         proof: Vec<u8>,
     ) -> Result<StateVerificationResult, LightClientError> {
-        let (client_def, client_state, consensus_state, prefix, proof) = Self::validate_args(
+        let (_, client_state, consensus_state, prefix, path, proof) = Self::validate_args(
             ctx.as_ibc_client_reader(),
             client_id.clone(),
-            counterparty_prefix,
+            prefix,
+            path,
             proof_height,
             proof,
         )?;
 
-        let expected_client_consensus_state =
-            AnyConsensusState::try_from(expected_client_consensus_state)
-                .map_err(Error::ICS02Error)?;
-        let counterparty_consensus_height = counterparty_consensus_height
-            .try_into()
-            .map_err(Error::ICS02Error)?;
+        let tm_client_state = match client_state {
+            AnyClientState::Tendermint(ref cs) => cs,
+            _ => unreachable!(),
+        };
 
-        client_def
-            .verify_client_consensus_state(
-                &client_state,
-                proof_height.try_into().map_err(Error::ICS02Error)?,
-                &prefix,
-                &proof,
-                consensus_state.root(),
-                &counterparty_client_id,
-                counterparty_consensus_height,
-                &expected_client_consensus_state,
-            )
-            .map_err(|e| {
-                Error::ICS03Error(ICS03Error::consensus_state_verification_failure(
-                    counterparty_consensus_height,
-                    e,
-                ))
-            })?;
+        tm_client_state
+            .verify_height(proof_height.try_into().map_err(Error::ICS02Error)?)
+            .map_err(|e| Error::ICS02Error(e.into()))?;
+
+        verify_non_membership(
+            tm_client_state,
+            &prefix,
+            &proof,
+            consensus_state.root(),
+            path.clone(),
+        )
+        .map_err(|e| {
+            Error::ICS03Error(ICS03Error::client_state_verification_failure(
+                client_id.clone(),
+                e,
+            ))
+        })?;
 
         Ok(StateVerificationResult {
-            state_commitment: StateCommitment {
+            state_commitment: StateCommitment::new(
                 prefix,
-                path: Path::ClientConsensusState(ClientConsensusStatePath {
-                    client_id,
-                    epoch: counterparty_consensus_height.revision_number(),
-                    height: counterparty_consensus_height.revision_height(),
-                }),
-                value: expected_client_consensus_state.encode_vec().unwrap(),
-                height: proof_height,
-                state_id: gen_state_id(client_state, consensus_state).map_err(Error::OtherError)?,
-            },
+                path,
+                None,
+                proof_height,
+                gen_state_id(canonicalize_state_from_any(client_state), consensus_state)
+                    .map_err(Error::OtherError)?,
+            ),
         })
     }
 
-    fn verify_connection(
-        &self,
-        ctx: &dyn ClientReader,
-        client_id: ClientId,
-        expected_connection_state: ConnectionEnd,
-        counterparty_prefix: Vec<u8>,
-        counterparty_connection_id: ConnectionId,
-        proof_height: Height,
-        proof: Vec<u8>,
-    ) -> light_client::Result<StateVerificationResult> {
-        let (client_def, client_state, consensus_state, prefix, proof) = Self::validate_args(
-            ctx.as_ibc_client_reader(),
-            client_id.clone(),
-            counterparty_prefix,
-            proof_height,
-            proof,
-        )?;
-
-        client_def
-            .verify_connection_state(
-                &client_state,
-                proof_height.try_into().map_err(Error::ICS02Error)?,
-                &prefix,
-                &proof,
-                consensus_state.root(),
-                &counterparty_connection_id,
-                &expected_connection_state,
-            )
-            .map_err(|e| Error::ICS03Error(ICS03Error::verify_connection_state(e)))?;
-
-        Ok(StateVerificationResult {
-            state_commitment: StateCommitment {
-                prefix,
-                path: Path::Connections(ConnectionsPath(counterparty_connection_id)),
-                value: expected_connection_state.encode_vec().unwrap(),
-                height: proof_height,
-                state_id: gen_state_id(client_state, consensus_state).map_err(Error::OtherError)?,
-            },
-        })
+    fn client_type(&self) -> String {
+        ClientType::Tendermint.as_str().to_owned()
     }
 
-    fn verify_channel(
+    fn latest_height(
         &self,
         ctx: &dyn ClientReader,
-        client_id: ClientId,
-        expected_channel_state: ChannelEnd,
-        counterparty_prefix: Vec<u8>,
-        counterparty_port_id: PortId,
-        counterparty_channel_id: ChannelId,
-        proof_height: Height,
-        proof: Vec<u8>,
-    ) -> light_client::Result<StateVerificationResult> {
-        let (client_def, client_state, consensus_state, prefix, proof) = Self::validate_args(
-            ctx.as_ibc_client_reader(),
-            client_id.clone(),
-            counterparty_prefix,
-            proof_height,
-            proof,
-        )?;
-
-        client_def
-            .verify_channel_state(
-                &client_state,
-                proof_height.try_into().map_err(Error::ICS02Error)?,
-                &prefix,
-                &proof,
-                consensus_state.root(),
-                &counterparty_port_id,
-                &counterparty_channel_id,
-                &expected_channel_state,
-            )
-            .map_err(|e| Error::ICS04Error(ICS04Error::verify_channel_failed(e)))?;
-
-        Ok(StateVerificationResult {
-            state_commitment: StateCommitment {
-                prefix,
-                path: Path::ChannelEnds(ChannelEndsPath(
-                    counterparty_port_id,
-                    counterparty_channel_id,
-                )),
-                value: expected_channel_state.encode_vec().unwrap(),
-                height: proof_height,
-                state_id: gen_state_id(client_state, consensus_state).map_err(Error::OtherError)?,
-            },
-        })
+        client_id: &ClientId,
+    ) -> Result<Height, LightClientError> {
+        let ctx = ctx.as_ibc_client_reader();
+        let client_state = ctx.client_state(client_id).map_err(Error::ICS02Error)?;
+        Ok(client_state.latest_height().into())
     }
 }
 
@@ -431,6 +349,7 @@ impl TendermintLightClient {
         ctx: &dyn IBCClientReader,
         client_id: ClientId,
         counterparty_prefix: Vec<u8>,
+        path: String,
         proof_height: Height,
         proof: Vec<u8>,
     ) -> Result<
@@ -439,6 +358,7 @@ impl TendermintLightClient {
             AnyClientState,
             AnyConsensusState,
             CommitmentPrefix,
+            Path,
             CommitmentProofBytes,
         ),
         LightClientError,
@@ -462,7 +382,16 @@ impl TendermintLightClient {
 
         let prefix: CommitmentPrefix = counterparty_prefix.try_into().map_err(Error::ICS23Error)?;
 
-        Ok((client_def, client_state, consensus_state, prefix, proof))
+        let path: Path = Path::from_str(&path).unwrap();
+
+        Ok((
+            client_def,
+            client_state,
+            consensus_state,
+            prefix,
+            path,
+            proof,
+        ))
     }
 }
 
@@ -475,15 +404,6 @@ pub fn register_implementations(registry: &mut LightClientRegistry) {
         .unwrap()
 }
 
-pub fn gen_client_id(
-    any_client_state: &Any,
-    any_consensus_state: &Any,
-) -> Result<ClientId, LightClientError> {
-    let state_id = gen_state_id_from_any(any_client_state, any_consensus_state)
-        .map_err(LightClientError::OtherError)?;
-    Ok(serde_json::from_value::<ClientId>(Value::String(state_id.to_string())).unwrap())
-}
-
 // canonicalize_state canonicalizes some fields of specified client state
 // target fields: latest_height, frozen_height
 pub fn canonicalize_state(mut client_state: TendermintClientState) -> TendermintClientState {
@@ -493,11 +413,52 @@ pub fn canonicalize_state(mut client_state: TendermintClientState) -> Tendermint
 }
 
 // wrapper function for canonicalize_state
-pub fn canonicalize_state_from_any(client_state: AnyClientState) -> TendermintClientState {
+pub fn canonicalize_state_from_any(client_state: AnyClientState) -> AnyClientState {
     #[allow(irrefutable_let_patterns)]
     if let AnyClientState::Tendermint(tm_client_state) = client_state {
-        canonicalize_state(tm_client_state)
+        AnyClientState::Tendermint(canonicalize_state(tm_client_state))
     } else {
         unreachable!()
     }
+}
+
+fn verify_membership(
+    client_state: &TendermintClientState,
+    prefix: &CommitmentPrefix,
+    proof: &CommitmentProofBytes,
+    root: &CommitmentRoot,
+    path: impl Into<Path>,
+    value: Vec<u8>,
+) -> Result<(), ICS02Error> {
+    let merkle_path = apply_prefix(prefix, vec![path.into().to_string()]);
+    let merkle_proof: MerkleProof = RawMerkleProof::try_from(proof.clone())
+        .map_err(ICS02Error::invalid_commitment_proof)?
+        .into();
+
+    merkle_proof
+        .verify_membership(
+            &client_state.proof_specs,
+            root.clone().into(),
+            merkle_path,
+            value,
+            0,
+        )
+        .map_err(|e| ICS02Error::tendermint(TendermintError::ics23_error(e)))
+}
+
+fn verify_non_membership(
+    client_state: &TendermintClientState,
+    prefix: &CommitmentPrefix,
+    proof: &CommitmentProofBytes,
+    root: &CommitmentRoot,
+    path: impl Into<Path>,
+) -> Result<(), ICS02Error> {
+    let merkle_path = apply_prefix(prefix, vec![path.into().to_string()]);
+    let merkle_proof: MerkleProof = RawMerkleProof::try_from(proof.clone())
+        .map_err(ICS02Error::invalid_commitment_proof)?
+        .into();
+
+    merkle_proof
+        .verify_non_membership(&client_state.proof_specs, root.clone().into(), merkle_path)
+        .map_err(|e| ICS02Error::tendermint(TendermintError::ics23_error(e)))
 }

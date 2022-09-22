@@ -23,6 +23,8 @@ use std::format;
 use std::string::String;
 use store::KVStore;
 
+pub static NEXT_CLIENT_SEQUENCE: &str = "nextClientSequence";
+
 pub struct Context<'a, 'e, S> {
     store: &'a mut S,
     ek: &'e dyn Signer,
@@ -52,6 +54,9 @@ impl<'a, 'e, S: KVStore> ClientReader for Context<'a, 'e, S> {
         let value = self
             .store
             .get(format!("{}", ClientTypePath(client_id.clone())).as_bytes());
+        if value.is_none() {
+            return Err(ICS02Error::client_not_found(client_id.clone()));
+        }
         Ok(String::from_utf8(value.unwrap()).unwrap())
     }
 
@@ -59,6 +64,9 @@ impl<'a, 'e, S: KVStore> ClientReader for Context<'a, 'e, S> {
         let value = self
             .store
             .get(format!("{}", ClientStatePath(client_id.clone())).as_bytes());
+        if value.is_none() {
+            return Err(ICS02Error::client_not_found(client_id.clone()));
+        }
         Ok(bincode::deserialize(&value.unwrap()).unwrap())
     }
 
@@ -72,7 +80,6 @@ impl<'a, 'e, S: KVStore> ClientReader for Context<'a, 'e, S> {
         let value = match self.store.get(format!("{}", path).as_bytes()) {
             Some(value) => value,
             None => {
-                // TODO fix
                 return Err(ICS02Error::consensus_state_not_found(
                     client_id.clone(),
                     height.try_into()?,
@@ -89,6 +96,17 @@ impl<'a, 'e, S: KVStore> ClientReader for Context<'a, 'e, S> {
 
     fn host_timestamp(&self) -> Timestamp {
         self.current_timestamp.unwrap().into()
+    }
+
+    fn client_counter(&self) -> Result<u64, ICS02Error> {
+        match self.store.get(NEXT_CLIENT_SEQUENCE.as_bytes()) {
+            Some(bz) => {
+                let mut b: [u8; 8] = Default::default();
+                b.copy_from_slice(&bz);
+                Ok(u64::from_be_bytes(b))
+            }
+            None => Ok(0),
+        }
     }
 
     fn as_ibc_client_reader(&self) -> &dyn IBCClientReader {
@@ -171,7 +189,7 @@ impl<'a, 'e, S: KVStore> IBCClientReader for Context<'a, 'e, S> {
     }
 
     fn client_counter(&self) -> Result<u64, ICS02Error> {
-        todo!()
+        <Self as ClientReader>::client_counter(&self)
     }
 }
 
@@ -215,7 +233,13 @@ impl<'a, 'e, S: KVStore> ClientKeeper for Context<'a, 'e, S> {
         Ok(())
     }
 
-    fn increase_client_counter(&mut self) {}
+    fn increase_client_counter(&mut self) {
+        let next_counter = <Self as ClientReader>::client_counter(self).unwrap() + 1;
+        self.store.set(
+            NEXT_CLIENT_SEQUENCE.as_bytes().to_vec(),
+            next_counter.to_be_bytes().to_vec(),
+        );
+    }
 
     fn store_update_time(
         &mut self,
