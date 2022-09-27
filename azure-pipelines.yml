@@ -3,11 +3,10 @@
 # Add steps that build, run tests, deploy, and more:
 # https://aka.ms/yaml
 
-trigger:
+pr:
   branches:
     include:
-      - azure-pipelines
-#pr: none
+      - main
 
 pool:
   name: lcp-agent-pool
@@ -21,21 +20,32 @@ variables:
 
 
 steps:
+ # Find out if full ci is enabled for Pull Request validation
+- bash: |
+   echo "Looking for label at https://api.github.com/repos/$(Build.Repository.ID)/issues/$(System.PullRequest.PullRequestNumber)/labels"
+   if curl -s -H "Authorization: token $(GH_PAT)" "https://api.github.com/repos/$(Build.Repository.ID)/issues/$(System.PullRequest.PullRequestNumber)/labels" | grep '"name": "integration-test"'
+   then
+     echo "##vso[task.setvariable variable=prWithCILabel;isOutput=true]true"
+     echo "integration-test label found!"
+   fi
+  displayName: Check for CI label build on PR
+  condition: eq(variables['Build.Reason'], 'PullRequest')
+  name: checkPrCILabel
 - script: |
     echo $(GH_PAT) | docker login $(registry) -u $(registry_user) --password-stdin
     docker pull $(registry)/$(registry_user)/$(sgx_rust_repo):$(sgx_rust_tag)
+  condition: eq(variables.prWithCILabel, 'true')
   displayName: 'Pull the sgx-rust image'
 
-- script: |
-    docker build -t lcp-ci-it:$(lcp_tag) -f .ci/tests/integration/Dockerfile .
-  displayName: 'Build docker image'
-
-- script: |
-    docker run \
-      --device /dev/sgx/enclave \
-      --device /dev/sgx/provision \
-      --env IAS_KEY=$(IAS_KEY) \
-      --env SPID=$(SPID) \
-      lcp-ci-it:$(lcp_tag)
-  displayName: 'Run integration test'
-
+#- script: |
+#    docker build -t lcp-ci-it:$(lcp_tag) -f .ci/tests/integration/Dockerfile .
+#  displayName: 'Build docker image'
+#
+#- script: |
+#    docker run \
+#      --device /dev/sgx/enclave \
+#      --device /dev/sgx/provision \
+#      --env IAS_KEY=$(IAS_KEY) \
+#      --env SPID=$(SPID) \
+#      lcp-ci-it:$(lcp_tag)
+#  displayName: 'Run integration test'
