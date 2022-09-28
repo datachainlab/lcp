@@ -196,6 +196,10 @@ test:
 integration-test: $(Signed_RustEnclave_Name) bin/gaiad
 	@PATH=${PATH}:$(CURDIR)/bin cargo test $(CARGO_TARGET) --package integration-test
 
+.PHONY: build-integration-test
+build-integration-test: $(Signed_RustEnclave_Name)
+	@PATH=${PATH}:$(CURDIR)/bin cargo test $(CARGO_TARGET) --package integration-test --no-run
+
 .PHONY: test-nodes
 test-setup-nodes: bin/gaiad
 	@PATH=${PATH}:$(CURDIR)/bin cargo run --bin test_setup_with_binary_channel

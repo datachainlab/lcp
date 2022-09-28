@@ -35,4 +35,10 @@ jobs:
       - uses: actions-rs/toolchain@v1
       - uses: Swatinem/rust-cache@v1
       - uses: actions-rs/cargo@v1
-      - run: make
+      - run: |
+          bash <<EOF
+          source /opt/sgxsdk/environment
+          export SGX_MODE=SW
+          make
+          make integration-test
+          EOF
