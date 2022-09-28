@@ -9,7 +9,7 @@ pub enum EnclaveManageCommand {
     InitEnclave(InitEnclaveInput),
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Default)]
 pub struct InitEnclaveInput {
     pub spid: Vec<u8>,
     pub ias_key: Vec<u8>,
@@ -20,7 +20,7 @@ pub enum EnclaveManageResult {
     InitEnclave(InitEnclaveResult),
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Default)]
 pub struct InitEnclaveResult {
     pub report: EndorsedAttestationVerificationReport,
 }

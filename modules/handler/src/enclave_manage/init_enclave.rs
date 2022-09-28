@@ -18,6 +18,15 @@ pub fn init_enclave(
     input: InitEnclaveInput,
     params: CommandParams,
 ) -> Result<InitEnclaveResult, Error> {
+    if input.spid.is_empty() && input.ias_key.is_empty() {
+        let mut key_manager = KeyManager::new(params.home);
+        let _ = match key_manager.get_enclave_key() {
+            Some(kp) => kp,
+            None => key_manager.create_enclave_key()?,
+        };
+        return Ok(Default::default());
+    }
+
     let spid = decode_spid(&input.spid)?;
     let mut key_manager = KeyManager::new(params.home);
     let kp = match key_manager.get_enclave_key() {
