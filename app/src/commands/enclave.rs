@@ -34,68 +34,99 @@ pub struct InitKey {
         help = "Boolean flag to overwrite an enclave key and AVR if it already exists."
     )]
     pub force: bool,
+
+    /// Boolean flag to simulate the execution with the enclave
+    #[clap(
+        long = "simulate",
+        default_value = "false",
+        help = "Boolean flag to simulate the execution with the enclave"
+    )]
+    pub simulate: bool,
 }
 
-#[derive(Clone, Debug, Parser, PartialEq)]
-pub struct ShowKey {}
+fn run_init_key(home: &PathBuf, opts: &Opts, cmd: &InitKey) -> Result<()> {
+    let ek_path = home.join(SEALED_ENCLAVE_KEY_PATH);
+    if ek_path.exists() {
+        if cmd.force {
+            remove_file(&ek_path)?;
+        } else {
+            bail!(
+                "Init Key Failed: Enclave Key path {:?} already exists",
+                ek_path.as_path(),
+            );
+        }
+    }
+
+    let avr_path = home.join(AVR_KEY_PATH);
+    if avr_path.exists() {
+        if cmd.force {
+            remove_file(&avr_path)?;
+        } else {
+            bail!(
+                "Init Key Failed: AVR path {:?} already exists",
+                avr_path.as_path(),
+            );
+        }
+    }
+
+    let spid = std::env::var("SPID")?;
+    let ias_key = std::env::var("IAS_KEY")?;
+
+    let enclave = load_enclave(opts, cmd.enclave.as_ref())?;
+    match enclave.init_enclave_key(InitEnclaveInput {
+        spid: spid.as_bytes().to_vec(),
+        ias_key: ias_key.as_bytes().to_vec(),
+    }) {
+        Ok(res) => {
+            let s = serde_json::to_string(&res.report)?;
+            info!("successfully got the AVR");
+            // NOTE: Currently, enclave key and AVR file operations are not atomic.
+            // Therefore, if the service is running in the background, the service may read incomplete data (and its attempt will be failed).
+            // To solve this problem, consider using the traditional `rename` approach or a File DB such as rocksdb.
+            let mut f = OpenOptions::new()
+                .write(true)
+                .create_new(true)
+                .open(&avr_path)?;
+            f.write_all(s.as_bytes())?;
+            f.flush()?;
+            Ok(())
+        }
+        Err(e) => bail!("ECALL Enclave Failed {:?}!", e),
+    }
+}
+
+fn run_simulate_init_key(home: &PathBuf, opts: &Opts, cmd: &InitKey) -> Result<()> {
+    let ek_path = home.join(SEALED_ENCLAVE_KEY_PATH);
+    if ek_path.exists() {
+        if cmd.force {
+            remove_file(&ek_path)?;
+        } else {
+            bail!(
+                "Init Key Failed: Enclave Key path {:?} already exists",
+                ek_path.as_path(),
+            );
+        }
+    }
+    let enclave = load_enclave(opts, cmd.enclave.as_ref())?;
+    match enclave.init_enclave_key(InitEnclaveInput::default()) {
+        Ok(_) => Ok(()),
+        Err(e) => bail!("ECALL Enclave Failed {:?}!", e),
+    }
+}
 
 impl EnclaveCmd {
     pub fn run(&self, opts: &Opts) -> Result<()> {
         match self {
             EnclaveCmd::InitKey(cmd) => {
-                let spid = std::env::var("SPID")?;
-                let ias_key = std::env::var("IAS_KEY")?;
-
                 let home = opts.get_home();
                 if !home.exists() {
                     std::fs::create_dir_all(&home)?;
                     info!("created home directory: {:?}", home);
                 }
 
-                let ek_path = home.join(SEALED_ENCLAVE_KEY_PATH);
-                if ek_path.exists() {
-                    if cmd.force {
-                        remove_file(&ek_path)?;
-                    } else {
-                        bail!(
-                            "Init Key Failed: Enclave Key path {:?} already exists",
-                            ek_path.as_path(),
-                        );
-                    }
-                }
-
-                let avr_path = home.join(AVR_KEY_PATH);
-                if avr_path.exists() {
-                    if cmd.force {
-                        remove_file(&avr_path)?;
-                    } else {
-                        bail!(
-                            "Init Key Failed: AVR path {:?} already exists",
-                            avr_path.as_path(),
-                        );
-                    }
-                }
-
-                let enclave = load_enclave(opts, cmd.enclave.as_ref())?;
-                match enclave.init_enclave_key(InitEnclaveInput {
-                    spid: spid.as_bytes().to_vec(),
-                    ias_key: ias_key.as_bytes().to_vec(),
-                }) {
-                    Ok(res) => {
-                        let s = serde_json::to_string(&res.report)?;
-                        info!("successfully got the AVR");
-                        // NOTE: Currently, enclave key and AVR file operations are not atomic.
-                        // Therefore, if the service is running in the background, the service may read incomplete data (and its attempt will be failed).
-                        // To solve this problem, consider using the traditional `rename` approach or a File DB such as rocksdb.
-                        let mut f = OpenOptions::new()
-                            .write(true)
-                            .create_new(true)
-                            .open(&avr_path)?;
-                        f.write_all(s.as_bytes())?;
-                        f.flush()?;
-                        Ok(())
-                    }
-                    Err(e) => bail!("ECALL Enclave Failed {:?}!", e),
+                match cmd.simulate {
+                    false => run_init_key(&home, opts, cmd),
+                    true => run_simulate_init_key(&home, opts, cmd),
                 }
             }
             EnclaveCmd::ShowAVR => {
