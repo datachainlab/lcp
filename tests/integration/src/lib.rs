@@ -94,7 +94,7 @@ mod tests {
         let _ = match enclave.init_enclave_key(InitEnclaveInput::default()) {
             Ok(res) => res,
             Err(e) => {
-                panic!("Init Enclave Failed {:?}!", e);
+                bail!("Init Enclave Failed {:?}!", e);
             }
         };
 
@@ -106,7 +106,7 @@ mod tests {
             }) {
                 Ok(res) => res.report,
                 Err(e) => {
-                    bail!(e);
+                    bail!("IAS Remote Attestation Failed {:?}!", e);
                 }
             };
         }
