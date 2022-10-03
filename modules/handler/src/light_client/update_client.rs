@@ -2,7 +2,7 @@ use super::registry::get_light_client_by_client_id;
 use crate::light_client::LightClientHandlerError as Error;
 use commitments::{prover::prove_update_client_commitment, UpdateClientCommitmentProof};
 use context::Context;
-use enclave_commands::{LightClientResult, UpdateClientInput, UpdateClientResult};
+use ecall_commands::{LightClientResult, UpdateClientInput, UpdateClientResult};
 use light_client::{ClientKeeper, ClientReader, LightClientSource};
 use store::KVStore;
 

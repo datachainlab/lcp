@@ -14,7 +14,7 @@ pub enum EnclaveAPIError {
     #[error("BincodeError")]
     BincodeError(#[from] BincodeError),
     #[error("EnclaveCommandError")]
-    EnclaveCommandError(#[from] enclave_commands::EnclaveCommandError),
+    EnclaveCommandError(#[from] ecall_commands::EnclaveCommandError),
     #[error(transparent)]
     OtherError(#[from] anyhow::Error),
 }

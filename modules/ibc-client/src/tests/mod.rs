@@ -7,7 +7,7 @@ mod tests {
     use crate::{client_state::ClientState, consensus_state::ConsensusState};
     use core::time::Duration;
     use crypto::{Address, EnclaveKey};
-    use enclave_commands::{
+    use ecall_commands::{
         Command, CommandParams, CommandResult, EnclaveCommand, InitClientInput, InitClientResult,
         LightClientCommand, LightClientResult, UpdateClientInput, UpdateClientResult,
     };

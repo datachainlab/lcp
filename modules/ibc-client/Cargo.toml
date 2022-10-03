@@ -38,7 +38,7 @@ tempdir = "0.3.7"
 mock-lc = { path = "../mock-lc" }
 handler = { path = "../handler" }
 store = { path = "../store" }
-enclave-commands = { path = "../enclave-commands" }
+ecall-commands = { path = "../ecall-commands" }
 
 [features]
 default = ["std"]

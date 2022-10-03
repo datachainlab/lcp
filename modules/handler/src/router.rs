@@ -8,7 +8,7 @@ use ::light_client::LightClientSource;
 use anyhow::anyhow;
 use context::Context;
 use crypto::EnclaveKey;
-use enclave_commands::{Command, CommandResult, EnclaveCommand};
+use ecall_commands::{Command, CommandResult, EnclaveCommand};
 use log::*;
 use std::format;
 use store::Store;

@@ -3,11 +3,11 @@ mod relayer;
 mod tests {
     use super::*;
     use anyhow::{anyhow, bail};
-    use enclave_api::{Enclave, EnclavePrimitiveAPI};
-    use enclave_commands::{
+    use ecall_commands::{
         CommitmentProofPair, IASRemoteAttestationInput, InitClientInput, InitEnclaveInput,
         UpdateClientInput, VerifyMembershipInput,
     };
+    use enclave_api::{Enclave, EnclavePrimitiveAPI};
     use ibc::core::{
         ics23_commitment::{commitment::CommitmentProofBytes, merkle::MerkleProof},
         ics24_host::{

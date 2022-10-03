@@ -27,7 +27,7 @@ lcp-types = { path = "../types", default-features = false }
 light-client = { path = "../light-client", default-features = false }
 crypto = { path = "../crypto", default-features = false }
 settings = { path = "../settings", default-features = false }
-enclave-commands = { path = "../enclave-commands", default-features = false }
+ecall-commands = { path = "../ecall-commands", default-features = false }
 commitments = { path = "../commitments", default-features = false }
 attestation-report = { path = "../attestation-report", default-features = false }
 context = { path = "../context", default-features = false }
@@ -44,7 +44,7 @@ std = [
     "light-client/std",
     "crypto/std",
     "settings/std",
-    "enclave-commands/std",
+    "ecall-commands/std",
     "commitments/std",
     "attestation-report/std",
     "context/std",
@@ -62,7 +62,7 @@ sgx = [
     "light-client/sgx",
     "crypto/sgx",
     "settings/sgx",
-    "enclave-commands/sgx",
+    "ecall-commands/sgx",
     "commitments/sgx",
     "attestation-report/sgx",
     "context/sgx",

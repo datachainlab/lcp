@@ -1,7 +1,7 @@
 use super::registry::get_light_client_by_client_id;
 use crate::light_client::LightClientHandlerError as Error;
 use context::Context;
-use enclave_commands::{LightClientResult, QueryClientInput, QueryClientResult};
+use ecall_commands::{LightClientResult, QueryClientInput, QueryClientResult};
 use light_client::{ClientReader, LightClientSource};
 use store::KVStore;
 

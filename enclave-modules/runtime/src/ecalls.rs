@@ -1,7 +1,7 @@
 use crate::get_store;
 use crate::light_client::GlobalLightClientRegistry;
 use crypto::KeyManager;
-use enclave_commands::{CommandResult, EnclaveCommand};
+use ecall_commands::{CommandResult, EnclaveCommand};
 use enclave_utils::validate_const_ptr;
 use handler::router::dispatch;
 use sgx_types::sgx_status_t;

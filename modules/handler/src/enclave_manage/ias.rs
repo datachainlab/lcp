@@ -4,7 +4,7 @@ use crate::sgx_reexport_prelude::*;
 use anyhow::anyhow;
 use attestation_report::verify_report;
 use crypto::KeyManager;
-use enclave_commands::{CommandParams, IASRemoteAttestationInput, IASRemoteAttestationResult};
+use ecall_commands::{CommandParams, IASRemoteAttestationInput, IASRemoteAttestationResult};
 use enclave_remote_attestation::{
     attestation::create_attestation_report, report::validate_quote_status,
 };

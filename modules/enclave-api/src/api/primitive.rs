@@ -1,5 +1,5 @@
 use crate::{ffi, Enclave, EnclaveAPIError as Error, Result};
-use enclave_commands::{
+use ecall_commands::{
     Command, CommandParams, CommandResult, EnclaveCommand, EnclaveManageCommand,
     EnclaveManageResult, IASRemoteAttestationInput, IASRemoteAttestationResult, InitClientInput,
     InitClientResult, InitEnclaveInput, InitEnclaveResult, LightClientCommand, LightClientResult,
