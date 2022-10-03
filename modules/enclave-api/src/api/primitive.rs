@@ -1,9 +1,10 @@
 use crate::{ffi, Enclave, EnclaveAPIError as Error, Result};
 use enclave_commands::{
     Command, CommandParams, CommandResult, EnclaveCommand, EnclaveManageCommand,
-    EnclaveManageResult, InitClientInput, InitClientResult, InitEnclaveInput, InitEnclaveResult,
-    LightClientCommand, LightClientResult, QueryClientInput, QueryClientResult, UpdateClientInput,
-    UpdateClientResult, VerifyMembershipInput, VerifyMembershipResult, VerifyNonMembershipInput,
+    EnclaveManageResult, IASRemoteAttestationInput, IASRemoteAttestationResult, InitClientInput,
+    InitClientResult, InitEnclaveInput, InitEnclaveResult, LightClientCommand, LightClientResult,
+    QueryClientInput, QueryClientResult, UpdateClientInput, UpdateClientResult,
+    VerifyMembershipInput, VerifyMembershipResult, VerifyNonMembershipInput,
     VerifyNonMembershipResult,
 };
 use sgx_types::sgx_status_t;
@@ -14,6 +15,12 @@ pub trait EnclavePrimitiveAPI {
 
     /// init_enclave_key generates a new key and perform remote attestation to generates an AVR
     fn init_enclave_key(&self, input: InitEnclaveInput) -> Result<InitEnclaveResult>;
+
+    /// ias_remote_attestation performs Remote Attestation with IAS(Intel Attestation Service)
+    fn ias_remote_attestation(
+        &self,
+        input: IASRemoteAttestationInput,
+    ) -> Result<IASRemoteAttestationResult>;
 
     /// init_client initializes an ELC instance with given states
     fn init_client(&self, input: InitClientInput) -> Result<InitClientResult>;
@@ -78,6 +85,19 @@ impl EnclavePrimitiveAPI for Enclave {
             Command::EnclaveManage(EnclaveManageCommand::InitEnclave(input)),
         ))? {
             CommandResult::EnclaveManage(EnclaveManageResult::InitEnclave(res)) => Ok(res),
+            _ => unreachable!(),
+        }
+    }
+
+    fn ias_remote_attestation(
+        &self,
+        input: IASRemoteAttestationInput,
+    ) -> Result<IASRemoteAttestationResult> {
+        match self.execute_command(&EnclaveCommand::new(
+            CommandParams::new(self.home.clone()),
+            Command::EnclaveManage(EnclaveManageCommand::IASRemoteAttestation(input)),
+        ))? {
+            CommandResult::EnclaveManage(EnclaveManageResult::IASRemoteAttestation(res)) => Ok(res),
             _ => unreachable!(),
         }
     }

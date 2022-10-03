@@ -2,11 +2,11 @@ mod relayer;
 #[cfg(test)]
 mod tests {
     use super::*;
-    use anyhow::anyhow;
+    use anyhow::{anyhow, bail};
     use enclave_api::{Enclave, EnclavePrimitiveAPI};
     use enclave_commands::{
-        CommitmentProofPair, InitClientInput, InitEnclaveInput, UpdateClientInput,
-        VerifyMembershipInput,
+        CommitmentProofPair, IASRemoteAttestationInput, InitClientInput, InitEnclaveInput,
+        UpdateClientInput, VerifyMembershipInput,
     };
     use ibc::core::{
         ics23_commitment::{commitment::CommitmentProofBytes, merkle::MerkleProof},
@@ -31,7 +31,9 @@ mod tests {
     static ENCLAVE_FILE: &'static str = "../../bin/enclave.signed.so";
     static ENV_SETUP_NODES: &'static str = "SETUP_NODES";
 
-    struct ELCStateVerificationTest;
+    struct ELCStateVerificationTest {
+        enclave: Enclave,
+    }
 
     impl TestOverrides for ELCStateVerificationTest {
         fn modify_relayer_config(&self, _config: &mut Config) {}
@@ -48,30 +50,13 @@ mod tests {
             let rt = Arc::new(TokioRuntime::new()?);
             let config_a = chains.handle_a().config()?;
             let rly = Relayer::new(config_a, rt).unwrap();
-            verify(rly).unwrap();
+            verify(rly, &self.enclave).unwrap();
             Ok(())
         }
     }
 
     #[test]
     fn test_elc_state_verification() {
-        match std::env::var(ENV_SETUP_NODES).map(|v| v.to_lowercase()) {
-            Ok(v) if v == "false" => run_test().unwrap(),
-            _ => run_binary_channel_test(&ELCStateVerificationTest).unwrap(),
-        }
-    }
-
-    fn run_test() -> Result<(), anyhow::Error> {
-        env_logger::init();
-        let rt = Arc::new(TokioRuntime::new()?);
-        let rly = relayer::create_relayer(rt).unwrap();
-        verify(rly)
-    }
-
-    fn verify(mut rly: Relayer) -> Result<(), anyhow::Error> {
-        let spid = std::env::var("SPID")?;
-        let ias_key = std::env::var("IAS_KEY")?;
-
         let enclave = match host::enclave::load_enclave(ENCLAVE_FILE) {
             Ok(r) => {
                 info!("Init Enclave Successful {}!", r.geteid());
@@ -81,25 +66,50 @@ mod tests {
                 panic!("Init Enclave Failed {}!", x.as_str());
             }
         };
-
         let tmp_dir = TempDir::new("lcp").unwrap();
         let home = tmp_dir.path().to_str().unwrap().to_string();
         let enclave = Enclave::new(enclave, home);
 
-        let report = match enclave.init_enclave_key(InitEnclaveInput {
-            spid: spid.as_bytes().to_vec(),
-            ias_key: ias_key.as_bytes().to_vec(),
-        }) {
-            Ok(res) => res.report,
-            Err(e) => {
-                panic!("ECALL Enclave Failed {:?}!", e);
-            }
-            _ => unreachable!(),
-        };
-        let quote = report.get_avr().unwrap().parse_quote().unwrap();
-        info!("report={:?}", quote.raw.report_body.report_data.d);
+        match std::env::var(ENV_SETUP_NODES).map(|v| v.to_lowercase()) {
+            Ok(v) if v == "false" => run_test(&enclave).unwrap(),
+            _ => run_binary_channel_test(&ELCStateVerificationTest { enclave }).unwrap(),
+        }
+    }
 
-        // register the key into onchain
+    fn run_test(enclave: &Enclave) -> Result<(), anyhow::Error> {
+        env_logger::init();
+        let rt = Arc::new(TokioRuntime::new()?);
+        let rly = relayer::create_relayer(rt).unwrap();
+        verify(rly, enclave)
+    }
+
+    fn verify(mut rly: Relayer, enclave: &Enclave) -> Result<(), anyhow::Error> {
+        let simulate = std::env::var("SGX_MODE").map_or(false, |m| m == "SW");
+        if simulate {
+            info!("this test is running in SW mode");
+        } else {
+            info!("this test is running in HW mode");
+        }
+
+        let _ = match enclave.init_enclave_key(InitEnclaveInput::default()) {
+            Ok(res) => res,
+            Err(e) => {
+                bail!("Init Enclave Failed {:?}!", e);
+            }
+        };
+
+        let simulate = std::env::var("SGX_MODE").map_or(false, |m| m == "SW");
+        if !simulate {
+            let _ = match enclave.ias_remote_attestation(IASRemoteAttestationInput {
+                spid: std::env::var("SPID").unwrap().as_bytes().to_vec(),
+                ias_key: std::env::var("IAS_KEY").unwrap().as_bytes().to_vec(),
+            }) {
+                Ok(res) => res.report,
+                Err(e) => {
+                    bail!("IAS Remote Attestation Failed {:?}!", e);
+                }
+            };
+        }
 
         // XXX use non-latest height here
         let initial_height = rly
@@ -169,7 +179,6 @@ mod tests {
             ),
         })?;
 
-        enclave.destroy();
         Ok(())
     }
 

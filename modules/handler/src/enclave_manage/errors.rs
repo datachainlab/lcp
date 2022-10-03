@@ -1,11 +1,14 @@
 #[cfg(feature = "sgx")]
 use crate::sgx_reexport_prelude::*;
 use sgx_types::sgx_status_t;
+use std::string::String;
 
 #[derive(thiserror::Error, Debug)]
 pub enum EnclaveManageError {
     #[error("SGXError: {0}")]
     SGXError(sgx_status_t),
+    #[error("EnclaveKeyNotFound")]
+    EnclaveKeyNotFound,
     #[error("CryptoError")]
     CryptoError(#[from] crypto::CryptoError),
     #[error("AttestationReportError")]

@@ -11,7 +11,8 @@ use serde::{Deserialize, Serialize};
 use std::string::String;
 
 pub use enclave_manage::{
-    EnclaveManageCommand, EnclaveManageResult, InitEnclaveInput, InitEnclaveResult,
+    EnclaveManageCommand, EnclaveManageResult, IASRemoteAttestationInput,
+    IASRemoteAttestationResult, InitEnclaveInput, InitEnclaveResult,
 };
 pub use errors::EnclaveCommandError;
 pub use light_client::{

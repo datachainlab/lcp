@@ -4,7 +4,7 @@ jobs:
   fmt:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - uses: actions-rs/toolchain@v1
       - run: rustup component add rustfmt && cargo fmt --all -- --check
 
@@ -13,26 +13,51 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - uses: actions-rs/toolchain@v1
-      - uses: Swatinem/rust-cache@v1
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            .
+            ./enclave
       - uses: actions-rs/cargo@v1
       - run: make test
 
   relayer:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-go@v2
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v3
         with:
           go-version: 1.18
+      - uses: actions/cache@v3
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
       - run: make yrly
 
   sdk-test:
     runs-on: ubuntu-latest
-    container:
-      image: bluele/sgx-rust:2004-1.1.5
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - uses: actions-rs/toolchain@v1
-      - uses: Swatinem/rust-cache@v1
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            .
+            ./enclave
       - uses: actions-rs/cargo@v1
-      - run: make
+      - run: |
+          docker run -w /root/lcp \
+            -v $(pwd):/root/lcp \
+            -v ${HOME}/.cargo/git:/root/.cargo/git \
+            -v ${HOME}/.cargo/registry:/root/.cargo/registry \
+            bluele/sgx-rust:2004-1.1.5 \
+            /bin/bash -c \
+              "source /opt/sgxsdk/environment && \
+              source /root/.cargo/env && \
+              export SGX_MODE=SW && \
+              make && make integration-test"
+      - run: sudo chown -R runner:docker . ${HOME}/.cargo
