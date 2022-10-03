@@ -4,7 +4,7 @@ members = [
     "app",
     "modules/host",
     "modules/types",
-    "modules/handler",
+    "modules/ecall-handler",
     "modules/attestation-report",
     "modules/enclave-api",
     "modules/ecall-commands",

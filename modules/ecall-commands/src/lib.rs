@@ -14,7 +14,7 @@ pub use enclave_manage::{
     EnclaveManageCommand, EnclaveManageResult, IASRemoteAttestationInput,
     IASRemoteAttestationResult, InitEnclaveInput, InitEnclaveResult,
 };
-pub use errors::EnclaveCommandError;
+pub use errors::ECallCommandError;
 pub use light_client::{
     CommitmentProofPair, InitClientInput, InitClientResult, LightClientCommand, LightClientResult,
     QueryClientInput, QueryClientResult, UpdateClientInput, UpdateClientResult,
@@ -27,12 +27,12 @@ mod errors;
 mod light_client;
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct EnclaveCommand {
+pub struct ECallCommand {
     pub params: CommandParams,
     pub cmd: Command,
 }
 
-impl EnclaveCommand {
+impl ECallCommand {
     pub fn new(params: CommandParams, cmd: Command) -> Self {
         Self { params, cmd }
     }

@@ -24,7 +24,7 @@ prost-types = { version = "0.10", default-features = false }
 bincode = { git = "https://github.com/bluele/bincode-sgx", branch = "serde" }
 
 enclave-utils = { path = "../utils" }
-handler = { path = "../../modules/handler", default-features = false, features = ["sgx"] }
+ecall-handler = { path = "../../modules/ecall-handler", default-features = false, features = ["sgx"] }
 light-client = { path = "../../modules/light-client", default-features = false, features = ["sgx"] }
 tendermint-lc = { path = "../../modules/tendermint-lc", default-features = false, features = ["sgx"] }
 ecall-commands = { path = "../../modules/ecall-commands", default-features = false, features = ["sgx"] }

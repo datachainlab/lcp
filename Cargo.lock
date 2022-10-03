@@ -1109,6 +1109,37 @@ dependencies = [
 ]
 
 [[package]]
+name = "ecall-handler"
+version = "0.1.0"
+dependencies = [
+ "anyhow 1.0.28",
+ "anyhow 1.0.58",
+ "attestation-report",
+ "bincode 1.3.1",
+ "bincode 1.3.3",
+ "commitments",
+ "context",
+ "crypto",
+ "ecall-commands",
+ "enclave-remote-attestation",
+ "enclave-utils",
+ "hex",
+ "ibc",
+ "lcp-types",
+ "light-client",
+ "log 0.4.14",
+ "log 0.4.17",
+ "prost-types",
+ "serde",
+ "settings",
+ "sgx_tstd",
+ "sgx_types",
+ "store",
+ "thiserror 1.0.31",
+ "thiserror 1.0.9",
+]
+
+[[package]]
 name = "ecdsa"
 version = "0.13.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1589,37 +1620,6 @@ name = "half"
 version = "1.8.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "eabb4a44450da02c90444cf74558da904edde8fb4e9035a9a6a4e15445af0bd7"
-
-[[package]]
-name = "handler"
-version = "0.1.0"
-dependencies = [
- "anyhow 1.0.28",
- "anyhow 1.0.58",
- "attestation-report",
- "bincode 1.3.1",
- "bincode 1.3.3",
- "commitments",
- "context",
- "crypto",
- "ecall-commands",
- "enclave-remote-attestation",
- "enclave-utils",
- "hex",
- "ibc",
- "lcp-types",
- "light-client",
- "log 0.4.14",
- "log 0.4.17",
- "prost-types",
- "serde",
- "settings",
- "sgx_tstd",
- "sgx_types",
- "store",
- "thiserror 1.0.31",
- "thiserror 1.0.9",
-]
 
 [[package]]
 name = "hashbrown"
@@ -2302,7 +2302,7 @@ dependencies = [
  "context",
  "crypto",
  "ecall-commands",
- "handler",
+ "ecall-handler",
  "ibc",
  "ibc-proto",
  "lazy_static",

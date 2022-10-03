@@ -8,10 +8,10 @@ mod tests {
     use core::time::Duration;
     use crypto::{Address, EnclaveKey};
     use ecall_commands::{
-        Command, CommandParams, CommandResult, EnclaveCommand, InitClientInput, InitClientResult,
+        Command, CommandParams, CommandResult, ECallCommand, InitClientInput, InitClientResult,
         LightClientCommand, LightClientResult, UpdateClientInput, UpdateClientResult,
     };
-    use handler::router;
+    use ecall_handler::router;
     use ibc::core::ics24_host::identifier::ClientId;
     use ibc::{
         core::ics02_client::{
@@ -82,7 +82,7 @@ mod tests {
             let res = router::dispatch::<_, LocalLightClientRegistry>(
                 Some(&ek),
                 &mut ibc_store,
-                EnclaveCommand::new(
+                ECallCommand::new(
                     CommandParams::new(home.clone()),
                     Command::LightClient(LightClientCommand::InitClient(input)),
                 ),
@@ -114,7 +114,7 @@ mod tests {
             let res = router::dispatch::<_, LocalLightClientRegistry>(
                 Some(&ek),
                 &mut lcp_store,
-                EnclaveCommand::new(
+                ECallCommand::new(
                     CommandParams::new(home.clone()),
                     Command::LightClient(LightClientCommand::InitClient(input)),
                 ),
@@ -146,7 +146,7 @@ mod tests {
             let res = router::dispatch::<_, LocalLightClientRegistry>(
                 Some(&ek),
                 &mut lcp_store,
-                EnclaveCommand::new(
+                ECallCommand::new(
                     CommandParams::new(home.clone()),
                     Command::LightClient(LightClientCommand::UpdateClient(input)),
                 ),
@@ -180,7 +180,7 @@ mod tests {
             let res = router::dispatch::<_, LocalLightClientRegistry>(
                 Some(&ek),
                 &mut ibc_store,
-                EnclaveCommand::new(
+                ECallCommand::new(
                     CommandParams::new(home.clone()),
                     Command::LightClient(LightClientCommand::UpdateClient(input)),
                 ),

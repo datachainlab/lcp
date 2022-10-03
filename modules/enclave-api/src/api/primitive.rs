@@ -1,17 +1,16 @@
 use crate::{ffi, Enclave, EnclaveAPIError as Error, Result};
 use ecall_commands::{
-    Command, CommandParams, CommandResult, EnclaveCommand, EnclaveManageCommand,
-    EnclaveManageResult, IASRemoteAttestationInput, IASRemoteAttestationResult, InitClientInput,
-    InitClientResult, InitEnclaveInput, InitEnclaveResult, LightClientCommand, LightClientResult,
-    QueryClientInput, QueryClientResult, UpdateClientInput, UpdateClientResult,
-    VerifyMembershipInput, VerifyMembershipResult, VerifyNonMembershipInput,
-    VerifyNonMembershipResult,
+    Command, CommandParams, CommandResult, ECallCommand, EnclaveManageCommand, EnclaveManageResult,
+    IASRemoteAttestationInput, IASRemoteAttestationResult, InitClientInput, InitClientResult,
+    InitEnclaveInput, InitEnclaveResult, LightClientCommand, LightClientResult, QueryClientInput,
+    QueryClientResult, UpdateClientInput, UpdateClientResult, VerifyMembershipInput,
+    VerifyMembershipResult, VerifyNonMembershipInput, VerifyNonMembershipResult,
 };
 use sgx_types::sgx_status_t;
 
 pub trait EnclavePrimitiveAPI {
     /// execute_command runs a given command in the enclave
-    fn execute_command(&self, cmd: &EnclaveCommand) -> Result<CommandResult>;
+    fn execute_command(&self, cmd: &ECallCommand) -> Result<CommandResult>;
 
     /// init_enclave_key generates a new key and perform remote attestation to generates an AVR
     fn init_enclave_key(&self, input: InitEnclaveInput) -> Result<InitEnclaveResult>;
@@ -42,7 +41,7 @@ pub trait EnclavePrimitiveAPI {
 }
 
 impl EnclavePrimitiveAPI for Enclave {
-    fn execute_command(&self, cmd: &EnclaveCommand) -> Result<CommandResult> {
+    fn execute_command(&self, cmd: &ECallCommand) -> Result<CommandResult> {
         let mut output_len = 0;
         let output_maxlen = 65536;
         let mut output_buf = Vec::with_capacity(output_maxlen);
@@ -80,7 +79,7 @@ impl EnclavePrimitiveAPI for Enclave {
     }
 
     fn init_enclave_key(&self, input: InitEnclaveInput) -> Result<InitEnclaveResult> {
-        match self.execute_command(&EnclaveCommand::new(
+        match self.execute_command(&ECallCommand::new(
             CommandParams::new(self.home.clone()),
             Command::EnclaveManage(EnclaveManageCommand::InitEnclave(input)),
         ))? {
@@ -93,7 +92,7 @@ impl EnclavePrimitiveAPI for Enclave {
         &self,
         input: IASRemoteAttestationInput,
     ) -> Result<IASRemoteAttestationResult> {
-        match self.execute_command(&EnclaveCommand::new(
+        match self.execute_command(&ECallCommand::new(
             CommandParams::new(self.home.clone()),
             Command::EnclaveManage(EnclaveManageCommand::IASRemoteAttestation(input)),
         ))? {
@@ -103,7 +102,7 @@ impl EnclavePrimitiveAPI for Enclave {
     }
 
     fn init_client(&self, input: InitClientInput) -> Result<InitClientResult> {
-        match self.execute_command(&EnclaveCommand::new(
+        match self.execute_command(&ECallCommand::new(
             CommandParams::new(self.home.clone()),
             Command::LightClient(LightClientCommand::InitClient(input)),
         ))? {
@@ -113,7 +112,7 @@ impl EnclavePrimitiveAPI for Enclave {
     }
 
     fn update_client(&self, input: UpdateClientInput) -> Result<UpdateClientResult> {
-        match self.execute_command(&EnclaveCommand::new(
+        match self.execute_command(&ECallCommand::new(
             CommandParams::new(self.home.clone()),
             Command::LightClient(LightClientCommand::UpdateClient(input)),
         ))? {
@@ -123,7 +122,7 @@ impl EnclavePrimitiveAPI for Enclave {
     }
 
     fn verify_membership(&self, input: VerifyMembershipInput) -> Result<VerifyMembershipResult> {
-        match self.execute_command(&EnclaveCommand::new(
+        match self.execute_command(&ECallCommand::new(
             CommandParams::new(self.home.clone()),
             Command::LightClient(LightClientCommand::VerifyMembership(input)),
         ))? {
@@ -136,7 +135,7 @@ impl EnclavePrimitiveAPI for Enclave {
         &self,
         input: VerifyNonMembershipInput,
     ) -> Result<VerifyNonMembershipResult> {
-        match self.execute_command(&EnclaveCommand::new(
+        match self.execute_command(&ECallCommand::new(
             CommandParams::new(self.home.clone()),
             Command::LightClient(LightClientCommand::VerifyNonMembership(input)),
         ))? {
@@ -146,7 +145,7 @@ impl EnclavePrimitiveAPI for Enclave {
     }
 
     fn query_client(&self, input: QueryClientInput) -> Result<QueryClientResult> {
-        match self.execute_command(&EnclaveCommand::new(
+        match self.execute_command(&ECallCommand::new(
             CommandParams::new(self.home.clone()),
             Command::LightClient(LightClientCommand::QueryClient(input)),
         ))? {

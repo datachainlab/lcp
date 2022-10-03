@@ -3,7 +3,7 @@ use crate::sgx_reexport_prelude::*;
 use std::string::String;
 
 #[derive(thiserror::Error, Debug)]
-pub enum EnclaveCommandError {
+pub enum ECallCommandError {
     #[error("InvalidArgumentError: {0}")]
     InvalidArgumentError(String),
     #[error("ICS03Error: {0}")]

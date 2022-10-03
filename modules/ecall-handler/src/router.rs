@@ -8,7 +8,7 @@ use ::light_client::LightClientSource;
 use anyhow::anyhow;
 use context::Context;
 use crypto::EnclaveKey;
-use ecall_commands::{Command, CommandResult, EnclaveCommand};
+use ecall_commands::{Command, CommandResult, ECallCommand};
 use log::*;
 use std::format;
 use store::Store;
@@ -16,7 +16,7 @@ use store::Store;
 pub fn dispatch<'l, S: Store, L: LightClientSource<'l>>(
     ek: Option<&EnclaveKey>,
     store: &mut S,
-    command: EnclaveCommand,
+    command: ECallCommand,
 ) -> Result<CommandResult> {
     let res = match command.cmd {
         #[cfg(feature = "sgx")]

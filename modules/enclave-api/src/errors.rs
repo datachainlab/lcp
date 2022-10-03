@@ -13,8 +13,8 @@ pub enum EnclaveAPIError {
     CommandError(sgx_status_t, String),
     #[error("BincodeError")]
     BincodeError(#[from] BincodeError),
-    #[error("EnclaveCommandError")]
-    EnclaveCommandError(#[from] ecall_commands::EnclaveCommandError),
+    #[error("ECallCommandError")]
+    ECallCommandError(#[from] ecall_commands::ECallCommandError),
     #[error(transparent)]
     OtherError(#[from] anyhow::Error),
 }
