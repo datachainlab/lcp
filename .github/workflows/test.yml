@@ -28,11 +28,24 @@ jobs:
 
   sdk-test:
     runs-on: ubuntu-latest
-    container:
-      image: bluele/sgx-rust:2004-1.1.5
     steps:
       - uses: actions/checkout@v2
       - uses: actions-rs/toolchain@v1
-      - uses: Swatinem/rust-cache@v1
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            .
+            ./enclave
       - uses: actions-rs/cargo@v1
-      - run: make
+      - run: |
+          docker run -w /root/lcp \
+            -v $(pwd):/root/lcp \
+            -v ${HOME}/.cargo/git:/root/.cargo/git \
+            -v ${HOME}/.cargo/registry:/root/.cargo/registry \
+            bluele/sgx-rust:2004-1.1.5 \
+            /bin/bash -c \
+              "source /opt/sgxsdk/environment && \
+              source /root/.cargo/env && \
+              export SGX_MODE=SW && \
+              make && make integration-test"
+      - run: sudo chown -R runner:docker . ${HOME}/.cargo
