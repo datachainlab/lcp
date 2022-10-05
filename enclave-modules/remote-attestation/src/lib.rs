@@ -4,5 +4,4 @@ extern crate sgx_tstd as std;
 
 pub mod attestation;
 pub mod errors;
-mod ocalls;
 pub mod report;

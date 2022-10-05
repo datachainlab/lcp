@@ -29,8 +29,7 @@ pub fn remote_attestation(
         sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE,
         spid,
         &input.ias_key,
-    )
-    .map_err(Error::SGXError)?;
+    )?;
 
     verify_report(&report, Time::now())?;
     validate_quote_status(&report.get_avr()?)?;
