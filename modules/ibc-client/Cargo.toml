@@ -36,9 +36,9 @@ libsecp256k1-sgx = { package = "libsecp256k1", rev = "sgx_1.1.3-patch", git = "h
 lazy_static = { version = "1.1.0", features = ["spin_no_std"] }
 tempdir = "0.3.7"
 mock-lc = { path = "../mock-lc" }
-handler = { path = "../handler" }
+ecall-handler = { path = "../ecall-handler" }
 store = { path = "../store" }
-enclave-commands = { path = "../enclave-commands" }
+ecall-commands = { path = "../ecall-commands" }
 
 [features]
 default = ["std"]

@@ -17,7 +17,7 @@ thiserror = { version = "1.0.30", optional = true }
 thiserror-sgx = { package = "thiserror", git = "https://github.com/mesalock-linux/thiserror-sgx.git", optional = true }
 
 lcp-types = { path = "../types", default-features = false }
-enclave-commands = { path = "../enclave-commands", default-features = false }
+ecall-commands = { path = "../ecall-commands", default-features = false }
 commitments = { path = "../commitments", default-features = false }
 
 [features]
@@ -26,7 +26,7 @@ std = [
     "thiserror",
     "anyhow",
     "lcp-types/std",
-    "enclave-commands/std",
+    "ecall-commands/std",
     "commitments/std"
 ]
 sgx = [
@@ -34,6 +34,6 @@ sgx = [
     "thiserror-sgx",
     "anyhow-sgx",
     "lcp-types/sgx",
-    "enclave-commands/sgx",
+    "ecall-commands/sgx",
     "commitments/sgx"
 ]

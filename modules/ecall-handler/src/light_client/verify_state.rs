@@ -2,7 +2,7 @@ use super::registry::get_light_client_by_client_id;
 use crate::light_client::LightClientHandlerError as Error;
 use commitments::prover::prove_state_commitment;
 use context::Context;
-use enclave_commands::{
+use ecall_commands::{
     LightClientResult, VerifyMembershipInput, VerifyMembershipResult, VerifyNonMembershipInput,
     VerifyNonMembershipResult,
 };

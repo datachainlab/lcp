@@ -1,9 +1,9 @@
 use crate::get_store;
 use crate::light_client::GlobalLightClientRegistry;
 use crypto::KeyManager;
-use enclave_commands::{CommandResult, EnclaveCommand};
+use ecall_commands::{CommandResult, ECallCommand};
+use ecall_handler::router::dispatch;
 use enclave_utils::validate_const_ptr;
-use handler::router::dispatch;
 use sgx_types::sgx_status_t;
 use std::format;
 use std::slice;
@@ -22,7 +22,7 @@ pub unsafe extern "C" fn ecall_execute_command(
         sgx_status_t::SGX_ERROR_UNEXPECTED
     );
 
-    let cmd: EnclaveCommand =
+    let cmd: ECallCommand =
         bincode::deserialize(slice::from_raw_parts(command, command_len as usize)).unwrap();
 
     let km = KeyManager::new(cmd.params.home.clone());

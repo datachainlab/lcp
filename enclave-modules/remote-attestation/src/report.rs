@@ -1,10 +1,11 @@
-use super::ocalls;
 use crate::errors::RemoteAttestationError as Error;
 use attestation_report::{AttestationVerificationReport, Quote};
+use host_api::remote_attestation::get_report_attestation_status;
 use lcp_types::Time;
 use log::*;
+use ocall_commands::{GetReportAttestationStatusInput, GetReportAttestationStatusResult};
 use settings::RT_ALLOWED_STATUS;
-use sgx_types::{sgx_platform_info_t, sgx_status_t, sgx_update_info_bit_t};
+use sgx_types::{sgx_platform_info_t, sgx_status_t};
 use std::format;
 use std::string::ToString;
 use std::time::Duration;
@@ -49,26 +50,16 @@ pub fn validate_quote_status(avr: &AttestationVerificationReport) -> Result<Quot
                 for i in 0..n {
                     buf.push(u8::from_str_radix(&pib[(i * 2 + 8)..(i * 2 + 10)], 16).unwrap());
                 }
+                let mut platform_info = sgx_platform_info_t::default();
+                platform_info.platform_info.copy_from_slice(buf.as_slice());
 
-                let mut update_info = sgx_update_info_bit_t::default();
-                let mut rt: sgx_status_t = sgx_status_t::SGX_ERROR_UNEXPECTED;
-                let res = unsafe {
-                    ocalls::ocall_get_update_info(
-                        &mut rt as *mut sgx_status_t,
-                        buf.as_slice().as_ptr() as *const sgx_platform_info_t,
-                        1,
-                        &mut update_info as *mut sgx_update_info_bit_t,
-                    )
-                };
-                if res != sgx_status_t::SGX_SUCCESS {
-                    return Err(Error::SGXError(
-                        res,
-                        "failed to ocall_get_update_info".to_string(),
-                    ));
-                }
+                let GetReportAttestationStatusResult { ret, update_info } =
+                    get_report_attestation_status(GetReportAttestationStatusInput {
+                        platform_blob: platform_info,
+                        enclave_trusted: 1,
+                    })?;
 
-                if rt != sgx_status_t::SGX_SUCCESS {
-                    info!("rt={:?}", rt);
+                if ret != sgx_status_t::SGX_SUCCESS {
                     // Borrow of packed field is unsafe in future Rust releases
                     info!("update_info.pswUpdate: {}", update_info.pswUpdate as i32);
                     info!(
@@ -79,8 +70,11 @@ pub fn validate_quote_status(avr: &AttestationVerificationReport) -> Result<Quot
                         "update_info.ucodeUpdate: {}",
                         update_info.ucodeUpdate as i32
                     );
-                    if !RT_ALLOWED_STATUS.contains(&rt) {
-                        return Err(Error::SGXError(rt, "the status is not allowed".to_string()));
+                    if !RT_ALLOWED_STATUS.contains(&ret) {
+                        return Err(Error::SGXError(
+                            ret,
+                            "the status is not allowed".to_string(),
+                        ));
                     }
                 }
             } else {

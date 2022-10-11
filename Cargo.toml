@@ -4,10 +4,12 @@ members = [
     "app",
     "modules/host",
     "modules/types",
-    "modules/handler",
+    "modules/ecall-handler",
+    "modules/ocall-handler",
     "modules/attestation-report",
     "modules/enclave-api",
-    "modules/enclave-commands",
+    "modules/ecall-commands",
+    "modules/ocall-commands",
     "modules/commitments",
     "modules/context",
     "modules/crypto",
@@ -29,6 +31,7 @@ exclude = [
     "enclave-modules/runtime",
     "enclave-modules/utils",
     "enclave-modules/remote-attestation",
+    "enclave-modules/host-api",
     "proto-compiler"
 ]
 

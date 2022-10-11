@@ -1,23 +1,22 @@
-use super::ocalls::{ocall_get_ias_socket, ocall_get_quote, ocall_sgx_init_quote};
+use crate::errors::RemoteAttestationError as Error;
 use attestation_report::EndorsedAttestationVerificationReport;
 use crypto::sgx::rand::fill_bytes;
+use host_api::remote_attestation::{get_ias_socket, get_quote, init_quote};
 use itertools::Itertools;
 use log::*;
+use ocall_commands::{GetIASSocketResult, GetQuoteInput, GetQuoteResult, InitQuoteResult};
 use settings::{SigningMethod, SIGNING_METHOD};
 use sgx_tcrypto::rsgx_sha256_slice;
 use sgx_tse::{rsgx_create_report, rsgx_verify_report};
 use sgx_types::{c_int, sgx_spid_t};
-use sgx_types::{
-    sgx_epid_group_id_t, sgx_quote_nonce_t, sgx_report_data_t, sgx_report_t, sgx_target_info_t,
-};
-use sgx_types::{sgx_quote_sign_type_t, sgx_status_t};
+use sgx_types::{sgx_quote_nonce_t, sgx_quote_sign_type_t, sgx_report_data_t};
 use std::borrow::ToOwned;
 use std::format;
 use std::vec::Vec;
 use std::{
     io::{Read, Write},
     net::TcpStream,
-    ptr, str,
+    str,
     string::{String, ToString},
     sync::Arc,
 };
@@ -43,62 +42,37 @@ pub fn create_attestation_report(
     sign_type: sgx_quote_sign_type_t,
     spid: sgx_spid_t,
     api_hex_str_bytes: &[u8],
-) -> Result<EndorsedAttestationVerificationReport, sgx_status_t> {
+) -> Result<EndorsedAttestationVerificationReport, Error> {
     // Workflow:
-    // (1) ocall to get the target_info structure (ti) and epid group id (eg)
+    // (1) ocall to get the target_info structure and epid_group_id
     // (1.5) get sigrl
-    // (2) call sgx_create_report with ti+data, produce an sgx_report_t
+    // (2) call sgx_create_report with target_info+data, produce an sgx_report_t
     // (3) ocall to sgx_get_quote to generate (*mut sgx-quote_t, uint32_t)
 
-    // (1) get ti + eg
-    let mut ti: sgx_target_info_t = sgx_target_info_t::default();
-    let mut eg: sgx_epid_group_id_t = sgx_epid_group_id_t::default();
-    let mut rt: sgx_status_t = sgx_status_t::SGX_ERROR_UNEXPECTED;
+    // (1) get target_info + epid_group_id
 
-    let res = unsafe {
-        ocall_sgx_init_quote(
-            &mut rt as *mut sgx_status_t,
-            &mut ti as *mut sgx_target_info_t,
-            &mut eg as *mut sgx_epid_group_id_t,
-        )
-    };
+    let InitQuoteResult {
+        target_info,
+        epid_group_id,
+    } = init_quote()?;
 
-    trace!("EPID group = {:?}", eg);
+    trace!("EPID group = {:?}", epid_group_id);
 
-    if res != sgx_status_t::SGX_SUCCESS {
-        return Err(res);
-    }
-
-    if rt != sgx_status_t::SGX_SUCCESS {
-        return Err(rt);
-    }
-
-    let eg_num = as_u32_le(&eg);
+    let eg_num = as_u32_le(&epid_group_id);
 
     // (1.5) get sigrl
-    let mut ias_sock: i32 = 0;
+    let GetIASSocketResult { fd } = get_ias_socket()?;
 
-    let res =
-        unsafe { ocall_get_ias_socket(&mut rt as *mut sgx_status_t, &mut ias_sock as *mut i32) };
-
-    if res != sgx_status_t::SGX_SUCCESS {
-        return Err(res);
-    }
-
-    if rt != sgx_status_t::SGX_SUCCESS {
-        return Err(rt);
-    }
-
-    trace!("Got ias_sock successfully = {}", ias_sock);
+    trace!("Got ias_sock successfully = {}", fd);
 
     // Now sigrl_vec is the revocation list, a vec<u8>
-    let sigrl_vec: Vec<u8> = get_sigrl_from_intel(ias_sock, eg_num, api_hex_str_bytes);
+    let sigrl_vec: Vec<u8> = get_sigrl_from_intel(fd, eg_num, api_hex_str_bytes);
 
     // (2) Generate the report
     // Fill secp256k1 public key into report_data
     // this is given as a parameter
 
-    let rep = match rsgx_create_report(&ti, &report_data) {
+    let report = match rsgx_create_report(&target_info, &report_data) {
         Ok(r) => {
             match SIGNING_METHOD {
                 SigningMethod::MRENCLAVE => {
@@ -120,18 +94,14 @@ pub fn create_attestation_report(
             r
         }
         Err(e) => {
-            error!("Report creation => failed {:?}", e);
-            return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
+            return Err(Error::SGXError(e, "Report creation => failed".to_string()));
         }
     };
 
     let mut quote_nonce = sgx_quote_nonce_t { rand: [0; 16] };
-    fill_bytes(&mut quote_nonce.rand)?;
+    fill_bytes(&mut quote_nonce.rand)
+        .map_err(|e| Error::SGXError(e, "failed to fill_bytes".to_string()))?;
     trace!("Nonce generated successfully");
-    let mut qe_report = sgx_report_t::default();
-    const RET_QUOTE_BUF_LEN: u32 = 2048;
-    let mut return_quote_buf: [u8; RET_QUOTE_BUF_LEN as usize] = [0; RET_QUOTE_BUF_LEN as usize];
-    let mut quote_len: u32 = 0;
 
     // (3) Generate the quote
     // Args:
@@ -144,64 +114,32 @@ pub fn create_attestation_report(
     //       7. [out]p_qe_report need further check
     //       8. [out]p_quote
     //       9. quote_size
-    let (p_sigrl, sigrl_len) = if sigrl_vec.is_empty() {
-        (ptr::null(), 0)
-    } else {
-        (sigrl_vec.as_ptr(), sigrl_vec.len() as u32)
-    };
-    let p_report = (&rep) as *const sgx_report_t;
-    let quote_type = sign_type;
 
-    let p_spid = &spid as *const sgx_spid_t;
-    let p_nonce = &quote_nonce as *const sgx_quote_nonce_t;
-    let p_qe_report = &mut qe_report as *mut sgx_report_t;
-    let p_quote = return_quote_buf.as_mut_ptr();
-    let maxlen = RET_QUOTE_BUF_LEN;
-    let p_quote_len = &mut quote_len as *mut u32;
-
-    let result = unsafe {
-        ocall_get_quote(
-            &mut rt as *mut sgx_status_t,
-            p_sigrl,
-            sigrl_len,
-            p_report,
-            quote_type,
-            p_spid,
-            p_nonce,
-            p_qe_report,
-            p_quote,
-            maxlen,
-            p_quote_len,
-        )
-    };
-
-    if result != sgx_status_t::SGX_SUCCESS {
-        warn!("ocall_get_quote returned {}", result);
-        return Err(result);
-    }
-
-    if rt != sgx_status_t::SGX_SUCCESS {
-        warn!("ocall_get_quote returned {}", rt);
-        return Err(rt);
-    }
+    let GetQuoteResult { qe_report, quote } = get_quote(GetQuoteInput {
+        sigrl: sigrl_vec,
+        report,
+        quote_type: sign_type,
+        spid,
+        nonce: quote_nonce,
+    })?;
 
     // Added 09-28-2018
     // Perform a check on qe_report to verify if the qe_report is valid
     match rsgx_verify_report(&qe_report) {
         Ok(()) => trace!("rsgx_verify_report passed!"),
-        Err(x) => {
-            warn!("rsgx_verify_report failed with {:?}", x);
-            return Err(x);
+        Err(e) => {
+            return Err(Error::SGXError(e, "rsgx_verify_report failed".to_string()));
         }
     }
 
     // Check if the qe_report is produced on the same platform
-    if ti.mr_enclave.m != qe_report.body.mr_enclave.m
-        || ti.attributes.flags != qe_report.body.attributes.flags
-        || ti.attributes.xfrm != qe_report.body.attributes.xfrm
+    if target_info.mr_enclave.m != qe_report.body.mr_enclave.m
+        || target_info.attributes.flags != qe_report.body.attributes.flags
+        || target_info.attributes.xfrm != qe_report.body.attributes.xfrm
     {
-        error!("qe_report does not match current target_info!");
-        return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
+        return Err(Error::UnexpectedReportError(
+            "qe_report does not match current target_info!".to_string(),
+        ));
     }
 
     trace!("QE report check passed");
@@ -216,7 +154,7 @@ pub fn create_attestation_report(
     // is not a replay. It is optional.
 
     let mut rhs_vec: Vec<u8> = quote_nonce.rand.to_vec();
-    rhs_vec.extend(&return_quote_buf[..quote_len as usize]);
+    rhs_vec.extend(&quote);
     let rhs_hash = rsgx_sha256_slice(&rhs_vec[..]).unwrap();
     let lhs_hash = &qe_report.body.report_data.d[..REPORT_DATA_SIZE];
 
@@ -224,24 +162,15 @@ pub fn create_attestation_report(
     trace!("Report lhs hash = {:02X}", lhs_hash.iter().format(""));
 
     if rhs_hash != lhs_hash {
-        error!("Quote is tampered!");
-        return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
+        return Err(Error::UnexpectedQuoteError(
+            format!("Quote is tampered!: {:?} != {:?}", rhs_hash, lhs_hash).to_string(),
+        ));
     }
 
-    let quote_vec: Vec<u8> = return_quote_buf[..quote_len as usize].to_vec();
-    let res =
-        unsafe { ocall_get_ias_socket(&mut rt as *mut sgx_status_t, &mut ias_sock as *mut i32) };
-
-    if res != sgx_status_t::SGX_SUCCESS {
-        return Err(res);
-    }
-
-    if rt != sgx_status_t::SGX_SUCCESS {
-        return Err(rt);
-    }
+    let GetIASSocketResult { fd } = get_ias_socket()?;
 
     let (attn_report, signature, signing_cert) =
-        get_report_from_intel(ias_sock, quote_vec, api_hex_str_bytes);
+        get_report_from_intel(fd, quote, api_hex_str_bytes);
 
     Ok(EndorsedAttestationVerificationReport {
         avr: attn_report,
@@ -277,7 +206,7 @@ pub fn get_sigrl_from_intel(fd: c_int, gid: u32, ias_key: &[u8]) -> Vec<u8> {
         Ok(_) => (),
         Err(e) => {
             warn!("get_sigrl_from_intel tls.read_to_end: {:?}", e);
-            // panic!("Communication error with IAS");
+            panic!("Communication error with IAS");
         }
     }
     info!("read_to_end complete");

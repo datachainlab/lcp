@@ -2,7 +2,7 @@ use crate::enclave_manage::{ias::remote_attestation, init_enclave};
 #[cfg(feature = "sgx")]
 use crate::sgx_reexport_prelude::*;
 use anyhow::Result;
-use enclave_commands::{CommandParams, CommandResult, EnclaveManageCommand, EnclaveManageResult};
+use ecall_commands::{CommandParams, CommandResult, EnclaveManageCommand, EnclaveManageResult};
 
 pub fn dispatch(command: EnclaveManageCommand, params: CommandParams) -> Result<CommandResult> {
     use EnclaveManageCommand::*;

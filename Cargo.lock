@@ -87,6 +87,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "android_system_properties"
+version = "0.1.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "819e7219dbd41043ac279b19830f2efc897156490d7fd6ea916720117ee66311"
+dependencies = [
+ "libc",
+]
+
+[[package]]
 name = "ansi_term"
 version = "0.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -572,13 +581,14 @@ checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
 
 [[package]]
 name = "chrono"
-version = "0.4.19"
+version = "0.4.22"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "670ad68c9088c2a963aaa298cb369688cf3f9465ce5e2d4ca10e6e0098a1ce73"
+checksum = "bfd4d1b31faaa3a89d7934dbded3111da0d2ef28e3ebccdb4f0179f5929d1ef1"
 dependencies = [
- "libc",
+ "iana-time-zone",
  "num-integer",
  "num-traits",
+ "serde",
  "winapi",
 ]
 
@@ -945,6 +955,41 @@ dependencies = [
 ]
 
 [[package]]
+name = "darling"
+version = "0.14.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4529658bdda7fd6769b8614be250cdcfc3aeb0ee72fe66f9e41e5e5eb73eac02"
+dependencies = [
+ "darling_core",
+ "darling_macro",
+]
+
+[[package]]
+name = "darling_core"
+version = "0.14.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "649c91bc01e8b1eac09fb91e8dbc7d517684ca6be8ebc75bb9cafc894f9fdb6f"
+dependencies = [
+ "fnv",
+ "ident_case",
+ "proc-macro2",
+ "quote",
+ "strsim",
+ "syn",
+]
+
+[[package]]
+name = "darling_macro"
+version = "0.14.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ddfc69c5bfcbd2fc09a0f38451d2daf0e372e367986a83906d1b0dbc88134fb5"
+dependencies = [
+ "darling_core",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "dashmap"
 version = "4.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1093,6 +1138,53 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9d07a982d1fb29db01e5a59b1918e03da4df7297eaeee7686ac45542fd4e59c8"
 
 [[package]]
+name = "ecall-commands"
+version = "0.1.0"
+dependencies = [
+ "attestation-report",
+ "commitments",
+ "ibc",
+ "lcp-proto",
+ "lcp-types",
+ "serde",
+ "serde_json",
+ "sgx_tstd",
+ "thiserror 1.0.31",
+ "thiserror 1.0.9",
+]
+
+[[package]]
+name = "ecall-handler"
+version = "0.1.0"
+dependencies = [
+ "anyhow 1.0.28",
+ "anyhow 1.0.58",
+ "attestation-report",
+ "bincode 1.3.1",
+ "bincode 1.3.3",
+ "commitments",
+ "context",
+ "crypto",
+ "ecall-commands",
+ "enclave-remote-attestation",
+ "enclave-utils",
+ "hex",
+ "ibc",
+ "lcp-types",
+ "light-client",
+ "log 0.4.14",
+ "log 0.4.17",
+ "prost-types",
+ "serde",
+ "settings",
+ "sgx_tstd",
+ "sgx_types",
+ "store",
+ "thiserror 1.0.31",
+ "thiserror 1.0.9",
+]
+
+[[package]]
 name = "ecdsa"
 version = "0.13.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1155,7 +1247,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow 1.0.58",
  "bincode 1.3.3",
- "enclave-commands",
+ "ecall-commands",
  "ibc",
  "lcp-proto",
  "lcp-types",
@@ -1168,35 +1260,22 @@ dependencies = [
 ]
 
 [[package]]
-name = "enclave-commands"
-version = "0.1.0"
-dependencies = [
- "attestation-report",
- "commitments",
- "ibc",
- "lcp-proto",
- "lcp-types",
- "serde",
- "serde_json",
- "sgx_tstd",
- "thiserror 1.0.31",
- "thiserror 1.0.9",
-]
-
-[[package]]
 name = "enclave-remote-attestation"
 version = "0.1.0"
 dependencies = [
  "anyhow 1.0.28",
  "attestation-report",
  "base64 0.13.0 (git+https://github.com/mesalock-linux/rust-base64-sgx?rev=dc7389e10817b078f289386b3b6a852ab6c4c021)",
+ "bincode 1.3.1",
  "chrono",
  "crypto",
  "hex",
+ "host-api",
  "httparse",
  "itertools 0.8.2",
  "lcp-types",
  "log 0.4.14",
+ "ocall-commands",
  "rustls 0.19.0",
  "serde",
  "serde_json",
@@ -1591,37 +1670,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "eabb4a44450da02c90444cf74558da904edde8fb4e9035a9a6a4e15445af0bd7"
 
 [[package]]
-name = "handler"
-version = "0.1.0"
-dependencies = [
- "anyhow 1.0.28",
- "anyhow 1.0.58",
- "attestation-report",
- "bincode 1.3.1",
- "bincode 1.3.3",
- "commitments",
- "context",
- "crypto",
- "enclave-commands",
- "enclave-remote-attestation",
- "enclave-utils",
- "hex",
- "ibc",
- "lcp-types",
- "light-client",
- "log 0.4.14",
- "log 0.4.17",
- "prost-types",
- "serde",
- "settings",
- "sgx_tstd",
- "sgx_types",
- "store",
- "thiserror 1.0.31",
- "thiserror 1.0.9",
-]
-
-[[package]]
 name = "hashbrown"
 version = "0.12.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1749,9 +1797,23 @@ dependencies = [
 name = "host"
 version = "0.1.0"
 dependencies = [
+ "bincode 1.3.3",
  "log 0.4.17",
+ "ocall-commands",
+ "ocall-handler",
  "sgx_types",
  "sgx_urts",
+]
+
+[[package]]
+name = "host-api"
+version = "0.1.0"
+dependencies = [
+ "bincode 1.3.1",
+ "ocall-commands",
+ "sgx_tstd",
+ "sgx_types",
+ "thiserror 1.0.9",
 ]
 
 [[package]]
@@ -1881,6 +1943,19 @@ dependencies = [
  "pin-project-lite",
  "tokio",
  "tokio-io-timeout",
+]
+
+[[package]]
+name = "iana-time-zone"
+version = "0.1.50"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fd911b35d940d2bd0bea0f9100068e5b97b51a1cbe13d13382f132e0365257a0"
+dependencies = [
+ "android_system_properties",
+ "core-foundation-sys",
+ "js-sys",
+ "wasm-bindgen",
+ "winapi",
 ]
 
 [[package]]
@@ -2186,8 +2261,8 @@ version = "0.1.0"
 dependencies = [
  "anyhow 1.0.58",
  "attestation-report",
+ "ecall-commands",
  "enclave-api",
- "enclave-commands",
  "env_logger",
  "envconfig",
  "host",
@@ -2278,8 +2353,8 @@ dependencies = [
  "attestation-report",
  "clap",
  "dirs",
+ "ecall-commands",
  "enclave-api",
- "enclave-commands",
  "env_logger",
  "hex",
  "host",
@@ -2301,8 +2376,8 @@ dependencies = [
  "commitments",
  "context",
  "crypto",
- "enclave-commands",
- "handler",
+ "ecall-commands",
+ "ecall-handler",
  "ibc",
  "ibc-proto",
  "lazy_static",
@@ -2404,7 +2479,7 @@ dependencies = [
  "anyhow 1.0.28",
  "anyhow 1.0.58",
  "commitments",
- "enclave-commands",
+ "ecall-commands",
  "ibc",
  "ibc-proto",
  "lcp-types",
@@ -2706,6 +2781,26 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "21158b2c33aa6d4561f1c0a6ea283ca92bc54802a93b263e910746d679a7eb53"
 dependencies = [
  "memchr",
+]
+
+[[package]]
+name = "ocall-commands"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_with",
+ "sgx_types",
+]
+
+[[package]]
+name = "ocall-handler"
+version = "0.1.0"
+dependencies = [
+ "anyhow 1.0.58",
+ "log 0.4.17",
+ "ocall-commands",
+ "sgx_types",
+ "thiserror 1.0.31",
 ]
 
 [[package]]
@@ -3831,6 +3926,33 @@ version = "0.1.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a2ad84e47328a31223de7fed7a4f5087f2d6ddfe586cf3ca25b7a165bc0a5aed"
 dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
+name = "serde_with"
+version = "2.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "368f2d60d049ea019a84dcd6687b0d1e0030fe663ae105039bdf967ed5e6a9a7"
+dependencies = [
+ "base64 0.13.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "chrono",
+ "hex",
+ "serde",
+ "serde_json",
+ "serde_with_macros",
+ "time",
+]
+
+[[package]]
+name = "serde_with_macros"
+version = "2.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1ccadfacf6cf10faad22bbadf55986bdd0856edfb5d9210aa1dcf1f516e84e93"
+dependencies = [
+ "darling",
  "proc-macro2",
  "quote",
  "syn",

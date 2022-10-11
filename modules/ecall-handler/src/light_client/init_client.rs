@@ -3,7 +3,7 @@ use commitments::prover::prove_update_client_commitment;
 use commitments::UpdateClientCommitmentProof;
 use context::Context;
 use core::str::FromStr;
-use enclave_commands::{InitClientInput, InitClientResult, LightClientResult};
+use ecall_commands::{InitClientInput, InitClientResult, LightClientResult};
 use ibc::core::ics24_host::{error::ValidationError, identifier::ClientId};
 use lcp_types::Any;
 use light_client::{ClientKeeper, ClientReader, LightClientSource};

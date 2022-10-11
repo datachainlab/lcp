@@ -3,7 +3,7 @@ use crate::light_client::{
     LightClientHandlerError as Error,
 };
 use context::Context;
-use enclave_commands::{CommandResult, LightClientCommand};
+use ecall_commands::{CommandResult, LightClientCommand};
 use light_client::LightClientSource;
 use store::Store;
 

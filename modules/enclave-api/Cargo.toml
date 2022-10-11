@@ -15,5 +15,5 @@ thiserror = { version = "1.0.30" }
 log = "0.4.8"
 
 lcp-types = { path = "../types" }
-enclave-commands = { path = "../enclave-commands" }
+ecall-commands = { path = "../ecall-commands" }
 lcp-proto = { path = "../../proto", features = ["server"] }

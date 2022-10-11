@@ -2,8 +2,8 @@ use crate::{enclave::load_enclave, opts::Opts};
 use anyhow::{bail, Result};
 use attestation_report::EndorsedAttestationVerificationReport;
 use clap::Parser;
+use ecall_commands::{IASRemoteAttestationInput, InitEnclaveInput};
 use enclave_api::EnclavePrimitiveAPI;
-use enclave_commands::{IASRemoteAttestationInput, InitEnclaveInput};
 use log::*;
 use settings::{AVR_KEY_PATH, SEALED_ENCLAVE_KEY_PATH};
 use std::{

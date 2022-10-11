@@ -1,4 +1,4 @@
-use crate::errors::EnclaveCommandError as Error;
+use crate::errors::ECallCommandError as Error;
 #[cfg(feature = "sgx")]
 use crate::sgx_reexport_prelude::*;
 use commitments::{StateCommitmentProof, UpdateClientCommitmentProof};

@@ -1,0 +1,9 @@
+[package]
+name = "ocall-commands"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+sgx_types = { git = "https://github.com/apache/teaclave-sgx-sdk.git", features = ["extra_traits"] }
+serde = { version = "1.0", default-features = false, features = ["alloc", "derive"] }
+serde_with = { version = "2.0.1", default-features = false, features = ["alloc", "macros"] }

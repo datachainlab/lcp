@@ -4,7 +4,7 @@ use crate::sgx_reexport_prelude::*;
 use anyhow::anyhow;
 use attestation_report::verify_report;
 use crypto::KeyManager;
-use enclave_commands::{CommandParams, IASRemoteAttestationInput, IASRemoteAttestationResult};
+use ecall_commands::{CommandParams, IASRemoteAttestationInput, IASRemoteAttestationResult};
 use enclave_remote_attestation::{
     attestation::create_attestation_report, report::validate_quote_status,
 };
@@ -29,8 +29,7 @@ pub fn remote_attestation(
         sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE,
         spid,
         &input.ias_key,
-    )
-    .map_err(Error::SGXError)?;
+    )?;
 
     verify_report(&report, Time::now())?;
     validate_quote_status(&report.get_avr()?)?;

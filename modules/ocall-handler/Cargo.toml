@@ -1,0 +1,11 @@
+[package]
+name = "ocall-handler"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+sgx_types = { git = "https://github.com/apache/teaclave-sgx-sdk.git" }
+log = { version = "0.4.8" }
+anyhow = { version = "1.0.56" }
+thiserror = { version = "1.0.30" }
+ocall-commands = { path = "../ocall-commands", default-features = false }
