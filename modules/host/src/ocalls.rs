@@ -1,9 +1,28 @@
-use ocall_commands::{CommandResult, OCallCommand};
-use ocall_handler::dispatch;
+use once_cell::sync::OnceCell;
+use sgx_types::sgx_status_t;
 
-use log::*;
-use sgx_types::*;
-use std::slice;
+/// Error indicating that `set_ocall_handler` was unable to set the provided OCallHandler
+#[derive(Debug, Clone, Copy)]
+pub struct SetOCallHandlerError;
+
+type OCallHandlerType = Box<dyn OCallHandler + Sync + Send + 'static>;
+
+static OCALL_HANDLER: OnceCell<OCallHandlerType> = OnceCell::new();
+
+pub fn set_ocall_handler(handler: OCallHandlerType) -> Result<(), SetOCallHandlerError> {
+    OCALL_HANDLER.set(handler).map_err(|_| SetOCallHandlerError)
+}
+
+pub trait OCallHandler {
+    fn handle(
+        &self,
+        command: *const u8,
+        command_len: u32,
+        output_buf: *mut u8,
+        output_buf_maxlen: u32,
+        output_len: &mut u32,
+    ) -> sgx_status_t;
+}
 
 #[no_mangle]
 pub unsafe extern "C" fn ocall_execute_command(
@@ -12,40 +31,16 @@ pub unsafe extern "C" fn ocall_execute_command(
     output_buf: *mut u8,
     output_buf_maxlen: u32,
     output_len: &mut u32,
-) -> sgx_status_t {
-    info!("Entering ocall_execute_commands");
-
-    if let Err(e) = validate_const_ptr(command, command_len as usize) {
-        return e;
-    }
-
-    let cmd: OCallCommand =
-        bincode::deserialize(slice::from_raw_parts(command, command_len as usize)).unwrap();
-
-    let (status, result) = match dispatch(cmd) {
-        Ok(result) => (sgx_status_t::SGX_SUCCESS, result),
-        Err(e) => (
-            sgx_status_t::SGX_ERROR_UNEXPECTED,
-            CommandResult::CommandError(format!("{:?}", e)),
-        ),
-    };
-    let res = bincode::serialize(&result).unwrap();
-    assert!(
-        output_buf_maxlen as usize >= res.len(),
-        "{} >= {}",
-        output_buf_maxlen as usize,
-        res.len()
-    );
-    std::ptr::copy_nonoverlapping(res.as_ptr(), output_buf, res.len());
-    *output_len = res.len() as u32;
-
-    status
-}
-
-fn validate_const_ptr(ptr: *const u8, ptr_len: usize) -> SgxResult<()> {
-    if ptr.is_null() || ptr_len == 0 {
-        warn!("Tried to access an empty pointer - ptr.is_null()");
-        return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
-    }
-    Ok(())
+) -> sgx_types::sgx_status_t {
+    let handler = OCALL_HANDLER
+        .get()
+        .expect("ocall handler must be set")
+        .as_ref();
+    handler.handle(
+        command,
+        command_len,
+        output_buf,
+        output_buf_maxlen,
+        output_len,
+    )
 }
