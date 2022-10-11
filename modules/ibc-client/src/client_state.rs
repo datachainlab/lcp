@@ -1,6 +1,5 @@
 use crate::header::Commitment;
-#[cfg(feature = "sgx")]
-use crate::sgx_reexport_prelude::*;
+use crate::prelude::*;
 use core::time::Duration;
 use crypto::Address;
 use ibc::core::ics02_client::client_type::ClientType;
@@ -13,7 +12,6 @@ use lcp_types::{Any, Height, Time};
 use prost::Message;
 use prost_types::Any as ProtoAny;
 use serde::{Deserialize, Serialize};
-use std::vec::Vec;
 use tendermint_proto::Protobuf;
 
 pub const LCP_CLIENT_STATE_TYPE_URL: &str = "/ibc.lightclients.lcp.v1.ClientState";
@@ -164,7 +162,7 @@ impl ibc::core::ics02_client::client_state::ClientState for ClientState {
     }
 
     fn upgrade(
-        mut self,
+        self,
         upgrade_height: ICS02Height,
         upgrade_options: UpgradeOptions,
         chain_id: ChainId,

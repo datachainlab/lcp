@@ -1,6 +1,5 @@
-use crate::enclave_manage::errors::EnclaveManageError as Error;
-#[cfg(feature = "sgx")]
-use crate::sgx_reexport_prelude::*;
+use crate::enclave_manage::Error;
+use crate::prelude::*;
 use crypto::KeyManager;
 use ecall_commands::{CommandParams, InitEnclaveInput, InitEnclaveResult};
 

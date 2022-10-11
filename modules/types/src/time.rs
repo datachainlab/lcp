@@ -1,13 +1,10 @@
-use crate::errors::TimeError as Error;
+use crate::errors::TimeError;
 use crate::prelude::*;
 use core::ops::Deref;
 use core::ops::{Add, Sub};
 use core::time::Duration;
 use ibc::timestamp::Timestamp;
 use serde::{Deserialize, Serialize};
-use std::time::{SystemTime, UNIX_EPOCH};
-#[cfg(feature = "sgx")]
-use std::untrusted::time::SystemTimeEx;
 use tendermint::Time as TmTime;
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
@@ -15,7 +12,17 @@ use tendermint::Time as TmTime;
 pub struct Time(TmTime);
 
 impl Time {
+    #[cfg(feature = "std")]
     pub fn now() -> Self {
+        use std::time::{SystemTime, UNIX_EPOCH};
+        let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
+        Time(TmTime::from_unix_timestamp(now.as_secs() as i64, now.subsec_nanos()).unwrap())
+    }
+
+    #[cfg(feature = "sgx")]
+    pub fn now() -> Self {
+        use sgx_tstd::time::{SystemTime, UNIX_EPOCH};
+        use sgx_tstd::untrusted::time::SystemTimeEx;
         let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
         Time(TmTime::from_unix_timestamp(now.as_secs() as i64, now.subsec_nanos()).unwrap())
     }
@@ -24,18 +31,17 @@ impl Time {
         Time(TmTime::unix_epoch())
     }
 
-    pub fn from_unix_timestamp_nanos(timestamp: u128) -> Result<Self, Error> {
+    pub fn from_unix_timestamp_nanos(timestamp: u128) -> Result<Self, TimeError> {
         let ut = TmTime::from_unix_timestamp(
             (timestamp / 1_000_000_000) as i64,
             (timestamp % 1_000_000_000) as u32,
         )
-        .map_err(Error::TendermintError)?;
+        .map_err(TimeError::tendermint)?;
         Ok(Time(ut))
     }
 
-    pub fn from_unix_timestamp_secs(timestamp: u64) -> Result<Self, Error> {
-        let ut =
-            TmTime::from_unix_timestamp(timestamp as i64, 0).map_err(Error::TendermintError)?;
+    pub fn from_unix_timestamp_secs(timestamp: u64) -> Result<Self, TimeError> {
+        let ut = TmTime::from_unix_timestamp(timestamp as i64, 0).map_err(TimeError::tendermint)?;
         Ok(Time(ut))
     }
 
@@ -80,17 +86,17 @@ impl From<TmTime> for Time {
 }
 
 impl Add<Duration> for Time {
-    type Output = Result<Self, Error>;
+    type Output = Result<Self, TimeError>;
 
     fn add(self, rhs: Duration) -> Self::Output {
-        Ok(Self((*self + rhs).map_err(Error::TendermintError)?))
+        Ok(Self((*self + rhs).map_err(TimeError::tendermint)?))
     }
 }
 
 impl Sub<Duration> for Time {
-    type Output = Result<Self, Error>;
+    type Output = Result<Self, TimeError>;
 
     fn sub(self, rhs: Duration) -> Self::Output {
-        Ok(Self((*self - rhs).map_err(Error::TendermintError)?))
+        Ok(Self((*self - rhs).map_err(TimeError::tendermint)?))
     }
 }

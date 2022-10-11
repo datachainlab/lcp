@@ -2,21 +2,18 @@ mod client;
 mod errors;
 #[cfg(test)]
 mod tests {
-    use super::client::register_implementations;
     use crate::header::{Header, UpdateClientHeader};
+    use crate::tests::client::LCPLightClient;
     use crate::{client_state::ClientState, consensus_state::ConsensusState};
+    use commitments::prover::prove_update_client_commitment;
+    use context::Context;
+    use core::str::FromStr;
     use core::time::Duration;
     use crypto::{Address, EnclaveKey};
-    use ecall_commands::{
-        Command, CommandParams, CommandResult, ECallCommand, InitClientInput, InitClientResult,
-        LightClientCommand, LightClientResult, UpdateClientInput, UpdateClientResult,
-    };
-    use ecall_handler::router;
     use ibc::core::ics24_host::identifier::ClientId;
     use ibc::{
         core::ics02_client::{
-            client_consensus::AnyConsensusState, client_state::AnyClientState,
-            client_type::ClientType, header::AnyHeader,
+            client_consensus::AnyConsensusState, client_state::AnyClientState, header::AnyHeader,
         },
         mock::{
             client_state::{MockClientState, MockConsensusState},
@@ -24,38 +21,24 @@ mod tests {
         },
         Height as ICS02Height,
     };
-    use lazy_static::lazy_static;
     use lcp_types::{Any, Height, Time};
-    use light_client::{LightClient, LightClientRegistry, LightClientSource};
+    use light_client::{ClientKeeper, LightClient};
+    use mock_lc::MockLightClient;
     use store::memory::MemStore;
+    use store::{CommitStore, KVStore};
     use tempdir::TempDir;
-
-    lazy_static! {
-        pub static ref LIGHT_CLIENT_REGISTRY: LightClientRegistry = {
-            let mut registry = LightClientRegistry::new();
-            mock_lc::register_implementations(&mut registry);
-            register_implementations(&mut registry);
-            registry
-        };
-    }
-
-    #[derive(Default)]
-    struct LocalLightClientRegistry;
-
-    impl LightClientSource<'static> for LocalLightClientRegistry {
-        fn get_light_client(type_url: &str) -> Option<&'static Box<dyn LightClient>> {
-            LIGHT_CLIENT_REGISTRY.get(type_url)
-        }
-    }
 
     #[test]
     fn test_ibc_client() {
         // ek is a signing key to prove LCP's commitments
         let ek = EnclaveKey::new().unwrap();
         // lcp_store is a store to keeps LCP's state
-        let mut lcp_store = MemStore::new();
+        let mut lcp_store = MemStore::default();
         // ibc_store is a store to keeps downstream's state
-        let mut ibc_store = MemStore::new();
+        let mut ibc_store = MemStore::default();
+
+        let lcp_client = LCPLightClient::default();
+        let mock_client = MockLightClient::default();
 
         let tmp_dir = TempDir::new("lcp").unwrap();
         let home = tmp_dir.path().to_str().unwrap().to_string();
@@ -74,29 +57,29 @@ mod tests {
                 timestamp: Time::unix_epoch(),
             };
 
-            let input = InitClientInput {
-                any_client_state: initial_client_state.into(),
-                any_consensus_state: initial_consensus_state.into(),
-                current_timestamp: Time::now(),
-            };
-            let res = router::dispatch::<_, LocalLightClientRegistry>(
-                Some(&ek),
-                &mut ibc_store,
-                ECallCommand::new(
-                    CommandParams::new(home.clone()),
-                    Command::LightClient(LightClientCommand::InitClient(input)),
-                ),
+            let mut ctx = Context::new(&mut ibc_store, &ek);
+            ctx.set_timestamp(Time::now());
+
+            let res = lcp_client.create_client(
+                &ctx,
+                initial_client_state.clone().into(),
+                initial_consensus_state.clone().into(),
             );
             assert!(res.is_ok(), "res={:?}", res);
-            if let CommandResult::LightClient(LightClientResult::InitClient(InitClientResult {
-                client_id,
-                proof: _,
-            })) = res.unwrap()
-            {
-                client_id
-            } else {
-                unreachable!()
-            }
+
+            let client_id = ClientId::from_str(&format!("{}-0", lcp_client.client_type())).unwrap();
+            ctx.store_client_type(client_id.clone(), lcp_client.client_type())
+                .unwrap();
+            ctx.store_any_client_state(client_id.clone(), initial_client_state.into())
+                .unwrap();
+            ctx.store_any_consensus_state(
+                client_id.clone(),
+                res.unwrap().height,
+                initial_consensus_state.into(),
+            )
+            .unwrap();
+            ibc_store.commit().unwrap();
+            client_id
         };
 
         // 2. initializes Light Client(Mock) corresponding to the upstream chain on the LCP side
@@ -105,62 +88,62 @@ mod tests {
             let client_state = AnyClientState::Mock(MockClientState::new(header));
             let consensus_state = AnyConsensusState::Mock(MockConsensusState::new(header));
 
-            let input = InitClientInput {
-                any_client_state: Any::from(client_state).into(),
-                any_consensus_state: Any::from(consensus_state).into(),
-                current_timestamp: Time::now(),
-            };
-            assert_eq!(lcp_store.revision, 1);
-            let res = router::dispatch::<_, LocalLightClientRegistry>(
-                Some(&ek),
-                &mut lcp_store,
-                ECallCommand::new(
-                    CommandParams::new(home.clone()),
-                    Command::LightClient(LightClientCommand::InitClient(input)),
-                ),
+            let mut ctx = Context::new(&mut lcp_store, &ek);
+            ctx.set_timestamp(Time::now());
+
+            let res = mock_client.create_client(
+                &ctx,
+                client_state.clone().into(),
+                consensus_state.clone().into(),
             );
             assert!(res.is_ok(), "res={:?}", res);
-            assert_eq!(lcp_store.revision, 2);
-            if let CommandResult::LightClient(LightClientResult::InitClient(InitClientResult {
-                client_id,
-                proof: _,
-            })) = res.unwrap()
-            {
-                assert!(ClientId::new(ClientType::Mock, 0).unwrap() == client_id);
-                client_id
-            } else {
-                unreachable!()
-            }
+
+            let client_id =
+                ClientId::from_str(&format!("{}-0", mock_client.client_type())).unwrap();
+            ctx.store_client_type(client_id.clone(), mock_client.client_type())
+                .unwrap();
+            ctx.store_any_client_state(client_id.clone(), client_state.into())
+                .unwrap();
+            ctx.store_any_consensus_state(
+                client_id.clone(),
+                res.unwrap().height,
+                consensus_state.into(),
+            )
+            .unwrap();
+            lcp_store.commit().unwrap();
+            client_id
         };
 
         // 3. updates the Light Client state on the LCP side
         let proof1 = {
             let header = MockHeader::new(ICS02Height::new(0, 2).unwrap());
-            let input = UpdateClientInput {
-                client_id: upstream_client_id,
-                any_header: Any::from(AnyHeader::Mock(header)).into(),
-                current_timestamp: Time::now(),
-                include_state: true,
-            };
 
-            let res = router::dispatch::<_, LocalLightClientRegistry>(
-                Some(&ek),
-                &mut lcp_store,
-                ECallCommand::new(
-                    CommandParams::new(home.clone()),
-                    Command::LightClient(LightClientCommand::UpdateClient(input)),
-                ),
+            let mut ctx = Context::new(&mut lcp_store, &ek);
+            ctx.set_timestamp(Time::now());
+            let res = mock_client.update_client(
+                &ctx,
+                upstream_client_id.clone(),
+                Any::from(AnyHeader::Mock(header)).into(),
             );
             assert!(res.is_ok(), "res={:?}", res);
-            assert_eq!(lcp_store.revision, 3);
-            if let CommandResult::LightClient(LightClientResult::UpdateClient(
-                UpdateClientResult(proof),
-            )) = res.unwrap()
-            {
-                proof
-            } else {
-                unreachable!()
-            }
+            let res = res.unwrap();
+            let (client_state, consensus_state, height) = {
+                (
+                    res.new_any_client_state,
+                    res.new_any_consensus_state,
+                    res.height,
+                )
+            };
+
+            let res = prove_update_client_commitment(ctx.get_enclave_key(), res.commitment);
+            assert!(res.is_ok(), "res={:?}", res);
+
+            ctx.store_any_client_state(upstream_client_id.clone(), client_state)
+                .unwrap();
+            ctx.store_any_consensus_state(upstream_client_id.clone(), height, consensus_state)
+                .unwrap();
+            lcp_store.commit().unwrap();
+            res.unwrap()
         };
 
         // 4. on the downstream side, updates LCP Light Client's state with the commitment from the LCP
@@ -171,20 +154,10 @@ mod tests {
                 signer: proof1.signer,
                 signature: proof1.signature,
             });
-            let input = UpdateClientInput {
-                client_id: lcp_client_id.clone(),
-                any_header: header.into(),
-                current_timestamp: (Time::now() + Duration::from_secs(60)).unwrap(),
-                include_state: false,
-            };
-            let res = router::dispatch::<_, LocalLightClientRegistry>(
-                Some(&ek),
-                &mut ibc_store,
-                ECallCommand::new(
-                    CommandParams::new(home.clone()),
-                    Command::LightClient(LightClientCommand::UpdateClient(input)),
-                ),
-            );
+            let mut ctx = Context::new(&mut ibc_store, &ek);
+            ctx.set_timestamp((Time::now() + Duration::from_secs(60)).unwrap());
+
+            let res = lcp_client.update_client(&ctx, lcp_client_id, header.into());
             assert!(res.is_ok(), "res={:?}", res);
         }
     }

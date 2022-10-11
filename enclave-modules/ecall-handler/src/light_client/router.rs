@@ -1,13 +1,12 @@
 use crate::light_client::{
-    init_client, query_client, update_client, verify_membership, verify_non_membership,
-    LightClientHandlerError as Error,
+    init_client, query_client, update_client, verify_membership, verify_non_membership, Error,
 };
 use context::Context;
 use ecall_commands::{CommandResult, LightClientCommand};
-use light_client::LightClientSource;
-use store::Store;
+use light_client_registry::LightClientSource;
+use store::KVStore;
 
-pub fn dispatch<'l, S: Store, L: LightClientSource<'l>>(
+pub fn dispatch<'l, S: KVStore, L: LightClientSource<'l>>(
     ctx: &mut Context<S>,
     command: LightClientCommand,
 ) -> Result<CommandResult, Error> {

@@ -1,17 +1,17 @@
+use flex_error::*;
 use sgx_types::sgx_status_t;
 
-pub type Result<T> = std::result::Result<T, HandlerError>;
+pub type Result<T> = core::result::Result<T, Error>;
 
-#[derive(thiserror::Error, Debug)]
-pub enum HandlerError {
-    #[error("SGXError: {0}")]
-    SGXError(sgx_status_t),
-    #[error(transparent)]
-    OtherError(#[from] anyhow::Error),
-}
-
-impl From<sgx_status_t> for HandlerError {
-    fn from(s: sgx_status_t) -> Self {
-        HandlerError::SGXError(s)
+define_error! {
+    #[derive(Debug, Clone, PartialEq, Eq)]
+    Error {
+        SgxError {
+            status: sgx_status_t,
+            descr: String
+        }
+        |e| {
+            format_args!("SGX error: status={:?} descr={}", e.status, e.descr)
+        }
     }
 }

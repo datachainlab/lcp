@@ -12,15 +12,11 @@ tendermint = { version = "=0.23.7", default-features = false }
 tendermint-proto = { version = "=0.23.7", default-features = false }
 serde = { version = "1.0", default-features = false, features = ["alloc", "derive"] }
 serde_json = { version = "1.0", default-features = false, features = ["alloc"] }
-thiserror = { version = "1.0.30", optional = true }
-thiserror-sgx = { package = "thiserror", git = "https://github.com/mesalock-linux/thiserror-sgx.git", optional = true }
+flex-error = { version = "0.4.4", default-features = false }
 
 [features]
 default = ["std"]
-std = [
-    "thiserror"
-]
+std = []
 sgx = [
     "sgx_tstd",
-    "thiserror-sgx"
 ]

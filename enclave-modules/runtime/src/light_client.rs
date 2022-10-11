@@ -1,11 +1,13 @@
+use crate::prelude::*;
 use lazy_static::lazy_static;
-use light_client::{LightClient, LightClientRegistry, LightClientSource};
-use std::boxed::Box;
+use light_client::LightClient;
+use light_client_registry::memory::HashMapLightClientRegistry;
+use light_client_registry::{LightClientRegistry, LightClientSource};
 use tendermint_lc::register_implementations;
 
 lazy_static! {
-    pub static ref LIGHT_CLIENT_REGISTRY: LightClientRegistry = {
-        let mut registry = LightClientRegistry::new();
+    pub static ref LIGHT_CLIENT_REGISTRY: HashMapLightClientRegistry = {
+        let mut registry = HashMapLightClientRegistry::new();
         register_implementations(&mut registry);
         registry
     };

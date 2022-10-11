@@ -1,44 +1,34 @@
-#[cfg(feature = "sgx")]
-use crate::sgx_reexport_prelude::*;
-use crate::{
-    traits::{Keccak256, SealedKey},
-    CryptoError as Error, Signer, Verifier,
-};
-use anyhow::anyhow;
-use secp256k1::curve::Scalar;
+use crate::prelude::*;
+use crate::{Error, Verifier};
+#[cfg(any(feature = "std", feature = "sgx"))]
+use crate::{Keccak256, Signer};
 use secp256k1::{
+    curve::Scalar,
     util::{COMPRESSED_PUBLIC_KEY_SIZE, SECRET_KEY_SIZE},
     Message, PublicKey, RecoveryId, SecretKey, Signature,
 };
 use serde::{Deserialize, Serialize};
 use sgx_types::sgx_report_data_t;
-use std::format;
-use std::io::{Read, Write};
-use std::string::String;
-use std::vec;
-use std::vec::Vec;
 use tiny_keccak::Keccak;
-
-#[cfg(feature = "sgx")]
-use crate::sgx::rand::rand_slice;
-#[cfg(not(feature = "sgx"))]
-use std::fs::File;
-#[cfg(feature = "sgx")]
-use std::sgxfs::SgxFile as File;
-#[cfg(not(feature = "sgx"))]
-fn rand_slice(bz: &mut [u8]) -> Result<(), Error> {
-    use rand::{thread_rng, Rng};
-    thread_rng().fill(bz);
-    Ok(())
-}
 
 #[derive(Default)]
 pub struct EnclaveKey {
-    secret_key: SecretKey,
+    pub(crate) secret_key: SecretKey,
 }
 
 impl EnclaveKey {
+    #[cfg(any(feature = "std", feature = "sgx"))]
     pub fn new() -> Result<Self, Error> {
+        #[cfg(feature = "sgx")]
+        use crate::sgx::rand::rand_slice;
+
+        #[cfg(feature = "std")]
+        fn rand_slice(bz: &mut [u8]) -> Result<(), Error> {
+            use rand::{thread_rng, Rng};
+            thread_rng().fill(bz);
+            Ok(())
+        }
+
         let secret_key = loop {
             let mut ret = [0u8; SECRET_KEY_SIZE];
             rand_slice(ret.as_mut())?;
@@ -57,20 +47,6 @@ impl EnclaveKey {
     pub fn get_pubkey(&self) -> EnclavePublicKey {
         EnclavePublicKey(PublicKey::from_secret_key(&self.secret_key))
     }
-
-    pub fn sign(&self, bz: &[u8]) -> Result<Vec<u8>, Error> {
-        self.sign_hash(&bz.keccak256())
-    }
-
-    fn sign_hash(&self, bz: &[u8; 32]) -> Result<Vec<u8>, Error> {
-        let mut s = Scalar::default();
-        let _ = s.set_b32(&bz);
-        let (sig, rid) = secp256k1::sign(&Message(s), &self.secret_key);
-        let mut ret = vec![0; 65];
-        ret[..64].copy_from_slice(&sig.serialize());
-        ret[64] = rid.serialize();
-        Ok(ret)
-    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -81,7 +57,7 @@ impl TryFrom<&[u8]> for EnclavePublicKey {
 
     fn try_from(v: &[u8]) -> Result<Self, Self::Error> {
         Ok(Self(
-            PublicKey::parse_slice(v, None).map_err(Error::Secp256k1Error)?,
+            PublicKey::parse_slice(v, None).map_err(Error::secp256k1)?,
         ))
     }
 }
@@ -95,18 +71,6 @@ impl EnclavePublicKey {
         let mut report_data = sgx_report_data_t::default();
         report_data.d[..20].copy_from_slice(Address::from(self).as_ref());
         report_data
-    }
-
-    pub fn verify(&self, msg: &[u8], signature: &[u8]) -> Result<(), Error> {
-        let signer = verify_signature(msg, signature)?;
-        if self.eq(&signer) {
-            Ok(())
-        } else {
-            Err(Error::VerificationError(format!(
-                "unexpected signer: {:?}",
-                signer
-            )))
-        }
     }
 }
 
@@ -149,9 +113,16 @@ impl From<Address> for Vec<u8> {
     }
 }
 
+#[cfg(any(feature = "std", feature = "sgx"))]
 impl Signer for EnclaveKey {
-    fn sign(&self, msg: &[u8]) -> Result<Vec<u8>, Error> {
-        self.sign(msg)
+    fn sign(&self, bz: &[u8]) -> Result<Vec<u8>, Error> {
+        let mut s = Scalar::default();
+        let _ = s.set_b32(&bz.keccak256());
+        let (sig, rid) = secp256k1::sign(&Message(s), &self.secret_key);
+        let mut ret = vec![0; 65];
+        ret[..64].copy_from_slice(&sig.serialize());
+        ret[64] = rid.serialize();
+        Ok(ret)
     }
 
     fn use_verifier(&self, f: &mut dyn FnMut(&dyn Verifier)) {
@@ -169,47 +140,13 @@ impl Verifier for EnclavePublicKey {
     }
 
     fn verify(&self, msg: &[u8], signature: &[u8]) -> Result<(), Error> {
-        self.verify(msg, signature)
+        let signer = verify_signature(msg, signature)?;
+        if self.eq(&signer) {
+            Ok(())
+        } else {
+            Err(Error::unexpected_signer(self.clone(), signer))
+        }
     }
-}
-
-impl SealedKey for EnclaveKey {
-    fn seal(&self, filepath: &str) -> Result<(), Error> {
-        // Files are automatically closed when they go out of scope.
-        seal(&self.get_privkey(), filepath)
-    }
-
-    fn unseal(filepath: &str) -> Result<Self, Error> {
-        let secret_key = open(filepath)?;
-        Ok(Self { secret_key })
-    }
-}
-
-fn seal(data: &[u8; 32], filepath: &str) -> Result<(), Error> {
-    let mut file = File::create(filepath)
-        .map_err(|e| Error::FailedSeal(e, format!("error creating file: {}", filepath)))?;
-    file.write_all(data)
-        .map_err(|e| Error::FailedSeal(e, format!("error writing to path: {}", filepath)))
-}
-
-fn open(filepath: &str) -> Result<SecretKey, Error> {
-    let mut file = File::open(filepath)
-        .map_err(|e| Error::FailedUnseal(e, format!("failed to open file: {}", filepath)))?;
-
-    let mut buf = [0u8; SECRET_KEY_SIZE];
-    let n = file
-        .read(buf.as_mut())
-        .map_err(|e| Error::FailedUnseal(e, format!("failed to read file: {}", filepath)))?;
-
-    if n < SECRET_KEY_SIZE {
-        return Err(Error::OtherError(anyhow!(
-            "[Enclave] Dramatic read from {} ended prematurely (n = {} < SECRET_KEY_SIZE = {})",
-            filepath,
-            n,
-            SECRET_KEY_SIZE
-        )));
-    }
-    Ok(SecretKey::parse(&buf).unwrap())
 }
 
 pub fn verify_signature(sign_bytes: &[u8], signature: &[u8]) -> Result<EnclavePublicKey, Error> {
@@ -219,9 +156,9 @@ pub fn verify_signature(sign_bytes: &[u8], signature: &[u8]) -> Result<EnclavePu
     let mut s = Scalar::default();
     let _ = s.set_b32(&sign_hash);
 
-    let sig = Signature::parse_slice(&signature[..64])?;
-    let rid = RecoveryId::parse(signature[64])?;
-    let signer = secp256k1::recover(&Message(s), &sig, &rid)?;
+    let sig = Signature::parse_slice(&signature[..64]).map_err(Error::secp256k1)?;
+    let rid = RecoveryId::parse(signature[64]).map_err(Error::secp256k1)?;
+    let signer = secp256k1::recover(&Message(s), &sig, &rid).map_err(Error::secp256k1)?;
     Ok(EnclavePublicKey(signer))
 }
 

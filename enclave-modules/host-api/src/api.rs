@@ -1,13 +1,10 @@
-use crate::{
-    errors::{HostAPIError as Error, Result},
-    ffi,
-};
+use crate::prelude::*;
+use crate::{errors::Error, ffi};
 use ocall_commands::{Command, CommandResult};
 use sgx_types::*;
-use std::vec::Vec;
 
-pub fn execute_command(cmd: Command) -> Result<CommandResult> {
-    let cmd_vec = bincode::serialize(&cmd)?;
+pub fn execute_command(cmd: Command) -> Result<CommandResult, Error> {
+    let cmd_vec = bincode::serialize(&cmd).map_err(Error::bincode)?;
     let mut ret: sgx_status_t = sgx_status_t::SGX_ERROR_UNEXPECTED;
     let mut output_len = 0;
     let output_maxlen = 65536;
@@ -26,17 +23,18 @@ pub fn execute_command(cmd: Command) -> Result<CommandResult> {
     };
 
     if result != sgx_status_t::SGX_SUCCESS {
-        Err(Error::SGXError(result))
+        Err(Error::sgx_error(result))
     } else {
         assert!((output_len as usize) < output_maxlen);
         unsafe {
             output_buf.set_len(output_len as usize);
         }
-        let res = bincode::deserialize(&output_buf[..output_len as usize])?;
+        let res =
+            bincode::deserialize(&output_buf[..output_len as usize]).map_err(Error::bincode)?;
         if ret == sgx_status_t::SGX_SUCCESS {
             Ok(res)
         } else if let CommandResult::CommandError(descr) = res {
-            Err(Error::CommandError(ret, descr))
+            Err(Error::command(ret, descr))
         } else {
             unreachable!()
         }

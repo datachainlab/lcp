@@ -15,7 +15,6 @@ tendermint-rpc  = { version = "=0.23.7", features = ["http-client", "websocket-c
 tempdir = "0.3.7"
 prost-types = { version = "0.10", default-features = false }
 anyhow = { version = "1.0.56" }
-thiserror = { version = "1.0.30" }
 tokio = { version = "1.0" }
 log = "0.4.8"
 env_logger = "0.9.0"
@@ -31,7 +30,6 @@ ecall-commands = { path = "../../modules/ecall-commands" }
 attestation-report = { path = "../../modules/attestation-report" }
 settings = { path = "../../modules/settings" }
 relay-tendermint = { path = "../../modules/relay/tendermint" }
-lcp-ibc-client = { path = "../../modules/ibc-client" }
 
 [features]
 default = []

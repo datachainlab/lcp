@@ -1,17 +1,11 @@
-#[cfg(feature = "sgx")]
-use crate::sgx_reexport_prelude::*;
-use crate::CommitmentError as Error;
-use crate::StateID;
+use crate::prelude::*;
+use crate::{Error, StateID};
 use core::str::FromStr;
 use ibc::core::ics23_commitment::commitment::CommitmentPrefix;
 use ibc::core::ics24_host::Path;
 use lcp_types::{Any, Height, Time};
 use prost::Message;
 use serde::{Deserialize, Serialize};
-#[allow(unused_imports)]
-use std::format;
-use std::string::{String, ToString};
-use std::vec::Vec;
 use validation_context::ValidationParams;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -77,7 +71,7 @@ impl UpdateClientCommitment {
             },
             new_state_id: r.at(1)?.as_val::<Vec<u8>>()?.as_slice().try_into()?,
             new_state: match r.at(2)?.as_val::<Vec<u8>>()? {
-                v if v.len() > 0 => Some(Any::try_from(v).map_err(Error::ICS02Error)?),
+                v if v.len() > 0 => Some(Any::try_from(v).map_err(Error::ics02)?),
                 _ => None,
             },
             prev_height: match r.at(3)?.as_val::<Vec<u8>>()?.as_slice() {
@@ -142,8 +136,8 @@ impl StateCommitment {
                 .at(0)?
                 .as_val::<Vec<u8>>()?
                 .try_into()
-                .map_err(Error::ICS23Error)?,
-            path: Path::from_str(&r.at(1)?.as_val::<String>()?).map_err(Error::ICS24PathError)?,
+                .map_err(Error::ics23)?,
+            path: Path::from_str(&r.at(1)?.as_val::<String>()?).map_err(Error::ics24)?,
             value: match r.at(2)?.as_val::<Vec<u8>>()?.as_slice() {
                 bz if bz.len() > 0 => Some(bytes_to_array(bz)?),
                 _ => None,
@@ -160,7 +154,7 @@ fn u128_from_bytes(bz: &[u8]) -> Result<u128, Error> {
         ar.copy_from_slice(bz);
         Ok(u128::from_be_bytes(ar))
     } else {
-        Err(Error::InvalidCommitmentFormatError(format!(
+        Err(Error::invalid_commitment_format(format!(
             "bytes length must be 16, but got {}",
             bz.len()
         )))
@@ -173,7 +167,7 @@ fn bytes_to_array(bz: &[u8]) -> Result<[u8; 32], Error> {
         ar.copy_from_slice(bz);
         Ok(ar)
     } else {
-        Err(Error::InvalidCommitmentFormatError(format!(
+        Err(Error::invalid_commitment_format(format!(
             "bytes length must be 32, but got {}",
             bz.len()
         )))

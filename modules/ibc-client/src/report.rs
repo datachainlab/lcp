@@ -1,7 +1,6 @@
 use crate::client_state::ClientState;
-use crate::errors::IBCClientError as Error;
-#[cfg(feature = "sgx")]
-use crate::sgx_reexport_prelude::*;
+use crate::errors::Error;
+use crate::prelude::*;
 use attestation_report::EndorsedAttestationVerificationReport;
 use crypto::Address;
 use lcp_types::Time;
@@ -23,16 +22,16 @@ pub fn verify_report(
     // check if attestation report's timestamp is not expired
     let key_expiration = (quote.attestation_time + client_state.key_expiration)?;
     if vctx.current_timestamp > key_expiration {
-        return Err(Error::ExpiredAVRError {
-            current_timestamp: vctx.current_timestamp,
-            attestation_time: quote.attestation_time,
-            client_state_key_expiration: client_state.key_expiration,
-        });
+        return Err(Error::expired_avr(
+            vctx.current_timestamp,
+            quote.attestation_time,
+            client_state.key_expiration,
+        ));
     }
 
     // check if `mr_enclave` that is included in the quote matches the expected value
     if &quote.raw.report_body.mr_enclave.m != client_state.mr_enclave.as_slice() {
-        return Err(Error::MrenclaveMismatchError(
+        return Err(Error::mrenclave_mismatch(
             quote.raw.report_body.mr_enclave.m.to_vec(),
             client_state.mr_enclave.clone(),
         ));

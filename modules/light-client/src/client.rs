@@ -1,22 +1,15 @@
-#[cfg(feature = "sgx")]
-use crate::sgx_reexport_prelude::*;
-use crate::{context::ClientReader, LightClientError};
+use crate::prelude::*;
+use crate::{context::ClientReader, Error};
 use commitments::{StateCommitment, UpdateClientCommitment};
 use ibc::core::ics24_host::identifier::ClientId;
 use lcp_types::{Any, Height};
-use std::string::String;
-use std::vec::Vec;
 
 pub trait LightClient {
     /// client_type returns a client type of the light client
     fn client_type(&self) -> String;
 
     /// latest_height returns the latest height that the light client tracks
-    fn latest_height(
-        &self,
-        ctx: &dyn ClientReader,
-        client_id: &ClientId,
-    ) -> Result<Height, LightClientError>;
+    fn latest_height(&self, ctx: &dyn ClientReader, client_id: &ClientId) -> Result<Height, Error>;
 
     /// create_client creates a new light client
     fn create_client(
@@ -24,7 +17,7 @@ pub trait LightClient {
         ctx: &dyn ClientReader,
         any_client_state: Any,
         any_consensus_state: Any,
-    ) -> Result<CreateClientResult, LightClientError>;
+    ) -> Result<CreateClientResult, Error>;
 
     /// update_client updates the light client with a header
     fn update_client(
@@ -32,7 +25,7 @@ pub trait LightClient {
         ctx: &dyn ClientReader,
         client_id: ClientId,
         any_header: Any,
-    ) -> Result<UpdateClientResult, LightClientError>;
+    ) -> Result<UpdateClientResult, Error>;
 
     /// verify_membership is a generic proof verification method which verifies a proof of the existence of a value at a given path at the specified height.
     fn verify_membership(
@@ -44,7 +37,7 @@ pub trait LightClient {
         value: Vec<u8>,
         proof_height: Height,
         proof: Vec<u8>,
-    ) -> Result<StateVerificationResult, LightClientError>;
+    ) -> Result<StateVerificationResult, Error>;
 
     /// verify_non_membership is a generic proof verification method which verifies the absence of a given path at a specified height.
     fn verify_non_membership(
@@ -55,7 +48,7 @@ pub trait LightClient {
         path: String,
         proof_height: Height,
         proof: Vec<u8>,
-    ) -> Result<StateVerificationResult, LightClientError>;
+    ) -> Result<StateVerificationResult, Error>;
 }
 
 #[derive(Clone, Debug, PartialEq)]

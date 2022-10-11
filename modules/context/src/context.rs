@@ -1,5 +1,4 @@
-#[cfg(feature = "sgx")]
-use crate::sgx_reexport_prelude::*;
+use crate::prelude::*;
 use core::str::FromStr;
 use crypto::Signer;
 use ibc::{
@@ -19,8 +18,6 @@ use ibc::{
 use lcp_types::{Any, Height, Time};
 use light_client::{ClientKeeper, ClientReader};
 use log::*;
-use std::format;
-use std::string::String;
 use store::KVStore;
 
 pub static NEXT_CLIENT_SEQUENCE: &str = "nextClientSequence";

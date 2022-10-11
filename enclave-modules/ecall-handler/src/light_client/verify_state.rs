@@ -1,12 +1,12 @@
 use super::registry::get_light_client_by_client_id;
-use crate::light_client::LightClientHandlerError as Error;
+use crate::light_client::Error;
 use commitments::prover::prove_state_commitment;
 use context::Context;
 use ecall_commands::{
     LightClientResult, VerifyMembershipInput, VerifyMembershipResult, VerifyNonMembershipInput,
     VerifyNonMembershipResult,
 };
-use light_client::LightClientSource;
+use light_client_registry::LightClientSource;
 use store::KVStore;
 
 pub fn verify_membership<'l, S: KVStore, L: LightClientSource<'l>>(

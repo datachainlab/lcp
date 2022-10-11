@@ -1,11 +1,7 @@
-#[cfg(feature = "sgx")]
-use crate::sgx_reexport_prelude::*;
-use crate::{
-    commitment::UpdateClientCommitment, errors::CommitmentError as Error, StateCommitment,
-};
+use crate::prelude::*;
+use crate::{commitment::UpdateClientCommitment, errors::Error, StateCommitment};
 use ibc::core::ics23_commitment::commitment::CommitmentProofBytes;
 use serde::{Deserialize, Serialize};
-use std::vec::Vec;
 
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct UpdateClientCommitmentProof {

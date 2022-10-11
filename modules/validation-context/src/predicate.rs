@@ -1,5 +1,3 @@
-#[cfg(feature = "sgx")]
-use crate::sgx_reexport_prelude::*;
 use crate::{
     params::ValidationParams, tendermint::TendermintValidationPredicate, ValidationContext,
 };

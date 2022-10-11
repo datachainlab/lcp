@@ -1,22 +1,19 @@
-use super::errors::LCPLCError as Error;
+use super::errors::Error;
 use crate::client_def::LCPClient;
 use crate::client_state::{ClientState, LCP_CLIENT_STATE_TYPE_URL};
 use crate::consensus_state::ConsensusState;
 use crate::header::Header;
-#[cfg(feature = "sgx")]
-use crate::sgx_reexport_prelude::*;
-use alloc::borrow::ToOwned;
+use crate::prelude::*;
 use commitments::{gen_state_id_from_any, UpdateClientCommitment};
 use ibc::core::ics02_client::client_state::ClientState as ICS02ClientState;
 use ibc::core::ics02_client::error::Error as ICS02Error;
 use ibc::core::ics24_host::identifier::ClientId;
 use lcp_types::{Any, Height};
-use light_client::{ClientReader, LightClientError};
-use light_client::{CreateClientResult, StateVerificationResult, UpdateClientResult};
-use light_client::{LightClient, LightClientRegistry};
-use std::boxed::Box;
-use std::string::ToString;
-use std::vec::Vec;
+use light_client::{
+    ClientReader, CreateClientResult, Error as LightClientError, LightClient,
+    StateVerificationResult, UpdateClientResult,
+};
+use light_client_registry::LightClientRegistry;
 use validation_context::ValidationParams;
 
 pub const LCP_CLIENT_TYPE: &str = "0000-lcp";
@@ -34,17 +31,17 @@ impl LightClient for LCPLightClient {
         any_consensus_state: Any,
     ) -> Result<CreateClientResult, LightClientError> {
         let state_id = gen_state_id_from_any(&any_client_state, &any_consensus_state)
-            .map_err(LightClientError::OtherError)?;
+            .map_err(LightClientError::commitment)?;
         let client_state =
-            ClientState::try_from(any_client_state).map_err(LightClientError::ICS02Error)?;
+            ClientState::try_from(any_client_state).map_err(LightClientError::ics02)?;
         let consensus_state =
-            ConsensusState::try_from(any_consensus_state).map_err(LightClientError::ICS02Error)?;
+            ConsensusState::try_from(any_consensus_state).map_err(LightClientError::ics02)?;
         let height = client_state.latest_height().into();
         let timestamp = consensus_state.timestamp;
 
         LCPClient {}
             .initialise(&client_state, &consensus_state)
-            .map_err(LightClientError::ICS02Error)?;
+            .map_err(LightClientError::ics02)?;
 
         Ok(CreateClientResult {
             height,
@@ -67,21 +64,21 @@ impl LightClient for LCPLightClient {
         client_id: ClientId,
         any_header: Any,
     ) -> Result<UpdateClientResult, LightClientError> {
-        let header = Header::try_from(any_header).map_err(LightClientError::ICS02Error)?;
+        let header = Header::try_from(any_header).map_err(LightClientError::ics02)?;
 
         // Read client type from the host chain store. The client should already exist.
         let client_type = ctx
             .client_type(&client_id)
-            .map_err(LightClientError::ICS02Error)?;
+            .map_err(LightClientError::ics02)?;
 
         assert!(client_type.eq(LCP_CLIENT_TYPE));
 
         // Read client state from the host chain store.
         let client_state = ctx
             .client_state(&client_id)
-            .map_err(LightClientError::ICS02Error)?
+            .map_err(LightClientError::ics02)?
             .try_into()
-            .map_err(LightClientError::ICS02Error)?;
+            .map_err(LightClientError::ics02)?;
 
         // if client_state.is_frozen() {
         //     return Err(Error::ICS02Error(ICS02Error::client_frozen(client_id)).into());
@@ -95,16 +92,14 @@ impl LightClient for LCPLightClient {
         // consensus_state obtained from header. These will be later persisted by the keeper.
         let (new_client_state, new_consensus_state) = LCPClient {}
             .check_header_and_update_state(ctx, client_id, client_state, header)
-            .map_err(|e| {
-                Error::ICS02Error(ICS02Error::header_verification_failure(e.to_string()))
-            })?;
+            .map_err(|e| Error::ics02(ICS02Error::header_verification_failure(e.to_string())))?;
 
         Ok(UpdateClientResult {
             new_any_client_state: Any::new(new_client_state),
             new_any_consensus_state: Any::new(new_consensus_state),
             height,
             commitment: UpdateClientCommitment::default(),
-            prove: true,
+            prove: false,
         })
     }
 
@@ -119,9 +114,9 @@ impl LightClient for LCPLightClient {
     ) -> Result<Height, LightClientError> {
         let client_state: ClientState = ctx
             .client_state(&client_id)
-            .map_err(LightClientError::ICS02Error)?
+            .map_err(LightClientError::ics02)?
             .try_into()
-            .map_err(LightClientError::ICS02Error)?;
+            .map_err(LightClientError::ics02)?;
         Ok(client_state.latest_height)
     }
 
@@ -151,7 +146,7 @@ impl LightClient for LCPLightClient {
     }
 }
 
-pub fn register_implementations(registry: &mut LightClientRegistry) {
+pub fn register_implementations(registry: &mut dyn LightClientRegistry) {
     registry
         .put(
             LCP_CLIENT_STATE_TYPE_URL.to_string(),

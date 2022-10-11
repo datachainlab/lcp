@@ -1,5 +1,3 @@
-#[cfg(feature = "sgx")]
-use crate::sgx_reexport_prelude::*;
 use lcp_types::Time;
 
 #[derive(Debug, Clone, PartialEq)]

@@ -1,25 +1,30 @@
-#![cfg_attr(feature = "sgx", no_std)]
-#[cfg(feature = "sgx")]
-extern crate sgx_tstd as std;
-// re-export module to properly feature gate sgx and regular std environment
-#[cfg(feature = "sgx")]
-pub mod sgx_reexport_prelude {
-    pub use anyhow_sgx as anyhow;
-    pub use bincode_sgx as bincode;
-    pub use log_sgx as log;
-    pub use sgx_tstd as std;
-    pub use thiserror_sgx as thiserror;
+#![cfg_attr(not(feature = "std"), no_std)]
+extern crate alloc;
+
+mod prelude {
+    pub use core::prelude::v1::*;
+
+    // Re-export according to alloc::prelude::v1 because it is not yet stabilized
+    // https://doc.rust-lang.org/src/alloc/prelude/v1.rs.html
+    pub use alloc::borrow::ToOwned;
+    pub use alloc::boxed::Box;
+    pub use alloc::string::{String, ToString};
+    pub use alloc::vec::Vec;
+
+    pub use alloc::format;
+    pub use alloc::vec;
+
+    // Those are exported by default in the std prelude in Rust 2021
+    pub use core::convert::{TryFrom, TryInto};
+    pub use core::iter::FromIterator;
 }
 
-pub use crate::errors::StoreError;
-pub use crate::store::{CommitStore, KVStore, PersistentStore, Store, VerifiablePersistentStore};
-pub use commit::{Commit, CommitID, Revision};
-pub use signed_commit::SignedCommit;
+pub use crate::errors::Error;
+pub use crate::store::{CommitStore, KVStore, Store};
 
-mod commit;
 mod errors;
+#[cfg(any(feature = "std", feature = "sgx"))]
 pub mod memory;
 #[cfg(feature = "sgx")]
-mod sgx_store;
-mod signed_commit;
+pub mod sgx_store;
 mod store;

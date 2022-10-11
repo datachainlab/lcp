@@ -1,4 +1,4 @@
-use crate::{ffi, Enclave, EnclaveAPIError as Error, Result};
+use crate::{ffi, Enclave, Error, Result};
 use ecall_commands::{
     Command, CommandParams, CommandResult, ECallCommand, EnclaveManageCommand, EnclaveManageResult,
     IASRemoteAttestationInput, IASRemoteAttestationResult, InitClientInput, InitClientResult,
@@ -48,7 +48,7 @@ impl EnclavePrimitiveAPI for Enclave {
         let output_ptr = output_buf.as_mut_ptr();
         let mut ret = sgx_status_t::SGX_SUCCESS;
 
-        let command_bytes = bincode::serialize(cmd)?;
+        let command_bytes = bincode::serialize(cmd).map_err(Error::bincode)?;
         let result = unsafe {
             ffi::ecall_execute_command(
                 self.sgx_enclave.geteid(),
@@ -61,17 +61,18 @@ impl EnclavePrimitiveAPI for Enclave {
             )
         };
         if result != sgx_status_t::SGX_SUCCESS {
-            Err(Error::SGXError(result))
+            Err(Error::sgx_error(result))
         } else {
             assert!((output_len as usize) < output_maxlen);
             unsafe {
                 output_buf.set_len(output_len as usize);
             }
-            let res = bincode::deserialize(&output_buf[..output_len as usize])?;
+            let res =
+                bincode::deserialize(&output_buf[..output_len as usize]).map_err(Error::bincode)?;
             if ret == sgx_status_t::SGX_SUCCESS {
                 Ok(res)
             } else if let CommandResult::CommandError(descr) = res {
-                Err(Error::CommandError(ret, descr))
+                Err(Error::command(ret, descr))
             } else {
                 unreachable!()
             }

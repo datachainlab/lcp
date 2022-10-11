@@ -1,6 +1,5 @@
-#[cfg(feature = "sgx")]
-use crate::sgx_reexport_prelude::*;
-use attestation_report::{AttestationVerificationReport, EndorsedAttestationVerificationReport};
+use crate::prelude::*;
+use attestation_report::EndorsedAttestationVerificationReport;
 use commitments::{StateID, UpdateClientCommitment};
 use crypto::Address;
 use ibc::core::ics02_client::{

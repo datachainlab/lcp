@@ -1,25 +1,31 @@
-#![cfg_attr(feature = "sgx", no_std)]
-#[cfg(feature = "sgx")]
-extern crate sgx_tstd as std;
-extern crate sgx_types;
+#![cfg_attr(not(feature = "std"), no_std)]
+extern crate alloc;
 
-// re-export module to properly feature gate sgx and regular std environment
-#[cfg(feature = "sgx")]
-pub mod sgx_reexport_prelude {
-    pub use anyhow_sgx as anyhow;
-    pub use base64_sgx as base64;
-    pub use log_sgx as log;
-    pub use pem_sgx as pem;
-    pub use rustls_sgx as rustls;
-    pub use sgx_tstd as std;
-    pub use thiserror_sgx as thiserror;
-    pub use webpki_sgx as webpki;
+mod prelude {
+    pub use core::prelude::v1::*;
+
+    // Re-export according to alloc::prelude::v1 because it is not yet stabilized
+    // https://doc.rust-lang.org/src/alloc/prelude/v1.rs.html
+    pub use alloc::borrow::ToOwned;
+    pub use alloc::boxed::Box;
+    pub use alloc::string::{String, ToString};
+    pub use alloc::vec::Vec;
+
+    pub use alloc::format;
+    pub use alloc::vec;
+
+    // Those are exported by default in the std prelude in Rust 2021
+    pub use core::convert::{TryFrom, TryInto};
+    pub use core::iter::FromIterator;
 }
 
-pub use errors::AttestationReportError;
-pub use report::{
-    verify_report, AttestationVerificationReport, EndorsedAttestationVerificationReport, Quote,
-};
-
+pub use errors::Error;
 mod errors;
+
+pub use report::{AttestationVerificationReport, EndorsedAttestationVerificationReport, Quote};
 mod report;
+
+#[cfg(any(feature = "std", feature = "sgx"))]
+pub use verification::verify_report;
+#[cfg(any(feature = "std", feature = "sgx"))]
+mod verification;

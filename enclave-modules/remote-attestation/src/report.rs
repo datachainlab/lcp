@@ -1,19 +1,17 @@
-use crate::errors::RemoteAttestationError as Error;
+use crate::errors::Error;
+use crate::prelude::*;
 use attestation_report::{AttestationVerificationReport, Quote};
+use core::time::Duration;
 use host_api::remote_attestation::get_report_attestation_status;
 use lcp_types::Time;
 use log::*;
 use ocall_commands::{GetReportAttestationStatusInput, GetReportAttestationStatusResult};
 use settings::RT_ALLOWED_STATUS;
 use sgx_types::{sgx_platform_info_t, sgx_status_t};
-use std::format;
-use std::string::ToString;
-use std::time::Duration;
-use std::vec::Vec;
 
 pub fn validate_quote_status(avr: &AttestationVerificationReport) -> Result<Quote, Error> {
     // 1. Verify quote body
-    let quote = avr.parse_quote()?;
+    let quote = avr.parse_quote().map_err(Error::attestation_report)?;
 
     // 2. Check quote's timestamp is within 24H
     let now = Time::now();
@@ -22,11 +20,8 @@ pub fn validate_quote_status(avr: &AttestationVerificationReport) -> Result<Quot
         now, quote.attestation_time
     );
 
-    if now >= (quote.attestation_time + Duration::from_secs(60 * 60 * 24))? {
-        return Err(Error::TooOldReportTimestampError(format!(
-            "The timestamp of the report is too old: now={:?} attestation_time={:?}",
-            now, quote.attestation_time
-        )));
+    if now >= (quote.attestation_time + Duration::from_secs(60 * 60 * 24)).map_err(Error::time)? {
+        return Err(Error::too_old_report_timestamp(now, quote.attestation_time));
     }
 
     // 3. Verify quote status (mandatory field)
@@ -57,7 +52,8 @@ pub fn validate_quote_status(avr: &AttestationVerificationReport) -> Result<Quot
                     get_report_attestation_status(GetReportAttestationStatusInput {
                         platform_blob: platform_info,
                         enclave_trusted: 1,
-                    })?;
+                    })
+                    .map_err(Error::host_api)?;
 
                 if ret != sgx_status_t::SGX_SUCCESS {
                     // Borrow of packed field is unsafe in future Rust releases
@@ -71,7 +67,7 @@ pub fn validate_quote_status(avr: &AttestationVerificationReport) -> Result<Quot
                         update_info.ucodeUpdate as i32
                     );
                     if !RT_ALLOWED_STATUS.contains(&ret) {
-                        return Err(Error::SGXError(
+                        return Err(Error::sgx_error(
                             ret,
                             "the status is not allowed".to_string(),
                         ));

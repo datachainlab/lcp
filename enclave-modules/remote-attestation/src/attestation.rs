@@ -1,4 +1,6 @@
-use crate::errors::RemoteAttestationError as Error;
+use crate::errors::Error;
+use crate::prelude::*;
+use alloc::str;
 use attestation_report::EndorsedAttestationVerificationReport;
 use crypto::sgx::rand::fill_bytes;
 use host_api::remote_attestation::{get_ias_socket, get_quote, init_quote};
@@ -8,18 +10,13 @@ use ocall_commands::{GetIASSocketResult, GetQuoteInput, GetQuoteResult, InitQuot
 use settings::{SigningMethod, SIGNING_METHOD};
 use sgx_tcrypto::rsgx_sha256_slice;
 use sgx_tse::{rsgx_create_report, rsgx_verify_report};
-use sgx_types::{c_int, sgx_spid_t};
-use sgx_types::{sgx_quote_nonce_t, sgx_quote_sign_type_t, sgx_report_data_t};
-use std::borrow::ToOwned;
-use std::format;
-use std::vec::Vec;
-use std::{
+use sgx_tstd::{
     io::{Read, Write},
     net::TcpStream,
-    str,
-    string::{String, ToString},
     sync::Arc,
 };
+use sgx_types::{c_int, sgx_spid_t};
+use sgx_types::{sgx_quote_nonce_t, sgx_quote_sign_type_t, sgx_report_data_t};
 
 const REPORT_DATA_SIZE: usize = 32;
 
@@ -54,14 +51,14 @@ pub fn create_attestation_report(
     let InitQuoteResult {
         target_info,
         epid_group_id,
-    } = init_quote()?;
+    } = init_quote().map_err(Error::host_api)?;
 
     trace!("EPID group = {:?}", epid_group_id);
 
     let eg_num = as_u32_le(&epid_group_id);
 
     // (1.5) get sigrl
-    let GetIASSocketResult { fd } = get_ias_socket()?;
+    let GetIASSocketResult { fd } = get_ias_socket().map_err(Error::host_api)?;
 
     trace!("Got ias_sock successfully = {}", fd);
 
@@ -94,13 +91,13 @@ pub fn create_attestation_report(
             r
         }
         Err(e) => {
-            return Err(Error::SGXError(e, "Report creation => failed".to_string()));
+            return Err(Error::sgx_error(e, "Report creation => failed".to_string()));
         }
     };
 
     let mut quote_nonce = sgx_quote_nonce_t { rand: [0; 16] };
     fill_bytes(&mut quote_nonce.rand)
-        .map_err(|e| Error::SGXError(e, "failed to fill_bytes".to_string()))?;
+        .map_err(|e| Error::sgx_error(e, "failed to fill_bytes".to_string()))?;
     trace!("Nonce generated successfully");
 
     // (3) Generate the quote
@@ -121,14 +118,15 @@ pub fn create_attestation_report(
         quote_type: sign_type,
         spid,
         nonce: quote_nonce,
-    })?;
+    })
+    .map_err(Error::host_api)?;
 
     // Added 09-28-2018
     // Perform a check on qe_report to verify if the qe_report is valid
     match rsgx_verify_report(&qe_report) {
         Ok(()) => trace!("rsgx_verify_report passed!"),
         Err(e) => {
-            return Err(Error::SGXError(e, "rsgx_verify_report failed".to_string()));
+            return Err(Error::sgx_error(e, "rsgx_verify_report failed".to_string()));
         }
     }
 
@@ -137,7 +135,7 @@ pub fn create_attestation_report(
         || target_info.attributes.flags != qe_report.body.attributes.flags
         || target_info.attributes.xfrm != qe_report.body.attributes.xfrm
     {
-        return Err(Error::UnexpectedReportError(
+        return Err(Error::unexpected_report(
             "qe_report does not match current target_info!".to_string(),
         ));
     }
@@ -162,12 +160,12 @@ pub fn create_attestation_report(
     trace!("Report lhs hash = {:02X}", lhs_hash.iter().format(""));
 
     if rhs_hash != lhs_hash {
-        return Err(Error::UnexpectedQuoteError(
+        return Err(Error::unexpected_quote(
             format!("Quote is tampered!: {:?} != {:?}", rhs_hash, lhs_hash).to_string(),
         ));
     }
 
-    let GetIASSocketResult { fd } = get_ias_socket()?;
+    let GetIASSocketResult { fd } = get_ias_socket().map_err(Error::host_api)?;
 
     let (attn_report, signature, signing_cert) =
         get_report_from_intel(fd, quote, api_hex_str_bytes);

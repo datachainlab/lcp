@@ -1,3 +1,4 @@
+use crate::prelude::*;
 use ibc::{
     core::{
         ics02_client::{context::ClientReader as IBCClientReader, error::Error as ICS02Error},
@@ -6,7 +7,6 @@ use ibc::{
     timestamp::Timestamp,
 };
 use lcp_types::{Any, Height};
-use std::string::String;
 
 pub trait ClientReader {
     /// Returns the ClientType for the given identifier `client_id`.

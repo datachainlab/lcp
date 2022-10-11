@@ -1,6 +1,6 @@
 pub use api::{EnclavePrimitiveAPI, EnclaveProtoAPI};
 pub use enclave::Enclave;
-use errors::{EnclaveAPIError, Result};
+use errors::{Error, Result};
 
 mod api;
 mod enclave;

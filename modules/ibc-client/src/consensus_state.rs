@@ -1,5 +1,4 @@
-#[cfg(feature = "sgx")]
-use crate::sgx_reexport_prelude::*;
+use crate::prelude::*;
 use commitments::StateID;
 use core::convert::Infallible;
 use ibc::core::{

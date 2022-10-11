@@ -1,12 +1,12 @@
 use crate::get_store;
 use crate::light_client::GlobalLightClientRegistry;
+use crate::prelude::*;
 use crypto::KeyManager;
 use ecall_commands::{CommandResult, ECallCommand};
-use ecall_handler::router::dispatch;
+use ecall_handler::dispatch;
 use enclave_utils::validate_const_ptr;
+use log::*;
 use sgx_types::sgx_status_t;
-use std::format;
-use std::slice;
 
 #[no_mangle]
 pub unsafe extern "C" fn ecall_execute_command(
@@ -16,6 +16,7 @@ pub unsafe extern "C" fn ecall_execute_command(
     output_buf_maxlen: u32,
     output_len: &mut u32,
 ) -> sgx_status_t {
+    info!("enter ecall_execute_command");
     validate_const_ptr!(
         command,
         command_len as usize,
@@ -23,7 +24,7 @@ pub unsafe extern "C" fn ecall_execute_command(
     );
 
     let cmd: ECallCommand =
-        bincode::deserialize(slice::from_raw_parts(command, command_len as usize)).unwrap();
+        bincode::deserialize(alloc::slice::from_raw_parts(command, command_len as usize)).unwrap();
 
     let km = KeyManager::new(cmd.params.home.clone());
     let (status, result) =
@@ -42,7 +43,7 @@ pub unsafe extern "C" fn ecall_execute_command(
         output_buf_maxlen as usize,
         res.len()
     );
-    std::ptr::copy_nonoverlapping(res.as_ptr(), output_buf, res.len());
+    core::ptr::copy_nonoverlapping(res.as_ptr(), output_buf, res.len());
     *output_len = res.len() as u32;
 
     status

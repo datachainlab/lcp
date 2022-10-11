@@ -1,33 +1,27 @@
-#[cfg(feature = "sgx")]
-use crate::sgx_reexport_prelude::*;
-use ibc::core::ics02_client::error::Error as ICS02Error;
-use std::boxed::Box;
-use std::fmt::{Debug, Display};
-use std::string::String;
-use std::sync::Arc;
+use crate::prelude::*;
+use flex_error::*;
 
-pub type Result<T> = std::result::Result<T, LightClientError>;
+define_error! {
+    #[derive(Debug, PartialEq, Eq)]
+    Error {
+        Ics02
+        [ibc::core::ics02_client::error::Error]
+        |_|  { "ICS02 client error" },
 
-#[derive(thiserror::Error, Debug)]
-pub enum LightClientError {
-    #[error("the type_url not found in the registry: {0}")]
-    TypeUrlNotFoundError(String),
-    #[error("the type_url already exists in the registry: {0}")]
-    TypeUrlAlreadyExistsError(String),
-    #[error("the registry is already sealed")]
-    AlreadySealedError(),
-    #[error("InstanceError: {0}")]
-    InstanceError(Arc<Box<dyn LightClientInstanceError>>),
-    #[error("ICS02Error: {0}")]
-    ICS02Error(ICS02Error),
-    #[error(transparent)]
-    OtherError(anyhow::Error),
+        LightClientInstance
+        [TraceError<Box<dyn LightClientInstanceError>>]
+        |_| { "Light Client instance error" },
+
+        Commitment
+        [commitments::Error]
+        |_| { "Commitment error" }
+    }
 }
 
-pub trait LightClientInstanceError: Display + Debug {}
+pub trait LightClientInstanceError: core::fmt::Display + core::fmt::Debug + Sync + Send {}
 
-impl<T: 'static + LightClientInstanceError> From<T> for LightClientError {
+impl<T: 'static + LightClientInstanceError> From<T> for Error {
     fn from(value: T) -> Self {
-        Self::InstanceError(Arc::new(Box::new(value)))
+        Self::light_client_instance(Box::new(value))
     }
 }

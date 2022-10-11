@@ -3,7 +3,7 @@ use std::net::{SocketAddr, TcpStream};
 use std::os::unix::io::IntoRawFd;
 use std::ptr;
 
-use crate::errors::Result;
+use crate::errors::{Error, Result};
 use ocall_commands::{
     GetIASSocketResult, GetQuoteInput, GetQuoteResult, GetReportAttestationStatusInput,
     GetReportAttestationStatusResult, InitQuoteResult, RemoteAttestationCommand,
@@ -30,7 +30,7 @@ fn init_quote() -> Result<InitQuoteResult> {
     let mut epid_group_id = sgx_epid_group_id_t::default();
     match unsafe { sgx_init_quote(&mut target_info, &mut epid_group_id) } {
         sgx_status_t::SGX_SUCCESS => {}
-        s => return Err(s.into()),
+        s => return Err(Error::sgx_error(s, "failed to sgx_init_quote".into())),
     }
     Ok(InitQuoteResult {
         target_info,
@@ -61,8 +61,10 @@ fn get_quote(input: GetQuoteInput) -> Result<GetQuoteResult> {
     let ret = unsafe { sgx_calc_quote_size(p_sigrl, sigrl_len, &mut quote_size as *mut u32) };
 
     if ret != sgx_status_t::SGX_SUCCESS {
-        info!("sgx_calc_quote_size returned {}", ret);
-        return Err(ret.into());
+        return Err(Error::sgx_error(
+            ret,
+            "failed to sgx_calc_quote_size".into(),
+        ));
     }
 
     info!("quote size = {}", quote_size);
@@ -85,11 +87,9 @@ fn get_quote(input: GetQuoteInput) -> Result<GetQuoteResult> {
     };
 
     if ret != sgx_status_t::SGX_SUCCESS {
-        info!("sgx_calc_quote_size returned {}", ret);
-        return Err(ret.into());
+        return Err(Error::sgx_error(ret, "failed to sgx_get_quote".into()));
     }
 
-    info!("sgx_calc_quote_size returned {}", ret);
     Ok(GetQuoteResult {
         qe_report,
         quote: quote[..quote_size as usize].to_vec(),

@@ -1,7 +1,5 @@
-use crate::enclave_manage::errors::EnclaveManageError as Error;
-#[cfg(feature = "sgx")]
-use crate::sgx_reexport_prelude::*;
-use anyhow::anyhow;
+use crate::enclave_manage::errors::Error;
+use crate::prelude::*;
 use attestation_report::verify_report;
 use crypto::KeyManager;
 use ecall_commands::{CommandParams, IASRemoteAttestationInput, IASRemoteAttestationResult};
@@ -10,8 +8,6 @@ use enclave_remote_attestation::{
 };
 use lcp_types::Time;
 use sgx_types::{sgx_quote_sign_type_t, sgx_spid_t};
-use std::format;
-use std::string::String;
 
 pub fn remote_attestation(
     input: IASRemoteAttestationInput,
@@ -22,7 +18,7 @@ pub fn remote_attestation(
     let key_manager = KeyManager::new(params.home);
     let pub_key = key_manager
         .get_enclave_key()
-        .ok_or(Error::EnclaveKeyNotFound)?
+        .ok_or(Error::enclave_key_not_found())?
         .get_pubkey();
     let report = create_attestation_report(
         pub_key.as_report_data(),
@@ -43,7 +39,7 @@ fn decode_spid(hex: &[u8]) -> Result<sgx_spid_t, Error> {
     let hex = &hex.trim();
 
     if hex.len() < 16 * 2 {
-        Err(anyhow!("Input spid file len ({}) is incorrect!", hex.len()).into())
+        Err(Error::invalid_sp_id_length(hex.len()))
     } else {
         let decoded_vec = hex::decode(hex).unwrap();
         spid.id.copy_from_slice(&decoded_vec[..16]);

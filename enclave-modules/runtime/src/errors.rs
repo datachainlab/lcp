@@ -1,11 +1,16 @@
+use crate::prelude::*;
+use flex_error::define_error;
 use sgx_types::sgx_status_t;
 
-pub type Result<T> = std::result::Result<T, RuntimeError>;
-
-#[derive(thiserror::Error, Debug)]
-pub enum RuntimeError {
-    #[error("SGXError: {0}")]
-    SGXError(sgx_status_t),
-    #[error(transparent)]
-    OtherError(#[from] anyhow::Error),
+define_error! {
+    #[derive(Debug, Clone, PartialEq, Eq)]
+    Error {
+        SgxError {
+            status: sgx_status_t,
+            descr: String
+        }
+        |e| {
+            format_args!("SGX error: status={:?} descr={}", e.status, e.descr)
+        }
+    }
 }

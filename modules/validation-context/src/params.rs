@@ -1,8 +1,6 @@
-#[cfg(feature = "sgx")]
-use crate::sgx_reexport_prelude::*;
+use crate::prelude::*;
 use crate::tendermint::TendermintValidationParams;
 use serde::{Deserialize, Serialize};
-use std::vec::Vec;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum ValidationParams {
