@@ -3,6 +3,7 @@ resolver = "2"
 members = [
     "app",
     "modules/host",
+    "modules/host-environment",
     "modules/types",
     "modules/ecall-handler",
     "modules/ocall-handler",

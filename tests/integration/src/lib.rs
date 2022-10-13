@@ -8,6 +8,7 @@ mod tests {
         UpdateClientInput, VerifyMembershipInput,
     };
     use enclave_api::{Enclave, EnclavePrimitiveAPI};
+    use host_environment::Environment;
     use ibc::core::{
         ics23_commitment::{commitment::CommitmentProofBytes, merkle::MerkleProof},
         ics24_host::{
@@ -22,14 +23,19 @@ mod tests {
     };
     use lcp_types::Time;
     use log::*;
+    use ocall_handler::OCallHandler;
+    use once_cell::sync::Lazy;
     use relay_tendermint::Relayer;
-    use std::{str::FromStr, sync::Arc};
+    use std::str::FromStr;
+    use std::sync::Arc;
     use tempdir::TempDir;
     use tendermint_proto::Protobuf;
     use tokio::runtime::Runtime as TokioRuntime;
 
     static ENCLAVE_FILE: &'static str = "../../bin/enclave.signed.so";
     static ENV_SETUP_NODES: &'static str = "SETUP_NODES";
+
+    static ENV: Lazy<Environment> = Lazy::new(|| Environment::new());
 
     struct ELCStateVerificationTest {
         enclave: Enclave,
@@ -57,6 +63,9 @@ mod tests {
 
     #[test]
     fn test_elc_state_verification() {
+        let handler = Box::new(OCallHandler::new(&*ENV));
+        host::ocalls::set_ocall_handler(handler).unwrap();
+
         let enclave = match host::enclave::load_enclave(ENCLAVE_FILE) {
             Ok(r) => {
                 info!("Init Enclave Successful {}!", r.geteid());
