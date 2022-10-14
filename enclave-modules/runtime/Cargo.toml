@@ -13,7 +13,8 @@ serde = { version = "1.0", default-features = false, features = ["alloc"] }
 serde_json = { version = "1.0", default-features = false, features = ["alloc"] }
 base64 = { git = "https://github.com/marshallpierce/rust-base64", default-features = false, features = ["alloc"] }
 itertools = { version = "0.8", default-features = false, features = [] }
-env_logger = { git = "https://github.com/mesalock-linux/env_logger-sgx", default-features = false, features = ["mesalock_sgx"] }
+simple_logger = { git = "https://github.com/bluele/rust-simple_logger", branch = "sgx", default-features = false, features = ["sgx"] }
+
 log = { version = "0.4.8", default-features = false }
 ctor = "0.1.13"
 lazy_static = { version = "1.1.0", features = ["spin_no_std"] }
