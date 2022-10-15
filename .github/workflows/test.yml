@@ -20,6 +20,7 @@ jobs:
             ./enclave
       - uses: actions-rs/cargo@v1
       - run: make test
+      - run: make lint
 
   relayer:
     runs-on: ubuntu-latest
