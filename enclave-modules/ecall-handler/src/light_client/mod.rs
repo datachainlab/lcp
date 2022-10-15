@@ -1,4 +1,4 @@
-pub use errors::LightClientHandlerError;
+pub use errors::Error;
 pub use init_client::init_client;
 pub use query::query_client;
 pub use router::dispatch;

@@ -1,0 +1,15 @@
+[package]
+name = "light-client-registry"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+sgx_tstd = { git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
+flex-error = { version = "0.4.4", default-features = false }
+
+light-client = { path = "../light-client", default-features = false }
+
+[features]
+default = ["std"]
+std = []
+sgx = ["sgx_tstd"]

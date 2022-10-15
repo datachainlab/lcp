@@ -188,6 +188,10 @@ proto:
 yrly:
 	go build -o ./bin/yrly ./go/relay/bin
 
+.PHONY: lint
+lint:
+	@cargo check $(CARGO_TARGET)
+
 .PHONY: test
 test:
 	@cargo test $(CARGO_TARGET) --lib --workspace --exclude integration-test

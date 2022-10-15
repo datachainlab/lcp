@@ -1,8 +1,4 @@
-#![cfg_attr(feature = "sgx", no_std)]
-
-#[cfg(feature = "sgx")]
-extern crate sgx_tstd as std;
-
+#![no_std]
 use sgx_types::sgx_status_t;
 
 pub static SEALED_ENCLAVE_KEY_PATH: &str = "ek_sealed";

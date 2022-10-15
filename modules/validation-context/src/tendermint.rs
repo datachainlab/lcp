@@ -1,11 +1,9 @@
-#[cfg(feature = "sgx")]
-use crate::sgx_reexport_prelude::*;
+use crate::prelude::*;
 use crate::{params::ValidationParams, ValidationContext, ValidationPredicate};
 use core::time::Duration;
 use lcp_types::Time;
 use rlp::{Rlp, RlpStream};
 use serde::{Deserialize, Serialize};
-use std::vec::Vec;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct TendermintValidationParams {

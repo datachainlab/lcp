@@ -106,14 +106,6 @@ dependencies = [
 
 [[package]]
 name = "anyhow"
-version = "1.0.28"
-source = "git+https://github.com/mesalock-linux/anyhow-sgx.git?rev=sgx_1.1.3#9b7763f58b5dedc11f388ea9a0072049c309e27d"
-dependencies = [
- "sgx_tstd",
-]
-
-[[package]]
-name = "anyhow"
 version = "1.0.58"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bb07d2053ccdbe10e2af2995a2f116c1330396493dc1269f6a91d0ae82e19704"
@@ -181,21 +173,18 @@ dependencies = [
  "tokio",
  "tokio-rustls 0.22.0",
  "tungstenite",
- "webpki-roots 0.21.1",
+ "webpki-roots",
 ]
 
 [[package]]
 name = "attestation-report"
 version = "0.1.0"
 dependencies = [
- "anyhow 1.0.28",
- "anyhow 1.0.58",
- "base64 0.13.0 (git+https://github.com/mesalock-linux/rust-base64-sgx)",
  "base64 0.20.0-alpha.1",
  "chrono",
  "crypto",
+ "flex-error",
  "lcp-types",
- "log 0.4.14",
  "log 0.4.17",
  "pem 0.8.2",
  "pem 1.1.0",
@@ -207,8 +196,6 @@ dependencies = [
  "sgx_tstd",
  "sgx_types",
  "tendermint",
- "thiserror 1.0.31",
- "thiserror 1.0.9",
  "webpki 0.21.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "webpki 0.21.4 (git+https://github.com/mesalock-linux/webpki?branch=mesalock_sgx)",
 ]
@@ -299,14 +286,6 @@ name = "base64"
 version = "0.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "904dfeac50f3cdaba28fc6f57fdcddb75f49ed61346676a78c4ffe55877802fd"
-
-[[package]]
-name = "base64"
-version = "0.13.0"
-source = "git+https://github.com/mesalock-linux/rust-base64-sgx?rev=dc7389e10817b078f289386b3b6a852ab6c4c021#dc7389e10817b078f289386b3b6a852ab6c4c021"
-dependencies = [
- "sgx_tstd",
-]
 
 [[package]]
 name = "base64"
@@ -686,14 +665,12 @@ dependencies = [
 name = "commitments"
 version = "0.1.0"
 dependencies = [
- "anyhow 1.0.28",
- "anyhow 1.0.58",
  "crypto",
+ "flex-error",
  "hex",
  "ibc",
  "ibc-proto",
  "lcp-types",
- "log 0.4.14",
  "log 0.4.17",
  "prost",
  "prost-types",
@@ -702,12 +679,9 @@ dependencies = [
  "serde",
  "serde_json",
  "sgx_trts",
- "sgx_tstd",
  "sgx_types",
  "sha2 0.8.2",
  "store",
- "thiserror 1.0.31",
- "thiserror 1.0.9",
  "validation-context",
 ]
 
@@ -742,11 +716,9 @@ dependencies = [
  "ibc-proto",
  "lcp-types",
  "light-client",
- "log 0.4.14",
  "log 0.4.17",
  "prost-types",
  "serde",
- "sgx_tstd",
  "store",
 ]
 
@@ -861,13 +833,10 @@ checksum = "7a81dae078cea95a014a339291cec439d2f232ebe854a9d672b796c6afafa9b7"
 name = "crypto"
 version = "0.1.0"
 dependencies = [
- "anyhow 1.0.28",
- "anyhow 1.0.58",
+ "flex-error",
  "hex",
- "lazy_static",
  "libsecp256k1 0.3.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "libsecp256k1 0.3.5 (git+https://github.com/bluele/libsecp256k1-rs-sgx?rev=sgx_1.1.3-patch)",
- "log 0.4.14",
  "log 0.4.17",
  "rand 0.8.5",
  "serde",
@@ -876,8 +845,6 @@ dependencies = [
  "sgx_trts",
  "sgx_tstd",
  "sgx_types",
- "thiserror 1.0.31",
- "thiserror 1.0.9",
  "tiny-keccak 1.5.0",
 ]
 
@@ -1143,45 +1110,12 @@ version = "0.1.0"
 dependencies = [
  "attestation-report",
  "commitments",
+ "flex-error",
  "ibc",
  "lcp-proto",
  "lcp-types",
  "serde",
  "serde_json",
- "sgx_tstd",
- "thiserror 1.0.31",
- "thiserror 1.0.9",
-]
-
-[[package]]
-name = "ecall-handler"
-version = "0.1.0"
-dependencies = [
- "anyhow 1.0.28",
- "anyhow 1.0.58",
- "attestation-report",
- "bincode 1.3.1",
- "bincode 1.3.3",
- "commitments",
- "context",
- "crypto",
- "ecall-commands",
- "enclave-remote-attestation",
- "enclave-utils",
- "hex",
- "ibc",
- "lcp-types",
- "light-client",
- "log 0.4.14",
- "log 0.4.17",
- "prost-types",
- "serde",
- "settings",
- "sgx_tstd",
- "sgx_types",
- "store",
- "thiserror 1.0.31",
- "thiserror 1.0.9",
 ]
 
 [[package]]
@@ -1245,9 +1179,9 @@ dependencies = [
 name = "enclave-api"
 version = "0.1.0"
 dependencies = [
- "anyhow 1.0.58",
  "bincode 1.3.3",
  "ecall-commands",
+ "flex-error",
  "ibc",
  "lcp-proto",
  "lcp-types",
@@ -1256,48 +1190,6 @@ dependencies = [
  "prost-types",
  "sgx_types",
  "sgx_urts",
- "thiserror 1.0.31",
-]
-
-[[package]]
-name = "enclave-remote-attestation"
-version = "0.1.0"
-dependencies = [
- "anyhow 1.0.28",
- "attestation-report",
- "base64 0.13.0 (git+https://github.com/mesalock-linux/rust-base64-sgx?rev=dc7389e10817b078f289386b3b6a852ab6c4c021)",
- "bincode 1.3.1",
- "chrono",
- "crypto",
- "hex",
- "host-api",
- "httparse",
- "itertools 0.8.2",
- "lcp-types",
- "log 0.4.14",
- "ocall-commands",
- "rustls 0.19.0",
- "serde",
- "serde_json",
- "settings",
- "sgx_tcrypto",
- "sgx_trts",
- "sgx_tse",
- "sgx_tstd",
- "sgx_types",
- "thiserror 1.0.9",
- "webpki 0.21.4 (git+https://github.com/mesalock-linux/webpki?branch=mesalock_sgx)",
- "webpki-roots 0.21.0",
-]
-
-[[package]]
-name = "enclave-utils"
-version = "0.1.0"
-dependencies = [
- "log 0.4.14",
- "sgx_trts",
- "sgx_tstd",
- "sgx_types",
 ]
 
 [[package]]
@@ -1416,7 +1308,7 @@ version = "0.4.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c606d892c9de11507fa0dcffc116434f94e105d0bbdc4e405b61519464c49d7b"
 dependencies = [
- "anyhow 1.0.58",
+ "anyhow",
  "eyre",
  "paste",
 ]
@@ -1804,17 +1696,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "host-api"
-version = "0.1.0"
-dependencies = [
- "bincode 1.3.1",
- "ocall-commands",
- "sgx_tstd",
- "sgx_types",
- "thiserror 1.0.9",
-]
-
-[[package]]
 name = "host-environment"
 version = "0.1.0"
 dependencies = [
@@ -1935,7 +1816,7 @@ dependencies = [
  "tokio",
  "tokio-rustls 0.22.0",
  "webpki 0.21.4 (registry+https://github.com/rust-lang/crates.io-index)",
- "webpki-roots 0.21.1",
+ "webpki-roots",
 ]
 
 [[package]]
@@ -2028,7 +1909,7 @@ name = "ibc-relayer"
 version = "0.16.0"
 source = "git+https://github.com/informalsystems/ibc-rs?rev=e8c98d440949abf971ac45a68ed9dd9e6e9f48ed#e8c98d440949abf971ac45a68ed9dd9e6e9f48ed"
 dependencies = [
- "anyhow 1.0.58",
+ "anyhow",
  "async-stream",
  "bech32 0.9.0",
  "bitcoin",
@@ -2045,7 +1926,7 @@ dependencies = [
  "ibc",
  "ibc-proto",
  "ibc-telemetry",
- "itertools 0.10.3",
+ "itertools",
  "k256",
  "moka",
  "nanoid",
@@ -2068,7 +1949,7 @@ dependencies = [
  "tendermint-light-client-verifier",
  "tendermint-proto",
  "tendermint-rpc",
- "thiserror 1.0.31",
+ "thiserror",
  "tiny-bip39",
  "tiny-keccak 2.0.2",
  "tokio",
@@ -2102,7 +1983,7 @@ dependencies = [
  "ibc-relayer",
  "ibc-relayer-rest",
  "ibc-telemetry",
- "itertools 0.10.3",
+ "itertools",
  "oneline-eyre",
  "serde",
  "serde_derive",
@@ -2168,7 +2049,7 @@ dependencies = [
  "ibc-proto",
  "ibc-relayer",
  "ibc-relayer-cli",
- "itertools 0.10.3",
+ "itertools",
  "rand 0.8.5",
  "semver",
  "serde",
@@ -2190,7 +2071,7 @@ version = "0.8.0-alpha"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "18a435f2471c1b2ce14771da465d47321c5905fac866d0effa9e0a3eb5d94fcf"
 dependencies = [
- "anyhow 1.0.58",
+ "anyhow",
  "bytes",
  "hex",
  "prost",
@@ -2264,7 +2145,7 @@ dependencies = [
 name = "integration-test"
 version = "0.1.0"
 dependencies = [
- "anyhow 1.0.58",
+ "anyhow",
  "attestation-report",
  "ecall-commands",
  "enclave-api",
@@ -2277,7 +2158,6 @@ dependencies = [
  "ibc-proto",
  "ibc-relayer",
  "ibc-test-framework",
- "lcp-ibc-client",
  "lcp-types",
  "log 0.4.17",
  "ocall-handler",
@@ -2288,17 +2168,7 @@ dependencies = [
  "tempdir",
  "tendermint-proto",
  "tendermint-rpc",
- "thiserror 1.0.31",
  "tokio",
-]
-
-[[package]]
-name = "itertools"
-version = "0.8.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f56a2d0bc861f9165be4eb3442afd3c236d8a98afd426f65d92324ae1091a484"
-dependencies = [
- "either",
 ]
 
 [[package]]
@@ -2357,7 +2227,7 @@ dependencies = [
 name = "lcp"
 version = "0.0.1"
 dependencies = [
- "anyhow 1.0.58",
+ "anyhow",
  "attestation-report",
  "clap",
  "dirs",
@@ -2381,35 +2251,28 @@ dependencies = [
 name = "lcp-ibc-client"
 version = "0.1.0"
 dependencies = [
- "anyhow 1.0.28",
- "anyhow 1.0.58",
  "attestation-report",
  "commitments",
  "context",
  "crypto",
  "ecall-commands",
- "ecall-handler",
+ "flex-error",
  "ibc",
  "ibc-proto",
  "lazy_static",
  "lcp-proto",
  "lcp-types",
- "libsecp256k1 0.3.5 (registry+https://github.com/rust-lang/crates.io-index)",
- "libsecp256k1 0.3.5 (git+https://github.com/bluele/libsecp256k1-rs-sgx?rev=sgx_1.1.3-patch)",
  "light-client",
- "log 0.4.14",
+ "light-client-registry",
  "log 0.4.17",
  "mock-lc",
  "prost",
  "prost-types",
  "serde",
  "serde_json",
- "sgx_tstd",
  "store",
  "tempdir",
  "tendermint-proto",
- "thiserror 1.0.31",
- "thiserror 1.0.9",
  "tiny-keccak 1.5.0",
  "validation-context",
 ]
@@ -2433,6 +2296,7 @@ dependencies = [
 name = "lcp-types"
 version = "0.1.0"
 dependencies = [
+ "flex-error",
  "ibc",
  "ibc-proto",
  "prost-types",
@@ -2441,8 +2305,6 @@ dependencies = [
  "sgx_tstd",
  "tendermint",
  "tendermint-proto",
- "thiserror 1.0.31",
- "thiserror 1.0.9",
 ]
 
 [[package]]
@@ -2487,19 +2349,23 @@ dependencies = [
 name = "light-client"
 version = "0.1.0"
 dependencies = [
- "anyhow 1.0.28",
- "anyhow 1.0.58",
  "commitments",
  "ecall-commands",
+ "flex-error",
  "ibc",
  "ibc-proto",
  "lcp-types",
  "prost",
  "prost-types",
+]
+
+[[package]]
+name = "light-client-registry"
+version = "0.1.0"
+dependencies = [
+ "flex-error",
+ "light-client",
  "sgx_tstd",
- "sha2 0.8.2",
- "thiserror 1.0.31",
- "thiserror 1.0.9",
 ]
 
 [[package]]
@@ -2627,23 +2493,18 @@ dependencies = [
 name = "mock-lc"
 version = "0.1.0"
 dependencies = [
- "anyhow 1.0.28",
- "anyhow 1.0.58",
  "commitments",
+ "flex-error",
  "ibc",
  "ibc-proto",
- "lazy_static",
  "lcp-types",
  "light-client",
- "log 0.4.14",
+ "light-client-registry",
  "log 0.4.17",
  "prost",
  "prost-types",
  "serde",
- "sgx_tstd",
  "sha2 0.8.2",
- "thiserror 1.0.31",
- "thiserror 1.0.9",
  "time",
  "validation-context",
 ]
@@ -2665,7 +2526,7 @@ dependencies = [
  "skeptic",
  "smallvec",
  "tagptr",
- "thiserror 1.0.31",
+ "thiserror",
  "triomphe",
  "uuid 1.1.2",
 ]
@@ -2807,14 +2668,13 @@ dependencies = [
 name = "ocall-handler"
 version = "0.1.0"
 dependencies = [
- "anyhow 1.0.58",
  "bincode 1.3.3",
+ "flex-error",
  "host",
  "host-environment",
  "log 0.4.17",
  "ocall-commands",
  "sgx_types",
- "thiserror 1.0.31",
 ]
 
 [[package]]
@@ -2876,7 +2736,7 @@ dependencies = [
  "percent-encoding",
  "pin-project",
  "rand 0.8.5",
- "thiserror 1.0.31",
+ "thiserror",
 ]
 
 [[package]]
@@ -3121,7 +2981,7 @@ dependencies = [
  "memchr",
  "parking_lot",
  "protobuf",
- "thiserror 1.0.31",
+ "thiserror",
 ]
 
 [[package]]
@@ -3144,7 +3004,7 @@ dependencies = [
  "cfg-if 1.0.0",
  "cmake",
  "heck",
- "itertools 0.10.3",
+ "itertools",
  "lazy_static",
  "log 0.4.17",
  "multimap",
@@ -3162,8 +3022,8 @@ version = "0.10.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7b670f45da57fb8542ebdbb6105a925fe571b67f9e7ed9f47a06a84e72b4e7cc"
 dependencies = [
- "anyhow 1.0.58",
- "itertools 0.10.3",
+ "anyhow",
+ "itertools",
  "proc-macro2",
  "quote",
  "syn",
@@ -3391,7 +3251,7 @@ checksum = "b033d837a7cf162d7993aded9304e30a83213c648b6e389db233191f891e5c2b"
 dependencies = [
  "getrandom 0.2.7",
  "redox_syscall",
- "thiserror 1.0.31",
+ "thiserror",
 ]
 
 [[package]]
@@ -3441,7 +3301,7 @@ checksum = "a3f87b73ce11b1619a3c6332f45341e0047173771e8b8b73f87bfeefb7b56244"
 name = "relay-tendermint"
 version = "0.1.0"
 dependencies = [
- "anyhow 1.0.58",
+ "anyhow",
  "ibc",
  "ibc-proto",
  "ibc-relayer",
@@ -3450,7 +3310,6 @@ dependencies = [
  "tendermint",
  "tendermint-light-client-verifier",
  "tendermint-rpc",
- "thiserror 1.0.31",
  "tokio",
 ]
 
@@ -3988,7 +3847,7 @@ dependencies = [
 name = "service"
 version = "0.1.0"
 dependencies = [
- "anyhow 1.0.58",
+ "anyhow",
  "attestation-report",
  "enclave-api",
  "ibc",
@@ -4007,7 +3866,6 @@ name = "settings"
 version = "0.1.0"
 dependencies = [
  "lazy_static",
- "sgx_tstd",
  "sgx_types",
 ]
 
@@ -4055,14 +3913,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "sgx_tcrypto"
-version = "1.1.5"
-source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?branch=master#d2d339cbb005f676bb700059bd51dc689c025f6b"
-dependencies = [
- "sgx_types",
-]
-
-[[package]]
 name = "sgx_tprotected_fs"
 version = "1.1.5"
 source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?branch=master#d2d339cbb005f676bb700059bd51dc689c025f6b"
@@ -4077,14 +3927,6 @@ version = "1.1.5"
 source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?branch=master#d2d339cbb005f676bb700059bd51dc689c025f6b"
 dependencies = [
  "sgx_libc",
- "sgx_types",
-]
-
-[[package]]
-name = "sgx_tse"
-version = "1.1.5"
-source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?branch=master#d2d339cbb005f676bb700059bd51dc689c025f6b"
-dependencies = [
  "sgx_types",
 ]
 
@@ -4338,19 +4180,12 @@ checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
 name = "store"
 version = "0.1.0"
 dependencies = [
- "anyhow 1.0.28",
- "anyhow 1.0.58",
- "bincode 1.3.1",
- "bincode 1.3.3",
- "crypto",
- "log 0.4.14",
+ "flex-error",
  "log 0.4.17",
  "serde",
  "serde_json",
  "sgx_tstd",
  "sha2 0.8.2",
- "thiserror 1.0.31",
- "thiserror 1.0.9",
 ]
 
 [[package]]
@@ -4496,26 +4331,21 @@ dependencies = [
 name = "tendermint-lc"
 version = "0.1.0"
 dependencies = [
- "anyhow 1.0.28",
- "anyhow 1.0.58",
  "commitments",
  "crypto",
+ "flex-error",
  "ibc",
  "ibc-proto",
- "lazy_static",
  "lcp-types",
  "light-client",
- "log 0.4.14",
+ "light-client-registry",
  "log 0.4.17",
  "prost",
  "prost-types",
  "serde",
- "sgx_tstd",
  "sha2 0.8.2",
  "tendermint-light-client-verifier",
  "tendermint-proto",
- "thiserror 1.0.31",
- "thiserror 1.0.9",
  "time",
  "validation-context",
 ]
@@ -4598,7 +4428,7 @@ dependencies = [
  "tendermint",
  "tendermint-config",
  "tendermint-proto",
- "thiserror 1.0.31",
+ "thiserror",
  "time",
  "tokio",
  "tracing",
@@ -4650,30 +4480,11 @@ checksum = "b1141d4d61095b28419e22cb0bbf02755f5e54e0526f97f1e3d1d160e60885fb"
 
 [[package]]
 name = "thiserror"
-version = "1.0.9"
-source = "git+https://github.com/mesalock-linux/thiserror-sgx.git#c2f806b88616e06aab0af770366a76885d974fdc"
-dependencies = [
- "sgx_tstd",
- "thiserror-impl 1.0.9",
-]
-
-[[package]]
-name = "thiserror"
 version = "1.0.31"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bd829fe32373d27f76265620b5309d0340cb8550f523c1dda251d6298069069a"
 dependencies = [
- "thiserror-impl 1.0.31",
-]
-
-[[package]]
-name = "thiserror-impl"
-version = "1.0.9"
-source = "git+https://github.com/mesalock-linux/thiserror-sgx.git#c2f806b88616e06aab0af770366a76885d974fdc"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn",
+ "thiserror-impl",
 ]
 
 [[package]]
@@ -4728,14 +4539,14 @@ version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "62cc94d358b5a1e84a5cb9109f559aa3c4d634d2b1b4de3d0fa4adc7c78e2861"
 dependencies = [
- "anyhow 1.0.58",
+ "anyhow",
  "hmac 0.12.1",
  "once_cell 1.15.0",
  "pbkdf2",
  "rand 0.8.5",
  "rustc-hash",
  "sha2 0.10.2",
- "thiserror 1.0.31",
+ "thiserror",
  "unicode-normalization",
  "wasm-bindgen",
  "zeroize",
@@ -5242,7 +5053,6 @@ dependencies = [
  "rlp",
  "rlp-derive",
  "serde",
- "sgx_tstd",
  "tendermint-light-client-verifier",
 ]
 
@@ -5402,15 +5212,6 @@ dependencies = [
 
 [[package]]
 name = "webpki-roots"
-version = "0.21.0"
-source = "git+https://github.com/mesalock-linux/webpki-roots?rev=6ff3be547ac13ccd46ae55605ad6506ce30688ef#6ff3be547ac13ccd46ae55605ad6506ce30688ef"
-dependencies = [
- "sgx_tstd",
- "webpki 0.21.4 (git+https://github.com/mesalock-linux/webpki?branch=mesalock_sgx)",
-]
-
-[[package]]
-name = "webpki-roots"
 version = "0.21.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "aabe153544e473b775453675851ecc86863d2a81d786d741f6b76778f2a48940"
@@ -5554,6 +5355,16 @@ version = "1.1.5"
 source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?branch=master#d2d339cbb005f676bb700059bd51dc689c025f6b"
 
 [[patch.unused]]
+name = "sgx_tcrypto"
+version = "1.1.5"
+source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?branch=master#d2d339cbb005f676bb700059bd51dc689c025f6b"
+
+[[patch.unused]]
 name = "sgx_tcrypto_helper"
+version = "1.1.5"
+source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?branch=master#d2d339cbb005f676bb700059bd51dc689c025f6b"
+
+[[patch.unused]]
+name = "sgx_tse"
 version = "1.1.5"
 source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?branch=master#d2d339cbb005f676bb700059bd51dc689c025f6b"

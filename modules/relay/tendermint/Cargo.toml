@@ -12,6 +12,5 @@ ibc = { git = "https://github.com/informalsystems/ibc-rs", rev = "e8c98d440949ab
 ibc-relayer = { git = "https://github.com/informalsystems/ibc-rs", rev = "e8c98d440949abf971ac45a68ed9dd9e6e9f48ed" }
 ibc-proto = { git = "https://github.com/informalsystems/ibc-rs", rev = "e8c98d440949abf971ac45a68ed9dd9e6e9f48ed", default-features = false }
 anyhow = { version = "1.0.56" }
-thiserror = { version = "1.0.30" }
 tokio = { version = "1.0" }
 lcp-types = { path = "../../types" }

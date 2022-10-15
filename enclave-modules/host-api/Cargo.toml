@@ -7,8 +7,6 @@ edition = "2021"
 
 [dependencies]
 sgx_types = { git = "https://github.com/apache/teaclave-sgx-sdk.git" }
-sgx_tstd = { git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 bincode = { git = "https://github.com/bluele/bincode-sgx", branch = "serde" }
-thiserror = { git = "https://github.com/mesalock-linux/thiserror-sgx.git" }
-
+flex-error = { version = "0.4.4", default-features = false }
 ocall-commands = { path = "../../modules/ocall-commands", default-features = false }

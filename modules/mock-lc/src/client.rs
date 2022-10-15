@@ -1,7 +1,5 @@
-use crate::errors::MockLCError as Error;
-#[cfg(feature = "sgx")]
-use crate::sgx_reexport_prelude::*;
-use alloc::borrow::ToOwned;
+use crate::errors::Error;
+use crate::prelude::*;
 use commitments::{gen_state_id, gen_state_id_from_any, UpdateClientCommitment};
 use ibc::core::ics02_client::client_consensus::AnyConsensusState;
 use ibc::core::ics02_client::client_def::{AnyClient, ClientDef};
@@ -14,12 +12,10 @@ use ibc::core::ics02_client::header::{AnyHeader, Header};
 use ibc::core::ics24_host::identifier::ClientId;
 use lcp_types::{Any, Height, Time};
 use light_client::{
-    ClientReader, CreateClientResult, LightClient, LightClientError, LightClientRegistry,
+    ClientReader, CreateClientResult, Error as LightClientError, LightClient,
     StateVerificationResult, UpdateClientResult,
 };
-use std::boxed::Box;
-use std::string::ToString;
-use std::vec::Vec;
+use light_client_registry::LightClientRegistry;
 use validation_context::ValidationParams;
 
 #[derive(Default)]
@@ -33,24 +29,20 @@ impl LightClient for MockLightClient {
         any_consensus_state: Any,
     ) -> Result<CreateClientResult, LightClientError> {
         let state_id = gen_state_id_from_any(&any_client_state, &any_consensus_state)
-            .map_err(Error::OtherError)?;
+            .map_err(Error::commitment)?;
         let client_state = match AnyClientState::try_from(any_client_state.clone()) {
             Ok(AnyClientState::Mock(client_state)) => AnyClientState::Mock(client_state),
             #[allow(unreachable_patterns)]
-            Ok(s) => {
-                return Err(Error::UnexpectedClientTypeError(s.client_type().to_string()).into())
-            }
-            Err(e) => return Err(Error::ICS02Error(e).into()),
+            Ok(s) => return Err(Error::unexpected_client_type(s.client_type().to_string()).into()),
+            Err(e) => return Err(Error::ics02(e).into()),
         };
         let consensus_state = match AnyConsensusState::try_from(any_consensus_state) {
             Ok(AnyConsensusState::Mock(consensus_state)) => {
                 AnyConsensusState::Mock(consensus_state)
             }
             #[allow(unreachable_patterns)]
-            Ok(s) => {
-                return Err(Error::UnexpectedClientTypeError(s.client_type().to_string()).into())
-            }
-            Err(e) => return Err(Error::ICS02Error(e).into()),
+            Ok(s) => return Err(Error::unexpected_client_type(s.client_type().to_string()).into()),
+            Err(e) => return Err(Error::ics02(e).into()),
         };
 
         let height = client_state.latest_height().into();
@@ -80,22 +72,20 @@ impl LightClient for MockLightClient {
         let header = match AnyHeader::try_from(any_header) {
             Ok(AnyHeader::Mock(header)) => AnyHeader::Mock(header),
             #[allow(unreachable_patterns)]
-            Ok(h) => {
-                return Err(Error::UnexpectedClientTypeError(h.client_type().to_string()).into())
-            }
-            Err(e) => return Err(Error::ICS02Error(e).into()),
+            Ok(h) => return Err(Error::unexpected_client_type(h.client_type().to_string()).into()),
+            Err(e) => return Err(Error::ics02(e).into()),
         };
 
         // Read client type from the host chain store. The client should already exist.
-        let client_type = ctx.client_type(&client_id).map_err(Error::ICS02Error)?;
+        let client_type = ctx.client_type(&client_id).map_err(Error::ics02)?;
 
         let client_def = AnyClient::from_client_type(client_type);
 
         // Read client state from the host chain store.
-        let client_state = ctx.client_state(&client_id).map_err(Error::ICS02Error)?;
+        let client_state = ctx.client_state(&client_id).map_err(Error::ics02)?;
 
         if client_state.is_frozen() {
-            return Err(Error::ICS02Error(ICS02Error::client_frozen(client_id)).into());
+            return Err(Error::ics02(ICS02Error::client_frozen(client_id)).into());
         }
 
         let height = header.height().into();
@@ -107,7 +97,7 @@ impl LightClient for MockLightClient {
         let latest_consensus_state =
             ctx.consensus_state(&client_id, latest_height)
                 .map_err(|_| {
-                    Error::ICS02Error(ICS02Error::consensus_state_not_found(
+                    Error::ics02(ICS02Error::consensus_state_not_found(
                         client_id.clone(),
                         latest_height,
                     ))
@@ -118,14 +108,12 @@ impl LightClient for MockLightClient {
         // consensus_state obtained from header. These will be later persisted by the keeper.
         let (new_client_state, new_consensus_state) = client_def
             .check_header_and_update_state(ctx, client_id, client_state.clone(), header)
-            .map_err(|e| {
-                Error::ICS02Error(ICS02Error::header_verification_failure(e.to_string()))
-            })?;
+            .map_err(|e| Error::ics02(ICS02Error::header_verification_failure(e.to_string())))?;
 
         let prev_state_id =
-            gen_state_id(client_state, latest_consensus_state).map_err(Error::OtherError)?;
+            gen_state_id(client_state, latest_consensus_state).map_err(Error::commitment)?;
         let new_state_id = gen_state_id(new_client_state.clone(), new_consensus_state.clone())
-            .map_err(Error::OtherError)?;
+            .map_err(Error::commitment)?;
         let new_any_client_state = Any::try_from(new_client_state).unwrap();
 
         Ok(UpdateClientResult {
@@ -145,6 +133,7 @@ impl LightClient for MockLightClient {
         })
     }
 
+    #[allow(unused_variables)]
     fn verify_membership(
         &self,
         ctx: &dyn ClientReader,
@@ -158,6 +147,7 @@ impl LightClient for MockLightClient {
         todo!()
     }
 
+    #[allow(unused_variables)]
     fn verify_non_membership(
         &self,
         ctx: &dyn ClientReader,
@@ -182,12 +172,12 @@ impl LightClient for MockLightClient {
         let client_state = ctx
             .as_ibc_client_reader()
             .client_state(client_id)
-            .map_err(Error::ICS02Error)?;
+            .map_err(Error::ics02)?;
         Ok(client_state.latest_height().into())
     }
 }
 
-pub fn register_implementations(registry: &mut LightClientRegistry) {
+pub fn register_implementations(registry: &mut dyn LightClientRegistry) {
     registry
         .put(
             MOCK_CLIENT_STATE_TYPE_URL.to_string(),

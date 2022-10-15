@@ -1,29 +1,47 @@
-#[cfg(feature = "sgx")]
-use crate::sgx_reexport_prelude::*;
-use ibc::core::ics02_client::error::Error as ICS02Error;
-use ibc::core::ics03_connection::error::Error as ICS03Error;
-use ibc::core::ics04_channel::error::Error as ICS04Error;
-use ibc::core::ics23_commitment::error::Error as ICS23Error;
-use ibc::proofs::ProofError;
+use crate::prelude::*;
+use flex_error::*;
 use light_client::LightClientInstanceError;
-use std::string::String;
 
-#[derive(thiserror::Error, Debug)]
-pub enum LCPLCError {
-    #[error("unexpected client type: {0}")]
-    UnexpectedClientTypeError(String),
-    #[error("ICS02Error: {0}")]
-    ICS02Error(ICS02Error),
-    #[error("ICS03Error: {0}")]
-    ICS03Error(ICS03Error),
-    #[error("ICS04Error: {0}")]
-    ICS04Error(ICS04Error),
-    #[error("ICS23Error: {0}")]
-    ICS23Error(ICS23Error),
-    #[error("IBCProofError: {0}")]
-    IBCProofError(ProofError),
-    #[error(transparent)]
-    OtherError(#[from] anyhow::Error),
+define_error! {
+    #[derive(Debug, PartialEq, Eq)]
+    Error {
+        UnexpectedClientType {
+            type_url: String
+        }
+        |e| {
+            format_args!("unexpected client_type: type_url={}", e.type_url)
+        },
+
+        Ics02
+        [ibc::core::ics02_client::error::Error]
+        |_| { "ICS02 client error" },
+
+        Ics03
+        [ibc::core::ics03_connection::error::Error]
+        |_| { "ICS03 connection error" },
+
+        Ics04
+        [ibc::core::ics04_channel::error::Error]
+        |_| { "ICS04 channel error" },
+
+        Ics23
+        [ibc::core::ics23_commitment::error::Error]
+        |_| { "ICS23 commitment error" },
+
+        IbcProof
+        [ibc::proofs::ProofError]
+        |_| { "IBC Proof error" },
+
+        Commitment
+        [commitments::Error]
+        |_| { "Commitment error" }
+    }
 }
 
-impl LightClientInstanceError for LCPLCError {}
+impl LightClientInstanceError for Error {}
+
+impl From<commitments::Error> for Error {
+    fn from(err: commitments::Error) -> Self {
+        Error::commitment(err)
+    }
+}

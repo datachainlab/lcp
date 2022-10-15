@@ -1,7 +1,5 @@
-#[cfg(feature = "sgx")]
-use crate::sgx_reexport_prelude::*;
-use crate::CryptoError as Error;
-use std::vec::Vec;
+use crate::prelude::*;
+use crate::Error;
 use tiny_keccak::Keccak;
 
 pub trait Verifier {
@@ -17,7 +15,7 @@ pub trait Signer {
 
 pub trait SealedKey
 where
-    Self: std::marker::Sized,
+    Self: core::marker::Sized,
 {
     fn seal(&self, filepath: &str) -> Result<(), Error>;
     fn unseal(filepath: &str) -> Result<Self, Error>;

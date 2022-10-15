@@ -1,23 +1,44 @@
-#[cfg(feature = "sgx")]
-use crate::sgx_reexport_prelude::*;
-use std::string::String;
+use crate::prelude::*;
+use flex_error::*;
 
-#[derive(Debug, thiserror::Error)]
-pub enum AttestationReportError {
-    #[error("InvalidAttestationReport: {0}")]
-    InvalidAttestationReportError(String),
-    #[error("UnexpectedAttestationReportVersionError: expected={0} actual={1}")]
-    UnexpectedAttestationReportVersionError(i64, i64),
-    #[error("InvalidReportDataError: {0}")]
-    InvalidReportDataError(String),
-    #[error("WebPKIError")]
-    WebPKIError(#[source] webpki::Error),
-    #[error("SerdeJSONError: {0}")]
-    SerdeJSONError(serde_json::Error),
-    #[error("Base64Error")]
-    Base64Error(#[from] base64::DecodeError),
-    #[error("TimeError")]
-    TimeError(#[from] lcp_types::TimeError),
-    #[error(transparent)]
-    OtherError(#[from] anyhow::Error),
+define_error! {
+    #[derive(Debug, Clone, PartialEq, Eq)]
+    Error {
+        UnexpectedAttestationReportVersion
+        {
+            expected: i64,
+            actual: i64
+        }
+        |e| {
+            format_args!("unexpected attestation report version: expected={} actual={}", e.expected, e.actual)
+        },
+
+        InvalidReportDataSize
+        {
+            size: usize
+        }
+        |e| {
+            format_args!("invalid report data size: size must be >= 20, but got {}", e.size)
+        },
+
+        WebPki
+        {
+            descr: String
+        }
+        |e| {
+            format_args!("WebPKI error: descr={}", e.descr)
+        },
+
+        SerdeJson
+        [TraceError<serde_json::Error>]
+        |_| { "serde_json error" },
+
+        Base64
+        [TraceError<base64::DecodeError>]
+        |_| { "base64 error" },
+
+        TimeError
+        [lcp_types::TimeError]
+        |_| { "Time error" }
+    }
 }

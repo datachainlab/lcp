@@ -10,10 +10,9 @@ ibc = { git = "https://github.com/informalsystems/ibc-rs", rev = "e8c98d440949ab
 prost = { version = "0.10", default-features = false }
 prost-types = { version = "0.10", default-features = false }
 bincode = "1.3"
-anyhow = { version = "1.0.56" }
-thiserror = { version = "1.0.30" }
 log = "0.4.8"
+flex-error = { version = "0.4.4" }
 
 lcp-types = { path = "../types" }
-ecall-commands = { path = "../ecall-commands" }
+ecall-commands = { path = "../ecall-commands", features = ["std"] }
 lcp-proto = { path = "../../proto", features = ["server"] }

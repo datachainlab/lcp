@@ -4,29 +4,15 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-sgx_tstd = { git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
 serde = { version = "1.0", default-features = false, features = ["alloc", "derive"] }
 serde_json = { version = "1.0", default-features = false, features = ["alloc"] }
 ibc = { git = "https://github.com/informalsystems/ibc-rs", rev = "e8c98d440949abf971ac45a68ed9dd9e6e9f48ed", default-features = false }
-thiserror-sgx = { package = "thiserror", git = "https://github.com/mesalock-linux/thiserror-sgx.git", optional = true }
-thiserror = { version = "1.0.30", optional = true }
 commitments = { path = "../commitments", default-features = false }
 lcp-types = { path = "../types", default-features = false }
 attestation-report = { path = "../attestation-report", default-features = false }
 lcp-proto = { path = "../../proto", default-features = false }
+flex-error = { version = "0.4.4", default-features = false }
 
 [features]
 default = ["std"]
-std = [
-    "thiserror",
-    "lcp-types/std",
-    "commitments/std",
-    "attestation-report/std"
-]
-sgx = [
-    "sgx_tstd",
-    "thiserror-sgx",
-    "lcp-types/sgx",
-    "commitments/sgx",
-    "attestation-report/sgx"
-]
+std = ["lcp-types/std"]

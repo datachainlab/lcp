@@ -1,26 +1,58 @@
-#[cfg(feature = "sgx")]
-use crate::sgx_reexport_prelude::*;
+use crate::prelude::*;
+use crate::EnclavePublicKey;
+use flex_error::*;
 use sgx_types::sgx_status_t;
-use std::string::String;
 
-#[derive(thiserror::Error, Debug)]
-pub enum CryptoError {
-    #[error("SGXError: {0}")]
-    SGXError(sgx_status_t),
+define_error! {
+    #[derive(Debug, Clone, PartialEq, Eq)]
+    Error {
+        SgxError
+        {
+            status: sgx_status_t,
+        }
+        |e| {
+            format_args!("SGX error: {:?}", e.status)
+        },
 
-    #[error("FailedSeal: {1}")]
-    FailedSeal(#[source] std::io::Error, String),
-    #[error("FailedUnseal: {1}")]
-    FailedUnseal(#[source] std::io::Error, String),
+        FailedSeal
+        {
+            err: String,
+            path: String,
+        }
+        |e| {
+            format_args!("failed to seal: path={} err={}", e.path, e.err)
+        },
 
-    /// An error derived from secp256k1 error
-    #[error("Secp256k1Error")]
-    Secp256k1Error(#[from] secp256k1::Error),
+        FailedUnseal
+        {
+            err: String,
+            path: String,
+        }
+        |e| {
+            format_args!("failed to unseal: path={} err={}", e.path, e.err)
+        },
 
-    /// An error related to signature verification
-    #[error("VerificationError: {0}")]
-    VerificationError(String),
+        InsufficientSecretKeySize
+        {
+            path: String,
+            expected: usize,
+            actual: usize
+        }
+        |e| {
+            format_args!("dramatic read from {} ended prematurely (n = {} < SECRET_KEY_SIZE = {})", e.path, e.actual, e.expected)
+        },
 
-    #[error(transparent)]
-    OtherError(#[from] anyhow::Error),
+        Secp256k1
+        [TraceError<secp256k1::Error>]
+        |_| { "secp256k1 error" },
+
+        UnexpectedSigner
+        {
+            expected: EnclavePublicKey,
+            actual: EnclavePublicKey
+        }
+        |e| {
+            format_args!("unexpected signer: expected={:?} actual={:?}", e.expected, e.actual)
+        }
+    }
 }

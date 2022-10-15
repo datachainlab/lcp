@@ -1,10 +1,11 @@
-use crate::enclave_manage::{ias::remote_attestation, init_enclave};
-#[cfg(feature = "sgx")]
-use crate::sgx_reexport_prelude::*;
-use anyhow::Result;
+use crate::enclave_manage::{ias::remote_attestation, init_enclave, Error};
+use crate::prelude::*;
 use ecall_commands::{CommandParams, CommandResult, EnclaveManageCommand, EnclaveManageResult};
 
-pub fn dispatch(command: EnclaveManageCommand, params: CommandParams) -> Result<CommandResult> {
+pub fn dispatch(
+    command: EnclaveManageCommand,
+    params: CommandParams,
+) -> Result<CommandResult, Error> {
     use EnclaveManageCommand::*;
 
     let res = match command {

@@ -1,16 +1,10 @@
-#[cfg(feature = "sgx")]
-use crate::sgx_reexport_prelude::*;
-use anyhow::{anyhow, Result};
+use crate::prelude::*;
+use crate::Error;
 use ibc::core::ics02_client::{client_consensus::AnyConsensusState, client_state::AnyClientState};
 use lcp_types::Any;
 use prost::Message;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
-#[allow(unused_imports)]
-use std::format;
-use std::string::String;
-use std::vec;
-use std::vec::Vec;
 
 pub const STATE_ID_SIZE: usize = 32;
 
@@ -36,11 +30,11 @@ impl StateID {
 }
 
 impl TryFrom<&[u8]> for StateID {
-    type Error = anyhow::Error;
+    type Error = Error;
 
     fn try_from(value: &[u8]) -> Result<Self, Self::Error> {
         if value.len() != STATE_ID_SIZE {
-            return Err(anyhow!("value length must be {}", STATE_ID_SIZE));
+            return Err(Error::invalid_state_id_length(value.len()));
         }
         let mut bz: [u8; STATE_ID_SIZE] = Default::default();
         bz.copy_from_slice(value);
@@ -53,14 +47,17 @@ impl TryFrom<&[u8]> for StateID {
 pub fn gen_state_id(
     any_client_state: AnyClientState,
     any_consensus_state: AnyConsensusState,
-) -> Result<StateID> {
+) -> Result<StateID, Error> {
     gen_state_id_from_any(
         &Any::from(any_client_state),
         &Any::from(any_consensus_state),
     )
 }
 
-pub fn gen_state_id_from_any(any_client_state: &Any, any_consensus_state: &Any) -> Result<StateID> {
+pub fn gen_state_id_from_any(
+    any_client_state: &Any,
+    any_consensus_state: &Any,
+) -> Result<StateID, Error> {
     let size = any_client_state.encoded_len() + any_consensus_state.encoded_len();
     let mut buf = vec![0; size];
     any_client_state.encode(&mut buf).unwrap();
@@ -70,7 +67,7 @@ pub fn gen_state_id_from_any(any_client_state: &Any, any_consensus_state: &Any) 
     gen_state_id_from_bytes(&buf)
 }
 
-pub fn gen_state_id_from_bytes(bz: &[u8]) -> Result<StateID> {
+pub fn gen_state_id_from_bytes(bz: &[u8]) -> Result<StateID, Error> {
     let mut result: [u8; STATE_ID_SIZE] = Default::default();
     let mut hasher = Sha256::new();
     hasher.input(&bz);

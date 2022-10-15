@@ -1,3 +1,4 @@
+#![allow(unused)]
 mod relayer;
 #[cfg(test)]
 mod tests {

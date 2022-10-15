@@ -1,14 +1,14 @@
-#[cfg(feature = "sgx")]
-use crate::sgx_reexport_prelude::*;
+use crate::prelude::*;
+use flex_error::*;
 
-pub type Result<T> = std::result::Result<T, StoreError>;
-
-#[derive(thiserror::Error, Debug)]
-pub enum StoreError {
-    #[error("CryptoError")]
-    CryptoError(#[from] crypto::CryptoError),
-    #[error("BincodeError")]
-    BincodeError(#[from] bincode::Error),
-    #[error(transparent)]
-    OtherError(#[from] anyhow::Error),
+define_error! {
+    #[derive(Debug, Clone, PartialEq, Eq)]
+    Error {
+        Commit {
+            descr: String
+        }
+        |e| {
+            format_args!("Commit error: {}", e.descr)
+        },
+    }
 }

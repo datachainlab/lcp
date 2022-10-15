@@ -1,9 +1,10 @@
 use super::registry::get_light_client_by_client_id;
-use crate::light_client::LightClientHandlerError as Error;
+use crate::light_client::Error;
 use commitments::{prover::prove_update_client_commitment, UpdateClientCommitmentProof};
 use context::Context;
 use ecall_commands::{LightClientResult, UpdateClientInput, UpdateClientResult};
-use light_client::{ClientKeeper, ClientReader, LightClientSource};
+use light_client::{ClientKeeper, ClientReader};
+use light_client_registry::LightClientSource;
 use store::KVStore;
 
 pub fn update_client<'l, S: KVStore, L: LightClientSource<'l>>(
@@ -21,17 +22,17 @@ pub fn update_client<'l, S: KVStore, L: LightClientSource<'l>>(
     }
 
     ctx.store_any_client_state(input.client_id.clone(), res.new_any_client_state)
-        .map_err(Error::ICS02Error)?;
+        .map_err(Error::ics02)?;
     ctx.store_any_consensus_state(
         input.client_id.clone(),
         res.height,
         res.new_any_consensus_state,
     )
-    .map_err(Error::ICS02Error)?;
+    .map_err(Error::ics02)?;
     ctx.store_update_time(input.client_id.clone(), res.height, ctx.host_timestamp())
-        .map_err(Error::ICS02Error)?;
+        .map_err(Error::ics02)?;
     ctx.store_update_height(input.client_id, res.height, ctx.host_height())
-        .map_err(Error::ICS02Error)?;
+        .map_err(Error::ics02)?;
 
     let proof = if res.prove {
         prove_update_client_commitment(ek, res.commitment)?

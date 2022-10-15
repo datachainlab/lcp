@@ -1,15 +1,26 @@
 use crate::prelude::*;
+use flex_error::*;
 
-#[derive(thiserror::Error, Debug)]
-pub enum TypeError {
-    #[error("HeightConversionError")]
-    HeightConversionError(String),
+define_error! {
+    #[derive(Debug, Clone, PartialEq, Eq)]
+    TypeError {
+        HeightBytesConversion
+            {
+                bz: Vec<u8>,
+            }
+            |e| {
+                format_args!("height bytes length must be 16, but got {:?}", e.bz)
+            }
+    }
 }
 
-#[derive(thiserror::Error, Debug)]
-pub enum TimeError {
-    #[error("SystemTimeError")]
-    SystemTimeError(#[from] std::time::SystemTimeError),
-    #[error("TendermintError: {0}")]
-    TendermintError(tendermint::Error),
+define_error! {
+    #[derive(Debug, Clone, PartialEq, Eq)]
+    TimeError {
+        Tendermint
+            [tendermint::Error]
+            |_| {
+                "tendermint error"
+            }
+    }
 }

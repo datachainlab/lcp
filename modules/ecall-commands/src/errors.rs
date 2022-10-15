@@ -1,15 +1,25 @@
-#[cfg(feature = "sgx")]
-use crate::sgx_reexport_prelude::*;
-use std::string::String;
+use crate::prelude::*;
+use flex_error::*;
 
-#[derive(thiserror::Error, Debug)]
-pub enum ECallCommandError {
-    #[error("InvalidArgumentError: {0}")]
-    InvalidArgumentError(String),
-    #[error("ICS03Error: {0}")]
-    ICS03Error(ibc::core::ics03_connection::error::Error),
-    #[error("ICS04Error: {0}")]
-    ICS04Error(ibc::core::ics04_channel::error::Error),
-    #[error("ICS24ValidationError: {0}")]
-    ICS24ValidationError(ibc::core::ics24_host::error::ValidationError),
+define_error! {
+    #[derive(Debug, PartialEq, Eq)]
+    Error {
+        InvalidArgument {
+            descr: String
+        }
+        |e| {
+            format_args!("invalid argument: descr={}", e.descr)
+        },
+        Ics03
+        [ibc::core::ics03_connection::error::Error]
+        |_| { "ICS03 connection error" },
+
+        Ics04
+        [ibc::core::ics04_channel::error::Error]
+        |_| { "ICS04 channel error" },
+
+        Ics24
+        [ibc::core::ics24_host::error::ValidationError]
+        |_| { "ICS24 host error" }
+    }
 }

@@ -187,10 +187,7 @@ impl TryFrom<&[u8]> for Height {
     type Error = TypeError;
     fn try_from(bz: &[u8]) -> Result<Self, Self::Error> {
         if bz.len() != 16 {
-            return Err(TypeError::HeightConversionError(format!(
-                "bytes length must be 16, but got {}",
-                bz.len()
-            )));
+            return Err(TypeError::height_bytes_conversion(bz.into()));
         }
         let mut ar: [u8; 8] = Default::default();
         ar.copy_from_slice(&bz[..8]);

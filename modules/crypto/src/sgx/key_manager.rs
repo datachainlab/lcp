@@ -1,13 +1,10 @@
-use crate::errors::CryptoError as Error;
-#[cfg(feature = "sgx")]
-use crate::sgx_reexport_prelude::*;
-use crate::{traits::SealedKey, EnclaveKey};
+use crate::errors::Error;
+use crate::prelude::*;
+use crate::traits::SealedKey;
+use crate::EnclaveKey;
 use log::*;
 use settings::SEALED_ENCLAVE_KEY_PATH;
-use std::{
-    path::PathBuf,
-    string::{String, ToString},
-};
+use sgx_tstd::path::PathBuf;
 
 #[derive(Default)]
 pub struct KeyManager {

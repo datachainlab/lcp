@@ -1,20 +1,30 @@
-#![cfg_attr(feature = "sgx", no_std)]
-#[cfg(feature = "sgx")]
-extern crate sgx_tstd as std;
-// re-export module to properly feature gate sgx and regular std environment
-#[cfg(feature = "sgx")]
-pub mod sgx_reexport_prelude {
-    pub use thiserror_sgx as thiserror;
+#![cfg_attr(not(feature = "std"), no_std)]
+extern crate alloc;
+
+mod prelude {
+    pub use core::prelude::v1::*;
+
+    // Re-export according to alloc::prelude::v1 because it is not yet stabilized
+    // https://doc.rust-lang.org/src/alloc/prelude/v1.rs.html
+    pub use alloc::borrow::ToOwned;
+    pub use alloc::boxed::Box;
+    pub use alloc::string::{String, ToString};
+    pub use alloc::vec::Vec;
+
+    pub use alloc::format;
+    pub use alloc::vec;
+
+    // Those are exported by default in the std prelude in Rust 2021
+    pub use core::convert::{TryFrom, TryInto};
+    pub use core::iter::FromIterator;
 }
 
-use serde::{Deserialize, Serialize};
-use std::string::String;
-
+pub use commands::{Command, CommandParams, CommandResult, ECallCommand};
 pub use enclave_manage::{
     EnclaveManageCommand, EnclaveManageResult, IASRemoteAttestationInput,
     IASRemoteAttestationResult, InitEnclaveInput, InitEnclaveResult,
 };
-pub use errors::ECallCommandError;
+pub use errors::Error;
 pub use light_client::{
     CommitmentProofPair, InitClientInput, InitClientResult, LightClientCommand, LightClientResult,
     QueryClientInput, QueryClientResult, UpdateClientInput, UpdateClientResult,
@@ -22,42 +32,9 @@ pub use light_client::{
     VerifyNonMembershipResult,
 };
 
+mod commands;
 mod enclave_manage;
 mod errors;
 mod light_client;
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct ECallCommand {
-    pub params: CommandParams,
-    pub cmd: Command,
-}
-
-impl ECallCommand {
-    pub fn new(params: CommandParams, cmd: Command) -> Self {
-        Self { params, cmd }
-    }
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct CommandParams {
-    pub home: String,
-}
-
-impl CommandParams {
-    pub fn new(home: String) -> Self {
-        Self { home }
-    }
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub enum Command {
-    EnclaveManage(EnclaveManageCommand),
-    LightClient(LightClientCommand),
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub enum CommandResult {
-    EnclaveManage(EnclaveManageResult),
-    LightClient(LightClientResult),
-    CommandError(String),
-}
+#[cfg(feature = "std")]
+pub mod msgs;

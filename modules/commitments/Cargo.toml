@@ -4,7 +4,6 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-sgx_tstd = { git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
 sgx_types = { git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 sgx_trts = { git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 serde = { version = "1.0", default-features = false, features = ["alloc"] }
@@ -13,16 +12,12 @@ prost = { version = "0.10", default-features = false }
 prost-types = { version = "0.10", default-features = false }
 ibc = { git = "https://github.com/informalsystems/ibc-rs", rev = "e8c98d440949abf971ac45a68ed9dd9e6e9f48ed", default-features = false }
 ibc-proto = { git = "https://github.com/informalsystems/ibc-rs", rev = "e8c98d440949abf971ac45a68ed9dd9e6e9f48ed", default-features = false }
-log = { version = "0.4.8", optional = true }
-log-sgx = { package = "log", git = "https://github.com/mesalock-linux/log-sgx", optional = true }
+log = { version = "0.4.8", default-features = false }
 hex = { version = "0.4", default-features = false, features = ["alloc"] }
 sha2 = { version = "0.8", default-features = false }
 store = { path = "../store", default-features = false }
 rlp = { version = "0.5.1", default-features = false }
-anyhow-sgx = { package = "anyhow", rev = "sgx_1.1.3", git = "https://github.com/mesalock-linux/anyhow-sgx.git", optional = true }
-anyhow = { version = "1.0.56", optional = true }
-thiserror-sgx = { package = "thiserror", git = "https://github.com/mesalock-linux/thiserror-sgx.git", optional = true }
-thiserror = { version = "1.0.30", optional = true }
+flex-error = { version = "0.4.4", default-features = false }
 
 lcp-types = { path = "../types", default-features = false }
 validation-context = { path = "../validation-context", default-features = false }
@@ -30,25 +25,4 @@ crypto = { path = "../crypto", default-features = false }
 
 [dev-dependencies]
 rand = { version = "0.8" }
-
-[features]
-default = ["std"]
-std = [
-    "anyhow",
-    "thiserror",
-    "log",
-    "lcp-types/std",
-    "validation-context/std",
-    "store/std",
-    "crypto/std"
-]
-sgx = [
-    "sgx_tstd",
-    "anyhow-sgx",
-    "thiserror-sgx",
-    "log-sgx",
-    "lcp-types/sgx",
-    "validation-context/sgx",
-    "store/sgx",
-    "crypto/sgx"
-]
+lcp-types = { path = "../types", default-features = false, features = ["std"] }
