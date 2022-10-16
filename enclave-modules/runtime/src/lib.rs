@@ -19,17 +19,40 @@ mod prelude {
 }
 
 pub(crate) use crate::store::get_store;
-use ctor::ctor;
+pub use ecalls::{ecall_execute_command, set_environment};
 
 mod ecalls;
 mod errors;
-mod light_client;
 mod store;
 
-#[ctor]
-fn init_logger() {
-    simple_logger::SimpleLogger::new()
-        .with_level(log::LevelFilter::Info)
-        .init()
-        .unwrap();
+#[macro_export]
+macro_rules! setup_runtime {
+    ($func:block) => {
+        sgx_tstd::global_ctors_object! {_init, _init_func = {
+            enclave_runtime::set_environment(_env_builder()).unwrap()
+        }}
+
+        #[no_mangle]
+        pub unsafe extern "C" fn ecall_execute_command(
+            command: *const u8,
+            command_len: u32,
+            output_buf: *mut u8,
+            output_buf_maxlen: u32,
+            output_len: &mut u32,
+        ) -> u32 {
+            enclave_runtime::ecall_execute_command(
+                command,
+                command_len,
+                output_buf,
+                output_buf_maxlen,
+                output_len,
+            ) as u32
+        }
+
+        fn _env_builder() -> enclave_environment::Environment {
+            {
+                $func
+            }
+        }
+    };
 }

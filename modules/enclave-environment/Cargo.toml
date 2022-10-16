@@ -1,0 +1,8 @@
+[package]
+name = "enclave-environment"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+light-client = { path = "../../modules/light-client", default-features = false }
+light-client-registry = { path = "../../modules/light-client-registry", default-features = false }

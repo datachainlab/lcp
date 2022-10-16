@@ -8,6 +8,7 @@ members = [
     "modules/ocall-handler",
     "modules/attestation-report",
     "modules/enclave-api",
+    "modules/enclave-environment",
     "modules/ecall-commands",
     "modules/ocall-commands",
     "modules/commitments",

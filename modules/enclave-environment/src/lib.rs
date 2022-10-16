@@ -1,4 +1,4 @@
-#![cfg_attr(not(feature = "std"), no_std)]
+#![no_std]
 extern crate alloc;
 
 mod prelude {
@@ -17,21 +17,8 @@ mod prelude {
     // Those are exported by default in the std prelude in Rust 2021
     pub use core::convert::{TryFrom, TryInto};
     pub use core::iter::FromIterator;
-
-    #[cfg(feature = "sgx")]
-    pub use sgx_tstd as std;
 }
 
-pub use errors::Error;
-pub use registry::LightClientRegistry;
+pub use environment::Environment;
 
-mod errors;
-#[cfg(any(feature = "std", feature = "sgx"))]
-pub mod memory;
-mod registry;
-
-use light_client::LightClient;
-
-pub trait LightClientResolver {
-    fn get_light_client(&self, type_url: &str) -> Option<&alloc::boxed::Box<dyn LightClient>>;
-}
+mod environment;

@@ -3,21 +3,20 @@ use crate::light_client::{
 };
 use context::Context;
 use ecall_commands::{CommandResult, LightClientCommand};
-use light_client_registry::LightClientSource;
 use store::KVStore;
 
-pub fn dispatch<'l, S: KVStore, L: LightClientSource<'l>>(
+pub fn dispatch<S: KVStore>(
     ctx: &mut Context<S>,
     command: LightClientCommand,
 ) -> Result<CommandResult, Error> {
     use LightClientCommand::*;
     let res = match command {
-        InitClient(input) => init_client::<S, L>(ctx, input)?,
-        UpdateClient(input) => update_client::<S, L>(ctx, input)?,
-        VerifyMembership(input) => verify_membership::<S, L>(ctx, input)?,
-        VerifyNonMembership(input) => verify_non_membership::<S, L>(ctx, input)?,
+        InitClient(input) => init_client::<S>(ctx, input)?,
+        UpdateClient(input) => update_client::<S>(ctx, input)?,
+        VerifyMembership(input) => verify_membership::<S>(ctx, input)?,
+        VerifyNonMembership(input) => verify_non_membership::<S>(ctx, input)?,
 
-        QueryClient(input) => query_client::<S, L>(ctx, input)?,
+        QueryClient(input) => query_client::<S>(ctx, input)?,
     };
     Ok(CommandResult::LightClient(res))
 }
