@@ -8,3 +8,5 @@ sgx_urts = { git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 sgx_types = { git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 log = "0.4.8"
 once_cell = "1.15.0"
+
+ocall-handler = { path = "../ocall-handler" }

@@ -2,7 +2,7 @@ use anyhow::Result;
 use clap::Parser;
 use cli::Cli;
 use host_environment::Environment;
-use ocall_handler::OCallHandler;
+use ocall_handler::HostOCallHandler;
 use once_cell::sync::Lazy;
 
 mod cli;
@@ -22,7 +22,7 @@ fn main() -> Result<()> {
     );
     let (cli, env) = &*CLI_ENV;
 
-    let handler = Box::new(OCallHandler::new(env));
+    let handler = Box::new(HostOCallHandler::new(env));
     host::ocalls::set_ocall_handler(handler).unwrap();
     cli.run()
 }

@@ -1,22 +1,22 @@
 use crate::dispatch;
-use host::ocalls::OCallHandler as HostOCallHandler;
+use crate::traits::OCallHandler;
 use host_environment::Environment;
 use log::*;
 use ocall_commands::{CommandResult, OCallCommand};
 use sgx_types::*;
 use std::slice;
 
-pub struct OCallHandler<'a> {
+pub struct HostOCallHandler<'a> {
     env: &'a Environment,
 }
 
-impl<'a> OCallHandler<'a> {
+impl<'a> HostOCallHandler<'a> {
     pub fn new(env: &'a Environment) -> Self {
         Self { env }
     }
 }
 
-impl<'a> HostOCallHandler for OCallHandler<'a> {
+impl<'a> OCallHandler for HostOCallHandler<'a> {
     fn handle(
         &self,
         command: *const u8,

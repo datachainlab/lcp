@@ -24,7 +24,7 @@ mod tests {
     };
     use lcp_types::Time;
     use log::*;
-    use ocall_handler::OCallHandler;
+    use ocall_handler::HostOCallHandler;
     use once_cell::sync::Lazy;
     use relay_tendermint::Relayer;
     use std::str::FromStr;
@@ -64,7 +64,7 @@ mod tests {
 
     #[test]
     fn test_elc_state_verification() {
-        let handler = Box::new(OCallHandler::new(&*ENV));
+        let handler = Box::new(HostOCallHandler::new(&*ENV));
         host::ocalls::set_ocall_handler(handler).unwrap();
 
         let enclave = match host::enclave::load_enclave(ENCLAVE_FILE) {
