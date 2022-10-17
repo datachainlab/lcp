@@ -5,32 +5,17 @@ edition = "2021"
 
 [dependencies]
 sgx_types = { git = "https://github.com/apache/teaclave-sgx-sdk.git" }
-sgx_tstd = { git = "https://github.com/apache/teaclave-sgx-sdk.git", features = ["net"] }
-sgx_trts = { git = "https://github.com/apache/teaclave-sgx-sdk.git" }
-sgx_tse = { git = "https://github.com/apache/teaclave-sgx-sdk.git" }
-sgx_tcrypto = { git = "https://github.com/apache/teaclave-sgx-sdk.git" }
-serde = { version = "1.0", default-features = false, features = ["alloc"] }
-serde_json = { version = "1.0", default-features = false, features = ["alloc"] }
-base64 = { git = "https://github.com/marshallpierce/rust-base64", default-features = false, features = ["alloc"] }
-itertools = { version = "0.8", default-features = false, features = [] }
-simple_logger = { git = "https://github.com/bluele/rust-simple_logger", branch = "sgx", default-features = false, features = ["sgx"] }
-
+sgx_tstd = { git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 log = { version = "0.4.8", default-features = false }
-ctor = "0.1.13"
 lazy_static = { version = "1.1.0", features = ["spin_no_std"] }
-ibc = { git = "https://github.com/informalsystems/ibc-rs", rev = "e8c98d440949abf971ac45a68ed9dd9e6e9f48ed", default-features = false }
-prost-types = { version = "0.10", default-features = false }
 bincode = { git = "https://github.com/bluele/bincode-sgx", branch = "serde" }
 flex-error = { version = "0.4.4", default-features = false }
+once_cell = { version = "1.15.0", default-features = false, features = ["alloc"] }
 
 enclave-utils = { path = "../utils" }
 ecall-handler = { path = "../ecall-handler", default-features = false }
-
 store = { path = "../../modules/store", default-features = false, features = ["sgx"] }
 crypto = { path = "../../modules/crypto", default-features = false, features = ["sgx"] }
-light-client-registry = { path = "../../modules/light-client-registry", default-features = false, features = ["sgx"] }
 
-light-client = { path = "../../modules/light-client", default-features = false }
-tendermint-lc = { path = "../../modules/tendermint-lc", default-features = false }
+enclave-environment = { path = "../../modules/enclave-environment", default-features = false }
 ecall-commands = { path = "../../modules/ecall-commands", default-features = false }
-settings = { path = "../../modules/settings", default-features = false }

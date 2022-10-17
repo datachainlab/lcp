@@ -23,10 +23,16 @@ mod tests {
     };
     use lcp_types::{Any, Height, Time};
     use light_client::{ClientKeeper, LightClient};
+    use light_client_registry::memory::HashMapLightClientRegistry;
     use mock_lc::MockLightClient;
     use store::memory::MemStore;
     use store::{CommitStore, KVStore};
     use tempdir::TempDir;
+
+    fn build_lc_registry() -> HashMapLightClientRegistry {
+        let mut registry = HashMapLightClientRegistry::new();
+        registry
+    }
 
     #[test]
     fn test_ibc_client() {
@@ -39,6 +45,8 @@ mod tests {
 
         let lcp_client = LCPLightClient::default();
         let mock_client = MockLightClient::default();
+
+        let env = enclave_environment::Environment::new(Box::new(build_lc_registry()));
 
         let tmp_dir = TempDir::new("lcp").unwrap();
         let home = tmp_dir.path().to_str().unwrap().to_string();
@@ -57,7 +65,7 @@ mod tests {
                 timestamp: Time::unix_epoch(),
             };
 
-            let mut ctx = Context::new(&mut ibc_store, &ek);
+            let mut ctx = Context::new(&env, &mut ibc_store, &ek);
             ctx.set_timestamp(Time::now());
 
             let res = lcp_client.create_client(
@@ -88,7 +96,7 @@ mod tests {
             let client_state = AnyClientState::Mock(MockClientState::new(header));
             let consensus_state = AnyConsensusState::Mock(MockConsensusState::new(header));
 
-            let mut ctx = Context::new(&mut lcp_store, &ek);
+            let mut ctx = Context::new(&env, &mut lcp_store, &ek);
             ctx.set_timestamp(Time::now());
 
             let res = mock_client.create_client(
@@ -118,7 +126,7 @@ mod tests {
         let proof1 = {
             let header = MockHeader::new(ICS02Height::new(0, 2).unwrap());
 
-            let mut ctx = Context::new(&mut lcp_store, &ek);
+            let mut ctx = Context::new(&env, &mut lcp_store, &ek);
             ctx.set_timestamp(Time::now());
             let res = mock_client.update_client(
                 &ctx,
@@ -154,7 +162,7 @@ mod tests {
                 signer: proof1.signer,
                 signature: proof1.signature,
             });
-            let mut ctx = Context::new(&mut ibc_store, &ek);
+            let mut ctx = Context::new(&env, &mut ibc_store, &ek);
             ctx.set_timestamp((Time::now() + Duration::from_secs(60)).unwrap());
 
             let res = lcp_client.update_client(&ctx, lcp_client_id, header.into());

@@ -17,11 +17,9 @@ clap = { version = "3.2", features = ["derive"] }
 dirs = "4.0"
 serde = { version = "1.0", default-features = false, features = ["alloc"] }
 serde_json = { version = "1.0", default-features = false, features = ["alloc"] }
-once_cell = "1.15.0"
 
 host = { path = "../modules/host" }
 host-environment = { path = "../modules/host-environment" }
-ocall-handler = { path = "../modules/ocall-handler" }
 service = { path = "../modules/service" }
 enclave-api = { path = "../modules/enclave-api" }
 ecall-commands = { path = "../modules/ecall-commands" }

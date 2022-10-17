@@ -8,10 +8,10 @@ use ecall_commands::{InitClientInput, InitClientResult, LightClientResult};
 use ibc::core::ics24_host::{error::ValidationError, identifier::ClientId};
 use lcp_types::Any;
 use light_client::{ClientKeeper, ClientReader};
-use light_client_registry::LightClientSource;
+use light_client_registry::LightClientResolver;
 use store::KVStore;
 
-pub fn init_client<'l, S: KVStore, L: LightClientSource<'l>>(
+pub fn init_client<S: KVStore>(
     ctx: &mut Context<S>,
     input: InitClientInput,
 ) -> Result<LightClientResult, Error> {
@@ -19,16 +19,17 @@ pub fn init_client<'l, S: KVStore, L: LightClientSource<'l>>(
 
     let any_client_state: Any = input.any_client_state.into();
     let any_consensus_state: Any = input.any_consensus_state.into();
-    let lc = L::get_light_client(&any_client_state.type_url).unwrap();
+    let lc = ctx.get_light_client(&any_client_state.type_url).unwrap();
     let ek = ctx.get_enclave_key();
     let res = lc.create_client(ctx, any_client_state.clone(), any_consensus_state.clone())?;
+    let client_type = lc.client_type();
     let client_id = gen_client_id(
-        lc.client_type(),
+        client_type.clone(),
         ctx.client_counter().map_err(Error::ics02)?,
     )
     .map_err(Error::ics24)?;
 
-    ctx.store_client_type(client_id.clone(), lc.client_type())
+    ctx.store_client_type(client_id.clone(), client_type)
         .map_err(Error::ics02)?;
     ctx.store_any_client_state(client_id.clone(), any_client_state)
         .map_err(Error::ics02)?;

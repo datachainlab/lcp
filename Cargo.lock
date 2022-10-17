@@ -712,10 +712,12 @@ dependencies = [
  "bincode 1.3.1",
  "bincode 1.3.3",
  "crypto",
+ "enclave-environment",
  "ibc",
  "ibc-proto",
  "lcp-types",
  "light-client",
+ "light-client-registry",
  "log 0.4.17",
  "prost-types",
  "serde",
@@ -1190,6 +1192,14 @@ dependencies = [
  "prost-types",
  "sgx_types",
  "sgx_urts",
+]
+
+[[package]]
+name = "enclave-environment"
+version = "0.1.0"
+dependencies = [
+ "light-client",
+ "light-client-registry",
 ]
 
 [[package]]
@@ -1689,7 +1699,11 @@ dependencies = [
 name = "host"
 version = "0.1.0"
 dependencies = [
+ "bincode 1.3.3",
+ "host-environment",
  "log 0.4.17",
+ "ocall-commands",
+ "ocall-handler",
  "once_cell 1.15.0",
  "sgx_types",
  "sgx_urts",
@@ -2238,8 +2252,6 @@ dependencies = [
  "host",
  "host-environment",
  "log 0.4.17",
- "ocall-handler",
- "once_cell 1.15.0",
  "serde",
  "serde_json",
  "service",
@@ -2256,6 +2268,7 @@ dependencies = [
  "context",
  "crypto",
  "ecall-commands",
+ "enclave-environment",
  "flex-error",
  "ibc",
  "ibc-proto",
@@ -2670,7 +2683,6 @@ version = "0.1.0"
 dependencies = [
  "bincode 1.3.3",
  "flex-error",
- "host",
  "host-environment",
  "log 0.4.17",
  "ocall-commands",

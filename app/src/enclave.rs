@@ -9,7 +9,7 @@ pub(crate) fn load_enclave(opts: &Opts, path: Option<&PathBuf>) -> Result<Enclav
     } else {
         opts.default_enclave()
     };
-    match host::enclave::load_enclave(&path) {
+    match host::load_enclave(&path) {
         Ok(enclave) => Ok(Enclave::new(
             enclave,
             opts.get_home().to_str().unwrap().to_string(),

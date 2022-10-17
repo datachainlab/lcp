@@ -4,16 +4,15 @@ use commitments::{prover::prove_update_client_commitment, UpdateClientCommitment
 use context::Context;
 use ecall_commands::{LightClientResult, UpdateClientInput, UpdateClientResult};
 use light_client::{ClientKeeper, ClientReader};
-use light_client_registry::LightClientSource;
 use store::KVStore;
 
-pub fn update_client<'l, S: KVStore, L: LightClientSource<'l>>(
+pub fn update_client<S: KVStore>(
     ctx: &mut Context<S>,
     input: UpdateClientInput,
 ) -> Result<LightClientResult, Error> {
     ctx.set_timestamp(input.current_timestamp);
 
-    let lc = get_light_client_by_client_id::<_, L>(ctx, &input.client_id)?;
+    let lc = get_light_client_by_client_id(ctx, &input.client_id)?;
 
     let ek = ctx.get_enclave_key();
     let mut res = lc.update_client(ctx, input.client_id.clone(), input.any_header.into())?;

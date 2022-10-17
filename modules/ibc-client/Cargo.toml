@@ -30,6 +30,7 @@ mock-lc = { path = "../mock-lc" }
 store = { path = "../store" }
 context = { path = "../context" }
 ecall-commands = { path = "../ecall-commands" }
+enclave-environment = { path = "../enclave-environment" }
 light-client-registry = { path = "../light-client-registry", default-features = false }
 crypto = { path = "../crypto", default-features = false, features = ["std"] }
 

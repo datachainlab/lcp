@@ -1,6 +1,7 @@
 use crate::prelude::*;
 use core::str::FromStr;
 use crypto::Signer;
+use enclave_environment::Environment;
 use ibc::{
     core::{
         ics02_client::{
@@ -17,20 +18,23 @@ use ibc::{
 };
 use lcp_types::{Any, Height, Time};
 use light_client::{ClientKeeper, ClientReader};
+use light_client_registry::LightClientResolver;
 use log::*;
 use store::KVStore;
 
 pub static NEXT_CLIENT_SEQUENCE: &str = "nextClientSequence";
 
-pub struct Context<'a, 'e, S> {
-    store: &'a mut S,
-    ek: &'e dyn Signer,
+pub struct Context<'e, 's, 'k, S> {
+    env: &'e Environment,
+    store: &'s mut S,
+    ek: &'k dyn Signer,
     current_timestamp: Option<Time>,
 }
 
-impl<'a, 'e, S> Context<'a, 'e, S> {
-    pub fn new(store: &'a mut S, ek: &'e dyn Signer) -> Self {
+impl<'e, 's, 'k, S> Context<'e, 's, 'k, S> {
+    pub fn new(env: &'e Environment, store: &'s mut S, ek: &'k dyn Signer) -> Self {
         Self {
+            env,
             store,
             ek,
             current_timestamp: None,
@@ -41,12 +45,12 @@ impl<'a, 'e, S> Context<'a, 'e, S> {
         self.current_timestamp = Some(timestamp)
     }
 
-    pub fn get_enclave_key(&self) -> &'e dyn Signer {
+    pub fn get_enclave_key(&self) -> &'k dyn Signer {
         self.ek
     }
 }
 
-impl<'a, 'e, S: KVStore> ClientReader for Context<'a, 'e, S> {
+impl<'e, 's, 'k, S: KVStore> ClientReader for Context<'e, 's, 'k, S> {
     fn client_type(&self, client_id: &ClientId) -> Result<String, ICS02Error> {
         let value = self
             .store
@@ -111,7 +115,7 @@ impl<'a, 'e, S: KVStore> ClientReader for Context<'a, 'e, S> {
     }
 }
 
-impl<'a, 'e, S: KVStore> IBCClientReader for Context<'a, 'e, S> {
+impl<'e, 's, 'k, S: KVStore> IBCClientReader for Context<'e, 's, 'k, S> {
     fn client_type(&self, client_id: &ClientId) -> Result<ClientType, ICS02Error> {
         let client_type = <Self as ClientReader>::client_type(&self, client_id)?;
         ClientType::from_str(&client_type)
@@ -190,7 +194,7 @@ impl<'a, 'e, S: KVStore> IBCClientReader for Context<'a, 'e, S> {
     }
 }
 
-impl<'a, 'e, S: KVStore> ClientKeeper for Context<'a, 'e, S> {
+impl<'e, 's, 'k, S: KVStore> ClientKeeper for Context<'e, 's, 'k, S> {
     fn store_client_type(
         &mut self,
         client_id: ClientId,
@@ -254,5 +258,14 @@ impl<'a, 'e, S: KVStore> ClientKeeper for Context<'a, 'e, S> {
         _host_height: Height,
     ) -> Result<(), ICS02Error> {
         Ok(())
+    }
+}
+
+impl<'e, 's, 'k, S> LightClientResolver for Context<'e, 's, 'k, S> {
+    fn get_light_client(
+        &self,
+        type_url: &str,
+    ) -> Option<&alloc::boxed::Box<dyn light_client::LightClient>> {
+        self.env.get_light_client(type_url)
     }
 }

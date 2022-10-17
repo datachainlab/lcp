@@ -11,4 +11,3 @@ flex-error = { version = "0.4.4" }
 
 ocall-commands = { path = "../ocall-commands", default-features = false }
 host-environment = { path = "../host-environment" }
-host = { path = "../host" }

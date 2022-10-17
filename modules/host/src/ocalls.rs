@@ -1,46 +1,88 @@
-use once_cell::sync::OnceCell;
+use host_environment::Environment;
+use log::*;
+use ocall_commands::{CommandResult, OCallCommand};
+use once_cell::race::OnceBox;
 use sgx_types::sgx_status_t;
+use sgx_types::*;
+use std::slice;
 
-/// Error indicating that `set_ocall_handler` was unable to set the provided OCallHandler
+/// Error indicating that `set_environment` was unable to set the provided Environment
 #[derive(Debug, Clone, Copy)]
-pub struct SetOCallHandlerError;
+pub struct SetEnvironmentError;
 
-type OCallHandlerType = Box<dyn OCallHandler + Sync + Send + 'static>;
+static HOST_ENVIRONMENT: OnceBox<Environment> = OnceBox::new();
 
-static OCALL_HANDLER: OnceCell<OCallHandlerType> = OnceCell::new();
-
-pub fn set_ocall_handler(handler: OCallHandlerType) -> Result<(), SetOCallHandlerError> {
-    OCALL_HANDLER.set(handler).map_err(|_| SetOCallHandlerError)
-}
-
-pub trait OCallHandler {
-    fn handle(
-        &self,
-        command: *const u8,
-        command_len: u32,
-        output_buf: *mut u8,
-        output_buf_maxlen: u32,
-        output_len: &mut u32,
-    ) -> sgx_status_t;
+pub fn set_environment(env: Environment) -> Result<(), SetEnvironmentError> {
+    HOST_ENVIRONMENT
+        .set(Box::new(env))
+        .map_err(|_| SetEnvironmentError)
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn ocall_execute_command(
+pub extern "C" fn ocall_execute_command(
     command: *const u8,
     command_len: u32,
     output_buf: *mut u8,
     output_buf_maxlen: u32,
     output_len: &mut u32,
 ) -> sgx_types::sgx_status_t {
-    let handler = OCALL_HANDLER
-        .get()
-        .expect("ocall handler must be set")
-        .as_ref();
-    handler.handle(
-        command,
-        command_len,
-        output_buf,
-        output_buf_maxlen,
-        output_len,
-    )
+    info!("Entering ocall_command_handler");
+
+    if let Err(e) = validate_const_ptr(command, command_len as usize) {
+        return e;
+    }
+
+    let cmd: OCallCommand =
+        match bincode::deserialize(unsafe { slice::from_raw_parts(command, command_len as usize) })
+        {
+            Ok(cmd) => cmd,
+            Err(e) => {
+                error!("failed to bincode::deserialize: {:?}", e);
+                return sgx_status_t::SGX_ERROR_UNEXPECTED;
+            }
+        };
+
+    let (status, result) = match ocall_handler::dispatch(
+        HOST_ENVIRONMENT
+            .get()
+            .expect("you must initialize HOST_ENVIRONMENT before executing the command"),
+        cmd,
+    ) {
+        Ok(result) => (sgx_status_t::SGX_SUCCESS, result),
+        Err(e) => (
+            sgx_status_t::SGX_ERROR_UNEXPECTED,
+            CommandResult::CommandError(format!("{:?}", e)),
+        ),
+    };
+
+    let res = match bincode::serialize(&result) {
+        Ok(res) => {
+            if res.len() > output_buf_maxlen as usize {
+                error!(
+                    "output_buf will be overflow: res_len={} output_buf_maxlen={}",
+                    res.len(),
+                    output_buf_maxlen
+                );
+                return sgx_status_t::SGX_ERROR_UNEXPECTED;
+            }
+            res
+        }
+        Err(e) => {
+            error!("failed to bincode::serialize: {:?}", e);
+            return sgx_status_t::SGX_ERROR_UNEXPECTED;
+        }
+    };
+
+    unsafe { std::ptr::copy_nonoverlapping(res.as_ptr(), output_buf, res.len()) };
+    *output_len = res.len() as u32;
+
+    status
+}
+
+fn validate_const_ptr(ptr: *const u8, ptr_len: usize) -> SgxResult<()> {
+    if ptr.is_null() || ptr_len == 0 {
+        warn!("Tried to access an empty pointer - ptr.is_null()");
+        return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
+    }
+    Ok(())
 }

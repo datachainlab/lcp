@@ -5,10 +5,11 @@ use crate::{Error, Result};
 use context::Context;
 use crypto::EnclaveKey;
 use ecall_commands::{Command, CommandResult, ECallCommand};
-use light_client_registry::LightClientSource;
+use enclave_environment::Environment;
 use store::Store;
 
-pub fn dispatch<'l, S: Store, L: LightClientSource<'l>>(
+pub fn dispatch<'l, S: Store>(
+    env: &Environment,
     ek: Option<&EnclaveKey>,
     store: &mut S,
     command: ECallCommand,
@@ -20,10 +21,10 @@ pub fn dispatch<'l, S: Store, L: LightClientSource<'l>>(
         cmd => {
             let mut ctx = match ek {
                 None => return Err(Error::enclave_key_not_found()),
-                Some(ek) => Context::new(store, ek),
+                Some(ek) => Context::new(env, store, ek),
             };
             match cmd {
-                Command::LightClient(cmd) => match light_client::dispatch::<_, L>(&mut ctx, cmd) {
+                Command::LightClient(cmd) => match light_client::dispatch(&mut ctx, cmd) {
                     Ok(res) => {
                         let _ = store.commit().map_err(Error::store)?;
                         res
