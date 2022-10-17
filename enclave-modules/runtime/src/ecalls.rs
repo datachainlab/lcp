@@ -47,7 +47,9 @@ pub fn ecall_execute_command(
 
     let km = KeyManager::new(cmd.params.home.clone());
     let (status, result) = match dispatch(
-        ENCLAVE_ENVIRONMENT.get().unwrap(),
+        ENCLAVE_ENVIRONMENT
+            .get()
+            .expect("you must initialize ENCLAVE_ENVIRONMENT before executing the command"),
         km.get_enclave_key(),
         &mut get_store(),
         cmd,
