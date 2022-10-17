@@ -24,7 +24,6 @@ mod tests {
     };
     use lcp_types::Time;
     use log::*;
-    use ocall_handler::HostOCallHandler;
     use once_cell::sync::Lazy;
     use relay_tendermint::Relayer;
     use std::str::FromStr;
@@ -35,8 +34,6 @@ mod tests {
 
     static ENCLAVE_FILE: &'static str = "../../bin/enclave.signed.so";
     static ENV_SETUP_NODES: &'static str = "SETUP_NODES";
-
-    static ENV: Lazy<Environment> = Lazy::new(|| Environment::new());
 
     struct ELCStateVerificationTest {
         enclave: Enclave,
@@ -64,10 +61,9 @@ mod tests {
 
     #[test]
     fn test_elc_state_verification() {
-        let handler = Box::new(HostOCallHandler::new(&*ENV));
-        host::ocalls::set_ocall_handler(handler).unwrap();
+        host::set_environment(Environment::new()).unwrap();
 
-        let enclave = match host::enclave::load_enclave(ENCLAVE_FILE) {
+        let enclave = match host::load_enclave(ENCLAVE_FILE) {
             Ok(r) => {
                 info!("Init Enclave Successful {}!", r.geteid());
                 r
