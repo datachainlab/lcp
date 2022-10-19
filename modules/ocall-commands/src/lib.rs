@@ -7,10 +7,13 @@ pub use remote_attestation::{
     GetReportAttestationStatusResult, InitQuoteResult, RemoteAttestationCommand,
     RemoteAttestationResult,
 };
-use serde::{Deserialize, Serialize};
+pub use store::{StoreCommand, StoreResult};
 
 mod remote_attestation;
+mod store;
 mod transmuter;
+
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct OCallCommand {
@@ -20,10 +23,12 @@ pub struct OCallCommand {
 #[derive(Serialize, Deserialize, Debug)]
 pub enum Command {
     RemoteAttestation(RemoteAttestationCommand),
+    Store(StoreCommand),
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 pub enum CommandResult {
     RemoteAttestation(RemoteAttestationResult),
+    Store(StoreResult),
     CommandError(alloc::string::String),
 }
