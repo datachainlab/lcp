@@ -179,7 +179,7 @@ impl LightClient for MockLightClient {
 
 pub fn register_implementations(registry: &mut dyn LightClientRegistry) {
     registry
-        .put(
+        .put_light_client(
             MOCK_CLIENT_STATE_TYPE_URL.to_string(),
             Box::new(MockLightClient),
         )

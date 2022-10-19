@@ -19,6 +19,10 @@ mod prelude {
     pub use core::iter::FromIterator;
 }
 
-pub use environment::Environment;
+pub use environment::Env;
+#[cfg(feature = "environment_impl")]
+pub use environment_impl::Environment;
 
 mod environment;
+#[cfg(feature = "environment_impl")]
+mod environment_impl;

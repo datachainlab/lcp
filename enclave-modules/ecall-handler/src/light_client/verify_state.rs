@@ -6,10 +6,11 @@ use ecall_commands::{
     LightClientResult, VerifyMembershipInput, VerifyMembershipResult, VerifyNonMembershipInput,
     VerifyNonMembershipResult,
 };
+use light_client_registry::LightClientResolver;
 use store::KVStore;
 
-pub fn verify_membership<S: KVStore>(
-    ctx: &mut Context<S>,
+pub fn verify_membership<R: LightClientResolver, S: KVStore>(
+    ctx: &mut Context<R, S>,
     input: VerifyMembershipInput,
 ) -> Result<LightClientResult, Error> {
     let ek = ctx.get_enclave_key();
@@ -30,8 +31,8 @@ pub fn verify_membership<S: KVStore>(
     )))
 }
 
-pub fn verify_non_membership<'l, S: KVStore>(
-    ctx: &mut Context<S>,
+pub fn verify_non_membership<R: LightClientResolver, S: KVStore>(
+    ctx: &mut Context<R, S>,
     input: VerifyNonMembershipInput,
 ) -> Result<LightClientResult, Error> {
     let ek = ctx.get_enclave_key();

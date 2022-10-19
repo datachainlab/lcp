@@ -383,7 +383,7 @@ impl TendermintLightClient {
 
 pub fn register_implementations(registry: &mut dyn LightClientRegistry) {
     registry
-        .put(
+        .put_light_client(
             TENDERMINT_CLIENT_STATE_TYPE_URL.to_string(),
             Box::new(TendermintLightClient),
         )

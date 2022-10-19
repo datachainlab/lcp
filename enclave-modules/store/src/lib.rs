@@ -1,6 +1,5 @@
-#![cfg_attr(not(feature = "std"), no_std)]
+#![no_std]
 extern crate alloc;
-
 mod prelude {
     pub use core::prelude::v1::*;
 
@@ -19,12 +18,6 @@ mod prelude {
     pub use core::iter::FromIterator;
 }
 
-pub use crate::errors::Error;
-pub use crate::store::{KVStore, Store, TransactionStore};
+pub use crate::store::EnclaveStore;
 
-mod errors;
-#[cfg(any(feature = "std", feature = "sgx"))]
-pub mod memory;
-#[cfg(feature = "sgx")]
-pub mod sgx_store;
 mod store;

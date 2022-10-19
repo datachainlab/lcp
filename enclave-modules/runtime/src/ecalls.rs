@@ -1,9 +1,8 @@
-use crate::get_store;
 use crate::prelude::*;
 use crypto::KeyManager;
 use ecall_commands::{CommandResult, ECallCommand};
 use ecall_handler::dispatch;
-use enclave_environment::Environment;
+use enclave_environment::Env;
 use enclave_utils::validate_const_ptr;
 use log::*;
 use once_cell::race::OnceBox;
@@ -13,11 +12,11 @@ use sgx_types::sgx_status_t;
 #[derive(Debug, Clone, Copy)]
 pub struct SetEnvironmentError;
 
-static ENCLAVE_ENVIRONMENT: OnceBox<Environment> = OnceBox::new();
+static ENCLAVE_ENVIRONMENT: OnceBox<Box<dyn Env>> = OnceBox::new();
 
-pub fn set_environment(env: Environment) -> Result<(), SetEnvironmentError> {
+pub fn set_environment<E: Env + 'static>(env: E) -> Result<(), SetEnvironmentError> {
     ENCLAVE_ENVIRONMENT
-        .set(Box::new(env))
+        .set(Box::new(Box::new(env)))
         .map_err(|_| SetEnvironmentError)
 }
 
@@ -51,7 +50,6 @@ pub fn ecall_execute_command(
             .get()
             .expect("you must initialize ENCLAVE_ENVIRONMENT before executing the command"),
         km.get_enclave_key(),
-        &mut get_store(),
         cmd,
     ) {
         Ok(result) => (sgx_status_t::SGX_SUCCESS, result),

@@ -12,7 +12,7 @@ setup_runtime!({
         .with_level(log::LevelFilter::Info)
         .init()
         .unwrap();
-    Environment::new(alloc::boxed::Box::new(build_lc_registry()))
+    Environment::new(build_lc_registry())
 });
 
 fn build_lc_registry() -> HashMapLightClientRegistry {

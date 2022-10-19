@@ -11,8 +11,8 @@ use light_client::{ClientKeeper, ClientReader};
 use light_client_registry::LightClientResolver;
 use store::KVStore;
 
-pub fn init_client<S: KVStore>(
-    ctx: &mut Context<S>,
+pub fn init_client<R: LightClientResolver, S: KVStore>(
+    ctx: &mut Context<R, S>,
     input: InitClientInput,
 ) -> Result<LightClientResult, Error> {
     ctx.set_timestamp(input.current_timestamp);

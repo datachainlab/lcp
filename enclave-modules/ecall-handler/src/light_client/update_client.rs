@@ -4,10 +4,11 @@ use commitments::{prover::prove_update_client_commitment, UpdateClientCommitment
 use context::Context;
 use ecall_commands::{LightClientResult, UpdateClientInput, UpdateClientResult};
 use light_client::{ClientKeeper, ClientReader};
+use light_client_registry::LightClientResolver;
 use store::KVStore;
 
-pub fn update_client<S: KVStore>(
-    ctx: &mut Context<S>,
+pub fn update_client<R: LightClientResolver, S: KVStore>(
+    ctx: &mut Context<R, S>,
     input: UpdateClientInput,
 ) -> Result<LightClientResult, Error> {
     ctx.set_timestamp(input.current_timestamp);

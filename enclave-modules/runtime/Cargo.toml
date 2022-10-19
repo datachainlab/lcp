@@ -13,9 +13,11 @@ flex-error = { version = "0.4.4", default-features = false }
 once_cell = { version = "1.15.0", default-features = false, features = ["alloc"] }
 
 enclave-utils = { path = "../utils" }
-ecall-handler = { path = "../ecall-handler", default-features = false }
+enclave-store = { path = "../store" }
+ecall-handler = { path = "../ecall-handler" }
+enclave-environment = { path = "../environment" }
 store = { path = "../../modules/store", default-features = false, features = ["sgx"] }
 crypto = { path = "../../modules/crypto", default-features = false, features = ["sgx"] }
+light-client-registry = { path = "../../modules/light-client-registry", default-features = false, features = ["sgx"] }
 
-enclave-environment = { path = "../../modules/enclave-environment", default-features = false }
 ecall-commands = { path = "../../modules/ecall-commands", default-features = false }

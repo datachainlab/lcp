@@ -5,8 +5,10 @@ mod tests {
     use crate::header::{Header, UpdateClientHeader};
     use crate::tests::client::LCPLightClient;
     use crate::{client_state::ClientState, consensus_state::ConsensusState};
+    use alloc::rc::Rc;
     use commitments::prover::prove_update_client_commitment;
     use context::Context;
+    use core::cell::RefCell;
     use core::str::FromStr;
     use core::time::Duration;
     use crypto::{Address, EnclaveKey};
@@ -24,14 +26,15 @@ mod tests {
     use lcp_types::{Any, Height, Time};
     use light_client::{ClientKeeper, LightClient};
     use light_client_registry::memory::HashMapLightClientRegistry;
+    use light_client_registry::LightClientResolver;
     use mock_lc::MockLightClient;
     use store::memory::MemStore;
-    use store::{CommitStore, KVStore};
+    use store::TransactionStore;
     use tempdir::TempDir;
 
-    fn build_lc_registry() -> HashMapLightClientRegistry {
-        let mut registry = HashMapLightClientRegistry::new();
-        registry
+    fn build_lc_registry() -> Rc<dyn LightClientResolver> {
+        let registry = HashMapLightClientRegistry::new();
+        Rc::new(registry)
     }
 
     #[test]
@@ -39,14 +42,14 @@ mod tests {
         // ek is a signing key to prove LCP's commitments
         let ek = EnclaveKey::new().unwrap();
         // lcp_store is a store to keeps LCP's state
-        let mut lcp_store = MemStore::default();
+        let mut lcp_store = Rc::new(RefCell::new(MemStore::default()));
         // ibc_store is a store to keeps downstream's state
-        let mut ibc_store = MemStore::default();
+        let mut ibc_store = Rc::new(RefCell::new(MemStore::default()));
 
         let lcp_client = LCPLightClient::default();
         let mock_client = MockLightClient::default();
 
-        let env = enclave_environment::Environment::new(Box::new(build_lc_registry()));
+        let registry = build_lc_registry();
 
         let tmp_dir = TempDir::new("lcp").unwrap();
         let home = tmp_dir.path().to_str().unwrap().to_string();
@@ -65,7 +68,7 @@ mod tests {
                 timestamp: Time::unix_epoch(),
             };
 
-            let mut ctx = Context::new(&env, &mut ibc_store, &ek);
+            let mut ctx = Context::new(registry.clone(), ibc_store.clone(), &ek);
             ctx.set_timestamp(Time::now());
 
             let res = lcp_client.create_client(
@@ -95,8 +98,7 @@ mod tests {
             let header = MockHeader::new(ICS02Height::new(0, 1).unwrap());
             let client_state = AnyClientState::Mock(MockClientState::new(header));
             let consensus_state = AnyConsensusState::Mock(MockConsensusState::new(header));
-
-            let mut ctx = Context::new(&env, &mut lcp_store, &ek);
+            let mut ctx = Context::new(registry.clone(), lcp_store.clone(), &ek);
             ctx.set_timestamp(Time::now());
 
             let res = mock_client.create_client(
@@ -126,7 +128,7 @@ mod tests {
         let proof1 = {
             let header = MockHeader::new(ICS02Height::new(0, 2).unwrap());
 
-            let mut ctx = Context::new(&env, &mut lcp_store, &ek);
+            let mut ctx = Context::new(registry.clone(), lcp_store.clone(), &ek);
             ctx.set_timestamp(Time::now());
             let res = mock_client.update_client(
                 &ctx,
@@ -162,7 +164,7 @@ mod tests {
                 signer: proof1.signer,
                 signature: proof1.signature,
             });
-            let mut ctx = Context::new(&env, &mut ibc_store, &ek);
+            let mut ctx = Context::new(registry.clone(), ibc_store.clone(), &ek);
             ctx.set_timestamp((Time::now() + Duration::from_secs(60)).unwrap());
 
             let res = lcp_client.update_client(&ctx, lcp_client_id, header.into());

@@ -24,6 +24,7 @@ once_cell = "1.15.0"
 lcp-types = { path = "../../modules/types" }
 host = { path = "../../modules/host" }
 host-environment = { path = "../../modules/host-environment" }
+store = { path = "../../modules/store" }
 ocall-handler = { path = "../../modules/ocall-handler" }
 enclave-api = { path = "../../modules/enclave-api" }
 ecall-commands = { path = "../../modules/ecall-commands" }

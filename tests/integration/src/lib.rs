@@ -27,7 +27,8 @@ mod tests {
     use once_cell::sync::Lazy;
     use relay_tendermint::Relayer;
     use std::str::FromStr;
-    use std::sync::Arc;
+    use std::sync::{Arc, RwLock};
+    use store::memory::MemStore;
     use tempdir::TempDir;
     use tendermint_proto::Protobuf;
     use tokio::runtime::Runtime as TokioRuntime;
@@ -61,7 +62,8 @@ mod tests {
 
     #[test]
     fn test_elc_state_verification() {
-        host::set_environment(Environment::new()).unwrap();
+        host::set_environment(Environment::new(Arc::new(RwLock::new(MemStore::default()))))
+            .unwrap();
 
         let enclave = match host::load_enclave(ENCLAVE_FILE) {
             Ok(r) => {

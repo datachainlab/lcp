@@ -18,6 +18,10 @@ pub fn set_environment(env: Environment) -> Result<(), SetEnvironmentError> {
         .map_err(|_| SetEnvironmentError)
 }
 
+pub fn get_environment() -> Option<&'static Environment> {
+    HOST_ENVIRONMENT.get()
+}
+
 #[no_mangle]
 pub extern "C" fn ocall_execute_command(
     command: *const u8,

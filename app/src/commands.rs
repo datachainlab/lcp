@@ -2,6 +2,9 @@ use self::{elc::ELCCmd, enclave::EnclaveCmd, service::ServiceCmd};
 use crate::opts::Opts;
 use anyhow::Result;
 use clap::Parser;
+use host_environment::Environment;
+use std::sync::{Arc, RwLock};
+use store_rocksdb::RocksDBStore;
 
 mod elc;
 mod enclave;
@@ -19,7 +22,11 @@ pub enum CliCmd {
 }
 
 impl CliCmd {
-    pub fn run(&self, opts: &Opts) -> Result<()> {
+    pub fn run(self, opts: &Opts) -> Result<()> {
+        let store = RocksDBStore::open(opts.get_store_path());
+        let env = Environment::new(Arc::new(RwLock::new(store)));
+        host::set_environment(env).unwrap();
+
         match self {
             CliCmd::Enclave(cmd) => cmd.run(opts),
             CliCmd::Service(cmd) => cmd.run(opts),

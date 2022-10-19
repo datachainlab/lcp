@@ -1,10 +1,12 @@
+use std::sync::{Arc, RwLock};
+use store::Store;
+
 pub struct Environment {
-    // TODO env should keeps the store after refactoring host store
-// pub store: Arc<RwLock<dyn KVStore + Send + Sync>>,
+    pub store: Arc<RwLock<dyn Store + Send + Sync>>,
 }
 
 impl Environment {
-    pub fn new() -> Self {
-        Self {}
+    pub fn new(store: Arc<RwLock<dyn Store + Send + Sync>>) -> Self {
+        Self { store }
     }
 }

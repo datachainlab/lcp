@@ -1,6 +1,6 @@
 use crate::memory::MemStore;
 use crate::{prelude::*, Error};
-use crate::{CommitStore, KVStore, Store};
+use crate::{KVStore, Store, TransactionStore};
 use sgx_tstd::sync::{Arc, SgxRwLock};
 
 impl<T> KVStore for Arc<SgxRwLock<T>>
@@ -16,16 +16,20 @@ where
     }
 }
 
-impl<T> CommitStore for Arc<SgxRwLock<T>>
+impl<T> TransactionStore for Arc<SgxRwLock<T>>
 where
     T: Store,
 {
+    fn begin(&mut self) -> Result<(), Error> {
+        self.write().unwrap().begin()
+    }
+
     fn commit(&mut self) -> Result<(), Error> {
         self.write().unwrap().commit()
     }
 
-    fn rollback(&mut self) {
-        self.write().unwrap().rollback()
+    fn abort(&mut self) {
+        self.write().unwrap().abort()
     }
 }
 

@@ -25,7 +25,7 @@ pub struct Cli {
 }
 
 impl Cli {
-    pub fn run(&self) -> Result<()> {
+    pub fn run(self) -> Result<()> {
         self.command.run(&self.opts)
     }
 }

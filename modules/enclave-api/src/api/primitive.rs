@@ -48,6 +48,9 @@ impl EnclavePrimitiveAPI for Enclave {
         let output_ptr = output_buf.as_mut_ptr();
         let mut ret = sgx_status_t::SGX_SUCCESS;
 
+        let env = host::get_environment().unwrap();
+        env.store.write().unwrap().begin().unwrap();
+
         let command_bytes = bincode::serialize(cmd).map_err(Error::bincode)?;
         let result = unsafe {
             ffi::ecall_execute_command(
@@ -60,7 +63,9 @@ impl EnclavePrimitiveAPI for Enclave {
                 &mut output_len,
             )
         };
+        let mut store = env.store.write().unwrap();
         if result != sgx_status_t::SGX_SUCCESS {
+            store.abort();
             Err(Error::sgx_error(result))
         } else {
             assert!((output_len as usize) < output_maxlen);
@@ -70,8 +75,10 @@ impl EnclavePrimitiveAPI for Enclave {
             let res =
                 bincode::deserialize(&output_buf[..output_len as usize]).map_err(Error::bincode)?;
             if ret == sgx_status_t::SGX_SUCCESS {
+                store.commit().unwrap();
                 Ok(res)
             } else if let CommandResult::CommandError(descr) = res {
+                store.abort();
                 Err(Error::command(ret, descr))
             } else {
                 unreachable!()

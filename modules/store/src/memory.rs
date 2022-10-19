@@ -1,5 +1,7 @@
 use crate::{prelude::*, Store};
-use crate::{CommitStore, Error, KVStore};
+use crate::{Error, KVStore, TransactionStore};
+use alloc::rc::Rc;
+use core::cell::RefCell;
 use core::ops::Deref;
 use serde::{Deserialize, Serialize};
 #[cfg(feature = "sgx")]
@@ -40,19 +42,46 @@ impl KVStore for MemStore {
     }
 }
 
-impl CommitStore for MemStore {
+impl TransactionStore for MemStore {
+    fn begin(&mut self) -> Result<(), Error> {
+        Ok(())
+    }
+
     fn commit(&mut self) -> Result<(), Error> {
         self.committed.0.extend(self.cached.0.clone());
         self.cached.0.clear();
         Ok(())
     }
 
-    fn rollback(&mut self) {
+    fn abort(&mut self) {
         self.cached.0.clear()
     }
 }
 
 impl Store for MemStore {}
+
+impl KVStore for Rc<RefCell<MemStore>> {
+    fn get(&self, k: &[u8]) -> Option<Vec<u8>> {
+        self.borrow().get(k)
+    }
+    fn set(&mut self, k: Vec<u8>, v: Vec<u8>) {
+        self.borrow_mut().set(k, v)
+    }
+}
+
+impl TransactionStore for Rc<RefCell<MemStore>> {
+    fn begin(&mut self) -> Result<(), Error> {
+        self.borrow_mut().begin()
+    }
+
+    fn commit(&mut self) -> Result<(), Error> {
+        self.borrow_mut().commit()
+    }
+
+    fn abort(&mut self) {
+        self.borrow_mut().abort()
+    }
+}
 
 mod hash_map_bytes {
     use super::*;
