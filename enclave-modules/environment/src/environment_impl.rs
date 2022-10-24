@@ -1,18 +1,18 @@
 use crate::{prelude::*, Env};
-use alloc::rc::Rc;
+use alloc::sync::Arc;
 use enclave_store::EnclaveStore;
 use light_client::LightClient;
 use light_client_registry::{memory::HashMapLightClientRegistry, LightClientResolver};
-use store::KVStore;
+use store::{KVStore, TxId};
 
 pub struct Environment {
-    lc_registry: Rc<HashMapLightClientRegistry>,
+    lc_registry: Arc<HashMapLightClientRegistry>,
 }
 
 impl Environment {
     pub fn new(lc_registry: HashMapLightClientRegistry) -> Self {
         Self {
-            lc_registry: Rc::new(lc_registry),
+            lc_registry: Arc::new(lc_registry),
         }
     }
 }
@@ -24,10 +24,11 @@ impl LightClientResolver for Environment {
 }
 
 impl Env for Environment {
-    fn get_store(&self) -> Box<dyn KVStore> {
-        Box::new(EnclaveStore {})
+    fn new_store(&self, tx_id: TxId) -> Box<dyn KVStore> {
+        Box::new(EnclaveStore::new(tx_id))
     }
-    fn get_lc_registry(&self) -> Rc<dyn LightClientResolver> {
+
+    fn get_lc_registry(&self) -> Arc<dyn LightClientResolver> {
         self.lc_registry.clone()
     }
 }

@@ -19,12 +19,10 @@ mod prelude {
     pub use core::iter::FromIterator;
 }
 
-pub use crate::errors::Error;
-pub use crate::store::{KVStore, Store, TransactionStore};
+pub use crate::errors::{Error, Result};
+pub use crate::store::{CommitStore, KVStore, TxId};
 
 mod errors;
 #[cfg(any(feature = "std", feature = "sgx"))]
 pub mod memory;
-#[cfg(feature = "sgx")]
-pub mod sgx_store;
 mod store;

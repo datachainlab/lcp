@@ -1182,6 +1182,7 @@ dependencies = [
  "lcp-types",
  "serde",
  "serde_json",
+ "store",
 ]
 
 [[package]]
@@ -2800,6 +2801,7 @@ dependencies = [
  "serde",
  "serde_with",
  "sgx_types",
+ "store",
 ]
 
 [[package]]

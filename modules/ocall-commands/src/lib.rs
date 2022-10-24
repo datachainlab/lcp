@@ -2,12 +2,12 @@
 #![allow(incomplete_features)]
 #![feature(generic_const_exprs)]
 extern crate alloc;
+pub use crate::store::{StoreCommand, StoreResult};
 pub use remote_attestation::{
     GetIASSocketResult, GetQuoteInput, GetQuoteResult, GetReportAttestationStatusInput,
     GetReportAttestationStatusResult, InitQuoteResult, RemoteAttestationCommand,
     RemoteAttestationResult,
 };
-pub use store::{StoreCommand, StoreResult};
 
 mod remote_attestation;
 mod store;

@@ -6,6 +6,7 @@ mod tests {
     use crate::tests::client::LCPLightClient;
     use crate::{client_state::ClientState, consensus_state::ConsensusState};
     use alloc::rc::Rc;
+    use alloc::sync::Arc;
     use commitments::prover::prove_update_client_commitment;
     use context::Context;
     use core::cell::RefCell;
@@ -29,12 +30,11 @@ mod tests {
     use light_client_registry::LightClientResolver;
     use mock_lc::MockLightClient;
     use store::memory::MemStore;
-    use store::TransactionStore;
     use tempdir::TempDir;
 
-    fn build_lc_registry() -> Rc<dyn LightClientResolver> {
+    fn build_lc_registry() -> Arc<dyn LightClientResolver> {
         let registry = HashMapLightClientRegistry::new();
-        Rc::new(registry)
+        Arc::new(registry)
     }
 
     #[test]
@@ -42,9 +42,9 @@ mod tests {
         // ek is a signing key to prove LCP's commitments
         let ek = EnclaveKey::new().unwrap();
         // lcp_store is a store to keeps LCP's state
-        let mut lcp_store = Rc::new(RefCell::new(MemStore::default()));
+        let lcp_store = Rc::new(RefCell::new(MemStore::default()));
         // ibc_store is a store to keeps downstream's state
-        let mut ibc_store = Rc::new(RefCell::new(MemStore::default()));
+        let ibc_store = Rc::new(RefCell::new(MemStore::default()));
 
         let lcp_client = LCPLightClient::default();
         let mock_client = MockLightClient::default();
@@ -89,7 +89,6 @@ mod tests {
                 initial_consensus_state.into(),
             )
             .unwrap();
-            ibc_store.commit().unwrap();
             client_id
         };
 
@@ -120,7 +119,6 @@ mod tests {
                 consensus_state.into(),
             )
             .unwrap();
-            lcp_store.commit().unwrap();
             client_id
         };
 
@@ -152,7 +150,6 @@ mod tests {
                 .unwrap();
             ctx.store_any_consensus_state(upstream_client_id.clone(), height, consensus_state)
                 .unwrap();
-            lcp_store.commit().unwrap();
             res.unwrap()
         };
 

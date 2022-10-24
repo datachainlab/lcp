@@ -10,7 +10,7 @@ use sgx_types::sgx_status_t;
 
 pub trait EnclavePrimitiveAPI {
     /// execute_command runs a given command in the enclave
-    fn execute_command(&self, cmd: &ECallCommand) -> Result<CommandResult>;
+    fn execute_command(&self, cmd: Command) -> Result<CommandResult>;
 
     /// init_enclave_key generates a new key and perform remote attestation to generates an AVR
     fn init_enclave_key(&self, input: InitEnclaveInput) -> Result<InitEnclaveResult>;
@@ -41,7 +41,7 @@ pub trait EnclavePrimitiveAPI {
 }
 
 impl EnclavePrimitiveAPI for Enclave {
-    fn execute_command(&self, cmd: &ECallCommand) -> Result<CommandResult> {
+    fn execute_command(&self, cmd: Command) -> Result<CommandResult> {
         let mut output_len = 0;
         let output_maxlen = 65536;
         let mut output_buf = Vec::with_capacity(output_maxlen);
@@ -49,9 +49,10 @@ impl EnclavePrimitiveAPI for Enclave {
         let mut ret = sgx_status_t::SGX_SUCCESS;
 
         let env = host::get_environment().unwrap();
-        env.store.write().unwrap().begin().unwrap();
+        let tx_id = env.store.write().unwrap().begin().unwrap();
 
-        let command_bytes = bincode::serialize(cmd).map_err(Error::bincode)?;
+        let ecmd = ECallCommand::new(CommandParams::new(self.home.clone(), tx_id), cmd);
+        let command_bytes = bincode::serialize(&ecmd).map_err(Error::bincode)?;
         let result = unsafe {
             ffi::ecall_execute_command(
                 self.sgx_enclave.geteid(),
@@ -65,7 +66,7 @@ impl EnclavePrimitiveAPI for Enclave {
         };
         let mut store = env.store.write().unwrap();
         if result != sgx_status_t::SGX_SUCCESS {
-            store.abort();
+            store.rollback(tx_id);
             Err(Error::sgx_error(result))
         } else {
             assert!((output_len as usize) < output_maxlen);
@@ -75,10 +76,10 @@ impl EnclavePrimitiveAPI for Enclave {
             let res =
                 bincode::deserialize(&output_buf[..output_len as usize]).map_err(Error::bincode)?;
             if ret == sgx_status_t::SGX_SUCCESS {
-                store.commit().unwrap();
+                store.commit(tx_id).unwrap();
                 Ok(res)
             } else if let CommandResult::CommandError(descr) = res {
-                store.abort();
+                store.rollback(tx_id);
                 Err(Error::command(ret, descr))
             } else {
                 unreachable!()
@@ -87,10 +88,9 @@ impl EnclavePrimitiveAPI for Enclave {
     }
 
     fn init_enclave_key(&self, input: InitEnclaveInput) -> Result<InitEnclaveResult> {
-        match self.execute_command(&ECallCommand::new(
-            CommandParams::new(self.home.clone()),
-            Command::EnclaveManage(EnclaveManageCommand::InitEnclave(input)),
-        ))? {
+        match self.execute_command(Command::EnclaveManage(EnclaveManageCommand::InitEnclave(
+            input,
+        )))? {
             CommandResult::EnclaveManage(EnclaveManageResult::InitEnclave(res)) => Ok(res),
             _ => unreachable!(),
         }
@@ -100,9 +100,8 @@ impl EnclavePrimitiveAPI for Enclave {
         &self,
         input: IASRemoteAttestationInput,
     ) -> Result<IASRemoteAttestationResult> {
-        match self.execute_command(&ECallCommand::new(
-            CommandParams::new(self.home.clone()),
-            Command::EnclaveManage(EnclaveManageCommand::IASRemoteAttestation(input)),
+        match self.execute_command(Command::EnclaveManage(
+            EnclaveManageCommand::IASRemoteAttestation(input),
         ))? {
             CommandResult::EnclaveManage(EnclaveManageResult::IASRemoteAttestation(res)) => Ok(res),
             _ => unreachable!(),
@@ -110,30 +109,25 @@ impl EnclavePrimitiveAPI for Enclave {
     }
 
     fn init_client(&self, input: InitClientInput) -> Result<InitClientResult> {
-        match self.execute_command(&ECallCommand::new(
-            CommandParams::new(self.home.clone()),
-            Command::LightClient(LightClientCommand::InitClient(input)),
-        ))? {
+        match self.execute_command(Command::LightClient(LightClientCommand::InitClient(input)))? {
             CommandResult::LightClient(LightClientResult::InitClient(res)) => Ok(res),
             _ => unreachable!(),
         }
     }
 
     fn update_client(&self, input: UpdateClientInput) -> Result<UpdateClientResult> {
-        match self.execute_command(&ECallCommand::new(
-            CommandParams::new(self.home.clone()),
-            Command::LightClient(LightClientCommand::UpdateClient(input)),
-        ))? {
+        match self.execute_command(Command::LightClient(LightClientCommand::UpdateClient(
+            input,
+        )))? {
             CommandResult::LightClient(LightClientResult::UpdateClient(res)) => Ok(res),
             _ => unreachable!(),
         }
     }
 
     fn verify_membership(&self, input: VerifyMembershipInput) -> Result<VerifyMembershipResult> {
-        match self.execute_command(&ECallCommand::new(
-            CommandParams::new(self.home.clone()),
-            Command::LightClient(LightClientCommand::VerifyMembership(input)),
-        ))? {
+        match self.execute_command(Command::LightClient(LightClientCommand::VerifyMembership(
+            input,
+        )))? {
             CommandResult::LightClient(LightClientResult::VerifyMembership(res)) => Ok(res),
             _ => unreachable!(),
         }
@@ -143,9 +137,8 @@ impl EnclavePrimitiveAPI for Enclave {
         &self,
         input: VerifyNonMembershipInput,
     ) -> Result<VerifyNonMembershipResult> {
-        match self.execute_command(&ECallCommand::new(
-            CommandParams::new(self.home.clone()),
-            Command::LightClient(LightClientCommand::VerifyNonMembership(input)),
+        match self.execute_command(Command::LightClient(
+            LightClientCommand::VerifyNonMembership(input),
         ))? {
             CommandResult::LightClient(LightClientResult::VerifyNonMembership(res)) => Ok(res),
             _ => unreachable!(),
@@ -153,10 +146,7 @@ impl EnclavePrimitiveAPI for Enclave {
     }
 
     fn query_client(&self, input: QueryClientInput) -> Result<QueryClientResult> {
-        match self.execute_command(&ECallCommand::new(
-            CommandParams::new(self.home.clone()),
-            Command::LightClient(LightClientCommand::QueryClient(input)),
-        ))? {
+        match self.execute_command(Command::LightClient(LightClientCommand::QueryClient(input)))? {
             CommandResult::LightClient(LightClientResult::QueryClient(res)) => Ok(res),
             _ => unreachable!(),
         }

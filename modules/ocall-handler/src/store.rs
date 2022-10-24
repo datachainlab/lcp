@@ -6,10 +6,24 @@ pub fn dispatch(env: &Environment, command: StoreCommand) -> Result<StoreResult>
     use StoreCommand::*;
     // TODO add error handling
     let res = match command {
-        Get(k) => StoreResult::Get(env.store.try_read().unwrap().get(&k)),
-        Set(k, v) => {
-            env.store.try_write().unwrap().set(k, v);
+        Get(tx_id, key) => {
+            StoreResult::Get(env.store.try_read().unwrap().tx_get(tx_id, &key).unwrap())
+        }
+        Set(tx_id, key, value) => {
+            env.store
+                .try_write()
+                .unwrap()
+                .tx_set(tx_id, key, value)
+                .unwrap();
             StoreResult::Set
+        }
+        Remove(tx_id, key) => {
+            env.store
+                .try_write()
+                .unwrap()
+                .tx_remove(tx_id, &key)
+                .unwrap();
+            StoreResult::Remove
         }
     };
     Ok(res)

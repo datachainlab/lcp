@@ -1,101 +1,106 @@
-use crate::{prelude::*, Store};
-use crate::{Error, KVStore, TransactionStore};
-use alloc::rc::Rc;
-use core::cell::RefCell;
-use core::ops::Deref;
-use serde::{Deserialize, Serialize};
+use crate::prelude::*;
+use crate::store::TxId;
+use crate::{CommitStore, Error, KVStore, Result};
 #[cfg(feature = "sgx")]
-use sgx_tstd::collections::HashMap;
+use sgx_tstd::collections::{HashMap, HashSet};
 #[cfg(feature = "std")]
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 // MemStore is only available for testing purposes
 #[derive(Default, Debug)]
 pub struct MemStore {
-    pub committed: MemMap,
-    pub cached: MemMap,
-}
-
-#[derive(Default, Debug, Serialize, Deserialize)]
-pub struct MemMap(#[serde(with = "hash_map_bytes")] HashMap<Vec<u8>, Vec<u8>>);
-
-impl Deref for MemMap {
-    type Target = HashMap<Vec<u8>, Vec<u8>>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
+    latest_tx_id: TxId,
+    uncommitted_data: HashMap<TxId, HashMap<Vec<u8>, Vec<u8>>>,
+    uncommitted_tombstones: HashMap<TxId, HashSet<Vec<u8>>>,
+    committed_data: HashMap<Vec<u8>, Vec<u8>>,
 }
 
 impl KVStore for MemStore {
-    fn set(&mut self, k: Vec<u8>, v: Vec<u8>) {
-        self.cached.0.insert(k, v);
+    fn get(&self, key: &[u8]) -> Option<Vec<u8>> {
+        self.committed_data.get(key).map(|v| v.to_vec())
     }
-    fn get(&self, k: &[u8]) -> Option<Vec<u8>> {
-        match self.cached.0.get(k) {
-            Some(v) => Some(v.clone()),
-            None => match self.committed.0.get(k) {
-                Some(v) => Some(v.clone()),
-                None => None,
+
+    fn set(&mut self, key: Vec<u8>, value: Vec<u8>) {
+        self.committed_data.insert(key, value);
+    }
+
+    fn remove(&mut self, key: &[u8]) {
+        self.committed_data.remove(key);
+    }
+}
+
+impl CommitStore for MemStore {
+    fn begin(&mut self) -> Result<TxId> {
+        self.latest_tx_id.safe_incr()?;
+        self.uncommitted_data
+            .insert(self.latest_tx_id, Default::default());
+        self.uncommitted_tombstones
+            .insert(self.latest_tx_id, Default::default());
+        Ok(self.latest_tx_id)
+    }
+
+    fn commit(&mut self, tx_id: TxId) -> Result<()> {
+        let uncommitted_data = self
+            .uncommitted_data
+            .remove(&tx_id)
+            .ok_or_else(|| Error::tx_id_not_found(tx_id))?;
+
+        let uncommitted_tombstones = self
+            .uncommitted_tombstones
+            .remove(&tx_id)
+            .ok_or_else(|| Error::tx_id_not_found(tx_id))?;
+
+        self.committed_data.extend(uncommitted_data);
+        for k in uncommitted_tombstones {
+            self.committed_data.remove(&k);
+        }
+        Ok(())
+    }
+
+    fn rollback(&mut self, tx_id: TxId) {
+        self.uncommitted_data.remove(&tx_id).unwrap();
+        self.uncommitted_tombstones.remove(&tx_id).unwrap();
+    }
+
+    fn tx_get(&self, tx_id: TxId, key: &[u8]) -> Result<Option<Vec<u8>>> {
+        if self
+            .uncommitted_tombstones
+            .get(&tx_id)
+            .ok_or_else(|| Error::tx_id_not_found(tx_id))?
+            .contains(key)
+        {
+            return Ok(None);
+        }
+        let uncommitted_data = self
+            .uncommitted_data
+            .get(&tx_id)
+            .ok_or_else(|| Error::tx_id_not_found(tx_id))?;
+        match uncommitted_data.get(key) {
+            Some(v) => Ok(Some(v.clone())),
+            None => match self.committed_data.get(key) {
+                Some(v) => Ok(Some(v.clone())),
+                None => Ok(None),
             },
         }
     }
-}
 
-impl TransactionStore for MemStore {
-    fn begin(&mut self) -> Result<(), Error> {
+    fn tx_set(&mut self, tx_id: TxId, key: Vec<u8>, value: Vec<u8>) -> Result<()> {
+        self.uncommitted_tombstones
+            .get_mut(&tx_id)
+            .ok_or_else(|| Error::tx_id_not_found(tx_id))?
+            .remove(&key);
+        self.uncommitted_data
+            .get_mut(&tx_id)
+            .ok_or_else(|| Error::tx_id_not_found(tx_id))?
+            .insert(key, value);
         Ok(())
     }
 
-    fn commit(&mut self) -> Result<(), Error> {
-        self.committed.0.extend(self.cached.0.clone());
-        self.cached.0.clear();
+    fn tx_remove(&mut self, tx_id: TxId, key: &[u8]) -> Result<()> {
+        self.uncommitted_tombstones
+            .get_mut(&tx_id)
+            .ok_or_else(|| Error::tx_id_not_found(tx_id))?
+            .insert(key.into());
         Ok(())
-    }
-
-    fn abort(&mut self) {
-        self.cached.0.clear()
-    }
-}
-
-impl Store for MemStore {}
-
-impl KVStore for Rc<RefCell<MemStore>> {
-    fn get(&self, k: &[u8]) -> Option<Vec<u8>> {
-        self.borrow().get(k)
-    }
-    fn set(&mut self, k: Vec<u8>, v: Vec<u8>) {
-        self.borrow_mut().set(k, v)
-    }
-}
-
-impl TransactionStore for Rc<RefCell<MemStore>> {
-    fn begin(&mut self) -> Result<(), Error> {
-        self.borrow_mut().begin()
-    }
-
-    fn commit(&mut self) -> Result<(), Error> {
-        self.borrow_mut().commit()
-    }
-
-    fn abort(&mut self) {
-        self.borrow_mut().abort()
-    }
-}
-
-mod hash_map_bytes {
-    use super::*;
-    use serde::{Deserializer, Serializer};
-
-    type HashMapBytes = HashMap<Vec<u8>, Vec<u8>>;
-
-    pub(super) fn serialize<S: Serializer>(attr: &HashMapBytes, ser: S) -> Result<S::Ok, S::Error> {
-        let attr: Vec<_> = attr.iter().collect();
-        serde::Serialize::serialize(&attr, ser)
-    }
-
-    pub(super) fn deserialize<'de, D: Deserializer<'de>>(des: D) -> Result<HashMapBytes, D::Error> {
-        let attr: Vec<_> = serde::Deserialize::deserialize(des)?;
-        Ok(attr.into_iter().collect())
     }
 }

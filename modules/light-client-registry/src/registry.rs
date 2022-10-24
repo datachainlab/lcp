@@ -1,6 +1,6 @@
 use crate::errors::Error;
 use crate::prelude::*;
-use alloc::rc::Rc;
+use alloc::sync::Arc;
 use light_client::LightClient;
 
 pub trait LightClientRegistry: LightClientResolver {
@@ -15,7 +15,7 @@ pub trait LightClientResolver {
     fn get_light_client(&self, type_url: &str) -> Option<&Box<dyn LightClient>>;
 }
 
-impl LightClientResolver for Rc<dyn LightClientResolver> {
+impl LightClientResolver for Arc<dyn LightClientResolver> {
     fn get_light_client(&self, type_url: &str) -> Option<&Box<dyn LightClient>> {
         self.as_ref().get_light_client(type_url)
     }

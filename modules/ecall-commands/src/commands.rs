@@ -2,6 +2,7 @@ use crate::{
     prelude::*, EnclaveManageCommand, EnclaveManageResult, LightClientCommand, LightClientResult,
 };
 use serde::{Deserialize, Serialize};
+use store::TxId;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct ECallCommand {
@@ -18,11 +19,12 @@ impl ECallCommand {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct CommandParams {
     pub home: String,
+    pub tx_id: TxId,
 }
 
 impl CommandParams {
-    pub fn new(home: String) -> Self {
-        Self { home }
+    pub fn new(home: String, tx_id: TxId) -> Self {
+        Self { home, tx_id }
     }
 }
 

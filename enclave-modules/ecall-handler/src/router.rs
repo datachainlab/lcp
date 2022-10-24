@@ -19,7 +19,11 @@ pub fn dispatch<E: Env>(
         cmd => {
             let mut ctx = match ek {
                 None => return Err(Error::enclave_key_not_found()),
-                Some(ek) => Context::new(env.get_lc_registry(), env.get_store(), ek),
+                Some(ek) => Context::new(
+                    env.get_lc_registry(),
+                    env.new_store(command.params.tx_id),
+                    ek,
+                ),
             };
             match cmd {
                 Command::LightClient(cmd) => match light_client::dispatch(&mut ctx, cmd) {
