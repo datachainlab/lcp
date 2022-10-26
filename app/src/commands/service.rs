@@ -1,11 +1,12 @@
-use crate::enclave::load_enclave;
 use crate::opts::Opts;
 use anyhow::Result;
 use clap::Parser;
+use enclave_api::{Enclave, EnclaveProtoAPI};
 use log::*;
 use service::{run_service, AppService};
 use std::path::PathBuf;
 use std::sync::Arc;
+use store::transaction::CommitStore;
 use tokio::runtime::Runtime;
 
 // `service` subcommand
@@ -30,11 +31,20 @@ pub struct Start {
 }
 
 impl ServiceCmd {
-    pub fn run(&self, opts: &Opts) -> Result<()> {
+    pub fn run<'e, S>(
+        &self,
+        opts: &Opts,
+        enclave_loader: impl FnOnce(&Opts, Option<&PathBuf>) -> Result<Enclave<'e, S>>,
+    ) -> Result<()>
+    where
+        'e: 'static,
+        S: CommitStore + 'e,
+        Enclave<'e, S>: EnclaveProtoAPI<S>,
+    {
         match self {
             Self::Start(cmd) => {
                 let addr = cmd.address.parse()?;
-                let enclave = load_enclave(opts, cmd.enclave.as_ref())?;
+                let enclave = enclave_loader(opts, cmd.enclave.as_ref())?;
                 let rt = Arc::new(Runtime::new()?);
                 let srv = AppService::new(opts.get_home(), enclave);
 

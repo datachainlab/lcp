@@ -1,10 +1,10 @@
-use crate::enclave::load_enclave;
 use crate::opts::Opts;
 use anyhow::Result;
 use clap::Parser;
-use enclave_api::EnclaveProtoAPI;
+use enclave_api::{Enclave, EnclaveProtoAPI};
 use serde::de::DeserializeOwned;
 use std::path::PathBuf;
+use store::transaction::CommitStore;
 
 // `client` subcommand
 #[derive(Debug, Parser)]
@@ -42,9 +42,17 @@ impl ELCOpts {
 }
 
 impl ELCCmd {
-    pub fn run(&self, opts: &Opts) -> Result<()> {
+    pub fn run<'e, S>(
+        &self,
+        opts: &Opts,
+        enclave_loader: impl FnOnce(&Opts, Option<&PathBuf>) -> Result<Enclave<'e, S>>,
+    ) -> Result<()>
+    where
+        S: CommitStore,
+        Enclave<'e, S>: EnclaveProtoAPI<S>,
+    {
         let elc_opts = self.opts();
-        let enclave = load_enclave(opts, elc_opts.enclave.as_ref())?;
+        let enclave = enclave_loader(opts, elc_opts.enclave.as_ref())?;
         match self {
             Self::CreateClient(_) => {
                 let _ = enclave.proto_create_client(elc_opts.load()?)?;

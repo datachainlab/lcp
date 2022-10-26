@@ -21,5 +21,14 @@ define_error! {
 
         CommitTx { descr: String }
         |e| { format_args!("Commit transaction error: {}", e.descr) },
+
+        WaitMutex { descr: String }
+        |e| { format_args!("Wait mutex error: {}", e.descr) },
+
+        NotSupportedOperation { descr: String }
+        |e| { format_args!("The tx doesn't support an operation {}", e.descr) },
+
+        InvalidUpdateKeyLength { length: usize }
+        |e| { format_args!("Invalid UpdateKey length: {}", e.length) }
     }
 }

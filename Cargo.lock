@@ -1166,9 +1166,9 @@ dependencies = [
 
 [[package]]
 name = "dyn-clone"
-version = "1.0.8"
+version = "1.0.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9d07a982d1fb29db01e5a59b1918e03da4df7297eaeee7686ac45542fd4e59c8"
+checksum = "4f94fa09c2aeea5b8839e414b7b841bf429fd25b9c522116ac97ee87856d88b2"
 
 [[package]]
 name = "ecall-commands"
@@ -1250,6 +1250,7 @@ dependencies = [
  "ecall-commands",
  "flex-error",
  "host",
+ "host-environment",
  "ibc",
  "lcp-proto",
  "lcp-types",
@@ -1258,6 +1259,7 @@ dependencies = [
  "prost-types",
  "sgx_types",
  "sgx_urts",
+ "store",
 ]
 
 [[package]]
@@ -2330,7 +2332,7 @@ dependencies = [
  "serde_json",
  "service",
  "settings",
- "store-rocksdb",
+ "store",
  "tokio",
 ]
 
@@ -2814,6 +2816,7 @@ dependencies = [
  "log 0.4.17",
  "ocall-commands",
  "sgx_types",
+ "store",
 ]
 
 [[package]]
@@ -4040,6 +4043,7 @@ dependencies = [
  "log 0.4.17",
  "serde_json",
  "settings",
+ "store",
  "tokio",
  "tonic",
  "tonic-reflection",
@@ -4370,21 +4374,14 @@ checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
 name = "store"
 version = "0.1.0"
 dependencies = [
+ "env_logger",
  "flex-error",
  "log 0.4.17",
- "serde",
- "serde_json",
- "sgx_tstd",
- "sha2 0.8.2",
-]
-
-[[package]]
-name = "store-rocksdb"
-version = "0.1.0"
-dependencies = [
  "ouroboros",
  "rocksdb",
- "store",
+ "serde",
+ "serde_json",
+ "sha2 0.8.2",
  "tempdir",
 ]
 

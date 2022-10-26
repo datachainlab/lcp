@@ -14,7 +14,6 @@ members = [
     "modules/context",
     "modules/crypto",
     "modules/store",
-    "modules/store-rocksdb",
     "modules/settings",
     "modules/ibc-client",
     "modules/validation-context",

@@ -1,10 +1,10 @@
 use self::{elc::ELCCmd, enclave::EnclaveCmd, service::ServiceCmd};
-use crate::opts::Opts;
+use crate::{enclave::build_enclave_loader, opts::Opts};
 use anyhow::Result;
 use clap::Parser;
 use host_environment::Environment;
 use std::sync::{Arc, RwLock};
-use store_rocksdb::RocksDBStore;
+use store::{host::HostStore, rocksdb::RocksDBStore};
 
 mod elc;
 mod enclave;
@@ -23,14 +23,14 @@ pub enum CliCmd {
 
 impl CliCmd {
     pub fn run(self, opts: &Opts) -> Result<()> {
-        let store = RocksDBStore::open(opts.get_store_path());
-        let env = Environment::new(Arc::new(RwLock::new(store)));
+        let store = HostStore::RocksDB(RocksDBStore::open(opts.get_store_path()));
+        let enclave_loader = build_enclave_loader::<RocksDBStore>();
+        let env = Environment::new(opts.get_home(), Arc::new(RwLock::new(store)));
         host::set_environment(env).unwrap();
-
         match self {
-            CliCmd::Enclave(cmd) => cmd.run(opts),
-            CliCmd::Service(cmd) => cmd.run(opts),
-            CliCmd::ELC(cmd) => cmd.run(opts),
+            CliCmd::Enclave(cmd) => cmd.run(opts, enclave_loader),
+            CliCmd::Service(cmd) => cmd.run(opts, enclave_loader),
+            CliCmd::ELC(cmd) => cmd.run(opts, enclave_loader),
         }
     }
 }

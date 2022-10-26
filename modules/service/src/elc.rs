@@ -6,10 +6,15 @@ use lcp_proto::lcp::service::elc::v1::{
     MsgVerifyNonMembership, MsgVerifyNonMembershipResponse, QueryClientRequest,
     QueryClientResponse,
 };
+use store::transaction::CommitStore;
 use tonic::{Request, Response, Status};
 
 #[tonic::async_trait]
-impl Msg for AppService {
+impl<E, S> Msg for AppService<E, S>
+where
+    S: CommitStore + 'static,
+    E: EnclaveProtoAPI<S> + 'static,
+{
     async fn create_client(
         &self,
         request: Request<MsgCreateClient>,
@@ -55,7 +60,11 @@ impl Msg for AppService {
 }
 
 #[tonic::async_trait]
-impl Query for AppService {
+impl<E, S> Query for AppService<E, S>
+where
+    S: CommitStore + 'static,
+    E: EnclaveProtoAPI<S> + 'static,
+{
     async fn client(
         &self,
         request: Request<QueryClientRequest>,

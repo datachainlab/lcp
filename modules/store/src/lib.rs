@@ -20,9 +20,15 @@ mod prelude {
 }
 
 pub use crate::errors::{Error, Result};
-pub use crate::store::{CommitStore, KVStore, TxId};
+pub use crate::store::{KVStore, TxId};
 
 mod errors;
-#[cfg(any(feature = "std", feature = "sgx"))]
+#[cfg(feature = "std")]
+pub mod host;
+#[cfg(feature = "std")]
 pub mod memory;
+#[cfg(feature = "rocksdbstore")]
+pub mod rocksdb;
 mod store;
+#[cfg(feature = "std")]
+pub mod transaction;

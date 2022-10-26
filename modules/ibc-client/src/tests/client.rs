@@ -146,6 +146,7 @@ impl LightClient for LCPLightClient {
     }
 }
 
+#[allow(dead_code)]
 pub fn register_implementations(registry: &mut dyn LightClientRegistry) {
     registry
         .put_light_client(

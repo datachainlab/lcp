@@ -16,8 +16,8 @@ enclave-utils = { path = "../utils" }
 enclave-store = { path = "../store" }
 ecall-handler = { path = "../ecall-handler" }
 enclave-environment = { path = "../environment" }
-store = { path = "../../modules/store", default-features = false, features = ["sgx"] }
 crypto = { path = "../../modules/crypto", default-features = false, features = ["sgx"] }
 light-client-registry = { path = "../../modules/light-client-registry", default-features = false, features = ["sgx"] }
 
+store = { path = "../../modules/store", default-features = false }
 ecall-commands = { path = "../../modules/ecall-commands", default-features = false }

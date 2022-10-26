@@ -1,12 +1,13 @@
-use super::primitive::EnclavePrimitiveAPI;
-use crate::{Enclave, Result};
+use super::command::EnclaveCommandAPI;
+use crate::Result;
 use lcp_proto::lcp::service::elc::v1::{
     MsgCreateClient, MsgCreateClientResponse, MsgUpdateClient, MsgUpdateClientResponse,
     MsgVerifyMembership, MsgVerifyMembershipResponse, MsgVerifyNonMembership,
     MsgVerifyNonMembershipResponse, QueryClientRequest, QueryClientResponse,
 };
+use store::transaction::CommitStore;
 
-pub trait EnclaveProtoAPI: EnclavePrimitiveAPI {
+pub trait EnclaveProtoAPI<S: CommitStore>: EnclaveCommandAPI<S> {
     fn proto_create_client(&self, msg: MsgCreateClient) -> Result<MsgCreateClientResponse> {
         Ok(self.init_client(msg.try_into()?)?.into())
     }
@@ -37,5 +38,3 @@ pub trait EnclaveProtoAPI: EnclavePrimitiveAPI {
         })
     }
 }
-
-impl EnclaveProtoAPI for Enclave {}

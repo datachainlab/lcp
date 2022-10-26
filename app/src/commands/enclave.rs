@@ -1,9 +1,9 @@
-use crate::{enclave::load_enclave, opts::Opts};
+use crate::opts::Opts;
 use anyhow::{bail, Result};
 use attestation_report::EndorsedAttestationVerificationReport;
 use clap::Parser;
 use ecall_commands::{IASRemoteAttestationInput, InitEnclaveInput};
-use enclave_api::EnclavePrimitiveAPI;
+use enclave_api::{Enclave, EnclaveCommandAPI, EnclaveProtoAPI};
 use log::*;
 use settings::{AVR_KEY_PATH, SEALED_ENCLAVE_KEY_PATH};
 use std::{
@@ -11,6 +11,7 @@ use std::{
     io::Write,
     path::PathBuf,
 };
+use store::transaction::CommitStore;
 
 // `enclave` subcommand
 #[derive(Debug, Parser)]
@@ -38,7 +39,11 @@ pub struct InitKey {
     pub force: bool,
 }
 
-fn run_init_key(home: &PathBuf, opts: &Opts, cmd: &InitKey) -> Result<()> {
+fn run_init_key<E: EnclaveCommandAPI<S>, S: CommitStore>(
+    enclave: E,
+    home: PathBuf,
+    cmd: &InitKey,
+) -> Result<()> {
     let ek_path = home.join(SEALED_ENCLAVE_KEY_PATH);
     if ek_path.exists() {
         if cmd.force {
@@ -50,16 +55,15 @@ fn run_init_key(home: &PathBuf, opts: &Opts, cmd: &InitKey) -> Result<()> {
             );
         }
     }
-    let enclave = load_enclave(opts, cmd.enclave.as_ref())?;
     match enclave.init_enclave_key(InitEnclaveInput::default()) {
         Ok(_) => Ok(()),
         Err(e) => bail!("Init Enclave Failed {:?}!", e),
     }
 }
 
-fn run_ias_remote_attestation(
-    home: &PathBuf,
-    opts: &Opts,
+fn run_ias_remote_attestation<E: EnclaveCommandAPI<S>, S: CommitStore>(
+    enclave: E,
+    home: PathBuf,
     cmd: &IASRemoteAttestation,
 ) -> Result<()> {
     let spid = std::env::var("SPID")?;
@@ -77,7 +81,6 @@ fn run_ias_remote_attestation(
         }
     }
 
-    let enclave = load_enclave(opts, cmd.enclave.as_ref())?;
     match enclave.ias_remote_attestation(IASRemoteAttestationInput {
         spid: spid.as_bytes().to_vec(),
         ias_key: ias_key.as_bytes().to_vec(),
@@ -116,25 +119,31 @@ pub struct IASRemoteAttestation {
 }
 
 impl EnclaveCmd {
-    pub fn run(&self, opts: &Opts) -> Result<()> {
+    pub fn run<'e, S>(
+        &self,
+        opts: &Opts,
+        enclave_loader: impl FnOnce(&Opts, Option<&PathBuf>) -> Result<Enclave<'e, S>>,
+    ) -> Result<()>
+    where
+        S: CommitStore,
+        Enclave<'e, S>: EnclaveProtoAPI<S>,
+    {
+        let home = opts.get_home();
         match self {
             EnclaveCmd::InitKey(cmd) => {
-                let home = opts.get_home();
                 if !home.exists() {
                     std::fs::create_dir_all(&home)?;
                     info!("created home directory: {:?}", home);
                 }
-                run_init_key(&home, opts, cmd)
+                run_init_key(enclave_loader(opts, cmd.enclave.as_ref())?, home, cmd)
             }
             EnclaveCmd::IASRemoteAttestation(cmd) => {
-                let home = opts.get_home();
                 if !home.exists() {
                     bail!("home directory doesn't exist at {:?}", home);
                 }
-                run_ias_remote_attestation(&home, opts, cmd)
+                run_ias_remote_attestation(enclave_loader(opts, cmd.enclave.as_ref())?, home, cmd)
             }
             EnclaveCmd::ShowAVR => {
-                let home = opts.get_home();
                 if !home.exists() {
                     bail!("home directory doesn't exist at {:?}", home);
                 }
