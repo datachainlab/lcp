@@ -1,9 +1,12 @@
 use crate::{enclave::EnclaveInfo, ffi, Error, Result};
 use ecall_commands::{Command, CommandParams, CommandResult, ECallCommand};
 use sgx_types::{sgx_enclave_id_t, sgx_status_t};
-use store::transaction::{CommitStore, Tx, TxManager};
+use store::{
+    host::HostStoreTxManager,
+    transaction::{CommitStore, Tx},
+};
 
-pub trait EnclavePrimitiveAPI<S: CommitStore>: EnclaveInfo + TxManager<S> {
+pub trait EnclavePrimitiveAPI<S: CommitStore>: EnclaveInfo + HostStoreTxManager<S> {
     /// execute_command runs a given command in the enclave
     fn execute_command(&self, cmd: Command, update_key: Option<String>) -> Result<CommandResult> {
         let tx = self.begin_tx(update_key)?;
