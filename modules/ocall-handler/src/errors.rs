@@ -12,6 +12,16 @@ define_error! {
         }
         |e| {
             format_args!("SGX error: status={:?} descr={}", e.status, e.descr)
-        }
+        },
+
+        Store
+        [store::Error]
+        |_| { "Store error" }
+    }
+}
+
+impl From<store::Error> for Error {
+    fn from(err: store::Error) -> Self {
+        Error::store(err)
     }
 }
