@@ -1,7 +1,7 @@
 use crate::errors::Result;
 use host_environment::Environment;
 use ocall_commands::{StoreCommand, StoreResult};
-use store::transaction::TxStore;
+use store::transaction::TxAccessor;
 
 pub fn dispatch(env: &Environment, command: StoreCommand) -> Result<StoreResult> {
     use StoreCommand::*;

@@ -1,6 +1,6 @@
 use crate::memory::MemStore;
 use crate::prelude::*;
-use crate::transaction::{CommitStore, TxStore};
+use crate::transaction::{CommitStore, TxAccessor};
 use crate::{KVStore, Result, TxId};
 
 pub enum HostStore {
@@ -36,7 +36,7 @@ impl HostCommitStore<MemStore> for HostStore {
     }
 }
 
-impl TxStore for HostStore {
+impl TxAccessor for HostStore {
     fn run_in_tx<T>(&self, tx_id: TxId, f: impl FnOnce(&dyn KVStore) -> T) -> Result<T> {
         match self {
             #[cfg(feature = "rocksdbstore")]

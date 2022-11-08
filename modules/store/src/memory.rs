@@ -1,6 +1,6 @@
 use crate::prelude::*;
 use crate::store::TxId;
-use crate::transaction::{CommitStore, CreatedTx, Tx, TxStore};
+use crate::transaction::{CommitStore, CreatedTx, Tx, TxAccessor};
 use crate::{KVStore, Result};
 use std::collections::HashMap;
 
@@ -42,7 +42,7 @@ impl KVStore for MemStore {
     }
 }
 
-impl TxStore for MemStore {
+impl TxAccessor for MemStore {
     fn run_in_tx<T>(&self, _tx_id: TxId, f: impl FnOnce(&dyn KVStore) -> T) -> Result<T> {
         Ok(f(self))
     }

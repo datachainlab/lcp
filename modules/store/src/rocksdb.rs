@@ -1,4 +1,4 @@
-use crate::transaction::{CommitStore, CreatedTx, Tx, TxStore, UpdateKey};
+use crate::transaction::{CommitStore, CreatedTx, Tx, TxAccessor, UpdateKey};
 use crate::{Error, KVStore, Result, TxId};
 use core::marker::PhantomData;
 use ouroboros::self_referencing;
@@ -80,7 +80,7 @@ impl KVStore for RocksDBStore {
     }
 }
 
-impl TxStore for RocksDBStore {
+impl TxAccessor for RocksDBStore {
     fn run_in_tx<T>(&self, tx_id: TxId, f: impl FnOnce(&dyn KVStore) -> T) -> Result<T> {
         self.with_txs(|txs| {
             let stx = txs
