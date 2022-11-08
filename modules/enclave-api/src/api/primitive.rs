@@ -1,10 +1,10 @@
-use crate::{enclave::EnclaveInfo, ffi, Error, Result};
+use crate::{
+    enclave::{EnclaveInfo, HostStoreTxManager},
+    ffi, Error, Result,
+};
 use ecall_commands::{Command, CommandParams, CommandResult, ECallCommand};
 use sgx_types::{sgx_enclave_id_t, sgx_status_t};
-use store::{
-    host::HostStoreTxManager,
-    transaction::{CommitStore, Tx},
-};
+use store::transaction::{CommitStore, Tx};
 
 pub trait EnclavePrimitiveAPI<S: CommitStore>: EnclaveInfo + HostStoreTxManager<S> {
     /// execute_command runs a given command in the enclave
