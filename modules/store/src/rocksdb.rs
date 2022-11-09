@@ -10,6 +10,7 @@ use std::path::Path;
 use std::rc::Rc;
 use std::sync::{Mutex, MutexGuard};
 
+/// `RocksDBStore` is a store implementation with RocksDB
 #[self_referencing]
 pub struct RocksDBStore {
     db: TransactionDB,
@@ -166,6 +167,7 @@ impl CommitStore for RocksDBStore {
     }
 }
 
+/// StoreTransaction implements two transaction types
 pub enum StoreTransaction<'a> {
     Read(ReadTransaction<'a>),
     Update(UpdateTransaction<'a>),
@@ -210,6 +212,9 @@ impl<'a> KVStore for StoreTransaction<'a> {
     }
 }
 
+/// ReadTransaction is a `read-only` transaction.
+/// All read operations are performed based on a specific version of snapshot.
+/// All write operations are applied to the transaction's buffer, but they are never committed to the DB.
 pub struct ReadTransaction<'a> {
     snapshot: SnapshotWithThreadMode<'a, TransactionDB>,
     buffer: HashMap<Vec<u8>, Option<Vec<u8>>>,
@@ -241,6 +246,9 @@ impl<'a> KVStore for ReadTransaction<'a> {
     }
 }
 
+/// UpdateTransaction is a `writable` transaction
+/// All read operations are performed based on a specific version of snapshot.
+/// All write operations are applied to the corresponding RocksDB's transaction
 #[self_referencing]
 pub struct UpdateTransaction<'a> {
     tx: Transaction<'a, TransactionDB>,
@@ -276,6 +284,7 @@ impl<'a> KVStore for UpdateTransaction<'a> {
     }
 }
 
+/// RocksDBTx is a transaction handle corresponding to `StoreTransaction`
 #[self_referencing]
 pub struct RocksDBTx<T> {
     pub id: TxId,
@@ -287,7 +296,10 @@ pub struct RocksDBTx<T> {
     marker: PhantomData<T>,
 }
 
+/// CreatedRocksDBTx represents a type of transaction that cannot be begun yet
 pub struct CreatedRocksDBTx;
+
+/// PreparedRocksDBTx represents a type of transaction that has been begun or can be begun
 pub struct PreparedRocksDBTx;
 
 impl<T> Tx for RocksDBTx<T> {

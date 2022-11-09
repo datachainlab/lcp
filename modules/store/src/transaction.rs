@@ -9,9 +9,9 @@ pub trait Tx {
     fn get_id(&self) -> TxId;
 }
 
-/// `CreatedTx` is a handle to a transaction that has not yet begun
+/// `CreatedTx` is a handle to a transaction that cannot be begun yet
 pub trait CreatedTx: Tx {
-    /// `PreparedTx` is a handle to a transaction that has already begun
+    /// `PreparedTx` is a handle to a transaction that has been begun or can be begun
     type PreparedTx: Tx;
 
     /// `prepare` consumes the self to generate `PreparedTx`
