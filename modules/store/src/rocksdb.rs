@@ -369,10 +369,14 @@ impl<T> RocksDBTx<T> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use alloc::sync::Arc;
+    use alloc::{collections::VecDeque, sync::Arc};
     use core::time::Duration;
     use log::*;
-    use std::{sync::RwLock, thread};
+    use std::{
+        sync::{Condvar, RwLock},
+        thread,
+        time::SystemTime,
+    };
     use tempdir::TempDir;
 
     #[test]
@@ -436,62 +440,61 @@ mod tests {
     }
 
     #[test]
-    fn test_two_concurrent_tx() {
-        env_logger::init();
+    fn test_concurrent_write_tx_with_same_update_key() {
+        let (_tmp_dir, store, mut runners) = get_test_helpers(2);
+        let r1 = runners.pop_front().unwrap();
+        let r2 = runners.pop_front().unwrap();
 
-        let tmp_dir = TempDir::new("store-rocksdb").unwrap().into_path();
-        let store = Arc::new(RwLock::new(RocksDBStore::open(tmp_dir.clone())));
+        let th1 = thread::spawn(move || {
+            r1.create(Some("test"))
+                .prepare()
+                .emit_event(1)
+                .block_on(2, 1)
+                .begin()
+                .set("k0", "v0")
+                .commit()
+        });
 
-        let th1 = {
-            let store = store.clone();
-            thread::spawn(move || {
-                debug!("th1 start");
-                let tx = store
-                    .write()
-                    .unwrap()
-                    .create_transaction(Some("test".into()))
-                    .unwrap();
-                let tx = tx.prepare().unwrap();
-                store.write().unwrap().begin(&tx).unwrap();
-                debug!("th1 sleep");
-                thread::sleep(Duration::from_millis(20));
-                debug!("th1 wakeup");
-                store
-                    .write()
-                    .unwrap()
-                    .tx_set(tx.get_id(), key(0), value(0))
-                    .unwrap();
-                store.write().unwrap().commit(tx).unwrap();
-                debug!("th1 end");
-            })
-        };
-
-        thread::sleep(Duration::from_millis(10));
-
-        let th2 = {
-            let store = store.clone();
-            thread::spawn(move || {
-                debug!("th2 start");
-                let tx = store
-                    .write()
-                    .unwrap()
-                    .create_transaction(Some("test".into()))
-                    .unwrap();
-                let tx = tx.prepare().unwrap();
-                store.write().unwrap().begin(&tx).unwrap();
-                store
-                    .write()
-                    .unwrap()
-                    .tx_set(tx.get_id(), key(0), value(1))
-                    .unwrap();
-                store.write().unwrap().commit(tx).unwrap();
-                debug!("th2 end");
-            })
-        };
+        let th2 = thread::spawn(move || {
+            r2.create(Some("test"))
+                .block_on(1, 1)
+                .emit_event(1)
+                .prepare()
+                .begin()
+                .get("k0", Some("v0"))
+                .set("k0", "v1")
+                .commit()
+        });
 
         th1.join().unwrap();
         th2.join().unwrap();
+
         assert!(store.read().unwrap().get(&key(0)).eq(&Some(value(1))));
+    }
+
+    #[test]
+    fn test_concurrent_read_tx() {
+        let (_tmp_dir, _store, runners) = get_test_helpers(8);
+
+        let mut ths = vec![];
+        let start = SystemTime::now();
+        for runner in runners.into_iter() {
+            let th = thread::spawn(move || {
+                runner
+                    .create(None)
+                    .prepare()
+                    .begin()
+                    .get("k0", None)
+                    .execute(|| thread::sleep(Duration::from_secs(1)))
+                    .commit()
+            });
+            ths.push(th);
+        }
+        for th in ths.into_iter() {
+            th.join().unwrap();
+        }
+        let end = SystemTime::now().duration_since(start).unwrap();
+        assert!(Duration::from_secs(1) * 2 > end);
     }
 
     fn key(idx: u32) -> Vec<u8> {
@@ -500,5 +503,163 @@ mod tests {
 
     fn value(idx: u32) -> Vec<u8> {
         format!("v{}", idx).into_bytes()
+    }
+
+    fn get_test_helpers(size: u64) -> (TempDir, Arc<RwLock<RocksDBStore>>, VecDeque<TxRunner>) {
+        let _ = env_logger::try_init();
+        let tmp_dir = TempDir::new("store-rocksdb").unwrap();
+        let store = Arc::new(RwLock::new(RocksDBStore::open(tmp_dir.path())));
+        let cond = Arc::new(Condvar::new());
+        let events = Arc::new(Mutex::new(HashMap::new()));
+        let mut runners = VecDeque::<TxRunner>::default();
+        for i in 1..=size {
+            runners.push_back(TxRunner::new(
+                i,
+                store.clone(),
+                cond.clone(),
+                events.clone(),
+            ));
+        }
+        (tmp_dir, store, runners)
+    }
+
+    struct TxRunner {
+        id: u64,
+        channel: EventChannel,
+        store: Arc<RwLock<RocksDBStore>>,
+        created_tx: Option<RocksDBTx<CreatedRocksDBTx>>,
+        prepared_tx: Option<RocksDBTx<PreparedRocksDBTx>>,
+    }
+
+    unsafe impl Send for TxRunner {}
+    unsafe impl Sync for TxRunner {}
+
+    struct EventChannel {
+        self_id: u64,
+        cond: Arc<Condvar>,
+        events: Arc<Mutex<HashMap<u64, u64>>>,
+    }
+
+    impl EventChannel {
+        fn emit_event(&self, eid: u64) {
+            info!("emit: teid={} eid={}", self.self_id, eid);
+            self.events.lock().unwrap().insert(self.self_id, eid);
+            self.cond.notify_all();
+            info!("done notification: eid={}", eid);
+        }
+        fn block_on(&self, teid: u64, eid: u64) {
+            let events = self.events.lock().unwrap();
+            let _ = self
+                .cond
+                .wait_while(events, |events| {
+                    log::info!("wakeup: wait={} {}", teid, eid);
+                    !match events.get(&teid) {
+                        Some(v) => eid == *v,
+                        None => false,
+                    }
+                })
+                .unwrap();
+        }
+    }
+
+    impl TxRunner {
+        fn new(
+            id: u64,
+            store: Arc<RwLock<RocksDBStore>>,
+            cond: Arc<Condvar>,
+            events: Arc<Mutex<HashMap<u64, u64>>>,
+        ) -> Self {
+            Self {
+                id,
+                channel: EventChannel {
+                    self_id: id,
+                    cond,
+                    events,
+                },
+                store,
+                created_tx: None,
+                prepared_tx: None,
+            }
+        }
+
+        fn emit_event(self, eid: u64) -> Self {
+            self.channel.emit_event(eid);
+            self
+        }
+
+        fn block_on(self, teid: u64, eid: u64) -> Self {
+            self.channel.block_on(teid, eid);
+            self
+        }
+
+        fn create(mut self, update_key: Option<&str>) -> Self {
+            debug!("create: id={} update_key={:?}", self.id, update_key);
+            let tx = self
+                .store
+                .write()
+                .unwrap()
+                .create_transaction(update_key.map(|s| s.into()))
+                .unwrap();
+            self.created_tx = Some(tx);
+            self
+        }
+
+        fn prepare(mut self) -> Self {
+            debug!("prepare: id={}", self.id);
+            self.prepared_tx = Some(self.created_tx.take().unwrap().prepare().unwrap());
+            self
+        }
+
+        fn begin(self) -> Self {
+            debug!("begin: id={}", self.id);
+            self.store
+                .write()
+                .unwrap()
+                .begin(self.prepared_tx.as_ref().unwrap())
+                .unwrap();
+            self
+        }
+
+        fn get<S: Into<String>>(self, key: S, expected_value: Option<S>) -> Self {
+            let v = self
+                .store
+                .read()
+                .unwrap()
+                .tx_get(
+                    self.prepared_tx.as_ref().unwrap().get_id(),
+                    (key.into() as String).as_bytes(),
+                )
+                .unwrap();
+
+            assert_eq!(
+                v.map(|s| String::from_utf8(s).unwrap()),
+                expected_value.map(|s| s.into())
+            );
+            self
+        }
+
+        fn set<S: Into<String>>(self, key: S, value: S) -> Self {
+            self.store
+                .write()
+                .unwrap()
+                .tx_set(
+                    self.prepared_tx.as_ref().unwrap().get_id(),
+                    (key.into() as String).into_bytes(),
+                    (value.into() as String).into_bytes(),
+                )
+                .unwrap();
+            self
+        }
+
+        fn execute(self, f: impl FnOnce()) -> Self {
+            f();
+            self
+        }
+
+        fn commit(self) {
+            log::info!("commit: id={}", self.id);
+            let tx = self.prepared_tx.unwrap();
+            self.store.write().unwrap().commit(tx).unwrap();
+        }
     }
 }
