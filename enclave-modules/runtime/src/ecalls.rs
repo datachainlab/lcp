@@ -27,7 +27,7 @@ pub fn ecall_execute_command(
     output_buf_maxlen: u32,
     output_len: &mut u32,
 ) -> sgx_status_t {
-    info!("Entering ecall_execute_command");
+    debug!("Entering ecall_execute_command");
     validate_const_ptr!(
         command,
         command_len as usize,

@@ -9,6 +9,7 @@ use std::collections::HashMap;
 use std::path::Path;
 use std::rc::Rc;
 use std::sync::{Mutex, MutexGuard};
+use log::*;
 
 /// `RocksDBStore` is a store implementation with RocksDB
 #[self_referencing]
@@ -105,7 +106,7 @@ impl CommitStore for RocksDBStore {
     type Tx = RocksDBTx<CreatedRocksDBTx>;
 
     fn create_transaction(&mut self, update_key: Option<UpdateKey>) -> Result<Self::Tx> {
-        log::info!("create tx: {:?}", update_key);
+        debug!("create tx: {:?}", update_key);
         self.with_mut(|fields| {
             fields.latest_tx_id.safe_incr()?;
             if let Some(update_key) = update_key {
@@ -129,7 +130,7 @@ impl CommitStore for RocksDBStore {
     }
 
     fn begin(&mut self, tx: &<Self::Tx as CreatedTx>::PreparedTx) -> Result<()> {
-        log::info!("begin tx: {:?}", tx.get_id());
+        debug!("begin tx: {:?}", tx.get_id());
         self.with_mut(|fields| {
             let mut tx_opt = TransactionOptions::default();
             tx_opt.set_snapshot(true);
@@ -155,12 +156,12 @@ impl CommitStore for RocksDBStore {
     }
 
     fn commit(&mut self, tx: <Self::Tx as CreatedTx>::PreparedTx) -> Result<()> {
-        log::info!("commit tx: {:?}", tx.get_id());
+        debug!("commit tx: {:?}", tx.get_id());
         self.finalize_tx(tx, |stx| stx.commit())
     }
 
     fn rollback(&mut self, tx: <Self::Tx as CreatedTx>::PreparedTx) {
-        log::info!("rollback tx: {:?}", tx.get_id());
+        debug!("rollback tx: {:?}", tx.get_id());
         self.finalize_tx(tx, |stx| stx.rollback())
     }
 }
@@ -369,7 +370,6 @@ mod tests {
     use super::*;
     use alloc::sync::Arc;
     use core::time::Duration;
-    use log::*;
     use std::{
         collections::HashSet,
         sync::{Condvar, RwLock},
