@@ -7,7 +7,7 @@ use service::{run_service, AppService};
 use std::path::PathBuf;
 use std::sync::Arc;
 use store::transaction::CommitStore;
-use tokio::runtime::Runtime;
+use tokio::runtime::Builder;
 
 // `service` subcommand
 #[derive(Debug, Parser)]
@@ -28,6 +28,13 @@ pub struct Start {
         help = "Address of the App service"
     )]
     pub address: String,
+    /// Worker thread number the tokio `Runtime` will use
+    /// This value is recommended to be less than or equal to TCS_NUM in Enclave config.
+    #[clap(
+        long = "threads",
+        help = "Worker thread number the tokio `Runtime` will use"
+    )]
+    pub threads: Option<usize>,
 }
 
 impl ServiceCmd {
@@ -45,10 +52,17 @@ impl ServiceCmd {
             Self::Start(cmd) => {
                 let addr = cmd.address.parse()?;
                 let enclave = enclave_loader(opts, cmd.enclave.as_ref())?;
-                let rt = Arc::new(Runtime::new()?);
+
+                let mut rb = Builder::new_multi_thread();
+                let rb = if let Some(threads) = cmd.threads {
+                    rb.worker_threads(threads)
+                } else {
+                    &mut rb
+                };
+                let rt = Arc::new(rb.enable_all().build()?);
                 let srv = AppService::new(opts.get_home(), enclave);
 
-                info!("start service");
+                info!("start service: addr={addr}");
                 run_service(srv, rt, addr)
             }
         }
