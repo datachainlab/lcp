@@ -18,7 +18,7 @@ pub struct RocksDBStore {
     #[borrows(db)]
     #[covariant]
     txs: HashMap<TxId, StoreTransaction<'this>>,
-    mutex: HashMap<UpdateKey, (Rc<Mutex<()>>, u64)>,
+    mutex: HashMap<UpdateKey, Rc<Mutex<()>>>,
 }
 
 unsafe impl Send for RocksDBStore {}
@@ -47,15 +47,9 @@ impl RocksDBStore {
         self.with_mut(|fields| {
             if tx.is_update_tx() {
                 let update_key = tx.borrow_update_key().as_ref().unwrap();
-                let v = fields
-                    .mutex
-                    .get_mut(update_key)
-                    .expect("invariant violation");
-                assert!(v.1 > 0);
-                if v.1 == 1 {
+                let v = fields.mutex.get(update_key).expect("invariant violation");
+                if Rc::strong_count(v) == 2 {
                     fields.mutex.remove_entry(update_key);
-                } else {
-                    v.1 -= 1;
                 }
             }
             let (_, tx) = fields
@@ -118,10 +112,9 @@ impl CommitStore for RocksDBStore {
                 }
                 if !fields.mutex.contains_key(&update_key) {
                     let mutex = Rc::new(Mutex::new(()));
-                    let _ = fields.mutex.insert(update_key.clone(), (mutex.clone(), 0));
+                    let _ = fields.mutex.insert(update_key.clone(), mutex);
                 }
-                let mutex = fields.mutex.get(&update_key).unwrap().0.clone();
-                fields.mutex.get_mut(&update_key).unwrap().1 += 1;
+                let mutex = fields.mutex.get(&update_key).unwrap().clone();
                 Ok(RocksDBTx::new_update_tx(
                     *fields.latest_tx_id,
                     update_key,
@@ -384,6 +377,7 @@ mod tests {
 
     #[test]
     fn test_store() {
+        let _ = env_logger::try_init();
         let tmp_dir = TempDir::new("store-rocksdb").unwrap().into_path();
         let mut db = RocksDBStore::open(tmp_dir.clone());
 
@@ -392,38 +386,38 @@ mod tests {
         // post: k0 -> v0
         {
             let tx = db.create_transaction(Some("test".into())).unwrap();
-            assert!(db.borrow_mutex().len() == 1);
+            assert_eq!(db.borrow_mutex().len(), 1);
             let tx = tx.prepare().unwrap();
             db.begin(&tx).unwrap();
             assert!(db.tx_set(tx.get_id(), key(0), value(0)).is_ok());
             assert!(db.tx_get(tx.get_id(), &key(0)).unwrap().eq(&Some(value(0))));
             db.commit(tx).unwrap();
-            assert!(db.borrow_mutex().len() == 0);
+            assert_eq!(db.borrow_mutex().len(), 0);
         }
 
         // case2: get key-value pair simply in read tx
         // post: k0 -> v0
         {
             let tx = db.create_transaction(None).unwrap();
-            assert!(db.borrow_mutex().len() == 0);
+            assert_eq!(db.borrow_mutex().len(), 0);
             let tx = tx.prepare().unwrap();
             db.begin(&tx).unwrap();
             assert!(db.tx_get(tx.get_id(), &key(0)).unwrap().eq(&Some(value(0))));
             db.commit(tx).unwrap();
-            assert!(db.borrow_mutex().len() == 0);
+            assert_eq!(db.borrow_mutex().len(), 0);
         }
 
         // case3: remove key-value pair simply in read tx
         // post: k0 -> v0
         {
             let tx = db.create_transaction(None).unwrap();
-            assert!(db.borrow_mutex().len() == 0);
+            assert_eq!(db.borrow_mutex().len(), 0);
             let tx = tx.prepare().unwrap();
             db.begin(&tx).unwrap();
             db.tx_remove(tx.get_id(), &key(0)).unwrap();
             assert!(db.tx_get(tx.get_id(), &key(0)).unwrap().eq(&None));
             db.commit(tx).unwrap();
-            assert!(db.borrow_mutex().len() == 0);
+            assert_eq!(db.borrow_mutex().len(), 0);
             assert!(db.get(&key(0)).ne(&None));
         }
 
@@ -431,25 +425,25 @@ mod tests {
         // post: empty
         {
             let tx = db.create_transaction(Some("test".into())).unwrap();
-            assert!(db.borrow_mutex().len() == 1);
+            assert_eq!(db.borrow_mutex().len(), 1);
             let tx = tx.prepare().unwrap();
             db.begin(&tx).unwrap();
             db.tx_remove(tx.get_id(), &key(0)).unwrap();
             assert!(db.tx_get(tx.get_id(), &key(0)).unwrap().eq(&None));
             db.commit(tx).unwrap();
-            assert!(db.borrow_mutex().len() == 0);
+            assert_eq!(db.borrow_mutex().len(), 0);
             assert!(db.get(&key(0)).eq(&None));
         }
 
         // case5: set key-value pair but rollback it
         {
             let tx = db.create_transaction(Some("test".into())).unwrap();
-            assert!(db.borrow_mutex().len() == 1);
+            assert_eq!(db.borrow_mutex().len(), 1);
             let tx = tx.prepare().unwrap();
             db.begin(&tx).unwrap();
             assert!(db.tx_set(tx.get_id(), key(0), value(0)).is_ok());
             db.rollback(tx);
-            assert!(db.borrow_mutex().len() == 0);
+            assert_eq!(db.borrow_mutex().len(), 0);
             assert!(db.get(&key(0)).eq(&None));
         }
     }
