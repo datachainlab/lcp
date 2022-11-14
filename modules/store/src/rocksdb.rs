@@ -379,72 +379,78 @@ mod tests {
     fn test_store() {
         let _ = env_logger::try_init();
         let tmp_dir = TempDir::new("store-rocksdb").unwrap().into_path();
-        let mut db = RocksDBStore::open(tmp_dir.clone());
+        let mut store = RocksDBStore::open(tmp_dir.clone());
 
         // case1: set key-value pair simply in update tx
         // pre:  initial state
         // post: k0 -> v0
         {
-            let tx = db.create_transaction(Some("test".into())).unwrap();
-            assert_eq!(db.borrow_mutex().len(), 1);
+            let tx = store.create_transaction(Some("test".into())).unwrap();
+            assert_eq!(store.borrow_mutex().len(), 1);
             let tx = tx.prepare().unwrap();
-            db.begin(&tx).unwrap();
-            assert!(db.tx_set(tx.get_id(), key(0), value(0)).is_ok());
-            assert!(db.tx_get(tx.get_id(), &key(0)).unwrap().eq(&Some(value(0))));
-            db.commit(tx).unwrap();
-            assert_eq!(db.borrow_mutex().len(), 0);
+            store.begin(&tx).unwrap();
+            assert!(store.tx_set(tx.get_id(), key(0), value(0)).is_ok());
+            assert!(store
+                .tx_get(tx.get_id(), &key(0))
+                .unwrap()
+                .eq(&Some(value(0))));
+            store.commit(tx).unwrap();
+            assert_eq!(store.borrow_mutex().len(), 0);
         }
 
         // case2: get key-value pair simply in read tx
         // post: k0 -> v0
         {
-            let tx = db.create_transaction(None).unwrap();
-            assert_eq!(db.borrow_mutex().len(), 0);
+            let tx = store.create_transaction(None).unwrap();
+            assert_eq!(store.borrow_mutex().len(), 0);
             let tx = tx.prepare().unwrap();
-            db.begin(&tx).unwrap();
-            assert!(db.tx_get(tx.get_id(), &key(0)).unwrap().eq(&Some(value(0))));
-            db.commit(tx).unwrap();
-            assert_eq!(db.borrow_mutex().len(), 0);
+            store.begin(&tx).unwrap();
+            assert!(store
+                .tx_get(tx.get_id(), &key(0))
+                .unwrap()
+                .eq(&Some(value(0))));
+            store.commit(tx).unwrap();
+            assert_eq!(store.borrow_mutex().len(), 0);
         }
 
         // case3: remove key-value pair simply in read tx
         // post: k0 -> v0
         {
-            let tx = db.create_transaction(None).unwrap();
-            assert_eq!(db.borrow_mutex().len(), 0);
+            let tx = store.create_transaction(None).unwrap();
+            assert_eq!(store.borrow_mutex().len(), 0);
             let tx = tx.prepare().unwrap();
-            db.begin(&tx).unwrap();
-            db.tx_remove(tx.get_id(), &key(0)).unwrap();
-            assert!(db.tx_get(tx.get_id(), &key(0)).unwrap().eq(&None));
-            db.commit(tx).unwrap();
-            assert_eq!(db.borrow_mutex().len(), 0);
-            assert!(db.get(&key(0)).ne(&None));
+            store.begin(&tx).unwrap();
+            store.tx_remove(tx.get_id(), &key(0)).unwrap();
+            assert!(store.tx_get(tx.get_id(), &key(0)).unwrap().eq(&None));
+            store.commit(tx).unwrap();
+            assert_eq!(store.borrow_mutex().len(), 0);
+            assert!(store.get(&key(0)).ne(&None));
         }
 
         // case4: remove key-value pair simply in update tx
         // post: empty
         {
-            let tx = db.create_transaction(Some("test".into())).unwrap();
-            assert_eq!(db.borrow_mutex().len(), 1);
+            let tx = store.create_transaction(Some("test".into())).unwrap();
+            assert_eq!(store.borrow_mutex().len(), 1);
             let tx = tx.prepare().unwrap();
-            db.begin(&tx).unwrap();
-            db.tx_remove(tx.get_id(), &key(0)).unwrap();
-            assert!(db.tx_get(tx.get_id(), &key(0)).unwrap().eq(&None));
-            db.commit(tx).unwrap();
-            assert_eq!(db.borrow_mutex().len(), 0);
-            assert!(db.get(&key(0)).eq(&None));
+            store.begin(&tx).unwrap();
+            store.tx_remove(tx.get_id(), &key(0)).unwrap();
+            assert!(store.tx_get(tx.get_id(), &key(0)).unwrap().eq(&None));
+            store.commit(tx).unwrap();
+            assert_eq!(store.borrow_mutex().len(), 0);
+            assert!(store.get(&key(0)).eq(&None));
         }
 
         // case5: set key-value pair but rollback it
         {
-            let tx = db.create_transaction(Some("test".into())).unwrap();
-            assert_eq!(db.borrow_mutex().len(), 1);
+            let tx = store.create_transaction(Some("test".into())).unwrap();
+            assert_eq!(store.borrow_mutex().len(), 1);
             let tx = tx.prepare().unwrap();
-            db.begin(&tx).unwrap();
-            assert!(db.tx_set(tx.get_id(), key(0), value(0)).is_ok());
-            db.rollback(tx);
-            assert_eq!(db.borrow_mutex().len(), 0);
-            assert!(db.get(&key(0)).eq(&None));
+            store.begin(&tx).unwrap();
+            assert!(store.tx_set(tx.get_id(), key(0), value(0)).is_ok());
+            store.rollback(tx);
+            assert_eq!(store.borrow_mutex().len(), 0);
+            assert!(store.get(&key(0)).eq(&None));
         }
     }
 
@@ -483,7 +489,7 @@ mod tests {
 
     #[test]
     fn test_concurrent_read_tx() {
-        let (_tmp_dir, _store, runners) = get_test_helpers(8);
+        let (_tmp_dir, store, runners) = get_test_helpers(8);
 
         let mut ths = vec![];
         let start = SystemTime::now();
@@ -504,6 +510,7 @@ mod tests {
         }
         let end = SystemTime::now().duration_since(start).unwrap();
         assert!(Duration::from_secs(1) * 2 > end);
+        assert_eq!(store.read().unwrap().borrow_mutex().len(), 0);
     }
 
     #[test]
@@ -541,7 +548,7 @@ mod tests {
 
     #[test]
     fn test_concurrent_write_different_update_keys() {
-        let (_tmp_dir, _store, runners) = get_test_helpers(8);
+        let (_tmp_dir, store, runners) = get_test_helpers(8);
 
         let mut ths = vec![];
         let start = SystemTime::now();
@@ -562,6 +569,7 @@ mod tests {
         }
         let end = SystemTime::now().duration_since(start).unwrap();
         assert!(Duration::from_secs(1) * 2 > end);
+        assert_eq!(store.read().unwrap().borrow_mutex().len(), 0);
     }
 
     fn key(idx: u32) -> Vec<u8> {
@@ -718,6 +726,7 @@ mod tests {
         }
 
         fn execute(self, f: impl FnOnce()) -> Self {
+            debug!("execute: id={}", self.id);
             f();
             self
         }
