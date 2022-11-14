@@ -48,7 +48,9 @@ impl RocksDBStore {
             if tx.is_update_tx() {
                 let update_key = tx.borrow_update_key().as_ref().unwrap();
                 let v = fields.mutex.get(update_key).expect("invariant violation");
-                if Rc::strong_count(v) == 2 { // "2" indicates `v` and an entry of `mutex` only exist
+                if Rc::strong_count(v) == 2 {
+                    // "2" indicates `v` and an entry of `mutex` only exist
+                    // so, remove the entry
                     fields.mutex.remove_entry(update_key);
                 }
             }
@@ -365,7 +367,7 @@ impl<T> RocksDBTx<T> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use alloc::{collections::VecDeque, sync::Arc};
+    use alloc::sync::Arc;
     use core::time::Duration;
     use log::*;
     use std::{
@@ -462,9 +464,7 @@ mod tests {
 
     #[test]
     fn test_concurrent_write_tx_with_same_update_key_1() {
-        let (_tmp_dir, store, mut runners) = get_test_helpers(2);
-        let r1 = runners.pop_front().unwrap();
-        let r2 = runners.pop_front().unwrap();
+        let (_tmp_dir, store, [r1, r2]) = get_test_helpers::<2>();
 
         // r1: create&prepare -> begin  -> commit
         //                     \                   \
@@ -499,9 +499,7 @@ mod tests {
 
     #[test]
     fn test_concurrent_write_tx_with_same_update_key_2() {
-        let (_tmp_dir, store, mut runners) = get_test_helpers(2);
-        let r1 = runners.pop_front().unwrap();
-        let r2 = runners.pop_front().unwrap();
+        let (_tmp_dir, store, [r1, r2]) = get_test_helpers::<2>();
 
         // r1:        create -> prepare -> begin -> commit
         //           /                                    \
@@ -536,7 +534,7 @@ mod tests {
 
     #[test]
     fn test_concurrent_read_tx() {
-        let (_tmp_dir, store, runners) = get_test_helpers(8);
+        let (_tmp_dir, store, runners) = get_test_helpers::<8>();
 
         let mut ths = vec![];
         let start = SystemTime::now();
@@ -562,9 +560,7 @@ mod tests {
 
     #[test]
     fn test_concurrent_include_rollback() {
-        let (_tmp_dir, store, mut runners) = get_test_helpers(2);
-        let r1 = runners.pop_front().unwrap();
-        let r2 = runners.pop_front().unwrap();
+        let (_tmp_dir, store, [r1, r2]) = get_test_helpers::<2>();
 
         let th1 = thread::spawn(move || {
             r1.create(Some("test"))
@@ -595,7 +591,7 @@ mod tests {
 
     #[test]
     fn test_concurrent_write_different_update_keys() {
-        let (_tmp_dir, store, runners) = get_test_helpers(8);
+        let (_tmp_dir, store, runners) = get_test_helpers::<8>();
 
         let mut ths = vec![];
         let start = SystemTime::now();
@@ -627,21 +623,29 @@ mod tests {
         format!("v{}", idx).into_bytes()
     }
 
-    fn get_test_helpers(size: u64) -> (TempDir, Arc<RwLock<RocksDBStore>>, VecDeque<TxRunner>) {
+    fn get_test_helpers<const S: usize>() -> (TempDir, Arc<RwLock<RocksDBStore>>, [TxRunner; S]) {
         let _ = env_logger::try_init();
         let tmp_dir = TempDir::new("store-rocksdb").unwrap();
         let store = Arc::new(RwLock::new(RocksDBStore::open(tmp_dir.path())));
         let cond = Arc::new(Condvar::new());
         let events = Arc::new(Mutex::new(HashSet::new()));
-        let mut runners = VecDeque::<TxRunner>::default();
-        for i in 1..=size {
-            runners.push_back(TxRunner::new(
-                i,
-                store.clone(),
-                cond.clone(),
-                events.clone(),
-            ));
-        }
+
+        let runners = {
+            let mut arr: [std::mem::MaybeUninit<TxRunner>; S] =
+                unsafe { std::mem::MaybeUninit::uninit().assume_init() };
+            for (i, elem) in arr.iter_mut().enumerate() {
+                unsafe {
+                    std::ptr::write(
+                        elem.as_mut_ptr(),
+                        TxRunner::new((i + 1) as u64, store.clone(), cond.clone(), events.clone()),
+                    );
+                }
+            }
+            let ptr = &mut arr as *mut _ as *mut [TxRunner; S];
+            let res = unsafe { ptr.read() };
+            core::mem::forget(arr);
+            res
+        };
         (tmp_dir, store, runners)
     }
 
