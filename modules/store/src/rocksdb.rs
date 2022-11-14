@@ -109,6 +109,7 @@ impl CommitStore for RocksDBStore {
     type Tx = RocksDBTx<CreatedRocksDBTx>;
 
     fn create_transaction(&mut self, update_key: Option<UpdateKey>) -> Result<Self::Tx> {
+        log::info!("create tx: {:?}", update_key);
         self.with_mut(|fields| {
             fields.latest_tx_id.safe_incr()?;
             if let Some(update_key) = update_key {
@@ -133,6 +134,7 @@ impl CommitStore for RocksDBStore {
     }
 
     fn begin(&mut self, tx: &<Self::Tx as CreatedTx>::PreparedTx) -> Result<()> {
+        log::info!("begin tx: {:?}", tx.get_id());
         self.with_mut(|fields| {
             let mut tx_opt = TransactionOptions::default();
             tx_opt.set_snapshot(true);
@@ -152,17 +154,18 @@ impl CommitStore for RocksDBStore {
                     buffer: HashMap::default(),
                 })
             };
-            log::info!("begin tx: {:?}", tx.get_id());
             fields.txs.insert(tx.get_id(), stx);
             Ok(())
         })
     }
 
     fn commit(&mut self, tx: <Self::Tx as CreatedTx>::PreparedTx) -> Result<()> {
+        log::info!("commit tx: {:?}", tx.get_id());
         self.finalize_tx(tx, |stx| stx.commit())
     }
 
     fn rollback(&mut self, tx: <Self::Tx as CreatedTx>::PreparedTx) {
+        log::info!("rollback tx: {:?}", tx.get_id());
         self.finalize_tx(tx, |stx| stx.rollback())
     }
 }
@@ -392,7 +395,7 @@ mod tests {
             assert!(db.borrow_mutex().len() == 1);
             let tx = tx.prepare().unwrap();
             db.begin(&tx).unwrap();
-            db.tx_set(tx.get_id(), key(0), value(0)).unwrap();
+            assert!(db.tx_set(tx.get_id(), key(0), value(0)).is_ok());
             assert!(db.tx_get(tx.get_id(), &key(0)).unwrap().eq(&Some(value(0))));
             db.commit(tx).unwrap();
             assert!(db.borrow_mutex().len() == 0);
@@ -434,6 +437,18 @@ mod tests {
             db.tx_remove(tx.get_id(), &key(0)).unwrap();
             assert!(db.tx_get(tx.get_id(), &key(0)).unwrap().eq(&None));
             db.commit(tx).unwrap();
+            assert!(db.borrow_mutex().len() == 0);
+            assert!(db.get(&key(0)).eq(&None));
+        }
+
+        // case5: set key-value pair but rollback it
+        {
+            let tx = db.create_transaction(Some("test".into())).unwrap();
+            assert!(db.borrow_mutex().len() == 1);
+            let tx = tx.prepare().unwrap();
+            db.begin(&tx).unwrap();
+            assert!(db.tx_set(tx.get_id(), key(0), value(0)).is_ok());
+            db.rollback(tx);
             assert!(db.borrow_mutex().len() == 0);
             assert!(db.get(&key(0)).eq(&None));
         }
@@ -497,6 +512,64 @@ mod tests {
         assert!(Duration::from_secs(1) * 2 > end);
     }
 
+    #[test]
+    fn test_concurrent_include_rollback() {
+        let (_tmp_dir, store, mut runners) = get_test_helpers(2);
+        let r1 = runners.pop_front().unwrap();
+        let r2 = runners.pop_front().unwrap();
+
+        let th1 = thread::spawn(move || {
+            r1.create(Some("test"))
+                .prepare()
+                .emit_event(1)
+                .block_on(2, 1)
+                .begin()
+                .set("k0", "v0")
+                .commit()
+        });
+
+        let th2 = thread::spawn(move || {
+            r2.create(Some("test"))
+                .block_on(1, 1)
+                .emit_event(1)
+                .prepare()
+                .begin()
+                .get("k0", Some("v0"))
+                .set("k0", "v1")
+                .rollback()
+        });
+
+        th1.join().unwrap();
+        th2.join().unwrap();
+
+        assert!(store.read().unwrap().get(&key(0)).eq(&Some(value(0))));
+    }
+
+    #[test]
+    fn test_concurrent_write_different_update_keys() {
+        let (_tmp_dir, _store, runners) = get_test_helpers(8);
+
+        let mut ths = vec![];
+        let start = SystemTime::now();
+        for r in runners {
+            let th = thread::spawn(move || {
+                let key = format!("key-{}", r.id);
+                r.create(Some(key.as_str()))
+                    .prepare()
+                    .begin()
+                    .set(key.as_str(), "v0")
+                    .execute(|| thread::sleep(Duration::from_secs(1)))
+                    .commit()
+            });
+            ths.push(th);
+        }
+        for th in ths.into_iter() {
+            th.join().unwrap();
+        }
+        let end = SystemTime::now().duration_since(start).unwrap();
+        assert!(Duration::from_secs(1) * 2 > end);
+    }
+
     fn key(idx: u32) -> Vec<u8> {
         format!("k{}", idx).into_bytes()
     }
@@ -535,25 +608,24 @@ mod tests {
     unsafe impl Sync for TxRunner {}
 
     struct EventChannel {
-        self_id: u64,
+        self_rid: u64,
         cond: Arc<Condvar>,
         events: Arc<Mutex<HashMap<u64, u64>>>,
     }
 
     impl EventChannel {
         fn emit_event(&self, eid: u64) {
-            info!("emit: teid={} eid={}", self.self_id, eid);
-            self.events.lock().unwrap().insert(self.self_id, eid);
+            debug!("emit: runner_id={} eid={}", self.self_rid, eid);
+            self.events.lock().unwrap().insert(self.self_rid, eid);
             self.cond.notify_all();
-            info!("done notification: eid={}", eid);
         }
-        fn block_on(&self, teid: u64, eid: u64) {
+        fn block_on(&self, rid: u64, eid: u64) {
             let events = self.events.lock().unwrap();
             let _ = self
                 .cond
                 .wait_while(events, |events| {
-                    log::info!("wakeup: wait={} {}", teid, eid);
-                    !match events.get(&teid) {
+                    debug!("wait: runner_id={} eid={}", rid, eid);
+                    !match events.get(&rid) {
                         Some(v) => eid == *v,
                         None => false,
                     }
@@ -572,7 +644,7 @@ mod tests {
             Self {
                 id,
                 channel: EventChannel {
-                    self_id: id,
+                    self_rid: id,
                     cond,
                     events,
                 },
@@ -657,9 +729,15 @@ mod tests {
         }
 
         fn commit(self) {
-            log::info!("commit: id={}", self.id);
+            debug!("commit: id={}", self.id);
             let tx = self.prepared_tx.unwrap();
             self.store.write().unwrap().commit(tx).unwrap();
+        }
+
+        fn rollback(self) {
+            debug!("rollback: id={}", self.id);
+            let tx = self.prepared_tx.unwrap();
+            self.store.write().unwrap().rollback(tx);
         }
     }
 }
