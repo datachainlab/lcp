@@ -48,7 +48,7 @@ impl RocksDBStore {
             if tx.is_update_tx() {
                 let update_key = tx.borrow_update_key().as_ref().unwrap();
                 let v = fields.mutex.get(update_key).expect("invariant violation");
-                if Rc::strong_count(v) == 2 {
+                if Rc::strong_count(v) == 2 { // "2" indicates `v` and an entry of `mutex` only exist
                     fields.mutex.remove_entry(update_key);
                 }
             }
@@ -369,6 +369,7 @@ mod tests {
     use core::time::Duration;
     use log::*;
     use std::{
+        collections::HashSet,
         sync::{Condvar, RwLock},
         thread,
         time::SystemTime,
@@ -409,6 +410,11 @@ mod tests {
                 .tx_get(tx.get_id(), &key(0))
                 .unwrap()
                 .eq(&Some(value(0))));
+            assert!(store.tx_set(tx.get_id(), key(0), value(1)).is_ok());
+            assert!(store
+                .tx_get(tx.get_id(), &key(0))
+                .unwrap()
+                .eq(&Some(value(1))));
             store.commit(tx).unwrap();
             assert_eq!(store.borrow_mutex().len(), 0);
         }
@@ -455,16 +461,57 @@ mod tests {
     }
 
     #[test]
-    fn test_concurrent_write_tx_with_same_update_key() {
+    fn test_concurrent_write_tx_with_same_update_key_1() {
         let (_tmp_dir, store, mut runners) = get_test_helpers(2);
         let r1 = runners.pop_front().unwrap();
         let r2 = runners.pop_front().unwrap();
 
+        // r1: create&prepare -> begin  -> commit
+        //                     \                   \
+        // r2:                   create -> prepare(blocking) -> begin&commit
+
         let th1 = thread::spawn(move || {
             r1.create(Some("test"))
+                .emit_event(1)
+                .prepare()
+                .emit_event(2)
+                .begin()
+                .set("k0", "v0")
+                .commit()
+        });
+
+        let th2 = thread::spawn(move || {
+            r2.block_on(1, 1)
+                .create(Some("test"))
+                .block_on(1, 2)
+                .prepare()
+                .begin()
+                .get("k0", Some("v0"))
+                .set("k0", "v1")
+                .commit()
+        });
+
+        th1.join().unwrap();
+        th2.join().unwrap();
+
+        assert!(store.read().unwrap().get(&key(0)).eq(&Some(value(1))));
+    }
+
+    #[test]
+    fn test_concurrent_write_tx_with_same_update_key_2() {
+        let (_tmp_dir, store, mut runners) = get_test_helpers(2);
+        let r1 = runners.pop_front().unwrap();
+        let r2 = runners.pop_front().unwrap();
+
+        // r1:        create -> prepare -> begin -> commit
+        //           /                                    \
+        // r2: create --------> prepare(blocking) ---------> begin&commit
+
+        let th1 = thread::spawn(move || {
+            r1.block_on(2, 1)
+                .create(Some("test"))
                 .prepare()
                 .emit_event(1)
-                .block_on(2, 1)
                 .begin()
                 .set("k0", "v0")
                 .commit()
@@ -472,8 +519,8 @@ mod tests {
 
         let th2 = thread::spawn(move || {
             r2.create(Some("test"))
-                .block_on(1, 1)
                 .emit_event(1)
+                .block_on(1, 1)
                 .prepare()
                 .begin()
                 .get("k0", Some("v0"))
@@ -585,7 +632,7 @@ mod tests {
         let tmp_dir = TempDir::new("store-rocksdb").unwrap();
         let store = Arc::new(RwLock::new(RocksDBStore::open(tmp_dir.path())));
         let cond = Arc::new(Condvar::new());
-        let events = Arc::new(Mutex::new(HashMap::new()));
+        let events = Arc::new(Mutex::new(HashSet::new()));
         let mut runners = VecDeque::<TxRunner>::default();
         for i in 1..=size {
             runners.push_back(TxRunner::new(
@@ -612,13 +659,13 @@ mod tests {
     struct EventChannel {
         self_rid: u64,
         cond: Arc<Condvar>,
-        events: Arc<Mutex<HashMap<u64, u64>>>,
+        events: Arc<Mutex<HashSet<(u64, u64)>>>, // (rid, eid)
     }
 
     impl EventChannel {
         fn emit_event(&self, eid: u64) {
             debug!("emit: runner_id={} eid={}", self.self_rid, eid);
-            self.events.lock().unwrap().insert(self.self_rid, eid);
+            self.events.lock().unwrap().insert((self.self_rid, eid));
             self.cond.notify_all();
         }
         fn block_on(&self, rid: u64, eid: u64) {
@@ -626,11 +673,11 @@ mod tests {
             let _ = self
                 .cond
                 .wait_while(events, |events| {
-                    debug!("wait: runner_id={} eid={}", rid, eid);
-                    !match events.get(&rid) {
-                        Some(v) => eid == *v,
-                        None => false,
-                    }
+                    debug!(
+                        "wait: self_runner_id={} target_runner_id={} eid={}",
+                        self.self_rid, rid, eid
+                    );
+                    !events.contains(&(rid, eid))
                 })
                 .unwrap();
         }
@@ -641,7 +688,7 @@ mod tests {
             id: u64,
             store: Arc<RwLock<RocksDBStore>>,
             cond: Arc<Condvar>,
-            events: Arc<Mutex<HashMap<u64, u64>>>,
+            events: Arc<Mutex<HashSet<(u64, u64)>>>,
         ) -> Self {
             Self {
                 id,
@@ -661,8 +708,8 @@ mod tests {
             self
         }
 
-        fn block_on(self, teid: u64, eid: u64) -> Self {
-            self.channel.block_on(teid, eid);
+        fn block_on(self, rid: u64, eid: u64) -> Self {
+            self.channel.block_on(rid, eid);
             self
         }
 
