@@ -8,6 +8,7 @@ mod tests {
         CommitmentProofPair, IASRemoteAttestationInput, InitClientInput, InitEnclaveInput,
         UpdateClientInput, VerifyMembershipInput,
     };
+    use enclave_api::EnclaveCommandAPI;
     use enclave_api::{Enclave, EnclavePrimitiveAPI};
     use host_environment::Environment;
     use ibc::core::{
@@ -27,7 +28,8 @@ mod tests {
     use once_cell::sync::Lazy;
     use relay_tendermint::Relayer;
     use std::str::FromStr;
-    use std::sync::Arc;
+    use std::sync::{Arc, RwLock};
+    use store::{host::HostStore, memory::MemStore, transaction::CommitStore};
     use tempdir::TempDir;
     use tendermint_proto::Protobuf;
     use tokio::runtime::Runtime as TokioRuntime;
@@ -35,15 +37,15 @@ mod tests {
     static ENCLAVE_FILE: &'static str = "../../bin/enclave.signed.so";
     static ENV_SETUP_NODES: &'static str = "SETUP_NODES";
 
-    struct ELCStateVerificationTest {
-        enclave: Enclave,
+    struct ELCStateVerificationTest<'e> {
+        enclave: Enclave<'e, store::memory::MemStore>,
     }
 
-    impl TestOverrides for ELCStateVerificationTest {
+    impl<'e> TestOverrides for ELCStateVerificationTest<'e> {
         fn modify_relayer_config(&self, _config: &mut Config) {}
     }
 
-    impl BinaryChannelTest for ELCStateVerificationTest {
+    impl<'e> BinaryChannelTest for ELCStateVerificationTest<'e> {
         fn run<ChainA: ChainHandle, ChainB: ChainHandle>(
             &self,
             _config: &TestConfig,
@@ -61,7 +63,13 @@ mod tests {
 
     #[test]
     fn test_elc_state_verification() {
-        host::set_environment(Environment::new()).unwrap();
+        let tmp_dir = TempDir::new("lcp").unwrap();
+        let home = tmp_dir.path().to_str().unwrap().to_string();
+        host::set_environment(Environment::new(
+            home.clone().into(),
+            Arc::new(RwLock::new(HostStore::Memory(MemStore::default()))),
+        ))
+        .unwrap();
 
         let enclave = match host::load_enclave(ENCLAVE_FILE) {
             Ok(r) => {
@@ -72,9 +80,7 @@ mod tests {
                 panic!("Init Enclave Failed {}!", x.as_str());
             }
         };
-        let tmp_dir = TempDir::new("lcp").unwrap();
-        let home = tmp_dir.path().to_str().unwrap().to_string();
-        let enclave = Enclave::new(enclave, home);
+        let enclave = Enclave::new(enclave, host::get_environment().unwrap());
 
         match std::env::var(ENV_SETUP_NODES).map(|v| v.to_lowercase()) {
             Ok(v) if v == "false" => run_test(&enclave).unwrap(),
@@ -82,14 +88,17 @@ mod tests {
         }
     }
 
-    fn run_test(enclave: &Enclave) -> Result<(), anyhow::Error> {
+    fn run_test<'e>(enclave: &Enclave<'e, store::memory::MemStore>) -> Result<(), anyhow::Error> {
         env_logger::init();
         let rt = Arc::new(TokioRuntime::new()?);
         let rly = relayer::create_relayer(rt).unwrap();
         verify(rly, enclave)
     }
 
-    fn verify(mut rly: Relayer, enclave: &Enclave) -> Result<(), anyhow::Error> {
+    fn verify<'e>(
+        mut rly: Relayer,
+        enclave: &Enclave<'e, store::memory::MemStore>,
+    ) -> Result<(), anyhow::Error> {
         let simulate = std::env::var("SGX_MODE").map_or(false, |m| m == "SW");
         if simulate {
             info!("this test is running in SW mode");

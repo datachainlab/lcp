@@ -25,6 +25,7 @@ enclave-api = { path = "../modules/enclave-api" }
 ecall-commands = { path = "../modules/ecall-commands" }
 settings = { path = "../modules/settings" }
 attestation-report = { path = "../modules/attestation-report" }
+store = { path = "../modules/store", features = ["rocksdbstore"] }
 
 [features]
 default = []

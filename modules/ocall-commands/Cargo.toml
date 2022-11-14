@@ -7,3 +7,4 @@ edition = "2021"
 sgx_types = { git = "https://github.com/apache/teaclave-sgx-sdk.git", features = ["extra_traits"] }
 serde = { version = "1.0", default-features = false, features = ["alloc", "derive"] }
 serde_with = { version = "2.0.1", default-features = false, features = ["alloc", "macros"] }
+store = { path = "../store", default-features = false }

@@ -35,12 +35,22 @@ define_error! {
 
         EcallCommand
         [ecall_commands::Error]
-        |_| { "ECallCommand error" }
+        |_| { "ECallCommand error" },
+
+        Store
+        [store::Error]
+        |_| { "Store error" }
     }
 }
 
 impl From<ecall_commands::Error> for Error {
     fn from(err: ecall_commands::Error) -> Self {
         Error::ecall_command(err)
+    }
+}
+
+impl From<store::Error> for Error {
+    fn from(err: store::Error) -> Self {
+        Error::store(err)
     }
 }

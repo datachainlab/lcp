@@ -1,72 +1,111 @@
-use crate::{prelude::*, Store};
-use crate::{CommitStore, Error, KVStore};
-use core::ops::Deref;
-use serde::{Deserialize, Serialize};
-#[cfg(feature = "sgx")]
-use sgx_tstd::collections::HashMap;
-#[cfg(feature = "std")]
+use crate::prelude::*;
+use crate::store::TxId;
+use crate::transaction::{CommitStore, CreatedTx, Tx, TxAccessor};
+use crate::{KVStore, Result};
 use std::collections::HashMap;
 
 // MemStore is only available for testing purposes
 #[derive(Default, Debug)]
 pub struct MemStore {
-    pub committed: MemMap,
-    pub cached: MemMap,
-}
-
-#[derive(Default, Debug, Serialize, Deserialize)]
-pub struct MemMap(#[serde(with = "hash_map_bytes")] HashMap<Vec<u8>, Vec<u8>>);
-
-impl Deref for MemMap {
-    type Target = HashMap<Vec<u8>, Vec<u8>>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
+    running_tx_exists: bool,
+    latest_tx_id: TxId,
+    uncommitted_data: HashMap<Vec<u8>, Option<Vec<u8>>>,
+    committed_data: HashMap<Vec<u8>, Vec<u8>>,
 }
 
 impl KVStore for MemStore {
-    fn set(&mut self, k: Vec<u8>, v: Vec<u8>) {
-        self.cached.0.insert(k, v);
+    fn get(&self, key: &[u8]) -> Option<Vec<u8>> {
+        if self.running_tx_exists {
+            match self.uncommitted_data.get(key) {
+                Some(v) => v.clone(),
+                None => self.committed_data.get(key).map(|v| v.to_vec()),
+            }
+        } else {
+            self.committed_data.get(key).map(|v| v.to_vec())
+        }
     }
-    fn get(&self, k: &[u8]) -> Option<Vec<u8>> {
-        match self.cached.0.get(k) {
-            Some(v) => Some(v.clone()),
-            None => match self.committed.0.get(k) {
-                Some(v) => Some(v.clone()),
-                None => None,
-            },
+
+    fn set(&mut self, key: Vec<u8>, value: Vec<u8>) {
+        if self.running_tx_exists {
+            self.uncommitted_data.insert(key, Some(value));
+        } else {
+            self.committed_data.insert(key, value);
+        }
+    }
+
+    fn remove(&mut self, key: &[u8]) {
+        if self.running_tx_exists {
+            self.uncommitted_data.insert(key.to_vec(), None);
+        } else {
+            self.committed_data.remove(key);
         }
     }
 }
 
-impl CommitStore for MemStore {
-    fn commit(&mut self) -> Result<(), Error> {
-        self.committed.0.extend(self.cached.0.clone());
-        self.cached.0.clear();
-        Ok(())
+impl TxAccessor for MemStore {
+    fn run_in_tx<T>(&self, _tx_id: TxId, f: impl FnOnce(&dyn KVStore) -> T) -> Result<T> {
+        Ok(f(self))
     }
 
-    fn rollback(&mut self) {
-        self.cached.0.clear()
+    fn run_in_mut_tx<T>(
+        &mut self,
+        _tx_id: TxId,
+        f: impl FnOnce(&mut dyn KVStore) -> T,
+    ) -> Result<T> {
+        Ok(f(self))
     }
 }
 
-impl Store for MemStore {}
+impl CommitStore for MemStore {
+    type Tx = MemTx;
 
-mod hash_map_bytes {
-    use super::*;
-    use serde::{Deserializer, Serializer};
-
-    type HashMapBytes = HashMap<Vec<u8>, Vec<u8>>;
-
-    pub(super) fn serialize<S: Serializer>(attr: &HashMapBytes, ser: S) -> Result<S::Ok, S::Error> {
-        let attr: Vec<_> = attr.iter().collect();
-        serde::Serialize::serialize(&attr, ser)
+    fn create_transaction(
+        &mut self,
+        _update_key: Option<crate::transaction::UpdateKey>,
+    ) -> Result<Self::Tx> {
+        self.latest_tx_id.safe_incr()?;
+        Ok(MemTx(self.latest_tx_id))
     }
 
-    pub(super) fn deserialize<'de, D: Deserializer<'de>>(des: D) -> Result<HashMapBytes, D::Error> {
-        let attr: Vec<_> = serde::Deserialize::deserialize(des)?;
-        Ok(attr.into_iter().collect())
+    fn begin(&mut self, _tx: &<Self::Tx as CreatedTx>::PreparedTx) -> Result<()> {
+        assert!(!self.running_tx_exists);
+        self.running_tx_exists = true;
+        Ok(())
+    }
+
+    fn commit(&mut self, _tx: <Self::Tx as CreatedTx>::PreparedTx) -> Result<()> {
+        assert!(self.running_tx_exists);
+        self.running_tx_exists = false;
+        let data = HashMap::<Vec<u8>, Option<Vec<u8>>>::default();
+        let uncommitted_data = std::mem::replace(&mut self.uncommitted_data, data);
+        for it in uncommitted_data {
+            match it.1 {
+                Some(v) => self.committed_data.insert(it.0, v),
+                None => self.committed_data.remove(&it.0),
+            };
+        }
+        Ok(())
+    }
+
+    fn rollback(&mut self, _tx: <Self::Tx as CreatedTx>::PreparedTx) {
+        assert!(self.running_tx_exists);
+        self.running_tx_exists = false;
+        self.uncommitted_data.clear();
+    }
+}
+
+pub struct MemTx(TxId);
+
+impl Tx for MemTx {
+    fn get_id(&self) -> TxId {
+        self.0
+    }
+}
+
+impl CreatedTx for MemTx {
+    type PreparedTx = MemTx;
+
+    fn prepare(self) -> Result<Self::PreparedTx> {
+        Ok(self)
     }
 }

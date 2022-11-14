@@ -17,7 +17,7 @@ enclave-remote-attestation = { path = "../remote-attestation" }
 crypto = { path = "../../modules/crypto", default-features = false, features = ["sgx"] }
 attestation-report = { path = "../../modules/attestation-report", default-features = false, features = ["sgx"] }
 context = { path = "../../modules/context", default-features = false, features = ["sgx"] }
-enclave-environment = { path = "../../modules/enclave-environment", default-features = false }
+enclave-environment = { path = "../environment", default-features = false }
 bincode = { git = "https://github.com/bluele/bincode-sgx", branch = "serde" }
 
 lcp-types = { path = "../../modules/types", default-features = false }

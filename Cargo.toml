@@ -8,7 +8,6 @@ members = [
     "modules/ocall-handler",
     "modules/attestation-report",
     "modules/enclave-api",
-    "modules/enclave-environment",
     "modules/ecall-commands",
     "modules/ocall-commands",
     "modules/commitments",
@@ -31,6 +30,8 @@ members = [
 exclude = [
     "enclave",
     "enclave-modules/runtime",
+    "enclave-modules/environment",
+    "enclave-modules/store",
     "enclave-modules/utils",
     "enclave-modules/remote-attestation",
     "enclave-modules/host-api",

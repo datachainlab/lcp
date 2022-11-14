@@ -5,10 +5,15 @@ use lcp_proto::lcp::service::ibc::v1::{
     MsgVerifyClientConsensus, MsgVerifyConnection, MsgVerifyNextSequenceRecv, MsgVerifyPacket,
     MsgVerifyPacketAcknowledgement, MsgVerifyPacketReceiptAbsense,
 };
+use store::transaction::CommitStore;
 use tonic::{Request, Response, Status};
 
 #[tonic::async_trait]
-impl Msg for AppService {
+impl<E, S> Msg for AppService<E, S>
+where
+    S: CommitStore + 'static,
+    E: EnclaveProtoAPI<S> + 'static,
+{
     async fn verify_client(
         &self,
         request: Request<MsgVerifyClient>,

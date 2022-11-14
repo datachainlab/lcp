@@ -20,4 +20,8 @@ impl Opts {
     pub fn default_enclave(&self) -> PathBuf {
         self.get_home().join("enclave.signed.so")
     }
+
+    pub fn get_store_path(&self) -> PathBuf {
+        self.get_home().join("store")
+    }
 }

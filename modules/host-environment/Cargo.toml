@@ -4,4 +4,4 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-store = { path = "../store", default-features = false, features = ["std"] }
+store = { path = "../store", default-features = false, features = ["std", "rocksdbstore"] }

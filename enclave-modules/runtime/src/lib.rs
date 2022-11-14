@@ -18,18 +18,16 @@ mod prelude {
     pub use core::iter::FromIterator;
 }
 
-pub(crate) use crate::store::get_store;
 pub use ecalls::{ecall_execute_command, set_environment};
 
 mod ecalls;
 mod errors;
-mod store;
 
 #[macro_export]
 macro_rules! setup_runtime {
     ($func:block) => {
         sgx_tstd::global_ctors_object! {_init, _init_func = {
-            enclave_runtime::set_environment(_env_builder()).unwrap()
+            enclave_runtime::set_environment((|| { $func })()).unwrap()
         }}
 
         #[no_mangle]
@@ -47,12 +45,6 @@ macro_rules! setup_runtime {
                 output_buf_maxlen,
                 output_len,
             ) as u32
-        }
-
-        fn _env_builder() -> enclave_environment::Environment {
-            {
-                $func
-            }
         }
     };
 }

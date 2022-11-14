@@ -6,8 +6,8 @@ use light_client::{ClientReader, LightClient};
 use light_client_registry::{Error as LightClientRegistryError, LightClientResolver};
 use store::KVStore;
 
-pub fn get_light_client_by_client_id<'a, S: KVStore>(
-    ctx: &'a Context<S>,
+pub fn get_light_client_by_client_id<'a, R: LightClientResolver, S: KVStore>(
+    ctx: &'a Context<R, S>,
     client_id: &ClientId,
 ) -> Result<&'a Box<dyn LightClient>, Error> {
     let any_client_state = ctx

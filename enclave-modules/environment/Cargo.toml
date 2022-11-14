@@ -6,3 +6,9 @@ edition = "2021"
 [dependencies]
 light-client = { path = "../../modules/light-client", default-features = false }
 light-client-registry = { path = "../../modules/light-client-registry", default-features = false }
+store = { path = "../../modules/store", default-features = false }
+enclave-store = { path = "../store", optional = true }
+
+[features]
+default = ["environment_impl"]
+environment_impl = ["enclave-store"]

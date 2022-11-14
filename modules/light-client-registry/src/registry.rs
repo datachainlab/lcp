@@ -1,10 +1,22 @@
 use crate::errors::Error;
 use crate::prelude::*;
+use alloc::sync::Arc;
 use light_client::LightClient;
 
-pub trait LightClientRegistry {
-    fn put(&mut self, client_state_type_url: String, lc: Box<dyn LightClient>)
-        -> Result<(), Error>;
+pub trait LightClientRegistry: LightClientResolver {
+    fn put_light_client(
+        &mut self,
+        client_state_type_url: String,
+        lc: Box<dyn LightClient>,
+    ) -> Result<(), Error>;
+}
 
-    fn get(&self, client_state_type_url: &str) -> Option<&Box<dyn LightClient>>;
+pub trait LightClientResolver {
+    fn get_light_client(&self, type_url: &str) -> Option<&Box<dyn LightClient>>;
+}
+
+impl LightClientResolver for Arc<dyn LightClientResolver> {
+    fn get_light_client(&self, type_url: &str) -> Option<&Box<dyn LightClient>> {
+        self.as_ref().get_light_client(type_url)
+    }
 }

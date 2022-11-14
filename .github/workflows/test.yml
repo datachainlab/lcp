@@ -60,5 +60,6 @@ jobs:
               "source /opt/sgxsdk/environment && \
               source /root/.cargo/env && \
               export SGX_MODE=SW && \
+              apt update -y && apt install -y libclang-dev && \
               make && make integration-test"
       - run: sudo chown -R runner:docker . ${HOME}/.cargo

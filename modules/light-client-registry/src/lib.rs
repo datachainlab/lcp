@@ -23,15 +23,9 @@ mod prelude {
 }
 
 pub use errors::Error;
-pub use registry::LightClientRegistry;
+pub use registry::{LightClientRegistry, LightClientResolver};
 
 mod errors;
 #[cfg(any(feature = "std", feature = "sgx"))]
 pub mod memory;
 mod registry;
-
-use light_client::LightClient;
-
-pub trait LightClientResolver {
-    fn get_light_client(&self, type_url: &str) -> Option<&alloc::boxed::Box<dyn LightClient>>;
-}
