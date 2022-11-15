@@ -5,36 +5,68 @@ use lcp_proto::lcp::service::elc::v1::{
     MsgVerifyMembership, MsgVerifyMembershipResponse, MsgVerifyNonMembership,
     MsgVerifyNonMembershipResponse, QueryClientRequest, QueryClientResponse,
 };
+use log::*;
 use store::transaction::CommitStore;
 
 pub trait EnclaveProtoAPI<S: CommitStore>: EnclaveCommandAPI<S> {
     fn proto_create_client(&self, msg: MsgCreateClient) -> Result<MsgCreateClientResponse> {
-        Ok(self.init_client(msg.try_into()?)?.into())
+        let res = self.init_client(msg.try_into()?)?;
+        if log_enabled!(log::Level::Info) {
+            info!(
+                "create_client: client_id={} commitment={{{}}}",
+                res.client_id,
+                res.proof.commitment()
+            );
+        }
+        Ok(res.into())
     }
 
     fn proto_update_client(&self, msg: MsgUpdateClient) -> Result<MsgUpdateClientResponse> {
-        Ok(self.update_client(msg.try_into()?)?.into())
+        let client_id = msg.client_id.clone();
+        let res = self.update_client(msg.try_into()?)?;
+        if log_enabled!(log::Level::Info) {
+            info!(
+                "update_client: client_id={} commitment={{{}}}",
+                client_id,
+                res.0.commitment()
+            );
+        }
+        Ok(res.into())
     }
 
     fn proto_verify_membership(
         &self,
         msg: MsgVerifyMembership,
     ) -> Result<MsgVerifyMembershipResponse> {
-        Ok(self.verify_membership(msg.try_into()?)?.into())
+        let client_id = msg.client_id.clone();
+        let res = self.verify_membership(msg.try_into()?)?;
+        if log_enabled!(log::Level::Info) {
+            info!(
+                "verify_membership: client_id={} commitment={{{}}}",
+                client_id,
+                res.0.commitment()
+            );
+        }
+        Ok(res.into())
     }
 
     fn proto_verify_non_membership(
         &self,
         msg: MsgVerifyNonMembership,
     ) -> Result<MsgVerifyNonMembershipResponse> {
-        Ok(self.verify_non_membership(msg.try_into()?)?.into())
+        let client_id = msg.client_id.clone();
+        let res = self.verify_non_membership(msg.try_into()?)?;
+        if log_enabled!(log::Level::Info) {
+            info!(
+                "verify_non_membership: client_id={} commitment={{{}}}",
+                client_id,
+                res.0.commitment()
+            );
+        }
+        Ok(res.into())
     }
 
     fn proto_query_client(&self, query: QueryClientRequest) -> Result<QueryClientResponse> {
-        let res = self.query_client(query.try_into()?)?;
-        Ok(QueryClientResponse {
-            client_state: Some(res.any_client_state.into()),
-            consensus_state: Some(res.any_consensus_state.into()),
-        })
+        Ok(self.query_client(query.try_into()?)?.into())
     }
 }

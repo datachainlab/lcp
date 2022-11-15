@@ -1,6 +1,7 @@
 use crate::transaction::{CommitStore, CreatedTx, Tx, TxAccessor, UpdateKey};
 use crate::{Error, KVStore, Result, TxId};
 use core::marker::PhantomData;
+use log::*;
 use ouroboros::self_referencing;
 use rocksdb::{
     SnapshotWithThreadMode, Transaction, TransactionDB, TransactionOptions, WriteOptions,
@@ -9,7 +10,6 @@ use std::collections::HashMap;
 use std::path::Path;
 use std::rc::Rc;
 use std::sync::{Mutex, MutexGuard};
-use log::*;
 
 /// `RocksDBStore` is a store implementation with RocksDB
 #[self_referencing]

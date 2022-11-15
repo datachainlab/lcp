@@ -1,5 +1,6 @@
 use crate::prelude::*;
 use crate::tendermint::TendermintValidationParams;
+use core::fmt::Display;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -11,6 +12,15 @@ pub enum ValidationParams {
 impl Default for ValidationParams {
     fn default() -> Self {
         Self::Empty
+    }
+}
+
+impl Display for ValidationParams {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        match self {
+            Self::Empty => write!(f, "Empty"),
+            Self::Tendermint(params) => write!(f, "{}", params),
+        }
     }
 }
 
