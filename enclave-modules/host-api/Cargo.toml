@@ -6,7 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-sgx_types = { git = "https://github.com/apache/teaclave-sgx-sdk.git" }
+sgx_types = { rev = "v1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk" }
 bincode = { git = "https://github.com/bluele/bincode-sgx", branch = "serde" }
 flex-error = { version = "0.4.4", default-features = false }
 ocall-commands = { path = "../../modules/ocall-commands", default-features = false }

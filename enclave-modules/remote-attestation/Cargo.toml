@@ -6,11 +6,11 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-sgx_types = { git = "https://github.com/apache/teaclave-sgx-sdk.git" }
-sgx_tstd = { git = "https://github.com/apache/teaclave-sgx-sdk.git", features = ["net"] }
-sgx_trts = { git = "https://github.com/apache/teaclave-sgx-sdk.git" }
-sgx_tse = { git = "https://github.com/apache/teaclave-sgx-sdk.git" }
-sgx_tcrypto = { git = "https://github.com/apache/teaclave-sgx-sdk.git" }
+sgx_types = { rev = "v1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk" }
+sgx_tstd = { rev = "v1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", features = ["net"] }
+sgx_trts = { rev = "v1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk" }
+sgx_tse = { rev = "v1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk" }
+sgx_tcrypto = { rev = "v1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk" }
 
 serde = { version = "1.0", default-features = false, features = ["alloc"] }
 serde_json = { version = "1.0", default-features = false, features = ["alloc"] }
