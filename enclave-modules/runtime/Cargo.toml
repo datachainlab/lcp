@@ -4,8 +4,8 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-sgx_types = { git = "https://github.com/apache/teaclave-sgx-sdk.git" }
-sgx_tstd = { git = "https://github.com/apache/teaclave-sgx-sdk.git" }
+sgx_types = { rev = "v1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk" }
+sgx_tstd = { rev = "v1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk" }
 log = { version = "0.4.8", default-features = false }
 lazy_static = { version = "1.1.0", features = ["spin_no_std"] }
 bincode = { git = "https://github.com/bluele/bincode-sgx", branch = "serde" }

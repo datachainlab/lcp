@@ -40,20 +40,20 @@ exclude = [
 ]
 
 [patch."https://github.com/apache/teaclave-sgx-sdk.git"]
-sgx_tstd = { version = "1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", branch = "master"}
-sgx_urts = { version = "1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", branch = "master"}
-sgx_tse = { version = "1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", branch = "master"}
-sgx_alloc = { version = "1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", branch = "master"}
-sgx_libc = { version = "1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", branch = "master"}
-sgx_serialize = { version = "1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", branch = "master"}
-sgx_serialize_derive = { version = "1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", branch = "master"}
-sgx_serialize_derive_internals = { version = "1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", branch = "master"}
-sgx_trts = { version = "1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", branch = "master"}
-sgx_types = { version = "1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", branch = "master"}
-sgx_tcrypto = { version = "1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", branch = "master"}
-sgx_tcrypto_helper = { version = "1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", branch = "master"}
-sgx_crypto_helper = { version = "1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", branch = "master"}
-sgx_rand = { version = "1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", branch = "master"}
+sgx_tstd = { rev = "v1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk" }
+sgx_urts = { rev = "v1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk" }
+sgx_tse = { rev = "v1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk" }
+sgx_alloc = { rev = "v1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk" }
+sgx_libc = { rev = "v1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk" }
+sgx_serialize = { rev = "v1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk" }
+sgx_serialize_derive = { rev = "v1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk" }
+sgx_serialize_derive_internals = { rev = "v1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk" }
+sgx_trts = { rev = "v1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk" }
+sgx_types = { rev = "v1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk" }
+sgx_tcrypto = { rev = "v1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk" }
+sgx_tcrypto_helper = { rev = "v1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk" }
+sgx_crypto_helper = { rev = "v1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk" }
+sgx_rand = { rev = "v1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk" }
 
 [patch."crates-io"]
 parking_lot = { git = "https://github.com/bluele/parking_lot", branch = "patch-const-fn-trait" }
