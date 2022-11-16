@@ -3,21 +3,25 @@ use crate::{
     ffi, Error, Result,
 };
 use ecall_commands::{Command, CommandParams, CommandResult, ECallCommand};
+use log::*;
 use sgx_types::{sgx_enclave_id_t, sgx_status_t};
 use store::transaction::{CommitStore, Tx};
 
 pub trait EnclavePrimitiveAPI<S: CommitStore>: EnclaveInfo + HostStoreTxManager<S> {
     /// execute_command runs a given command in the enclave
     fn execute_command(&self, cmd: Command, update_key: Option<String>) -> Result<CommandResult> {
+        debug!("execute_command: cmd={:?} update_key={:?}", cmd, update_key);
         let tx = self.begin_tx(update_key)?;
         let ecmd = ECallCommand::new(CommandParams::new(self.get_home(), tx.get_id()), cmd);
         match raw_execute_command(self.get_eid(), ecmd) {
             Ok(res) => {
                 self.commit_tx(tx)?;
+                debug!("execute_command succeeded: res={:?}", res);
                 Ok(res)
             }
             Err(e) => {
                 self.rollback_tx(tx);
+                debug!("execute_command failed: err={:?}", e);
                 Err(e)
             }
         }

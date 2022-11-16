@@ -30,7 +30,7 @@ pub extern "C" fn ocall_execute_command(
     output_buf_maxlen: u32,
     output_len: &mut u32,
 ) -> sgx_types::sgx_status_t {
-    info!("Entering ocall_command_handler");
+    debug!("Entering ocall_command_handler");
 
     if let Err(e) = validate_const_ptr(command, command_len as usize) {
         return e;

@@ -1,5 +1,6 @@
 use crate::prelude::*;
 use crate::{Error, StateID};
+use core::fmt::Display;
 use core::str::FromStr;
 use ibc::core::ics23_commitment::commitment::CommitmentPrefix;
 use ibc::core::ics24_host::Path;
@@ -30,6 +31,16 @@ impl Default for UpdateClientCommitment {
             timestamp: Time::unix_epoch(),
             validation_params: Default::default(),
         }
+    }
+}
+
+impl Display for UpdateClientCommitment {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(
+            f,
+            "prev_state_id={} new_state_id={} new_state_include={} prev_height={:?} new_height={:?} timestamp={} validation_params={{{}}}",
+            self.prev_state_id.map_or("".to_string(), |s| s.to_string()), self.new_state_id.to_string(), self.new_state.is_some(), self.prev_height.map_or("".to_string(), |h| h.to_string()), self.new_height.to_string(), self.timestamp, self.validation_params
+        )
     }
 }
 
@@ -96,6 +107,20 @@ pub struct StateCommitment {
     pub value: Option<[u8; 32]>,
     pub height: Height,
     pub state_id: StateID,
+}
+
+impl Display for StateCommitment {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(
+            f,
+            "prefix={:?} path={} value={:?} height={} state_id={}",
+            self.prefix,
+            self.path,
+            self.value,
+            self.height.to_string(),
+            self.state_id.to_string()
+        )
+    }
 }
 
 impl StateCommitment {

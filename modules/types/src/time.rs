@@ -1,5 +1,6 @@
 use crate::errors::TimeError;
 use crate::prelude::*;
+use core::fmt::Display;
 use core::ops::Deref;
 use core::ops::{Add, Sub};
 use core::time::Duration;
@@ -64,6 +65,12 @@ impl Deref for Time {
     type Target = TmTime;
     fn deref(&self) -> &Self::Target {
         &self.0
+    }
+}
+
+impl Display for Time {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        self.0.fmt(f)
     }
 }
 

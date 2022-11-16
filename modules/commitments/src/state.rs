@@ -17,7 +17,7 @@ impl StateID {
     }
 
     pub fn to_string(&self) -> String {
-        hex::encode(self.0)
+        format!("0x{}", hex::encode(self.0))
     }
 
     pub fn to_vec(&self) -> Vec<u8> {

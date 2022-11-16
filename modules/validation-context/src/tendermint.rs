@@ -1,5 +1,6 @@
 use crate::prelude::*;
 use crate::{params::ValidationParams, ValidationContext, ValidationPredicate};
+use core::fmt::Display;
 use core::time::Duration;
 use lcp_types::Time;
 use rlp::{Rlp, RlpStream};
@@ -10,6 +11,16 @@ pub struct TendermintValidationParams {
     pub options: TendermintValidationOptions,
     pub untrusted_header_timestamp: Time,
     pub trusted_consensus_state_timestamp: Time,
+}
+
+impl Display for TendermintValidationParams {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(
+            f,
+            "options={:?} untrusted_header_timestamp={} trusted_consensus_state_timestamp={}",
+            self.options, self.untrusted_header_timestamp, self.trusted_consensus_state_timestamp
+        )
+    }
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Serialize, Deserialize)]
