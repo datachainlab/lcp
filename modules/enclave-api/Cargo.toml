@@ -16,7 +16,6 @@ flex-error = { version = "0.4.4" }
 lcp-types = { path = "../types" }
 ecall-commands = { path = "../ecall-commands", features = ["std"] }
 lcp-proto = { path = "../../proto", features = ["server"] }
-host = { path = "../host" }
 store = { path = "../store" }
 host-environment = { path = "../host-environment" }
 

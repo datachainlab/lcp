@@ -2,7 +2,6 @@ use crate::errors::Error;
 use crate::prelude::*;
 use crate::traits::SealedKey;
 use crate::EnclaveKey;
-use log::*;
 use settings::SEALED_ENCLAVE_KEY_PATH;
 use sgx_tstd::path::PathBuf;
 
@@ -38,10 +37,7 @@ impl<'a> KeyManager {
     }
 
     pub fn set_enclave_key(&'a mut self, kp: EnclaveKey) -> Result<&'a EnclaveKey, Error> {
-        if let Err(e) = kp.seal(&self.key_dir) {
-            error!("Error sealing registration key");
-            return Err(e);
-        }
+        kp.seal(&self.key_dir)?;
         self.enclave_key = Some(kp);
         Ok(self.enclave_key.as_ref().unwrap())
     }

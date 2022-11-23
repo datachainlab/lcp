@@ -11,5 +11,4 @@ ibc-proto = { git = "https://github.com/informalsystems/ibc-rs", rev = "e8c98d44
 flex-error = { version = "0.4.4", default-features = false }
 
 lcp-types = { path = "../types", default-features = false }
-ecall-commands = { path = "../ecall-commands", default-features = false }
 commitments = { path = "../commitments", default-features = false }
