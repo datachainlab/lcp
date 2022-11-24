@@ -4,11 +4,10 @@ version = "0.1.0"
 edition = "2021"
 build = "build.rs"
 
-[dependencies]
+[dev-dependencies]
 ibc = { git = "https://github.com/informalsystems/ibc-rs", rev = "e8c98d440949abf971ac45a68ed9dd9e6e9f48ed", default-features = false }
 ibc-relayer = { git = "https://github.com/informalsystems/ibc-rs", rev = "e8c98d440949abf971ac45a68ed9dd9e6e9f48ed", default-features = false }
 ibc-proto = { git = "https://github.com/informalsystems/ibc-rs", rev = "e8c98d440949abf971ac45a68ed9dd9e6e9f48ed", default-features = false }
-ibc-integration-test = { git = "https://github.com/informalsystems/ibc-rs", rev = "e8c98d440949abf971ac45a68ed9dd9e6e9f48ed", default-features = false }
 ibc-test-framework = { git = "https://github.com/informalsystems/ibc-rs", rev = "e8c98d440949abf971ac45a68ed9dd9e6e9f48ed", default-features = false }
 tendermint-proto = { version = "=0.23.7", default-features = false }
 tendermint-rpc  = { version = "=0.23.7", features = ["http-client", "websocket-client"] }
@@ -29,7 +28,6 @@ ocall-handler = { path = "../../modules/ocall-handler" }
 enclave-api = { path = "../../modules/enclave-api" }
 ecall-commands = { path = "../../modules/ecall-commands" }
 attestation-report = { path = "../../modules/attestation-report" }
-settings = { path = "../../modules/settings" }
 relay-tendermint = { path = "../../modules/relay/tendermint" }
 
 [features]

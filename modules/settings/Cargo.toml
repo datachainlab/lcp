@@ -5,7 +5,6 @@ edition = "2021"
 
 [dependencies]
 sgx_types = { rev = "v1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk" }
-lazy_static = { version = "1.1.0", features = ["spin_no_std"] }
 
 [features]
 production = []

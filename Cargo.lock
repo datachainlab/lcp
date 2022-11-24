@@ -204,7 +204,6 @@ dependencies = [
  "rustls 0.19.1",
  "serde",
  "serde_json",
- "sgx_trts",
  "sgx_tstd",
  "sgx_types",
  "tendermint",
@@ -743,10 +742,8 @@ dependencies = [
  "rlp",
  "serde",
  "serde_json",
- "sgx_trts",
  "sgx_types",
  "sha2 0.8.2",
- "store",
  "validation-context",
 ]
 
@@ -903,7 +900,6 @@ dependencies = [
  "hex",
  "libsecp256k1 0.3.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "libsecp256k1 0.3.5 (git+https://github.com/bluele/libsecp256k1-rs-sgx?rev=sgx_1.1.3-patch)",
- "log 0.4.17",
  "rand 0.8.5",
  "serde",
  "settings",
@@ -1249,7 +1245,6 @@ dependencies = [
  "bincode 1.3.3",
  "ecall-commands",
  "flex-error",
- "host",
  "host-environment",
  "ibc",
  "lcp-proto",
@@ -1948,23 +1943,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "ibc-integration-test"
-version = "0.16.0"
-source = "git+https://github.com/informalsystems/ibc-rs?rev=e8c98d440949abf971ac45a68ed9dd9e6e9f48ed#e8c98d440949abf971ac45a68ed9dd9e6e9f48ed"
-dependencies = [
- "ibc",
- "ibc-proto",
- "ibc-relayer",
- "ibc-relayer-cli",
- "ibc-test-framework",
- "serde",
- "serde_json",
- "tendermint",
- "tendermint-rpc",
- "time",
-]
-
-[[package]]
 name = "ibc-proto"
 version = "0.19.0"
 source = "git+https://github.com/informalsystems/ibc-rs?rev=e8c98d440949abf971ac45a68ed9dd9e6e9f48ed#e8c98d440949abf971ac45a68ed9dd9e6e9f48ed"
@@ -2228,7 +2206,6 @@ dependencies = [
  "host",
  "host-environment",
  "ibc",
- "ibc-integration-test",
  "ibc-proto",
  "ibc-relayer",
  "ibc-test-framework",
@@ -2238,7 +2215,6 @@ dependencies = [
  "once_cell 1.15.0",
  "prost-types",
  "relay-tendermint",
- "settings",
  "store",
  "tempdir",
  "tendermint-proto",
@@ -2303,9 +2279,6 @@ name = "lazy_static"
 version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e2abad23fbc42b3700f2f279844dc832adb2b2eb069b2df918f455c4e18cc646"
-dependencies = [
- "spin",
-]
 
 [[package]]
 name = "lazycell"
@@ -2344,11 +2317,9 @@ dependencies = [
  "commitments",
  "context",
  "crypto",
- "ecall-commands",
  "flex-error",
  "ibc",
  "ibc-proto",
- "lazy_static",
  "lcp-proto",
  "lcp-types",
  "light-client",
@@ -2375,7 +2346,6 @@ dependencies = [
  "ibc",
  "ibc-proto",
  "prost",
- "prost-types",
  "schemars",
  "serde",
  "tonic",
@@ -2475,7 +2445,6 @@ name = "light-client"
 version = "0.1.0"
 dependencies = [
  "commitments",
- "ecall-commands",
  "flex-error",
  "ibc",
  "ibc-proto",
@@ -2810,7 +2779,6 @@ dependencies = [
 name = "ocall-handler"
 version = "0.1.0"
 dependencies = [
- "bincode 1.3.3",
  "flex-error",
  "host-environment",
  "log 0.4.17",
@@ -3564,17 +3532,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "rlp-derive"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e33d7b2abe0c340d8797fe2907d3f20d3b5ea5908683618bfe80df7f621f672a"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn",
-]
-
-[[package]]
 name = "rocksdb"
 version = "0.19.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4053,7 +4010,6 @@ dependencies = [
 name = "settings"
 version = "0.1.0"
 dependencies = [
- "lazy_static",
  "sgx_types",
 ]
 
@@ -4380,8 +4336,6 @@ dependencies = [
  "ouroboros",
  "rocksdb",
  "serde",
- "serde_json",
- "sha2 0.8.2",
  "tempdir",
 ]
 
@@ -5248,7 +5202,6 @@ version = "0.1.0"
 dependencies = [
  "lcp-types",
  "rlp",
- "rlp-derive",
  "serde",
  "tendermint-light-client-verifier",
 ]

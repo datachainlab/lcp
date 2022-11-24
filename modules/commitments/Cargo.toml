@@ -5,7 +5,6 @@ edition = "2021"
 
 [dependencies]
 sgx_types = { rev = "v1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk" }
-sgx_trts = { rev = "v1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk" }
 serde = { version = "1.0", default-features = false, features = ["alloc"] }
 serde_json = { version = "1.0", default-features = false, features = ["alloc"] }
 prost = { version = "0.10", default-features = false }
@@ -15,7 +14,6 @@ ibc-proto = { git = "https://github.com/informalsystems/ibc-rs", rev = "e8c98d44
 log = { version = "0.4.8", default-features = false }
 hex = { version = "0.4", default-features = false, features = ["alloc"] }
 sha2 = { version = "0.8", default-features = false }
-store = { path = "../store", default-features = false }
 rlp = { version = "0.5.1", default-features = false }
 flex-error = { version = "0.4.4", default-features = false }
 

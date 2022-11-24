@@ -1,4 +1,4 @@
-#![allow(unused)]
+#[cfg(test)]
 mod relayer;
 #[cfg(test)]
 mod tests {
@@ -8,8 +8,7 @@ mod tests {
         CommitmentProofPair, IASRemoteAttestationInput, InitClientInput, InitEnclaveInput,
         UpdateClientInput, VerifyMembershipInput,
     };
-    use enclave_api::EnclaveCommandAPI;
-    use enclave_api::{Enclave, EnclavePrimitiveAPI};
+    use enclave_api::{Enclave, EnclaveCommandAPI};
     use host_environment::Environment;
     use ibc::core::{
         ics23_commitment::{commitment::CommitmentProofBytes, merkle::MerkleProof},
@@ -25,11 +24,10 @@ mod tests {
     };
     use lcp_types::Time;
     use log::*;
-    use once_cell::sync::Lazy;
     use relay_tendermint::Relayer;
     use std::str::FromStr;
     use std::sync::{Arc, RwLock};
-    use store::{host::HostStore, memory::MemStore, transaction::CommitStore};
+    use store::{host::HostStore, memory::MemStore};
     use tempdir::TempDir;
     use tendermint_proto::Protobuf;
     use tokio::runtime::Runtime as TokioRuntime;
