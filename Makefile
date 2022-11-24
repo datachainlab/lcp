@@ -190,7 +190,8 @@ yrly:
 
 .PHONY: lint
 lint:
-	@cargo check $(CARGO_TARGET)
+	@cargo check --locked $(CARGO_TARGET)
+	@cargo udeps --locked --lib --quiet $(CARGO_TARGET)
 
 .PHONY: test
 test:
