@@ -190,7 +190,7 @@ yrly:
 
 .PHONY: lint-tools
 lint-tools:
-	cargo install cargo-udeps --locked
+	cargo +nightly install cargo-udeps --locked
 
 .PHONY: lint
 lint:
