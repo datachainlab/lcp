@@ -188,6 +188,10 @@ proto:
 yrly:
 	go build -o ./bin/yrly ./go/relay/bin
 
+.PHONY: lint-tools
+lint-tools:
+	cargo install cargo-udeps --locked
+
 .PHONY: lint
 lint:
 	@cargo check --locked --tests $(CARGO_TARGET)

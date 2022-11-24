@@ -19,9 +19,7 @@ jobs:
             .
             ./enclave
       - uses: actions-rs/cargo@v1
-        with:
-          command: install
-          args: cargo-udeps --locked
+      - run: make lint-tools
       - run: make test
       - run: make lint
 
