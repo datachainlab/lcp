@@ -48,11 +48,12 @@ func (cs ClientState) CheckHeaderAndUpdateForUpdateClient(ctx sdk.Context, cdc c
 		}
 	}
 
-	if !cs.Contains(header.Signer) {
-		return nil, nil, sdkerrors.Wrapf(clienttypes.ErrInvalidHeader, "signer '%v' already exists", header.Signer)
+	signer := common.BytesToAddress(header.Signer)
+	if !cs.IsActiveKey(ctx.BlockTime(), signer) {
+		return nil, nil, sdkerrors.Wrapf(clienttypes.ErrInvalidHeader, "signer '%v' not found", signer)
 	}
 
-	if err := VerifySignatureWithSignBytes(header.Commitment, header.Signature, header.Signer); err != nil {
+	if err := VerifySignatureWithSignBytes(header.Commitment, header.Signature, signer); err != nil {
 		return nil, nil, sdkerrors.Wrapf(clienttypes.ErrInvalidHeader, err.Error())
 	}
 
@@ -79,6 +80,9 @@ func (cs ClientState) CheckHeaderAndUpdateForRegisterEnclaveKey(ctx sdk.Context,
 	addr, err := ias.GetEnclaveKeyAddress(quote)
 	if err != nil {
 		return nil, nil, err
+	}
+	if cs.Contains(addr[:]) {
+		return nil, nil, sdkerrors.Wrapf(clienttypes.ErrInvalidHeader, "signer '%v' already exists", addr.String())
 	}
 
 	newClientState := cs.WithNewKey(addr, avr.GetTimestamp())
