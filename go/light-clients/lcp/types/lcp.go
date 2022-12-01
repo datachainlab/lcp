@@ -32,7 +32,7 @@ func VerifySignature(msg []byte, signature []byte, signer common.Address) error 
 	}
 }
 
-func VerifySignatureWithSignBytes(signBytes []byte, signature []byte, expectedSigner []byte) error {
+func VerifySignatureWithSignBytes(signBytes []byte, signature []byte, expectedSigner common.Address) error {
 	if l := len(signature); l != 65 {
 		return fmt.Errorf("invalid signature length: expected=%v actual=%v", 65, l)
 	}
@@ -40,7 +40,7 @@ func VerifySignatureWithSignBytes(signBytes []byte, signature []byte, expectedSi
 		return fmt.Errorf("invalid signer length: expected=%v actual=%v", common.AddressLength, l)
 	}
 	msg := crypto.Keccak256(signBytes)
-	return VerifySignature(msg, signature, common.BytesToAddress(expectedSigner))
+	return VerifySignature(msg, signature, expectedSigner)
 }
 
 type StateID [32]byte
