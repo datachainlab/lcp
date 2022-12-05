@@ -15,7 +15,7 @@
       "trusting_period": "336h"
     },
     "lcp_service_address": "localhost:50051",
-    "mrenclave": "0xd79043bb9d2690dacb96c1b4c340200c9e6eae2c78a3f02f271e2f3a448316ae",
+    "mrenclave": "0x345d104a3f19dda3dc1527b851f73c960c22aa42a43af7d062c210f9c79e9fa4",
     "elc_client_id": "07-tendermint-1"
   }
 }

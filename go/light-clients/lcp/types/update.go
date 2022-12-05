@@ -77,6 +77,9 @@ func (cs ClientState) CheckHeaderAndUpdateForRegisterEnclaveKey(ctx sdk.Context,
 	if err != nil {
 		return nil, nil, err
 	}
+	if !bytes.Equal(cs.Mrenclave, quote.Report.MRENCLAVE[:]) {
+		return nil, nil, sdkerrors.Wrapf(clienttypes.ErrInvalidHeader, "invalid AVR: mrenclave mismatch: expected=%v actual=%v", cs.Mrenclave, quote.Report.MRENCLAVE[:])
+	}
 	addr, err := ias.GetEnclaveKeyAddress(quote)
 	if err != nil {
 		return nil, nil, err
