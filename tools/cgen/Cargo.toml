@@ -1,0 +1,38 @@
+[package]
+name = "cgen"
+version = "0.1.0"
+edition = "2021"
+build = "build.rs"
+
+[dependencies]
+clap = { version = "3.2", features = ["derive"] }
+ibc = { git = "https://github.com/informalsystems/ibc-rs", rev = "e8c98d440949abf971ac45a68ed9dd9e6e9f48ed", default-features = false }
+ibc-relayer = { git = "https://github.com/informalsystems/ibc-rs", rev = "e8c98d440949abf971ac45a68ed9dd9e6e9f48ed", default-features = false }
+ibc-proto = { git = "https://github.com/informalsystems/ibc-rs", rev = "e8c98d440949abf971ac45a68ed9dd9e6e9f48ed", default-features = false }
+ibc-test-framework = { git = "https://github.com/informalsystems/ibc-rs", rev = "e8c98d440949abf971ac45a68ed9dd9e6e9f48ed", default-features = false }
+tendermint-proto = { version = "=0.23.7", default-features = false }
+tendermint-rpc  = { version = "=0.23.7", features = ["http-client", "websocket-client"] }
+tempdir = "0.3.7"
+prost-types = { version = "0.10", default-features = false }
+anyhow = { version = "1.0.56" }
+tokio = { version = "1.0" }
+log = "0.4.8"
+once_cell = "1.15.0"
+serde = { version = "1.0", default-features = false, features = ["alloc"] }
+serde_json = { version = "1.0", default-features = false, features = ["alloc"] }
+base64 = { git = "https://github.com/marshallpierce/rust-base64", default-features = false, features = ["alloc"] }
+rlp = { version = "0.5.1", default-features = false }
+
+lcp-types = { path = "../../modules/types" }
+host = { path = "../../modules/host" }
+host-environment = { path = "../../modules/host-environment" }
+store = { path = "../../modules/store" }
+commitments = { path = "../../modules/commitments" }
+ocall-handler = { path = "../../modules/ocall-handler" }
+enclave-api = { path = "../../modules/enclave-api" }
+ecall-commands = { path = "../../modules/ecall-commands" }
+attestation-report = { path = "../../modules/attestation-report" }
+relay-tendermint = { path = "../../modules/relay/tendermint" }
+
+[features]
+default = []

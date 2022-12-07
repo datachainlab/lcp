@@ -176,17 +176,17 @@ enclave:
 	@cd enclave && RUSTFLAGS=$(RUSTFLAGS) cargo build $(CARGO_TARGET) $(CARGO_FEATURES)
 	@cp enclave/target/$(OUTPUT_PATH)/libproxy_enclave.a ./lib/libenclave.a
 
-.PHONY: fmt
-fmt:
-	@cargo fmt --all && cd ./enclave && cargo fmt --all
+######## Code generator ########
 
 .PHONY: proto
 proto:
 	@cd proto-compiler && cargo run -- compile --ibc /tmp/cosmos/ibc --out ../proto/src/prost --descriptor ../proto/src/descriptor.bin
 
-.PHONY: yrly
-yrly:
-	go build -o ./bin/yrly ./go/relay/bin
+######## Lint ########
+
+.PHONY: fmt
+fmt:
+	@cargo fmt --all && cd ./enclave && cargo fmt --all
 
 .PHONY: lint-tools
 lint-tools:
@@ -196,6 +196,22 @@ lint-tools:
 lint:
 	@cargo check --locked --tests $(CARGO_TARGET)
 	@cargo udeps --locked --lib --tests --quiet $(CARGO_TARGET)
+
+######## Tools ########
+
+.PHONY: yrly
+yrly:
+	go build -o ./bin/yrly ./go/relay/bin
+
+.PHONY: cgen
+cgen:
+	@cargo build $(CARGO_TARGET) --package cgen
+
+.PHONY: nodes-runner
+nodes-runner:
+	@cargo build $(CARGO_TARGET) --package nodes-runner
+
+######## Tests ########
 
 .PHONY: test
 test:
