@@ -1,0 +1,39 @@
+
+services:
+  aesm:
+    image: sgx_aesm:latest
+    devices:
+      - /dev/sgx/enclave
+      - /dev/sgx/provision
+    volumes:
+      - aesmd-socket:/var/run/aesmd
+    stdin_open: true
+    tty: true
+
+  lcp:
+    image: lcp-ci-it:${TAG:-latest}
+    container_name: lcp-ci-it
+    devices:
+      - /dev/sgx/enclave
+    depends_on:
+      - aesm
+    volumes:
+      - aesmd-socket:/var/run/aesmd
+      - ${CARGO_DIR}/git:/home/${USERNAME}/.cargo/git
+      - ${CARGO_DIR}/registry:/home/${USERNAME}/.cargo/registry
+      - ${PROJECT_DIR}/target:/home/${USERNAME}/lcp/target
+      - ${PROJECT_DIR}/enclave/target:/home/${USERNAME}/lcp/enclave/target
+    stdin_open: true
+    tty: true
+    environment:
+      - SPID=${SPID}
+      - IAS_KEY=${IAS_KEY}
+    entrypoint: /bin/bash -l -c "./entrypoint.sh"
+
+volumes:
+  aesmd-socket:
+    driver_opts:
+      type: tmpfs
+      device: tmpfs
+      o: rw
+    driver: local

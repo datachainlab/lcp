@@ -3,11 +3,11 @@
 # Add steps that build, run tests, deploy, and more:
 # https://aka.ms/yaml
 
-# Manual execution only permitted
-trigger: none
-
-# no PR triggers
-pr: none
+trigger:
+  branches:
+    include:
+      - azure-pipelines
+#pr: none
 
 pool:
   name: lcp-agent-pool
@@ -18,24 +18,91 @@ variables:
   sgx_rust_repo: 'sgx-rust'
   sgx_rust_tag: '2004-1.1.5'
   lcp_tag: '$(Build.SourceVersion)'
+  cargo_cache_path: '$(Pipeline.Workspace)/cargo'
+  test_user_name: 'test-user'
+  test_user_group: 'test-user'
 
-jobs:
-  - job: 'integration_test'
-    steps:
-    - script: |
-        echo $(GH_PAT) | docker login $(registry) -u $(registry_user) --password-stdin
-        docker pull $(registry)/$(registry_user)/$(sgx_rust_repo):$(sgx_rust_tag)
-      displayName: 'Pull the sgx-rust image'
+steps:
+- script: |
+    echo $(GH_PAT) | docker login $(registry) -u $(registry_user) --password-stdin
+    docker pull $(registry)/$(registry_user)/$(sgx_rust_repo):$(sgx_rust_tag)
+  displayName: 'Pull the sgx-rust image'
 
-    - script: |
-        docker build -t lcp-ci-it:$(lcp_tag) -f .github/tests/integration/Dockerfile .
-      displayName: 'Build image'
+- task: Cache@2
+  displayName: "Cache cargo git dir"
+  inputs:
+    key: '"rust" | "$(Agent.OS)"| "lcp" | "cargo" | "git" | **/Cargo.lock'
+    path: $(cargo_cache_path)/git
+    cacheHitVar: CACHE_RESTORED_CARGO_GIT
 
-    - script: |
-        docker run \
-          --device /dev/sgx/enclave \
-          --device /dev/sgx/provision \
-          --env IAS_KEY=$(IAS_KEY) \
-          --env SPID=$(SPID) \
-          lcp-ci-it:$(lcp_tag)
-      displayName: 'Run integration test'
+- script: mkdir -p $(cargo_cache_path)/git
+  displayName: "Create cargo git dir if not exsits"
+  condition: ne(variables.CACHE_RESTORED_CARGO_GIT, 'true')
+
+- task: Cache@2
+  displayName: "Cache cargo registry dir"
+  inputs:
+    key: '"rust" | "$(Agent.OS)"| "lcp" | "cargo" | "registry" | **/Cargo.lock'
+    path: $(cargo_cache_path)/registry
+    cacheHitVar: CACHE_RESTORED_CARGO_REGISTRY
+
+- script: mkdir -p $(cargo_cache_path)/registry
+  displayName: "Create cargo registry dir if not exsits"
+  condition: ne(variables.CACHE_RESTORED_CARGO_REGISTRY, 'true')
+
+- script: |
+    .github/tests/integration/build.sh
+  displayName: 'Build Docker image'
+  env:
+    USERNAME: $(test_user_name)
+    GROUPNAME: $(test_user_group)
+    TAG: $(lcp_tag)
+
+- task: Cache@2
+  displayName: "Cache target dir"
+  inputs:
+    key: '"rust" | "$(Agent.OS)"| "lcp" | "target" | **/Cargo.lock'
+    path: $(Build.SourcesDirectory)/target
+    cacheHitVar: CACHE_RESTORED_LCP_TARGET
+
+- script: mkdir -p $(Build.SourcesDirectory)/target
+  displayName: "Create target dir if not exsits"
+  condition: ne(variables.CACHE_RESTORED_LCP_TARGET, 'true')
+
+- task: Cache@2
+  displayName: "Cache enclave/target dir"
+  inputs:
+    key: '"rust" | "$(Agent.OS)"| "lcp" | "enclave" | "target" | enclave/Cargo.toml'
+    path: $(Build.SourcesDirectory)/enclave/target
+    cacheHitVar: CACHE_RESTORED_LCP_ENCLAVE_TARGET
+
+- script: mkdir -p $(Build.SourcesDirectory)/enclave/target
+  displayName: "Create enclave/target dir if not exsits"
+  condition: ne(variables.CACHE_RESTORED_LCP_ENCLAVE_TARGET, 'true')
+
+- script: |
+    docker compose up --abort-on-container-exit --exit-code-from lcp
+  displayName: 'Run integration tests'
+  env:
+    USERNAME: $(test_user_name)
+    GROUPNAME: $(test_user_group)
+    TAG: $(lcp_tag)
+    CARGO_DIR: $(cargo_cache_path)
+    PROJECT_DIR: $(Build.SourcesDirectory)
+    IAS_KEY: $(IAS_KEY)
+    SPID: $(SPID)
+  workingDirectory: .github/tests/integration
+
+- script: |
+    docker compose down -v
+  condition: always()
+  displayName: 'Shutdown the Containers'
+  env:
+    USERNAME: $(test_user_name)
+    GROUPNAME: $(test_user_group)
+    TAG: $(lcp_tag)
+    CARGO_DIR: $(cargo_cache_path)
+    PROJECT_DIR: $(Build.SourcesDirectory)
+    IAS_KEY: $(IAS_KEY)
+    SPID: $(SPID)
+  workingDirectory: .github/tests/integration
