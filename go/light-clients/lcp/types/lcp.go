@@ -13,6 +13,19 @@ import (
 	"github.com/ethereum/go-ethereum/rlp"
 )
 
+const (
+	QuoteOK                                = "OK"
+	QuoteSignatureInvalid                  = "SIGNATURE_INVALID"
+	QuoteGroupRevoked                      = "GROUP_REVOKED"
+	QuoteSignatureRevoked                  = "SIGNATURE_REVOKED"
+	QuoteKeyRevoked                        = "KEY_REVOKED"
+	QuoteSigRLVersionMismatch              = "SIGRL_VERSION_MISMATCH"
+	QuoteGroupOutOfDate                    = "GROUP_OUT_OF_DATE"
+	QuoteConfigurationNeeded               = "CONFIGURATION_NEEDED"
+	QuoteSwHardeningNeeded                 = "SW_HARDENING_NEEDED"
+	QuoteConfigurationAndSwHardeningNeeded = "CONFIGURATION_AND_SW_HARDENING_NEEDED"
+)
+
 // Note: currently, LCP supports only secp256k1
 
 func VerifySignature(msg []byte, signature []byte, signer common.Address) error {

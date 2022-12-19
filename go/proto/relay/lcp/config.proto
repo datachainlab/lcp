@@ -11,5 +11,7 @@ message ProverConfig {
     google.protobuf.Any origin_prover = 1;
     string lcp_service_address = 2;
     string mrenclave = 3;
-    string elc_client_id = 4;
+    repeated string allowed_quote_statuses = 4;
+    repeated string allowed_advisory_ids = 5;
+    string elc_client_id = 6;
 }

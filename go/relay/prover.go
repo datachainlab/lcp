@@ -116,10 +116,13 @@ func (pr *Prover) CreateMsgCreateClient(clientID string, dstHeader core.HeaderI,
 	}
 
 	clientState := &lcptypes.ClientState{
-		LatestHeight:  clienttypes.Height{},
-		Mrenclave:     pr.config.GetMrenclave(),
-		KeyExpiration: 60 * 60 * 24 * 7, // 7 days
-		Keys:          [][]byte{},
+		LatestHeight:         clienttypes.Height{},
+		Mrenclave:            pr.config.GetMrenclave(),
+		KeyExpiration:        60 * 60 * 24 * 7, // 7 days
+		Keys:                 [][]byte{},
+		AttestationTimes:     []uint64{},
+		AllowedQuoteStatuses: pr.config.AllowedQuoteStatuses,
+		AllowedAdvisoryIds:   pr.config.AllowedAdvisoryIds,
 	}
 	consensusState := &lcptypes.ConsensusState{}
 

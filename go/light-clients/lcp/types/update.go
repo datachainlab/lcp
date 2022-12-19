@@ -10,6 +10,7 @@ import (
 	clienttypes "github.com/cosmos/ibc-go/v4/modules/core/02-client/types"
 	"github.com/cosmos/ibc-go/v4/modules/core/exported"
 	"github.com/datachainlab/lcp/go/sgx/ias"
+	mapset "github.com/deckarep/golang-set/v2"
 	"github.com/ethereum/go-ethereum/common"
 )
 
@@ -73,6 +74,19 @@ func (cs ClientState) CheckHeaderAndUpdateForRegisterEnclaveKey(ctx sdk.Context,
 	if err != nil {
 		return nil, nil, sdkerrors.Wrapf(clienttypes.ErrInvalidHeader, "invalid AVR: report=%v err=%v", header.Report, err)
 	}
+	quoteStatus := avr.ISVEnclaveQuoteStatus.String()
+	if quoteStatus == QuoteOK {
+		if len(avr.AdvisoryIDs) != 0 {
+			return nil, nil, sdkerrors.Wrapf(clienttypes.ErrInvalidHeader, "advisory IDs should be empty when status is OK: actual=%v", avr.AdvisoryIDs)
+		}
+	} else {
+		if !cs.isAllowedStatus(quoteStatus) {
+			return nil, nil, sdkerrors.Wrapf(clienttypes.ErrInvalidHeader, "disallowed quote status exists: allowed=%v actual=%v", cs.AllowedQuoteStatuses, quoteStatus)
+		}
+		if !cs.isAllowedAdvisoryIDs(avr.AdvisoryIDs) {
+			return nil, nil, sdkerrors.Wrapf(clienttypes.ErrInvalidHeader, "disallowed advisory ID(s) exists: allowed=%v actual=%v", cs.AllowedAdvisoryIds, avr.AdvisoryIDs)
+		}
+	}
 	quote, err := avr.Quote()
 	if err != nil {
 		return nil, nil, err
@@ -120,4 +134,24 @@ func (cs ClientState) WithNewKey(signer common.Address, attestationTime time.Tim
 
 func (cs ClientState) getKeyExpiration() time.Duration {
 	return time.Duration(cs.KeyExpiration) * time.Second
+}
+
+func (cs ClientState) isAllowedStatus(status string) bool {
+	if status == QuoteOK {
+		return true
+	}
+	for _, s := range cs.AllowedQuoteStatuses {
+		if status == s {
+			return true
+		}
+	}
+	return false
+}
+
+func (cs ClientState) isAllowedAdvisoryIDs(advIDs []string) bool {
+	if len(advIDs) == 0 {
+		return true
+	}
+	set := mapset.NewThreadUnsafeSet(cs.AllowedAdvisoryIds...)
+	return set.Contains(advIDs...)
 }
