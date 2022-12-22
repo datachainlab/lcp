@@ -29,6 +29,12 @@ pub struct ClientState {
     /// unix timestamp in seconds
     #[prost(uint64, repeated, tag="5")]
     pub attestation_times: ::prost::alloc::vec::Vec<u64>,
+    /// e.g. SW_HARDENING_NEEDED, CONFIGURATION_AND_SW_HARDENING_NEEDED (except "OK")
+    #[prost(string, repeated, tag="6")]
+    pub allowed_quote_statuses: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
+    /// e.g. INTEL-SA-XXXXX
+    #[prost(string, repeated, tag="7")]
+    pub allowed_advisory_ids: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ConsensusState {

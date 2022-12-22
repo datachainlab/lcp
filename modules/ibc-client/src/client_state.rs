@@ -62,6 +62,8 @@ impl From<ClientState> for RawClientState {
             key_expiration: value.key_expiration.as_secs(),
             keys: Vec::with_capacity(value.keys.len()),
             attestation_times: Vec::with_capacity(value.keys.len()),
+            allowed_quote_statuses: Default::default(),
+            allowed_advisory_ids: Default::default(),
         };
         value.keys.into_iter().for_each(|k| {
             client_state.keys.push(k.0.into());

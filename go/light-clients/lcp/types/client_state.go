@@ -48,17 +48,14 @@ func (cs ClientState) Validate() error {
 // Clients must validate the initial consensus state, and may store any client-specific metadata
 // necessary for correct light client operation
 func (cs ClientState) Initialize(_ sdk.Context, _ codec.BinaryCodec, _ sdk.KVStore, consensusState exported.ConsensusState) error {
-	if len(cs.Keys) != 0 {
-		return sdkerrors.Wrapf(clienttypes.ErrInvalidClient, "`Keys` length must be zero")
+	if err := cs.Validate(); err != nil {
+		return nil
 	}
-	if cs.KeyExpiration == 0 {
-		return sdkerrors.Wrapf(clienttypes.ErrInvalidClient, "`KeyExpiration` must be non-zero")
+	if len(cs.Keys) != 0 || len(cs.AttestationTimes) != 0 {
+		return sdkerrors.Wrapf(clienttypes.ErrInvalidClient, "both `Keys` and `AttestationTimes` length must be zero")
 	}
 	if !cs.LatestHeight.IsZero() {
 		return sdkerrors.Wrapf(clienttypes.ErrInvalidClient, "`LatestHeight` must be zero height")
-	}
-	if l := len(cs.Mrenclave); l != MrenclaveSize {
-		return sdkerrors.Wrapf(clienttypes.ErrInvalidClient, "`Mrenclave` length must be %v, but got %v", MrenclaveSize, l)
 	}
 	consensusState, ok := consensusState.(*ConsensusState)
 	if !ok {

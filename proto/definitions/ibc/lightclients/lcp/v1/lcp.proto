@@ -24,10 +24,16 @@ message ClientState {
   bytes mrenclave = 2;
   uint64 key_expiration = 3;
   repeated bytes keys = 4;
-  repeated uint64 attestation_times = 5; // unix timestamp in seconds
+  // unix timestamp in seconds
+  repeated uint64 attestation_times = 5;
+  // e.g. SW_HARDENING_NEEDED, CONFIGURATION_AND_SW_HARDENING_NEEDED (except "OK")
+  repeated string allowed_quote_statuses = 6;
+  // e.g. INTEL-SA-XXXXX
+  repeated string allowed_advisory_ids = 7;
 }
 
 message ConsensusState {
   bytes state_id = 1;
-  uint64 timestamp = 2; // unix timestamp in seconds
+  // unix timestamp in seconds
+  uint64 timestamp = 2;
 }
