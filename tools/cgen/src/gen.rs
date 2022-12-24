@@ -9,7 +9,7 @@ use ibc::core::ics04_channel::packet::Sequence;
 use ibc::core::ics23_commitment::commitment::CommitmentProofBytes;
 use ibc::core::ics23_commitment::merkle::MerkleProof;
 use ibc::core::ics24_host::identifier::ClientId;
-use ibc::core::ics24_host::path::{ChannelEndsPath, CommitmentsPath};
+use ibc::core::ics24_host::path::{ChannelEndsPath, CommitmentsPath, ConnectionsPath};
 use ibc::core::ics24_host::Path;
 use ibc::Height;
 use ibc_test_framework::prelude::*;
@@ -51,6 +51,7 @@ pub struct CGenConfig {
 
 pub enum Command {
     UpdateClient,
+    VerifyConnection,
     VerifyChannel,
     VerifyPacket,
 }
@@ -60,6 +61,7 @@ impl FromStr for Command {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "update_client" => Ok(Command::UpdateClient),
+            "verify_connection" => Ok(Command::VerifyConnection),
             "verify_channel" => Ok(Command::VerifyChannel),
             "verify_packet" => Ok(Command::VerifyPacket),
             _ => bail!("unknown command: '{}'", s),
@@ -67,21 +69,23 @@ impl FromStr for Command {
     }
 }
 
-pub struct CommandFileGenerator<'e, 'f> {
+pub struct CommandFileGenerator<'e, 'f, ChainA: ChainHandle, ChainB: ChainHandle> {
     config: CGenConfig,
     enclave: &'f Enclave<'e, store::memory::MemStore>,
     rly: Relayer,
 
-    channel: (PortId, ChannelId),
+    channel: ConnectedChannel<ChainA, ChainB>,
     seq: u64,
 }
 
-impl<'e, 'f> CommandFileGenerator<'e, 'f> {
+impl<'e, 'f, ChainA: ChainHandle, ChainB: ChainHandle>
+    CommandFileGenerator<'e, 'f, ChainA, ChainB>
+{
     pub fn new(
         config: CGenConfig,
         enclave: &'f Enclave<'e, store::memory::MemStore>,
         rly: Relayer,
-        channel: (PortId, ChannelId),
+        channel: ConnectedChannel<ChainA, ChainB>,
     ) -> Self {
         Self {
             seq: 1,
@@ -102,6 +106,9 @@ impl<'e, 'f> CommandFileGenerator<'e, 'f> {
             match cmd {
                 Command::UpdateClient => {
                     last_height = self.update_client(last_height, client_id.clone())?;
+                }
+                Command::VerifyConnection => {
+                    self.verify_connection(last_height, client_id.clone())?;
                 }
                 Command::VerifyChannel => {
                     self.verify_channel(last_height, client_id.clone())?;
@@ -208,14 +215,54 @@ impl<'e, 'f> CommandFileGenerator<'e, 'f> {
         Ok(res.0.commitment().new_height.try_into()?)
     }
 
+    fn verify_connection(
+        &mut self,
+        last_height: Height,
+        client_id: ClientId,
+    ) -> Result<(), anyhow::Error> {
+        let res = self.rly.query_connection_proof(
+            self.channel
+                .connection
+                .connection
+                .a_connection_id()
+                .unwrap()
+                .clone(),
+            Some(last_height.try_into().map_err(|e| anyhow!("{:?}", e))?),
+        )?;
+
+        let input = VerifyMembershipInput {
+            client_id,
+            prefix: "ibc".into(),
+            path: Path::Connections(ConnectionsPath(
+                self.channel
+                    .connection
+                    .connection
+                    .a_connection_id()
+                    .unwrap()
+                    .clone(),
+            ))
+            .to_string(),
+            value: res.0.encode_vec().unwrap(),
+            proof: CommitmentProofPair(
+                res.2.try_into().map_err(|e| anyhow!("{:?}", e))?,
+                merkle_proof_to_bytes(res.1)?,
+            ),
+        };
+        self.write_to_file("verify_connection_input", &input)?;
+        let res = self.enclave.verify_membership(input)?;
+        self.write_to_file("verify_connection_result", &res.0)?;
+
+        Ok(())
+    }
+
     fn verify_channel(
         &mut self,
         last_height: Height,
         client_id: ClientId,
     ) -> Result<(), anyhow::Error> {
         let res = self.rly.query_channel_proof(
-            self.channel.0.clone(),
-            self.channel.1.clone(),
+            self.channel.channel.a_side.port_id().clone(),
+            self.channel.channel.a_side.channel_id().unwrap().clone(),
             Some(last_height.try_into().map_err(|e| anyhow!("{:?}", e))?),
         )?;
 
@@ -223,8 +270,8 @@ impl<'e, 'f> CommandFileGenerator<'e, 'f> {
             client_id,
             prefix: "ibc".into(),
             path: Path::ChannelEnds(ChannelEndsPath(
-                self.channel.0.clone(),
-                self.channel.1.clone(),
+                self.channel.channel.a_side.port_id().clone(),
+                self.channel.channel.a_side.channel_id().unwrap().clone(),
             ))
             .to_string(),
             value: res.0.encode_vec().unwrap(),
@@ -247,8 +294,8 @@ impl<'e, 'f> CommandFileGenerator<'e, 'f> {
         sequence: Sequence,
     ) -> Result<(), anyhow::Error> {
         let res = self.rly.query_packet_proof(
-            self.channel.0.clone(),
-            self.channel.1.clone(),
+            self.channel.channel.a_side.port_id().clone(),
+            self.channel.channel.a_side.channel_id().unwrap().clone(),
             sequence,
             Some(last_height.try_into().map_err(|e| anyhow!("{:?}", e))?),
         )?;
@@ -257,8 +304,8 @@ impl<'e, 'f> CommandFileGenerator<'e, 'f> {
             client_id,
             prefix: "ibc".into(),
             path: Path::Commitments(CommitmentsPath {
-                port_id: self.channel.0.clone(),
-                channel_id: self.channel.1.clone(),
+                port_id: self.channel.channel.a_side.port_id().clone(),
+                channel_id: self.channel.channel.a_side.channel_id().unwrap().clone(),
                 sequence,
             })
             .to_string(),
@@ -351,17 +398,9 @@ impl<'e> BinaryChannelTest for CGenSuite<'e> {
         let rt = Arc::new(TokioRuntime::new()?);
         let config_a = chains.handle_a().config()?;
         let rly = Relayer::new(config_a, rt).unwrap();
-        CommandFileGenerator::new(
-            self.config.clone(),
-            &self.enclave,
-            rly,
-            (
-                channel.channel.a_side.port_id().clone(),
-                channel.channel.a_side.channel_id().unwrap().clone(),
-            ),
-        )
-        .gen(&self.commands)
-        .map_err(|e| Error::assertion(e.to_string()))
+        CommandFileGenerator::new(self.config.clone(), &self.enclave, rly, channel)
+            .gen(&self.commands)
+            .map_err(|e| Error::assertion(e.to_string()))
     }
 }
 

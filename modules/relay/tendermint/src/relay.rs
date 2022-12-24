@@ -3,12 +3,14 @@ use ibc::clients::ics07_tendermint::client_state::ClientState;
 use ibc::clients::ics07_tendermint::consensus_state::ConsensusState;
 use ibc::core::ics02_client::header::AnyHeader;
 use ibc::core::ics02_client::{client_consensus::AnyConsensusState, client_state::AnyClientState};
+use ibc::core::ics03_connection::connection::ConnectionEnd;
 use ibc::core::ics04_channel::channel::ChannelEnd;
 use ibc::core::ics04_channel::commitment::PacketCommitment;
 use ibc::core::ics04_channel::packet::Sequence;
 use ibc::core::ics23_commitment::merkle::MerkleProof;
-use ibc::core::ics24_host::identifier::{ChannelId, PortId};
+use ibc::core::ics24_host::identifier::{ChannelId, ConnectionId, PortId};
 use ibc::Height;
+use ibc_relayer::chain::requests::QueryConnectionRequest;
 use ibc_relayer::chain::{
     client::ClientSettings,
     cosmos::{client::Settings, CosmosSdkChain},
@@ -83,6 +85,23 @@ impl Relayer {
 
     pub fn query_latest_height(&self) -> Result<Height> {
         Ok(self.chain.query_chain_latest_height()?)
+    }
+
+    pub fn query_connection_proof(
+        &self,
+        connection_id: ConnectionId,
+        height: Option<Height>, // height of consensus state
+    ) -> Result<(ConnectionEnd, MerkleProof, Height)> {
+        let height = match height {
+            Some(height) => height.decrement()?,
+            None => self.query_latest_height()?.decrement()?,
+        };
+        let req = QueryConnectionRequest {
+            connection_id,
+            height: QueryHeight::Specific(height),
+        };
+        let res = self.chain.query_connection(req, IncludeProof::Yes)?;
+        Ok((res.0, res.1.unwrap(), height.increment()))
     }
 
     pub fn query_channel_proof(
