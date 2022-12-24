@@ -311,22 +311,17 @@ impl<'e> BinaryChannelTest for CGenSuite<'e> {
         chains: ConnectedChains<ChainA, ChainB>,
         channel: ConnectedChannel<ChainA, ChainB>,
     ) -> Result<(), Error> {
-        // begin transfer
+        // Begin: IBC transfer
 
         let denom_a = chains.node_a.denom();
-
         let wallet_a = chains.node_a.wallets().user1().cloned();
         let wallet_b = chains.node_b.wallets().user1().cloned();
+        let balance_a = chains
+            .node_a
+            .chain_driver()
+            .query_balance(&wallet_a.address(), &denom_a)?;
 
         let a_to_b_amount = random_u64_range(1000, 5000);
-
-        log::info!(
-            "Sending IBC transfer from chain {} to chain {} with amount of {} {}",
-            chains.chain_id_a(),
-            chains.chain_id_b(),
-            a_to_b_amount,
-            denom_a
-        );
 
         chains.node_a.chain_driver().ibc_transfer_token(
             &channel.port_a.as_ref(),
@@ -337,7 +332,21 @@ impl<'e> BinaryChannelTest for CGenSuite<'e> {
             a_to_b_amount,
         )?;
 
-        // end transfer
+        chains.node_a.chain_driver().assert_eventual_wallet_amount(
+            &wallet_a.address(),
+            balance_a - a_to_b_amount,
+            &denom_a,
+        )?;
+
+        log::info!(
+            "Sending IBC transfer from chain {} to chain {} with amount of {} {}",
+            chains.chain_id_a(),
+            chains.chain_id_b(),
+            a_to_b_amount,
+            denom_a
+        );
+
+        // End: IBC transfer
 
         let rt = Arc::new(TokioRuntime::new()?);
         let config_a = chains.handle_a().config()?;
