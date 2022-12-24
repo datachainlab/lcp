@@ -173,9 +173,9 @@ mod tests {
             PortId::from_str("transfer")?,
             ChannelId::from_str("channel-0")?,
         );
-        let res = rly.proven_channel(
-            &port_id,
-            &channel_id,
+        let res = rly.query_channel_proof(
+            port_id.clone(),
+            channel_id.clone(),
             Some(height.try_into().map_err(|e| anyhow!("{:?}", e))?),
         )?;
 
