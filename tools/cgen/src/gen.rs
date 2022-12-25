@@ -54,16 +54,24 @@ pub enum Command {
     VerifyConnection,
     VerifyChannel,
     VerifyPacket,
+    WaitBlocks(u64),
 }
 
 impl FromStr for Command {
     type Err = anyhow::Error;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s {
+        let parts: Vec<&str> = s.split(":").collect();
+        match parts[0] {
             "update_client" => Ok(Command::UpdateClient),
             "verify_connection" => Ok(Command::VerifyConnection),
             "verify_channel" => Ok(Command::VerifyChannel),
             "verify_packet" => Ok(Command::VerifyPacket),
+            "wait_blocks" => {
+                if parts.len() != 2 {
+                    bail!("`wait` requires one argument");
+                }
+                Ok(Command::WaitBlocks(u64::from_str(parts[1])?))
+            }
             _ => bail!("unknown command: '{}'", s),
         }
     }
@@ -75,7 +83,10 @@ pub struct CommandFileGenerator<'e, 'f, ChainA: ChainHandle, ChainB: ChainHandle
     rly: Relayer,
 
     channel: ConnectedChannel<ChainA, ChainB>,
-    seq: u64,
+    command_sequence: u64,
+
+    client_latest_height: Option<Height>, // latest height of client state
+    chain_latest_provable_height: Height, // latest provable height of chainA
 }
 
 impl<'e, 'f, ChainA: ChainHandle, ChainB: ChainHandle>
@@ -87,38 +98,38 @@ impl<'e, 'f, ChainA: ChainHandle, ChainB: ChainHandle>
         rly: Relayer,
         channel: ConnectedChannel<ChainA, ChainB>,
     ) -> Self {
+        let chain_latest_provable_height = rly.query_latest_height().unwrap().decrement().unwrap();
         Self {
-            seq: 1,
             config,
             enclave,
             rly,
             channel,
+            command_sequence: 1,
+            client_latest_height: None,
+            chain_latest_provable_height,
         }
     }
 
-    pub fn gen(&mut self, commands: &[Command]) -> Result<(), anyhow::Error> {
+    pub fn gen(&mut self, commands: &[Command], wait_blocks: u64) -> Result<(), anyhow::Error> {
+        if wait_blocks > 0 {
+            self.wait_blocks(wait_blocks)?;
+        }
         self.init_enclave_key()?;
-        self.seq += 1;
-        let (client_id, mut last_height) = self.create_client()?;
-        self.seq += 1;
+        self.command_sequence += 1;
+        let client_id = self.create_client()?;
+        self.command_sequence += 1;
 
         for cmd in commands.iter() {
+            assert!(self.command_sequence < 1000);
             match cmd {
-                Command::UpdateClient => {
-                    last_height = self.update_client(last_height, client_id.clone())?;
-                }
-                Command::VerifyConnection => {
-                    self.verify_connection(last_height, client_id.clone())?;
-                }
-                Command::VerifyChannel => {
-                    self.verify_channel(last_height, client_id.clone())?;
-                }
-                Command::VerifyPacket => {
-                    // TODO get sequence from command
-                    self.verify_packet(last_height, client_id.clone(), 1u64.into())?;
-                }
+                Command::UpdateClient => self.update_client(client_id.clone())?,
+                Command::VerifyConnection => self.verify_connection(client_id.clone())?,
+                Command::VerifyChannel => self.verify_channel(client_id.clone())?,
+                // TODO get sequence from command
+                Command::VerifyPacket => self.verify_packet(client_id.clone(), 1u64.into())?,
+                Command::WaitBlocks(n) => self.wait_blocks(*n)?,
             };
-            self.seq += 1;
+            self.command_sequence += 1;
         }
         Ok(())
     }
@@ -147,19 +158,13 @@ impl<'e, 'f, ChainA: ChainHandle, ChainB: ChainHandle>
         Ok(())
     }
 
-    fn create_client(&mut self) -> Result<(ClientId, Height), anyhow::Error> {
-        // XXX use non-latest height here
-        let initial_height = self
+    fn create_client(&mut self) -> Result<ClientId, anyhow::Error> {
+        let (client_state, consensus_state) = self
             .rly
-            .query_latest_height()?
-            .decrement()?
-            .decrement()?
-            .decrement()?;
-
-        let (client_state, consensus_state) = self.rly.fetch_state_as_any(initial_height)?;
+            .fetch_state_as_any(self.chain_latest_provable_height)?;
         log::info!(
             "initial_height: {:?} client_state: {:?}, consensus_state: {:?}",
-            initial_height,
+            self.chain_latest_provable_height,
             client_state,
             consensus_state
         );
@@ -182,18 +187,22 @@ impl<'e, 'f, ChainA: ChainHandle, ChainB: ChainHandle>
 
         self.write_to_file("init_client_result", &res)?;
 
-        Ok((res.client_id, initial_height))
+        self.client_latest_height = Some(self.chain_latest_provable_height);
+
+        Ok(res.client_id)
     }
 
-    fn update_client(
-        &mut self,
-        last_height: Height,
-        client_id: ClientId,
-    ) -> Result<Height, anyhow::Error> {
+    fn update_client(&mut self, client_id: ClientId) -> Result<(), anyhow::Error> {
+        assert!(
+            self.chain_latest_provable_height > self.client_latest_height.unwrap(),
+            "To update the client, you need to advance block's height with `wait_blocks`"
+        );
         let target_header = self.rly.create_header(
-            last_height.try_into().map_err(|e| anyhow!("{:?}", e))?,
-            last_height
-                .increment()
+            self.client_latest_height
+                .unwrap()
+                .try_into()
+                .map_err(|e| anyhow!("{:?}", e))?,
+            self.chain_latest_provable_height
                 .try_into()
                 .map_err(|e| anyhow!("{:?}", e))?,
         )?;
@@ -212,14 +221,12 @@ impl<'e, 'f, ChainA: ChainHandle, ChainB: ChainHandle>
 
         self.write_to_file("update_client_result", &res.0)?;
 
-        Ok(res.0.commitment().new_height.try_into()?)
+        assert!(self.chain_latest_provable_height == res.0.commitment().new_height.try_into()?);
+        self.client_latest_height = Some(self.chain_latest_provable_height);
+        Ok(())
     }
 
-    fn verify_connection(
-        &mut self,
-        last_height: Height,
-        client_id: ClientId,
-    ) -> Result<(), anyhow::Error> {
+    fn verify_connection(&mut self, client_id: ClientId) -> Result<(), anyhow::Error> {
         let res = self.rly.query_connection_proof(
             self.channel
                 .connection
@@ -227,7 +234,12 @@ impl<'e, 'f, ChainA: ChainHandle, ChainB: ChainHandle>
                 .a_connection_id()
                 .unwrap()
                 .clone(),
-            Some(last_height.try_into().map_err(|e| anyhow!("{:?}", e))?),
+            Some(
+                self.client_latest_height
+                    .unwrap()
+                    .try_into()
+                    .map_err(|e| anyhow!("{:?}", e))?,
+            ),
         )?;
 
         let input = VerifyMembershipInput {
@@ -255,15 +267,16 @@ impl<'e, 'f, ChainA: ChainHandle, ChainB: ChainHandle>
         Ok(())
     }
 
-    fn verify_channel(
-        &mut self,
-        last_height: Height,
-        client_id: ClientId,
-    ) -> Result<(), anyhow::Error> {
+    fn verify_channel(&mut self, client_id: ClientId) -> Result<(), anyhow::Error> {
         let res = self.rly.query_channel_proof(
             self.channel.channel.a_side.port_id().clone(),
             self.channel.channel.a_side.channel_id().unwrap().clone(),
-            Some(last_height.try_into().map_err(|e| anyhow!("{:?}", e))?),
+            Some(
+                self.client_latest_height
+                    .unwrap()
+                    .try_into()
+                    .map_err(|e| anyhow!("{:?}", e))?,
+            ),
         )?;
 
         let input = VerifyMembershipInput {
@@ -289,7 +302,6 @@ impl<'e, 'f, ChainA: ChainHandle, ChainB: ChainHandle>
 
     fn verify_packet(
         &mut self,
-        last_height: Height,
         client_id: ClientId,
         sequence: Sequence,
     ) -> Result<(), anyhow::Error> {
@@ -297,7 +309,12 @@ impl<'e, 'f, ChainA: ChainHandle, ChainB: ChainHandle>
             self.channel.channel.a_side.port_id().clone(),
             self.channel.channel.a_side.channel_id().unwrap().clone(),
             sequence,
-            Some(last_height.try_into().map_err(|e| anyhow!("{:?}", e))?),
+            Some(
+                self.client_latest_height
+                    .unwrap()
+                    .try_into()
+                    .map_err(|e| anyhow!("{:?}", e))?,
+            ),
         )?;
 
         let input = VerifyMembershipInput {
@@ -323,6 +340,21 @@ impl<'e, 'f, ChainA: ChainHandle, ChainB: ChainHandle>
         Ok(())
     }
 
+    fn wait_blocks(&mut self, n: u64) -> Result<(), anyhow::Error> {
+        let target = self.chain_latest_provable_height.add(n);
+        loop {
+            let h = self.rly.query_latest_height()?.decrement()?;
+            info!(
+                "wait_blocks: found new height: height={} target={}",
+                h, target
+            );
+            if h > target {
+                self.chain_latest_provable_height = target;
+                return Ok(());
+            }
+        }
+    }
+
     fn write_to_file<S: JSONSerializer>(
         &self,
         name: &str,
@@ -333,7 +365,7 @@ impl<'e, 'f, ChainA: ChainHandle, ChainB: ChainHandle>
         let out_path = self
             .config
             .out_dir
-            .join(format!("{:03}-{}", self.seq, name));
+            .join(format!("{:03}-{}", self.command_sequence, name));
         if out_path.exists() {
             bail!(format!("dir '{:?}' already exists", out_path));
         }
@@ -399,7 +431,7 @@ impl<'e> BinaryChannelTest for CGenSuite<'e> {
         let config_a = chains.handle_a().config()?;
         let rly = Relayer::new(config_a, rt).unwrap();
         CommandFileGenerator::new(self.config.clone(), &self.enclave, rly, channel)
-            .gen(&self.commands)
+            .gen(&self.commands, 1)
             .map_err(|e| Error::assertion(e.to_string()))
     }
 }
