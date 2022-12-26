@@ -1,7 +1,7 @@
 name: test
 on: [push, pull_request]
 jobs:
-  test:
+  lint:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -15,7 +15,6 @@ jobs:
             ./enclave
       - uses: actions-rs/cargo@v1
       - run: make lint-tools
-      - run: make test
       - run: make lint
 
   relayer:
@@ -59,5 +58,5 @@ jobs:
               source /root/.cargo/env && \
               export SGX_MODE=SW && \
               apt update -y && apt install -y libclang-dev && \
-              make && make integration-test cgen"
+              make && make test integration-test cgen"
       - run: sudo chown -R runner:docker . ${HOME}/.cargo
