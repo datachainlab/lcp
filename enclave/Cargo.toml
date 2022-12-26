@@ -12,7 +12,7 @@ crate-type = ["staticlib"]
 default = []
 
 [dependencies]
-sgx_tstd = { rev = "v1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk" }
+sgx_tstd = { rev = "v1.1.6", git = "https://github.com/apache/incubator-teaclave-sgx-sdk" }
 log = { version = "0.4.8", default-features = false }
 
 simple_logger = { git = "https://github.com/bluele/rust-simple_logger", branch = "sgx", default-features = false, features = ["sgx"] }
@@ -25,20 +25,20 @@ store = { path = "../modules/store", default-features = false }
 tendermint-lc = { path = "../modules/tendermint-lc", default-features = false }
 
 [patch."https://github.com/apache/teaclave-sgx-sdk.git"]
-sgx_tstd = { rev = "v1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk" }
-sgx_urts = { rev = "v1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk" }
-sgx_tse = { rev = "v1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk" }
-sgx_alloc = { rev = "v1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk" }
-sgx_libc = { rev = "v1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk" }
-sgx_serialize = { rev = "v1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk" }
-sgx_serialize_derive = { rev = "v1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk" }
-sgx_serialize_derive_internals = { rev = "v1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk" }
-sgx_trts = { rev = "v1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk" }
-sgx_types = { rev = "v1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk" }
-sgx_tcrypto = { rev = "v1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk" }
-sgx_tcrypto_helper = { rev = "v1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk" }
-sgx_crypto_helper = { rev = "v1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk" }
-sgx_rand = { rev = "v1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk" }
+sgx_tstd = { rev = "v1.1.6", git = "https://github.com/apache/incubator-teaclave-sgx-sdk" }
+sgx_urts = { rev = "v1.1.6", git = "https://github.com/apache/incubator-teaclave-sgx-sdk" }
+sgx_tse = { rev = "v1.1.6", git = "https://github.com/apache/incubator-teaclave-sgx-sdk" }
+sgx_alloc = { rev = "v1.1.6", git = "https://github.com/apache/incubator-teaclave-sgx-sdk" }
+sgx_libc = { rev = "v1.1.6", git = "https://github.com/apache/incubator-teaclave-sgx-sdk" }
+sgx_serialize = { rev = "v1.1.6", git = "https://github.com/apache/incubator-teaclave-sgx-sdk" }
+sgx_serialize_derive = { rev = "v1.1.6", git = "https://github.com/apache/incubator-teaclave-sgx-sdk" }
+sgx_serialize_derive_internals = { rev = "v1.1.6", git = "https://github.com/apache/incubator-teaclave-sgx-sdk" }
+sgx_trts = { rev = "v1.1.6", git = "https://github.com/apache/incubator-teaclave-sgx-sdk" }
+sgx_types = { rev = "v1.1.6", git = "https://github.com/apache/incubator-teaclave-sgx-sdk" }
+sgx_tcrypto = { rev = "v1.1.6", git = "https://github.com/apache/incubator-teaclave-sgx-sdk" }
+sgx_tcrypto_helper = { rev = "v1.1.6", git = "https://github.com/apache/incubator-teaclave-sgx-sdk" }
+sgx_crypto_helper = { rev = "v1.1.6", git = "https://github.com/apache/incubator-teaclave-sgx-sdk" }
+sgx_rand = { rev = "v1.1.6", git = "https://github.com/apache/incubator-teaclave-sgx-sdk" }
 
 [patch."crates-io"]
 # TODO these patches would be better as optional
