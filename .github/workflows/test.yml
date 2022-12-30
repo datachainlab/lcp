@@ -52,7 +52,7 @@ jobs:
             -v $(pwd):/root/lcp \
             -v ${HOME}/.cargo/git:/root/.cargo/git \
             -v ${HOME}/.cargo/registry:/root/.cargo/registry \
-            bluele/sgx-rust:2004-1.1.5 \
+            bluele/sgx-rust:2004-1.1.6 \
             /bin/bash -c \
               "source /opt/sgxsdk/environment && \
               source /root/.cargo/env && \
