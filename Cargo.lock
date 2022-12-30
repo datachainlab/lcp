@@ -2338,6 +2338,8 @@ dependencies = [
  "serde_json",
  "service",
  "settings",
+ "sgx_types",
+ "sgx_urts",
  "store",
  "tokio",
 ]

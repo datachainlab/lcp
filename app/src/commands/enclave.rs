@@ -18,10 +18,58 @@ use store::transaction::CommitStore;
 pub enum EnclaveCmd {
     #[clap(about = "Initialize an Enclave Key")]
     InitKey(InitKey),
+    #[clap(about = "Print mrenclave")]
+    Mrenclave(Mrenclave),
     #[clap(about = "Perform Remote Attestation with IAS")]
     IASRemoteAttestation(IASRemoteAttestation),
     #[clap(about = "Show the AVR info")]
     ShowAVR,
+}
+
+impl EnclaveCmd {
+    pub fn run<'e, S>(
+        &self,
+        opts: &Opts,
+        enclave_loader: impl FnOnce(&Opts, Option<&PathBuf>) -> Result<Enclave<'e, S>>,
+    ) -> Result<()>
+    where
+        S: CommitStore,
+        Enclave<'e, S>: EnclaveProtoAPI<S>,
+    {
+        let home = opts.get_home();
+        match self {
+            EnclaveCmd::InitKey(cmd) => {
+                if !home.exists() {
+                    std::fs::create_dir_all(&home)?;
+                    info!("created home directory: {:?}", home);
+                }
+                run_init_key(enclave_loader(opts, cmd.enclave.as_ref())?, home, cmd)
+            }
+            EnclaveCmd::Mrenclave(cmd) => run_print_mrenclave(opts, cmd),
+            EnclaveCmd::IASRemoteAttestation(cmd) => {
+                if !home.exists() {
+                    bail!("home directory doesn't exist at {:?}", home);
+                }
+                run_ias_remote_attestation(enclave_loader(opts, cmd.enclave.as_ref())?, home, cmd)
+            }
+            EnclaveCmd::ShowAVR => {
+                if !home.exists() {
+                    bail!("home directory doesn't exist at {:?}", home);
+                }
+                let avr_path = home.join(AVR_KEY_PATH);
+                if !avr_path.exists() {
+                    bail!("AVR doesn't exist at {:?}", avr_path.as_path());
+                }
+                let report: EndorsedAttestationVerificationReport =
+                    serde_json::from_slice(read(avr_path)?.as_slice())?;
+                let quote = report.get_avr()?.parse_quote()?;
+                let address = quote.get_enclave_key_address()?;
+                println!("ENCLAVE_KEY=0x{}", address.to_hex_string());
+                println!("MRENCLAVE=0x{}", hex::encode(quote.get_mrenclave().m));
+                Ok(())
+            }
+        }
+    }
 }
 
 #[derive(Clone, Debug, Parser, PartialEq)]
@@ -59,6 +107,27 @@ fn run_init_key<E: EnclaveCommandAPI<S>, S: CommitStore>(
         Ok(_) => Ok(()),
         Err(e) => bail!("Init Enclave Failed {:?}!", e),
     }
+}
+
+#[derive(Clone, Debug, Parser, PartialEq)]
+pub struct Mrenclave {
+    /// Path to the enclave binary
+    #[clap(long = "enclave", help = "Path to enclave binary")]
+    pub enclave: Option<PathBuf>,
+}
+
+fn run_print_mrenclave(opts: &Opts, cmd: &Mrenclave) -> Result<()> {
+    let enclave_path = if let Some(path) = cmd.enclave.as_ref() {
+        path.clone()
+    } else {
+        opts.default_enclave()
+    };
+    let metadata = host::sgx_get_metadata(enclave_path)?;
+    println!(
+        "0x{}",
+        hex::encode(metadata.enclave_css.body.enclave_hash.m)
+    );
+    Ok(())
 }
 
 fn run_ias_remote_attestation<E: EnclaveCommandAPI<S>, S: CommitStore>(
@@ -116,49 +185,4 @@ pub struct IASRemoteAttestation {
         help = "Boolean flag to overwrite an enclave key and AVR if it already exists."
     )]
     pub force: bool,
-}
-
-impl EnclaveCmd {
-    pub fn run<'e, S>(
-        &self,
-        opts: &Opts,
-        enclave_loader: impl FnOnce(&Opts, Option<&PathBuf>) -> Result<Enclave<'e, S>>,
-    ) -> Result<()>
-    where
-        S: CommitStore,
-        Enclave<'e, S>: EnclaveProtoAPI<S>,
-    {
-        let home = opts.get_home();
-        match self {
-            EnclaveCmd::InitKey(cmd) => {
-                if !home.exists() {
-                    std::fs::create_dir_all(&home)?;
-                    info!("created home directory: {:?}", home);
-                }
-                run_init_key(enclave_loader(opts, cmd.enclave.as_ref())?, home, cmd)
-            }
-            EnclaveCmd::IASRemoteAttestation(cmd) => {
-                if !home.exists() {
-                    bail!("home directory doesn't exist at {:?}", home);
-                }
-                run_ias_remote_attestation(enclave_loader(opts, cmd.enclave.as_ref())?, home, cmd)
-            }
-            EnclaveCmd::ShowAVR => {
-                if !home.exists() {
-                    bail!("home directory doesn't exist at {:?}", home);
-                }
-                let avr_path = home.join(AVR_KEY_PATH);
-                if !avr_path.exists() {
-                    bail!("AVR doesn't exist at {:?}", avr_path.as_path());
-                }
-                let report: EndorsedAttestationVerificationReport =
-                    serde_json::from_slice(read(avr_path)?.as_slice())?;
-                let quote = report.get_avr()?.parse_quote()?;
-                let address = quote.get_enclave_key_address()?;
-                println!("ENCLAVE_KEY=0x{}", address.to_hex_string());
-                println!("MRENCLAVE=0x{}", hex::encode(quote.get_mrenclave().m));
-                Ok(())
-            }
-        }
-    }
 }
