@@ -18,12 +18,12 @@ use store::transaction::CommitStore;
 pub enum EnclaveCmd {
     #[clap(about = "Initialize an Enclave Key")]
     InitKey(InitKey),
-    #[clap(about = "Print mrenclave")]
+    #[clap(about = "Print mrenclave of the enclave")]
     Mrenclave(Mrenclave),
     #[clap(about = "Perform Remote Attestation with IAS")]
     IASRemoteAttestation(IASRemoteAttestation),
     #[clap(about = "Show the AVR info")]
-    ShowAVR,
+    ShowAVR(ShowAVR),
 }
 
 impl EnclaveCmd {
@@ -45,28 +45,23 @@ impl EnclaveCmd {
                 }
                 run_init_key(enclave_loader(opts, cmd.enclave.as_ref())?, home, cmd)
             }
-            EnclaveCmd::Mrenclave(cmd) => run_print_mrenclave(opts, cmd),
+            EnclaveCmd::Mrenclave(cmd) => {
+                if !home.exists() {
+                    bail!("home directory doesn't exist at {:?}", home);
+                }
+                run_print_mrenclave(opts, cmd)
+            }
             EnclaveCmd::IASRemoteAttestation(cmd) => {
                 if !home.exists() {
                     bail!("home directory doesn't exist at {:?}", home);
                 }
                 run_ias_remote_attestation(enclave_loader(opts, cmd.enclave.as_ref())?, home, cmd)
             }
-            EnclaveCmd::ShowAVR => {
+            EnclaveCmd::ShowAVR(cmd) => {
                 if !home.exists() {
                     bail!("home directory doesn't exist at {:?}", home);
                 }
-                let avr_path = home.join(AVR_KEY_PATH);
-                if !avr_path.exists() {
-                    bail!("AVR doesn't exist at {:?}", avr_path.as_path());
-                }
-                let report: EndorsedAttestationVerificationReport =
-                    serde_json::from_slice(read(avr_path)?.as_slice())?;
-                let quote = report.get_avr()?.parse_quote()?;
-                let address = quote.get_enclave_key_address()?;
-                println!("ENCLAVE_KEY=0x{}", address.to_hex_string());
-                println!("MRENCLAVE=0x{}", hex::encode(quote.get_mrenclave().m));
-                Ok(())
+                run_show_avr(opts, home, cmd)
             }
         }
     }
@@ -75,7 +70,7 @@ impl EnclaveCmd {
 #[derive(Clone, Debug, Parser, PartialEq)]
 pub struct InitKey {
     /// Path to the enclave binary
-    #[clap(long = "enclave", help = "Path to enclave binary")]
+    #[clap(long = "enclave", help = "Path to the enclave binary")]
     pub enclave: Option<PathBuf>,
 
     /// Boolean flag to overwrite an enclave key and AVR if it already exists
@@ -112,22 +107,31 @@ fn run_init_key<E: EnclaveCommandAPI<S>, S: CommitStore>(
 #[derive(Clone, Debug, Parser, PartialEq)]
 pub struct Mrenclave {
     /// Path to the enclave binary
-    #[clap(long = "enclave", help = "Path to enclave binary")]
+    #[clap(long = "enclave", help = "Path to the enclave binary")]
     pub enclave: Option<PathBuf>,
 }
 
 fn run_print_mrenclave(opts: &Opts, cmd: &Mrenclave) -> Result<()> {
-    let enclave_path = if let Some(path) = cmd.enclave.as_ref() {
-        path.clone()
-    } else {
-        opts.default_enclave()
-    };
-    let metadata = host::sgx_get_metadata(enclave_path)?;
+    let metadata = host::sgx_get_metadata(cmd.enclave.clone().unwrap_or(opts.default_enclave()))?;
     println!(
         "0x{}",
         hex::encode(metadata.enclave_css.body.enclave_hash.m)
     );
     Ok(())
+}
+
+#[derive(Clone, Debug, Parser, PartialEq)]
+pub struct IASRemoteAttestation {
+    /// Path to the enclave binary
+    #[clap(long = "enclave", help = "Path to the enclave binary")]
+    pub enclave: Option<PathBuf>,
+
+    /// Boolean flag to overwrite an enclave key and AVR if it already exists
+    #[clap(
+        long = "force",
+        help = "Boolean flag to overwrite an enclave key and AVR if it already exists."
+    )]
+    pub force: bool,
 }
 
 fn run_ias_remote_attestation<E: EnclaveCommandAPI<S>, S: CommitStore>(
@@ -173,16 +177,44 @@ fn run_ias_remote_attestation<E: EnclaveCommandAPI<S>, S: CommitStore>(
 }
 
 #[derive(Clone, Debug, Parser, PartialEq)]
-pub struct IASRemoteAttestation {
+pub struct ShowAVR {
     /// Path to the enclave binary
-    #[clap(long = "enclave", help = "Path to enclave binary")]
+    #[clap(long = "enclave", help = "Path to the enclave binary")]
     pub enclave: Option<PathBuf>,
+    #[clap(long = "validate", help = "Check if the AVR is valid for the enclave")]
+    pub validate: bool,
+}
 
-    /// Boolean flag to overwrite an enclave key and AVR if it already exists
-    #[clap(
-        long = "force",
-        default_value = "false",
-        help = "Boolean flag to overwrite an enclave key and AVR if it already exists."
-    )]
-    pub force: bool,
+fn run_show_avr(opts: &Opts, home: PathBuf, cmd: &ShowAVR) -> Result<()> {
+    let avr_path = home.join(AVR_KEY_PATH);
+    if !avr_path.exists() {
+        bail!("AVR not found: {:?}", avr_path.as_path());
+    }
+    let report: EndorsedAttestationVerificationReport =
+        serde_json::from_slice(read(avr_path)?.as_slice())?;
+    let quote = report.get_avr()?.parse_quote()?;
+    let address = quote.get_enclave_key_address()?;
+    println!("ENCLAVE_KEY=0x{}", address.to_hex_string());
+    if cmd.validate {
+        let enclave_path = cmd.enclave.clone().unwrap_or(opts.default_enclave());
+        if !enclave_path.exists() {
+            bail!("Enclave not found: {:?}", enclave_path.as_path());
+        }
+        let metadata =
+            host::sgx_get_metadata(cmd.enclave.clone().unwrap_or(opts.default_enclave()))?;
+        let q_mrenclave = quote.get_mrenclave().m;
+        if q_mrenclave == metadata.enclave_css.body.enclave_hash.m {
+            println!("MRENCLAVE=0x{}", hex::encode(quote.get_mrenclave().m));
+        } else {
+            bail!(
+                "MRENCLAVE mismatch: expected=0x{} got=0x{}",
+                hex::encode(q_mrenclave),
+                hex::encode(metadata.enclave_css.body.enclave_hash.m)
+            );
+        }
+    } else {
+        println!("MRENCLAVE=0x{}", hex::encode(quote.get_mrenclave().m));
+    }
+
+    Ok(())
 }
