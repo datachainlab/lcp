@@ -4,8 +4,8 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-sgx_urts = { rev = "v1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk" }
-sgx_types = { rev = "v1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk" }
+sgx_urts = { rev = "v1.1.6", git = "https://github.com/apache/incubator-teaclave-sgx-sdk" }
+sgx_types = { rev = "v1.1.6", git = "https://github.com/apache/incubator-teaclave-sgx-sdk" }
 log = "0.4.8"
 once_cell = "1.15.0"
 bincode = "1.3"

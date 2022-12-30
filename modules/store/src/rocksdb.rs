@@ -674,8 +674,7 @@ mod tests {
         }
         fn block_on(&self, rid: u64, eid: u64) {
             let events = self.events.lock().unwrap();
-            let _ = self
-                .cond
+            self.cond
                 .wait_while(events, |events| {
                     debug!(
                         "wait: self_runner_id={} target_runner_id={} eid={}",

@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-sgx_tstd = { rev = "v1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", optional = true }
+sgx_tstd = { rev = "v1.1.6", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", optional = true }
 flex-error = { version = "0.4.4", default-features = false }
 
 light-client = { path = "../light-client", default-features = false }

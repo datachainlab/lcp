@@ -230,7 +230,7 @@ bin/gaiad:
 
 .PHONY: docker
 sgx-docker:
-	@cd rust-sgx-sdk/dockerfile && docker build --no-cache -t datachainlab/sgx-rust:2004-1.1.5 -f Dockerfile.2004.nightly .
+	@cd rust-sgx-sdk/dockerfile && docker build --no-cache -t datachainlab/sgx-rust:2004-1.1.6 -f Dockerfile.2004.nightly .
 
 .PHONY: tendermint-docker
 tendermint-docker:
