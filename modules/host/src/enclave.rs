@@ -1,7 +1,6 @@
-use std::{mem::MaybeUninit, path::PathBuf};
-
 use sgx_types::{metadata::metadata_t, *};
 use sgx_urts::SgxEnclave;
+use std::{ffi::CString, mem::MaybeUninit, path::PathBuf};
 
 pub fn create_enclave(path: impl Into<PathBuf>) -> SgxResult<SgxEnclave> {
     let mut launch_token: sgx_launch_token_t = [0; 1024];
@@ -24,9 +23,9 @@ pub fn create_enclave(path: impl Into<PathBuf>) -> SgxResult<SgxEnclave> {
 
 pub fn sgx_get_metadata(path: impl Into<PathBuf>) -> SgxResult<metadata_t> {
     let path = path.into();
-    let enclave_path = std::ffi::CString::new(path.as_os_str().to_str().unwrap()).unwrap();
+    let enclave_path = CString::new(path.as_os_str().to_str().unwrap()).unwrap();
     let metadata = unsafe {
-        let mut metadata: sgx_types::metadata::metadata_t = MaybeUninit::zeroed().assume_init();
+        let mut metadata: metadata_t = MaybeUninit::zeroed().assume_init();
         sgx_types::sgx_get_metadata(enclave_path.as_ptr(), &mut metadata);
         metadata
     };
