@@ -17,6 +17,7 @@ lcp-types = { path = "../types" }
 ecall-commands = { path = "../ecall-commands", features = ["std"] }
 lcp-proto = { path = "../../proto", features = ["server"] }
 store = { path = "../store" }
+host = { path = "../host" }
 host-environment = { path = "../host-environment" }
 
 [features]

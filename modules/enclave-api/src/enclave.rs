@@ -2,13 +2,17 @@ use crate::errors::Result;
 use crate::EnclaveProtoAPI;
 use host_environment::Environment;
 use lcp_types::Time;
+use sgx_types::metadata::metadata_t;
+use sgx_types::SgxResult;
 use sgx_urts::SgxEnclave;
+use std::path::PathBuf;
 use std::{marker::PhantomData, ops::DerefMut};
 use store::host::{HostStore, IntoCommitStore};
 use store::transaction::{CommitStore, CreatedTx, UpdateKey};
 
 /// `Enclave` keeps an enclave id and reference to the host environement
 pub struct Enclave<'e, S: CommitStore> {
+    pub(crate) path: PathBuf,
     pub(crate) sgx_enclave: SgxEnclave,
     pub(crate) env: &'e Environment,
     _marker: PhantomData<S>,
@@ -18,12 +22,23 @@ impl<'e, S: CommitStore> Enclave<'e, S>
 where
     Self: EnclaveProtoAPI<S>,
 {
-    pub fn new(sgx_enclave: SgxEnclave, env: &'e Environment) -> Self {
+    pub fn new(path: impl Into<PathBuf>, sgx_enclave: SgxEnclave, env: &'e Environment) -> Self {
         Enclave {
+            path: path.into(),
             sgx_enclave,
             env,
             _marker: PhantomData::default(),
         }
+    }
+
+    pub fn create(path: impl Into<PathBuf>, env: &'e Environment) -> SgxResult<Self> {
+        let path = path.into();
+        let enclave = host::create_enclave(path.clone())?;
+        Ok(Self::new(path, enclave, env))
+    }
+
+    pub fn metadata(&self) -> SgxResult<metadata_t> {
+        host::sgx_get_metadata(&self.path)
     }
 
     pub fn destroy(self) {

@@ -15,8 +15,8 @@ where
         } else {
             opts.default_enclave()
         };
-        match host::load_enclave(&path) {
-            Ok(enclave) => Ok(Enclave::<S>::new(enclave, host::get_environment().unwrap())),
+        match Enclave::<S>::create(&path, host::get_environment().unwrap()) {
+            Ok(enclave) => Ok(enclave),
             Err(x) => {
                 bail!(
                     "Init Enclave Failed: status={} path={:?}",

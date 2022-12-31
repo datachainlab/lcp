@@ -1,12 +1,9 @@
-use std::{
-    mem::MaybeUninit,
-    path::{Path, PathBuf},
-};
+use std::{mem::MaybeUninit, path::PathBuf};
 
 use sgx_types::{metadata::metadata_t, *};
 use sgx_urts::SgxEnclave;
 
-pub fn load_enclave<P: AsRef<Path>>(file: P) -> SgxResult<SgxEnclave> {
+pub fn create_enclave(path: impl Into<PathBuf>) -> SgxResult<SgxEnclave> {
     let mut launch_token: sgx_launch_token_t = [0; 1024];
     let mut launch_token_updated: i32 = 0;
     // call sgx_create_enclave to initialize an enclave instance
@@ -17,7 +14,7 @@ pub fn load_enclave<P: AsRef<Path>>(file: P) -> SgxResult<SgxEnclave> {
         misc_select: 0,
     };
     SgxEnclave::create(
-        file,
+        path.into(),
         debug,
         &mut launch_token,
         &mut launch_token_updated,

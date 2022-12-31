@@ -69,16 +69,7 @@ mod tests {
         ))
         .unwrap();
 
-        let enclave = match host::load_enclave(ENCLAVE_FILE) {
-            Ok(r) => {
-                info!("Init Enclave Successful {}!", r.geteid());
-                r
-            }
-            Err(x) => {
-                panic!("Init Enclave Failed {}!", x.as_str());
-            }
-        };
-        let enclave = Enclave::new(enclave, host::get_environment().unwrap());
+        let enclave = Enclave::create(ENCLAVE_FILE, host::get_environment().unwrap()).unwrap();
 
         match std::env::var(ENV_SETUP_NODES).map(|v| v.to_lowercase()) {
             Ok(v) if v == "false" => run_test(&enclave).unwrap(),

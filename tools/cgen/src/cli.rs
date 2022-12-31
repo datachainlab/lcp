@@ -48,16 +48,7 @@ impl Cli {
         ))
         .unwrap();
 
-        let enclave = match host::load_enclave(self.enclave) {
-            Ok(r) => {
-                info!("Init Enclave Successful {}!", r.geteid());
-                r
-            }
-            Err(x) => {
-                panic!("Init Enclave Failed {}!", x.as_str());
-            }
-        };
-        let enclave = Enclave::new(enclave, host::get_environment().unwrap());
+        let enclave = Enclave::create(self.enclave, host::get_environment().unwrap())?;
 
         let mut commands = vec![];
         for c in self.commands {
