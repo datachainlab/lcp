@@ -202,19 +202,8 @@ fn run_show_avr(opts: &Opts, home: PathBuf, cmd: &ShowAVR) -> Result<()> {
         }
         let metadata =
             host::sgx_get_metadata(cmd.enclave.clone().unwrap_or(opts.default_enclave()))?;
-        let q_mrenclave = quote.get_mrenclave().m;
-        if q_mrenclave == metadata.enclave_css.body.enclave_hash.m {
-            println!("MRENCLAVE=0x{}", hex::encode(quote.get_mrenclave().m));
-        } else {
-            bail!(
-                "MRENCLAVE mismatch: expected=0x{} got=0x{}",
-                hex::encode(q_mrenclave),
-                hex::encode(metadata.enclave_css.body.enclave_hash.m)
-            );
-        }
-    } else {
-        println!("MRENCLAVE=0x{}", hex::encode(quote.get_mrenclave().m));
+        quote.match_metadata(&metadata)?;
     }
-
+    println!("MRENCLAVE=0x{}", hex::encode(quote.get_mrenclave().m));
     Ok(())
 }

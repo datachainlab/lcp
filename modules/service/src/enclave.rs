@@ -34,6 +34,13 @@ where
             .map_err(|e| Status::internal(e.to_string()))?
             .parse_quote()
             .map_err(|e| Status::internal(e.to_string()))?;
+        let metadata = self
+            .enclave
+            .metadata()
+            .map_err(|e| Status::internal(e.to_string()))?;
+        quote
+            .match_metadata(&metadata)
+            .map_err(|e| Status::internal(e.to_string()))?;
         let address = quote
             .get_enclave_key_address()
             .map_err(|e| Status::internal(e.to_string()))?;

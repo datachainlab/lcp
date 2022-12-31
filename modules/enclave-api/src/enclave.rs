@@ -37,10 +37,6 @@ where
         Ok(Self::new(path, enclave, env))
     }
 
-    pub fn metadata(&self) -> SgxResult<metadata_t> {
-        host::sgx_get_metadata(&self.path)
-    }
-
     pub fn destroy(self) {
         self.sgx_enclave.destroy()
     }
@@ -51,6 +47,7 @@ pub trait EnclaveInfo {
     fn get_home(&self) -> String;
     fn get_eid(&self) -> sgx_types::sgx_enclave_id_t;
     fn current_timestamp(&self) -> Time;
+    fn metadata(&self) -> SgxResult<metadata_t>;
 }
 
 impl<'e, S: CommitStore> EnclaveInfo for Enclave<'e, S> {
@@ -64,6 +61,10 @@ impl<'e, S: CommitStore> EnclaveInfo for Enclave<'e, S> {
 
     fn current_timestamp(&self) -> Time {
         Time::now()
+    }
+
+    fn metadata(&self) -> SgxResult<metadata_t> {
+        host::sgx_get_metadata(&self.path)
     }
 }
 

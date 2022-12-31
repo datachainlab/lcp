@@ -15,7 +15,7 @@ where
         } else {
             opts.default_enclave()
         };
-        match Enclave::<S>::create(&path, host::get_environment().unwrap()) {
+        match Enclave::create(&path, host::get_environment().unwrap()) {
             Ok(enclave) => Ok(enclave),
             Err(x) => {
                 bail!(

@@ -5,7 +5,7 @@ use core::fmt::Debug;
 use crypto::Address;
 use lcp_types::Time;
 use serde::{Deserialize, Serialize};
-use sgx_types::{sgx_measurement_t, sgx_quote_t};
+use sgx_types::{metadata::metadata_t, sgx_measurement_t, sgx_quote_t};
 use tendermint::Time as TmTime;
 
 /// AttestationReport can be endorsed by either the Intel Attestation Service
@@ -120,6 +120,17 @@ impl Quote {
 
     pub fn get_mrenclave(&self) -> sgx_measurement_t {
         self.raw.report_body.mr_enclave
+    }
+
+    pub fn match_metadata(&self, metadata: &metadata_t) -> Result<(), Error> {
+        if self.raw.report_body.mr_enclave.m != metadata.enclave_css.body.enclave_hash.m {
+            Err(Error::mrenclave_mismatch(
+                self.raw.report_body.mr_enclave.m,
+                metadata.enclave_css.body.enclave_hash.m,
+            ))
+        } else {
+            Ok(())
+        }
     }
 }
 

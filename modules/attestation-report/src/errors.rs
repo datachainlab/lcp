@@ -21,6 +21,15 @@ define_error! {
             format_args!("invalid report data size: size must be >= 20, but got {}", e.size)
         },
 
+        MrenclaveMismatch
+        {
+            expected: [u8; 32],
+            actual: [u8; 32]
+        }
+        |e| {
+            format_args!("Mrenclave mismatch error: expected=0x{} actual=0x{}", hex::encode(e.expected), hex::encode(e.actual))
+        },
+
         WebPki
         {
             descr: String
