@@ -3,7 +3,7 @@ use crate::{
 };
 use store::memory::MemStore;
 
-impl<'e> HostStoreTxManager<MemStore> for Enclave<'e, MemStore> {}
-impl<'e> EnclavePrimitiveAPI<MemStore> for Enclave<'e, MemStore> {}
-impl<'e> EnclaveCommandAPI<MemStore> for Enclave<'e, MemStore> {}
-impl<'e> EnclaveProtoAPI<MemStore> for Enclave<'e, MemStore> {}
+impl HostStoreTxManager<MemStore> for Enclave<MemStore> {}
+impl EnclavePrimitiveAPI<MemStore> for Enclave<MemStore> {}
+impl EnclaveCommandAPI<MemStore> for Enclave<MemStore> {}
+impl EnclaveProtoAPI<MemStore> for Enclave<MemStore> {}

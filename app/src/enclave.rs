@@ -4,10 +4,10 @@ use enclave_api::{Enclave, EnclaveProtoAPI};
 use std::path::PathBuf;
 use store::transaction::CommitStore;
 
-pub(crate) fn build_enclave_loader<'e, S: CommitStore>(
-) -> impl FnOnce(&Opts, Option<&PathBuf>) -> Result<Enclave<'e, S>>
+pub(crate) fn build_enclave_loader<S: CommitStore>(
+) -> impl FnOnce(&Opts, Option<&PathBuf>) -> Result<Enclave<S>>
 where
-    Enclave<'e, S>: EnclaveProtoAPI<S>,
+    Enclave<S>: EnclaveProtoAPI<S>,
 {
     |opts, path| {
         let path = if let Some(path) = path {
@@ -15,8 +15,9 @@ where
         } else {
             opts.default_enclave()
         };
-        match host::load_enclave(&path) {
-            Ok(enclave) => Ok(Enclave::<S>::new(enclave, host::get_environment().unwrap())),
+        let env = host::get_environment().unwrap();
+        match Enclave::create(&path, &env.home, env.store.clone()) {
+            Ok(enclave) => Ok(enclave),
             Err(x) => {
                 bail!(
                     "Init Enclave Failed: status={} path={:?}",

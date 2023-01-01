@@ -22,16 +22,16 @@ use std::{fs::File, io::Write, path::PathBuf};
 use tendermint_proto::Protobuf;
 use tokio::runtime::Runtime as TokioRuntime;
 
-pub struct CGenSuite<'e> {
+pub struct CGenSuite {
     config: CGenConfig,
-    enclave: Enclave<'e, store::memory::MemStore>,
+    enclave: Enclave<store::memory::MemStore>,
     commands: Vec<Command>,
 }
 
-impl<'e> CGenSuite<'e> {
+impl CGenSuite {
     pub fn new(
         config: CGenConfig,
-        enclave: Enclave<'e, store::memory::MemStore>,
+        enclave: Enclave<store::memory::MemStore>,
         commands: Vec<Command>,
     ) -> Self {
         Self {
@@ -77,9 +77,9 @@ impl FromStr for Command {
     }
 }
 
-pub struct CommandFileGenerator<'e, 'f, ChainA: ChainHandle, ChainB: ChainHandle> {
+pub struct CommandFileGenerator<'e, ChainA: ChainHandle, ChainB: ChainHandle> {
     config: CGenConfig,
-    enclave: &'f Enclave<'e, store::memory::MemStore>,
+    enclave: &'e Enclave<store::memory::MemStore>,
     rly: Relayer,
 
     channel: ConnectedChannel<ChainA, ChainB>,
@@ -89,12 +89,10 @@ pub struct CommandFileGenerator<'e, 'f, ChainA: ChainHandle, ChainB: ChainHandle
     chain_latest_provable_height: Height, // latest provable height of chainA
 }
 
-impl<'e, 'f, ChainA: ChainHandle, ChainB: ChainHandle>
-    CommandFileGenerator<'e, 'f, ChainA, ChainB>
-{
+impl<'e, ChainA: ChainHandle, ChainB: ChainHandle> CommandFileGenerator<'e, ChainA, ChainB> {
     pub fn new(
         config: CGenConfig,
-        enclave: &'f Enclave<'e, store::memory::MemStore>,
+        enclave: &'e Enclave<store::memory::MemStore>,
         rly: Relayer,
         channel: ConnectedChannel<ChainA, ChainB>,
     ) -> Self {
@@ -375,14 +373,14 @@ impl<'e, 'f, ChainA: ChainHandle, ChainB: ChainHandle>
     }
 }
 
-impl<'e> TestOverrides for CGenSuite<'e> {
+impl TestOverrides for CGenSuite {
     fn modify_relayer_config(&self, config: &mut Config) {
         // disable packet relay
         config.mode.packets.enabled = false;
     }
 }
 
-impl<'e> BinaryChannelTest for CGenSuite<'e> {
+impl BinaryChannelTest for CGenSuite {
     fn run<ChainA: ChainHandle, ChainB: ChainHandle>(
         &self,
         _config: &TestConfig,

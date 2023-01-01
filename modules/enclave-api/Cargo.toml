@@ -13,10 +13,10 @@ bincode = "1.3"
 log = "0.4.8"
 flex-error = { version = "0.4.4" }
 
-lcp-types = { path = "../types" }
 ecall-commands = { path = "../ecall-commands", features = ["std"] }
 lcp-proto = { path = "../../proto", features = ["server"] }
 store = { path = "../store" }
+host = { path = "../host" }
 host-environment = { path = "../host-environment" }
 
 [features]

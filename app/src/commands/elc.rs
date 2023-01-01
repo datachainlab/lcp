@@ -42,14 +42,14 @@ impl ELCOpts {
 }
 
 impl ELCCmd {
-    pub fn run<'e, S>(
+    pub fn run<S>(
         &self,
         opts: &Opts,
-        enclave_loader: impl FnOnce(&Opts, Option<&PathBuf>) -> Result<Enclave<'e, S>>,
+        enclave_loader: impl FnOnce(&Opts, Option<&PathBuf>) -> Result<Enclave<S>>,
     ) -> Result<()>
     where
         S: CommitStore,
-        Enclave<'e, S>: EnclaveProtoAPI<S>,
+        Enclave<S>: EnclaveProtoAPI<S>,
     {
         let elc_opts = self.opts();
         let enclave = enclave_loader(opts, elc_opts.enclave.as_ref())?;

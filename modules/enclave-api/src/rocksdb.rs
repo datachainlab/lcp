@@ -3,7 +3,7 @@ use crate::{
 };
 use store::rocksdb::RocksDBStore;
 
-impl<'e> HostStoreTxManager<RocksDBStore> for Enclave<'e, RocksDBStore> {}
-impl<'e> EnclavePrimitiveAPI<RocksDBStore> for Enclave<'e, RocksDBStore> {}
-impl<'e> EnclaveCommandAPI<RocksDBStore> for Enclave<'e, RocksDBStore> {}
-impl<'e> EnclaveProtoAPI<RocksDBStore> for Enclave<'e, RocksDBStore> {}
+impl HostStoreTxManager<RocksDBStore> for Enclave<RocksDBStore> {}
+impl EnclavePrimitiveAPI<RocksDBStore> for Enclave<RocksDBStore> {}
+impl EnclaveCommandAPI<RocksDBStore> for Enclave<RocksDBStore> {}
+impl EnclaveProtoAPI<RocksDBStore> for Enclave<RocksDBStore> {}

@@ -7,7 +7,7 @@ use store::host::HostStore;
 
 pub struct Environment {
     pub home: PathBuf,
-    store: Arc<RwLock<HostStore>>,
+    pub store: Arc<RwLock<HostStore>>,
 }
 
 impl Environment {
