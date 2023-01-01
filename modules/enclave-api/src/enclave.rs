@@ -1,5 +1,4 @@
 use crate::errors::Result;
-use crate::EnclaveProtoAPI;
 use host_environment::Environment;
 use lcp_types::Time;
 use sgx_types::metadata::metadata_t;
@@ -11,17 +10,14 @@ use store::host::{HostStore, IntoCommitStore};
 use store::transaction::{CommitStore, CreatedTx, UpdateKey};
 
 /// `Enclave` keeps an enclave id and reference to the host environement
-pub struct Enclave<'e, S: CommitStore> {
+pub struct Enclave<'e, S> {
     pub(crate) path: PathBuf,
     pub(crate) sgx_enclave: SgxEnclave,
     pub(crate) env: &'e Environment,
     _marker: PhantomData<S>,
 }
 
-impl<'e, S: CommitStore> Enclave<'e, S>
-where
-    Self: EnclaveProtoAPI<S>,
-{
+impl<'e, S> Enclave<'e, S> {
     pub fn new(path: impl Into<PathBuf>, sgx_enclave: SgxEnclave, env: &'e Environment) -> Self {
         Enclave {
             path: path.into(),
@@ -50,7 +46,7 @@ pub trait EnclaveInfo {
     fn metadata(&self) -> SgxResult<metadata_t>;
 }
 
-impl<'e, S: CommitStore> EnclaveInfo for Enclave<'e, S> {
+impl<'e, S> EnclaveInfo for Enclave<'e, S> {
     fn get_home(&self) -> String {
         self.env.home.to_str().unwrap().to_string()
     }
