@@ -1283,7 +1283,6 @@ dependencies = [
  "host-environment",
  "ibc",
  "lcp-proto",
- "lcp-types",
  "log 0.4.17",
  "prost",
  "prost-types",

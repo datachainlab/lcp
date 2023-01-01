@@ -1,7 +1,5 @@
 use crate::errors::Result;
-use lcp_types::Time;
-use sgx_types::metadata::metadata_t;
-use sgx_types::SgxResult;
+use sgx_types::{metadata::metadata_t, sgx_enclave_id_t, SgxResult};
 use sgx_urts::SgxEnclave;
 use std::path::PathBuf;
 use std::sync::{Arc, RwLock};
@@ -51,25 +49,24 @@ impl<S> Enclave<S> {
 
 /// `EnclaveInfo` is an accessor to enclave information
 pub trait EnclaveInfo {
+    /// `get_home` returns a path to the home directory
     fn get_home(&self) -> String;
-    fn get_eid(&self) -> sgx_types::sgx_enclave_id_t;
-    fn current_timestamp(&self) -> Time;
+    /// `get_eid` returns the enclave id
+    fn get_eid(&self) -> sgx_enclave_id_t;
+    /// `metadata` returns the metadata of the enclave
     fn metadata(&self) -> SgxResult<metadata_t>;
 }
 
 impl<S> EnclaveInfo for Enclave<S> {
+    /// `get_home` returns a path to the home directory
     fn get_home(&self) -> String {
         self.home_path.to_str().unwrap().to_string()
     }
-
-    fn get_eid(&self) -> sgx_types::sgx_enclave_id_t {
+    /// `get_eid` returns the enclave id
+    fn get_eid(&self) -> sgx_enclave_id_t {
         self.sgx_enclave.geteid()
     }
-
-    fn current_timestamp(&self) -> Time {
-        Time::now()
-    }
-
+    /// `metadata` returns the metadata of the enclave
     fn metadata(&self) -> SgxResult<metadata_t> {
         host::sgx_get_metadata(&self.path)
     }
