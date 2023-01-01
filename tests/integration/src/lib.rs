@@ -35,15 +35,15 @@ mod tests {
     static ENCLAVE_FILE: &'static str = "../../bin/enclave.signed.so";
     static ENV_SETUP_NODES: &'static str = "SETUP_NODES";
 
-    struct ELCStateVerificationTest<'e> {
-        enclave: Enclave<'e, store::memory::MemStore>,
+    struct ELCStateVerificationTest {
+        enclave: Enclave<store::memory::MemStore>,
     }
 
-    impl<'e> TestOverrides for ELCStateVerificationTest<'e> {
+    impl TestOverrides for ELCStateVerificationTest {
         fn modify_relayer_config(&self, _config: &mut Config) {}
     }
 
-    impl<'e> BinaryChannelTest for ELCStateVerificationTest<'e> {
+    impl BinaryChannelTest for ELCStateVerificationTest {
         fn run<ChainA: ChainHandle, ChainB: ChainHandle>(
             &self,
             _config: &TestConfig,
@@ -69,7 +69,8 @@ mod tests {
         ))
         .unwrap();
 
-        let enclave = Enclave::create(ENCLAVE_FILE, host::get_environment().unwrap()).unwrap();
+        let env = host::get_environment().unwrap();
+        let enclave = Enclave::create(ENCLAVE_FILE, &env.home, env.store.clone()).unwrap();
 
         match std::env::var(ENV_SETUP_NODES).map(|v| v.to_lowercase()) {
             Ok(v) if v == "false" => run_test(&enclave).unwrap(),
@@ -77,7 +78,7 @@ mod tests {
         }
     }
 
-    fn run_test<'e>(enclave: &Enclave<'e, store::memory::MemStore>) -> Result<(), anyhow::Error> {
+    fn run_test<'e>(enclave: &Enclave<store::memory::MemStore>) -> Result<(), anyhow::Error> {
         env_logger::init();
         let rt = Arc::new(TokioRuntime::new()?);
         let rly = relayer::create_relayer(rt).unwrap();
@@ -86,7 +87,7 @@ mod tests {
 
     fn verify<'e>(
         mut rly: Relayer,
-        enclave: &Enclave<'e, store::memory::MemStore>,
+        enclave: &Enclave<store::memory::MemStore>,
     ) -> Result<(), anyhow::Error> {
         let simulate = std::env::var("SGX_MODE").map_or(false, |m| m == "SW");
         if simulate {

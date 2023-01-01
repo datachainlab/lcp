@@ -27,14 +27,14 @@ pub enum EnclaveCmd {
 }
 
 impl EnclaveCmd {
-    pub fn run<'e, S>(
+    pub fn run<S>(
         &self,
         opts: &Opts,
-        enclave_loader: impl FnOnce(&Opts, Option<&PathBuf>) -> Result<Enclave<'e, S>>,
+        enclave_loader: impl FnOnce(&Opts, Option<&PathBuf>) -> Result<Enclave<S>>,
     ) -> Result<()>
     where
         S: CommitStore,
-        Enclave<'e, S>: EnclaveProtoAPI<S>,
+        Enclave<S>: EnclaveProtoAPI<S>,
     {
         let home = opts.get_home();
         match self {

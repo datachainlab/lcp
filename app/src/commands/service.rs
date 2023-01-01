@@ -38,15 +38,14 @@ pub struct Start {
 }
 
 impl ServiceCmd {
-    pub fn run<'e, S>(
+    pub fn run<S>(
         &self,
         opts: &Opts,
-        enclave_loader: impl FnOnce(&Opts, Option<&PathBuf>) -> Result<Enclave<'e, S>>,
+        enclave_loader: impl FnOnce(&Opts, Option<&PathBuf>) -> Result<Enclave<S>>,
     ) -> Result<()>
     where
-        'e: 'static,
-        S: CommitStore + 'e,
-        Enclave<'e, S>: EnclaveProtoAPI<S>,
+        S: CommitStore + 'static,
+        Enclave<S>: EnclaveProtoAPI<S>,
     {
         match self {
             Self::Start(cmd) => {

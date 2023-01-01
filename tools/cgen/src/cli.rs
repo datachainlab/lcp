@@ -4,7 +4,6 @@ use clap::Parser;
 use enclave_api::Enclave;
 use host_environment::Environment;
 use ibc_test_framework::prelude::run_binary_channel_test;
-use log::*;
 use std::{
     path::PathBuf,
     str::FromStr,
@@ -48,7 +47,8 @@ impl Cli {
         ))
         .unwrap();
 
-        let enclave = Enclave::create(self.enclave, host::get_environment().unwrap())?;
+        let env = host::get_environment().unwrap();
+        let enclave = Enclave::create(self.enclave, &env.home, env.store.clone())?;
 
         let mut commands = vec![];
         for c in self.commands {
