@@ -5,6 +5,7 @@ use clap::Parser;
 use ecall_commands::{IASRemoteAttestationInput, InitEnclaveInput};
 use enclave_api::{Enclave, EnclaveCommandAPI, EnclaveProtoAPI};
 use log::*;
+use serde_json::json;
 use settings::{AVR_KEY_PATH, SEALED_ENCLAVE_KEY_PATH};
 use std::{
     fs::{read, remove_file, OpenOptions},
@@ -18,8 +19,8 @@ use store::transaction::CommitStore;
 pub enum EnclaveCmd {
     #[clap(about = "Initialize an Enclave Key")]
     InitKey(InitKey),
-    #[clap(about = "Print mrenclave of the enclave")]
-    Mrenclave(Mrenclave),
+    #[clap(about = "Print metadata of the enclave")]
+    Metadata(Metadata),
     #[clap(about = "Perform Remote Attestation with IAS")]
     IASRemoteAttestation(IASRemoteAttestation),
     #[clap(about = "Show the AVR info")]
@@ -45,11 +46,11 @@ impl EnclaveCmd {
                 }
                 run_init_key(enclave_loader(opts, cmd.enclave.as_ref())?, home, cmd)
             }
-            EnclaveCmd::Mrenclave(cmd) => {
+            EnclaveCmd::Metadata(cmd) => {
                 if !home.exists() {
                     bail!("home directory doesn't exist at {:?}", home);
                 }
-                run_print_mrenclave(opts, cmd)
+                run_print_metadata(opts, cmd)
             }
             EnclaveCmd::IASRemoteAttestation(cmd) => {
                 if !home.exists() {
@@ -105,17 +106,19 @@ fn run_init_key<E: EnclaveCommandAPI<S>, S: CommitStore>(
 }
 
 #[derive(Clone, Debug, Parser, PartialEq)]
-pub struct Mrenclave {
+pub struct Metadata {
     /// Path to the enclave binary
     #[clap(long = "enclave", help = "Path to the enclave binary")]
     pub enclave: Option<PathBuf>,
 }
 
-fn run_print_mrenclave(opts: &Opts, cmd: &Mrenclave) -> Result<()> {
+fn run_print_metadata(opts: &Opts, cmd: &Metadata) -> Result<()> {
     let metadata = host::sgx_get_metadata(cmd.enclave.clone().unwrap_or(opts.default_enclave()))?;
     println!(
-        "0x{}",
-        hex::encode(metadata.enclave_css.body.enclave_hash.m)
+        "{}",
+        json! {{
+            "mrenclave": format!("0x{}", hex::encode(metadata.enclave_css.body.enclave_hash.m))
+        }}
     );
     Ok(())
 }
@@ -192,9 +195,8 @@ fn run_show_avr(opts: &Opts, home: PathBuf, cmd: &ShowAVR) -> Result<()> {
     }
     let report: EndorsedAttestationVerificationReport =
         serde_json::from_slice(read(avr_path)?.as_slice())?;
-    let quote = report.get_avr()?.parse_quote()?;
-    let address = quote.get_enclave_key_address()?;
-    println!("ENCLAVE_KEY=0x{}", address.to_hex_string());
+    let avr = report.get_avr()?;
+    let quote = avr.parse_quote()?;
     if cmd.validate {
         let enclave_path = cmd.enclave.clone().unwrap_or(opts.default_enclave());
         if !enclave_path.exists() {
@@ -204,6 +206,13 @@ fn run_show_avr(opts: &Opts, home: PathBuf, cmd: &ShowAVR) -> Result<()> {
             host::sgx_get_metadata(cmd.enclave.clone().unwrap_or(opts.default_enclave()))?;
         quote.match_metadata(&metadata)?;
     }
-    println!("MRENCLAVE=0x{}", hex::encode(quote.get_mrenclave().m));
+    println!(
+        "{}",
+        json! {{
+            "mrenclave": format!("0x{}", hex::encode(quote.get_mrenclave().m)),
+            "enclave_key": format!("0x{}", quote.get_enclave_key_address()?.to_hex_string()),
+            "timestamp": avr.timestamp
+        }}
+    );
     Ok(())
 }

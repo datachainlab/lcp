@@ -24,10 +24,14 @@ pub fn create_enclave(path: impl Into<PathBuf>) -> SgxResult<SgxEnclave> {
 pub fn sgx_get_metadata(path: impl Into<PathBuf>) -> SgxResult<metadata_t> {
     let path = path.into();
     let enclave_path = CString::new(path.as_os_str().to_str().unwrap()).unwrap();
-    let metadata = unsafe {
+    let (metadata, status) = unsafe {
         let mut metadata: metadata_t = MaybeUninit::zeroed().assume_init();
-        sgx_types::sgx_get_metadata(enclave_path.as_ptr(), &mut metadata);
-        metadata
+        let status = sgx_types::sgx_get_metadata(enclave_path.as_ptr(), &mut metadata);
+        (metadata, status)
     };
-    Ok(metadata)
+    if status == sgx_status_t::SGX_SUCCESS {
+        Ok(metadata)
+    } else {
+        Err(status)
+    }
 }
