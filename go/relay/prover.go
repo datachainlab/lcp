@@ -2,7 +2,9 @@ package relay
 
 import (
 	"context"
+	"encoding/hex"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/cosmos/cosmos-sdk/codec"
@@ -134,6 +136,12 @@ func (pr *Prover) CreateMsgCreateClient(clientID string, dstHeader core.HeaderI,
 	if err != nil {
 		return nil, err
 	}
+
+	resBytes, err := res.Marshal()
+	if err != nil {
+		return nil, err
+	}
+	log.Printf("ELC(%s) created. MsgCreateClientResponse: %s\n", res.ClientId, hex.EncodeToString(resBytes))
 
 	// NOTE after creates client, register an enclave key into the client state
 	return &clienttypes.MsgCreateClient{

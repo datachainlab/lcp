@@ -95,7 +95,7 @@ func registerEnclaveKey(pathEnd *core.PathEnd, prover *Prover, debug bool) error
 	return nil
 }
 
-func activateClient(pathEnd *core.PathEnd, src, dst *core.ProvableChain) error {
+func activateClient(pathEnd *core.PathEnd, src, dst *core.ProvableChain, target *elc.MsgUpdateClientResponse) error {
 	latestHeight, err := src.GetLatestHeight()
 	if err != nil {
 		return err
@@ -105,13 +105,17 @@ func activateClient(pathEnd *core.PathEnd, src, dst *core.ProvableChain) error {
 		return err
 	}
 
-	// LCP synchronizes with the latest header of the upstream chain
+	var res *elc.MsgUpdateClientResponse
+	if target != nil {
+		res = target
+	} else {
+		// LCP synchronizes with the latest header of the upstream chain
 
-	res, err := srcProver.syncUpstreamHeader(latestHeight, true)
-	if err != nil {
-		return err
+		res, err = srcProver.syncUpstreamHeader(latestHeight, true)
+		if err != nil {
+			return err
+		}
 	}
-
 	// make MsgUpdateClient with the result of 2 and send it to the downstream chain
 
 	updateClientHeader := &lcptypes.UpdateClientHeader{

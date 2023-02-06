@@ -1,6 +1,8 @@
 package relay
 
 import (
+	"encoding/hex"
+	"github.com/datachainlab/lcp/go/relay/elc"
 	"github.com/hyperledger-labs/yui-relayer/config"
 	"github.com/hyperledger-labs/yui-relayer/core"
 	"github.com/spf13/cobra"
@@ -8,7 +10,8 @@ import (
 )
 
 const (
-	flagSrc = "src"
+	flagSrc        = "src"
+	flagCommitment = "commitment"
 )
 
 func LCPCmd(ctx *config.Context) *cobra.Command {
@@ -87,9 +90,30 @@ func activateClientCmd(ctx *config.Context) *cobra.Command {
 				pathEnd = path.Dst
 				target, counterparty = c[dst], c[src]
 			}
-			return activateClient(pathEnd, target, counterparty)
+			commitment := viper.GetString(flagCommitment)
+			var msgRes *elc.MsgUpdateClientResponse = nil
+			if commitment != "" {
+				commitmentBytes, err := hex.DecodeString(commitment)
+				if err != nil {
+					return err
+				}
+				createClient := &elc.MsgCreateClientResponse{}
+				err = createClient.Unmarshal(commitmentBytes)
+				if err != nil {
+					return err
+				}
+				msgRes = &elc.MsgUpdateClientResponse{
+					Commitment: createClient.Commitment,
+					Signer:     createClient.Signer,
+					Signature:  createClient.Signature,
+				}
+			}
+			return activateClient(pathEnd, target, counterparty, msgRes)
 		},
 	}
+
+	cmd.Flags().String(flagCommitment, "", "a hexadecimal value of MsgCreateClientResponse. This flag skips a UpdateClient.")
+
 	return srcFlag(cmd)
 }
 
