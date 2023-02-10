@@ -153,6 +153,9 @@ func (pr *Prover) SetupHeader(dst core.LightClientIBCQueryierI, baseSrcHeader co
 	if err != nil {
 		return nil, err
 	}
+	if baseSrcHeader == nil {
+		return nil, nil
+	}
 	anyHeader, err := clienttypes.PackHeader(baseSrcHeader)
 	if err != nil {
 		return nil, err
