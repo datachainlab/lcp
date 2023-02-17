@@ -44,6 +44,9 @@ func (pr *Prover) syncUpstreamHeader(height int64, includeState bool) (*elc.MsgU
 	if err != nil {
 		return nil, err
 	}
+	if header == nil {
+		return nil, nil
+	}
 	anyHeader, err := clienttypes.PackHeader(header)
 	if err != nil {
 		return nil, err
