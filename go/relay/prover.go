@@ -32,6 +32,10 @@ type Prover struct {
 	lcpServiceClient LCPServiceClient
 }
 
+const (
+	grpcTimeout = 30 * time.Second
+)
+
 var (
 	_ core.ProverI = (*Prover)(nil)
 )
@@ -45,7 +49,10 @@ func (pr *Prover) GetOriginProver() core.ProverI {
 }
 
 func (pr *Prover) initServiceClient() error {
-	conn, err := grpc.Dial(
+	ctx, cancel := context.WithTimeout(context.Background(), grpcTimeout)
+	defer cancel()
+	conn, err := grpc.DialContext(
+		ctx,
 		pr.config.LcpServiceAddress,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithBlock(),
