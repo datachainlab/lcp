@@ -202,7 +202,10 @@ fn bytes_to_array(bz: &[u8]) -> Result<[u8; 32], Error> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ibc::core::{ics02_client::client_type::ClientType, ics24_host::identifier::ClientId};
+    use ibc::{
+        clients::ics07_tendermint::client_type,
+        core::{ics02_client::client_type::ClientType, ics24_host::identifier::ClientId},
+    };
     use prost_types::Any as ProtoAny;
     use rand::{distributions::Uniform, thread_rng, Rng};
 
@@ -217,7 +220,8 @@ mod tests {
                         type_url: "/".to_owned(),
                         value: gen_rand_vec(64),
                     }
-                    .into()
+                    .try_into()
+                    .unwrap()
                 }),
                 prev_height: rand_or_none(gen_rand_height),
                 new_height: gen_rand_height(),
@@ -236,7 +240,7 @@ mod tests {
             let c1 = StateCommitment {
                 prefix: "ibc".as_bytes().to_vec().try_into().unwrap(),
                 path: Path::ClientType(ibc::core::ics24_host::path::ClientTypePath(
-                    ClientId::new(ClientType::Tendermint, thread_rng().gen()).unwrap(),
+                    ClientId::new(client_type(), thread_rng().gen()).unwrap(),
                 )),
                 value: rand_or_none(|| bytes_to_array(gen_rand_vec(32).as_slice()).unwrap()),
                 height: gen_rand_height(),

@@ -22,9 +22,7 @@ mod prelude {
 pub use commitment::{StateCommitment, UpdateClientCommitment};
 pub use errors::Error;
 pub use proof::{StateCommitmentProof, UpdateClientCommitmentProof};
-pub use state::{
-    gen_state_id, gen_state_id_from_any, gen_state_id_from_bytes, StateID, STATE_ID_SIZE,
-};
+pub use state::{gen_state_id_from_any, gen_state_id_from_bytes, StateID, STATE_ID_SIZE};
 
 mod commitment;
 mod errors;

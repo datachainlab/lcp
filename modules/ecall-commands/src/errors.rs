@@ -11,15 +11,15 @@ define_error! {
             format_args!("invalid argument: descr={}", e.descr)
         },
         Ics03
-        [ibc::core::ics03_connection::error::Error]
+        [TraceError<ibc::core::ics03_connection::error::ConnectionError>]
         |_| { "ICS03 connection error" },
 
         Ics04
-        [ibc::core::ics04_channel::error::Error]
+        [TraceError<ibc::core::ics04_channel::error::ChannelError>]
         |_| { "ICS04 channel error" },
 
         Ics24
-        [ibc::core::ics24_host::error::ValidationError]
+        [TraceError<ibc::core::ics24_host::error::ValidationError>]
         |_| { "ICS24 host error" }
     }
 }

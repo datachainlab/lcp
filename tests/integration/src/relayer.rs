@@ -3,6 +3,7 @@ use ibc::core::ics24_host::identifier::ChainId;
 use ibc_relayer::chain::ChainType;
 use ibc_relayer::config::{self, ChainConfig};
 use ibc_relayer::keyring::Store;
+use relay_tendermint::types::to_relayer_chain_id;
 use relay_tendermint::Relayer;
 use std::str::FromStr;
 use std::{sync::Arc, time::Duration};
@@ -33,7 +34,7 @@ pub fn create_relayer(rt: Arc<TokioRuntime>) -> Result<Relayer> {
 
 fn make_tm_config(cfg: TestChainConfig) -> ChainConfig {
     ChainConfig {
-        id: ChainId::new(cfg.id, 0),
+        id: to_relayer_chain_id(ChainId::new(cfg.id, 0)),
         r#type: ChainType::CosmosSdk,
         rpc_addr: Url::from_str(&cfg.rpc_addr).unwrap(),
         websocket_addr: Url::from_str(&cfg.websocket_addr).unwrap(),
@@ -64,5 +65,7 @@ fn make_tm_config(cfg: TestChainConfig) -> ChainConfig {
         address_type: Default::default(),
         memo_prefix: Default::default(),
         proof_specs: Default::default(),
+        sequential_batch_tx: Default::default(),
+        extension_options: Default::default(),
     }
 }

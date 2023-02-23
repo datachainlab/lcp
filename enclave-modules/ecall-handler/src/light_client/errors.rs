@@ -5,7 +5,7 @@ define_error! {
     #[derive(Debug, PartialEq, Eq)]
     Error {
         Ics02
-        [ibc::core::ics02_client::error::Error]
+        [TraceError<ibc::core::ics02_client::error::ClientError>]
         |_| { "ICS02 client error" },
 
         LightClient
@@ -21,7 +21,7 @@ define_error! {
         |_| { "Commitment error" },
 
         Ics24
-        [ibc::core::ics24_host::error::ValidationError]
+        [TraceError<ibc::core::ics24_host::error::ValidationError>]
         |_| { "ICS24 host error" }
     }
 }

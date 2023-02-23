@@ -11,8 +11,8 @@ use alloc::string::ToString;
 use core::str::FromStr;
 use ibc::core::ics24_host::identifier::{ChannelId, ClientId, ConnectionId, PortId};
 use ibc::core::ics24_host::path::{
-    AcksPath, ChannelEndsPath, ClientConsensusStatePath, ClientStatePath, CommitmentsPath,
-    ConnectionsPath, SeqRecvsPath,
+    AckPath, ChannelEndPath, ClientConsensusStatePath, ClientStatePath, CommitmentPath,
+    ConnectionPath, SeqRecvPath,
 };
 use ibc::core::ics24_host::Path;
 use prost::Message;
@@ -84,7 +84,7 @@ impl TryFrom<MsgVerifyConnection> for MsgVerifyMembership {
     fn try_from(msg: MsgVerifyConnection) -> Result<Self, Status> {
         let connection_id = ConnectionId::from_str(&msg.connection_id)
             .map_err(|e| Status::invalid_argument(format!("invalid connection_id: err={}", e)))?;
-        let path = Path::Connections(ConnectionsPath(connection_id)).to_string();
+        let path = Path::Connection(ConnectionPath(connection_id)).to_string();
 
         let value = msg
             .expected_connection
@@ -112,7 +112,7 @@ impl TryFrom<MsgVerifyChannel> for MsgVerifyMembership {
             .map_err(|e| Status::invalid_argument(format!("invalid port_id: err={}", e)))?;
         let channel_id = ChannelId::from_str(&msg.channel_id)
             .map_err(|e| Status::invalid_argument(format!("invalid channel_id: err={}", e)))?;
-        let path = Path::ChannelEnds(ChannelEndsPath(port_id, channel_id)).to_string();
+        let path = Path::ChannelEnd(ChannelEndPath(port_id, channel_id)).to_string();
         let value = msg
             .expected_channel
             .ok_or(Status::invalid_argument("expected_channel must be non-nil"))?
@@ -137,7 +137,7 @@ impl TryFrom<MsgVerifyPacket> for MsgVerifyMembership {
             .map_err(|e| Status::invalid_argument(format!("invalid port_id: err={}", e)))?;
         let channel_id = ChannelId::from_str(&msg.channel_id)
             .map_err(|e| Status::invalid_argument(format!("invalid channel_id: err={}", e)))?;
-        let path = Path::Commitments(CommitmentsPath {
+        let path = Path::Commitment(CommitmentPath {
             port_id,
             channel_id,
             sequence: msg.sequence.into(),
@@ -163,7 +163,7 @@ impl TryFrom<MsgVerifyPacketAcknowledgement> for MsgVerifyMembership {
         let channel_id = ChannelId::from_str(&msg.channel_id)
             .map_err(|e| Status::invalid_argument(format!("invalid channel_id: err={}", e)))?;
 
-        let path = Path::Acks(AcksPath {
+        let path = Path::Ack(AckPath {
             port_id,
             channel_id,
             sequence: msg.sequence.into(),
@@ -189,7 +189,7 @@ impl TryFrom<MsgVerifyPacketReceiptAbsense> for MsgVerifyNonMembership {
             .map_err(|e| Status::invalid_argument(format!("invalid port_id: err={}", e)))?;
         let channel_id = ChannelId::from_str(&msg.channel_id)
             .map_err(|e| Status::invalid_argument(format!("invalid channel_id: err={}", e)))?;
-        let path = Path::Commitments(CommitmentsPath {
+        let path = Path::Commitment(CommitmentPath {
             port_id,
             channel_id,
             sequence: msg.sequence.into(),
@@ -215,7 +215,7 @@ impl TryFrom<MsgVerifyNextSequenceRecv> for MsgVerifyMembership {
         let channel_id = ChannelId::from_str(&msg.channel_id)
             .map_err(|e| Status::invalid_argument(format!("invalid channel_id: err={}", e)))?;
 
-        let path = Path::SeqRecvs(SeqRecvsPath(port_id, channel_id)).to_string();
+        let path = Path::SeqRecv(SeqRecvPath(port_id, channel_id)).to_string();
         let value = msg.next_sequence_recv.to_be_bytes().to_vec();
         Ok(Self {
             client_id: msg.client_id,

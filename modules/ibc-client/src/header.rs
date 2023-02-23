@@ -2,10 +2,8 @@ use crate::prelude::*;
 use attestation_report::EndorsedAttestationVerificationReport;
 use commitments::{StateID, UpdateClientCommitment};
 use crypto::Address;
-use ibc::core::ics02_client::{
-    client_type::ClientType, error::Error, header::AnyHeader, height::Height as ICS02Height,
-};
-use ibc::timestamp::Timestamp;
+use ibc::core::ics02_client::error::ClientError as Error;
+use ibc_proto::protobuf::Protobuf;
 use lcp_proto::ibc::lightclients::lcp::v1::{
     RegisterEnclaveKeyHeader as RawRegisterEnclaveKeyHeader,
     UpdateClientHeader as RawUpdateClientHeader,
@@ -13,7 +11,6 @@ use lcp_proto::ibc::lightclients::lcp::v1::{
 use lcp_types::{Any, Height, Time};
 use prost_types::Any as ProtoAny;
 use serde::{Deserialize, Serialize};
-use tendermint_proto::Protobuf;
 use validation_context::ValidationParams;
 
 pub const LCP_HEADER_ACTIVATE_TYPE_URL: &str = "/ibc.lightclients.lcp.v1.Header.Activate";
@@ -34,11 +31,12 @@ impl TryFrom<ProtoAny> for Header {
 
     fn try_from(raw: ProtoAny) -> Result<Self, Self::Error> {
         match raw.type_url.as_str() {
-            "" => Err(Error::empty_client_state_response()),
             LCP_HEADER_UPDATE_CLIENT_TYPE_URL => Ok(Header::UpdateClient(
-                UpdateClientHeader::decode_vec(&raw.value).map_err(Error::invalid_raw_header)?,
+                UpdateClientHeader::decode_vec(&raw.value).map_err(Error::InvalidRawHeader)?,
             )),
-            _ => Err(Error::unknown_header_type(raw.type_url)),
+            _ => Err(Error::UnknownHeaderType {
+                header_type: raw.type_url,
+            }),
         }
     }
 }
@@ -65,7 +63,7 @@ impl TryFrom<Any> for Header {
 
 impl From<Header> for Any {
     fn from(value: Header) -> Self {
-        ProtoAny::from(value).into()
+        ProtoAny::from(value).try_into().unwrap()
     }
 }
 
@@ -185,22 +183,22 @@ impl Header {
     }
 }
 
-impl ibc::core::ics02_client::header::Header for Header {
-    fn client_type(&self) -> ClientType {
-        // NOTE: ClientType is defined as enum in ibc-rs, so we cannot support an additional type
-        todo!()
-    }
+// impl ibc::core::ics02_client::header::Header for Header {
+//     fn client_type(&self) -> ClientType {
+//         // NOTE: ClientType is defined as enum in ibc-rs, so we cannot support an additional type
+//         todo!()
+//     }
 
-    fn height(&self) -> ICS02Height {
-        self.get_height().unwrap().try_into().unwrap()
-    }
+//     fn height(&self) -> ICS02Height {
+//         self.get_height().unwrap().try_into().unwrap()
+//     }
 
-    fn timestamp(&self) -> Timestamp {
-        self.get_timestamp().unwrap().into()
-    }
+//     fn timestamp(&self) -> Timestamp {
+//         self.get_timestamp().unwrap().into()
+//     }
 
-    fn wrap_any(self) -> AnyHeader {
-        // NOTE: AnyHeader is defined as enum in ibc-rs, so we cannot support an additional type
-        todo!()
-    }
-}
+//     fn wrap_any(self) -> AnyHeader {
+//         // NOTE: AnyHeader is defined as enum in ibc-rs, so we cannot support an additional type
+//         todo!()
+//     }
+// }

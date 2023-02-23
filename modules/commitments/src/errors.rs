@@ -10,11 +10,11 @@ define_error! {
         |_| {"crypto error"},
 
         Ics02
-        [TraceError<ibc::core::ics02_client::error::Error>]
+        [TraceError<ibc::core::ics02_client::error::ClientError>]
         |_| {"ICS02 client error"},
 
         Ics23
-        [TraceError<ibc::core::ics23_commitment::error::Error>]
+        [TraceError<ibc::core::ics23_commitment::error::CommitmentError>]
         |_| {"ICS23 commitment error"},
 
         Ics24

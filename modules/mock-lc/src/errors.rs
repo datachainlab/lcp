@@ -13,24 +13,20 @@ define_error! {
         },
 
         Ics02
-        [ibc::core::ics02_client::error::Error]
+        [TraceError<ibc::core::ics02_client::error::ClientError>]
         |_| { "ICS02 client error" },
 
         Ics03
-        [ibc::core::ics03_connection::error::Error]
+        [TraceError<ibc::core::ics03_connection::error::ConnectionError>]
         |_| { "ICS03 connection error" },
 
         Ics04
-        [ibc::core::ics04_channel::error::Error]
+        [TraceError<ibc::core::ics04_channel::error::ChannelError>]
         |_| { "ICS04 channel error" },
 
         Ics23
-        [ibc::core::ics23_commitment::error::Error]
+        [TraceError<ibc::core::ics23_commitment::error::CommitmentError>]
         |_| { "ICS23 commitment error" },
-
-        IbcProof
-        [ibc::proofs::ProofError]
-        |_| { "IBC Proof error" },
 
         Commitment
         [commitments::Error]
@@ -39,3 +35,9 @@ define_error! {
 }
 
 impl LightClientInstanceError for Error {}
+
+impl From<commitments::Error> for Error {
+    fn from(value: commitments::Error) -> Self {
+        Self::commitment(value)
+    }
+}

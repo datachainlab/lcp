@@ -2,17 +2,14 @@ use crate::header::Commitment;
 use crate::prelude::*;
 use core::time::Duration;
 use crypto::Address;
-use ibc::core::ics02_client::client_type::ClientType;
-use ibc::core::ics02_client::error::Error;
-use ibc::core::ics02_client::height::Height as ICS02Height;
-use ibc::core::{ics02_client::client_state::AnyClientState, ics24_host::identifier::ChainId};
+use ibc::core::ics02_client::error::ClientError as Error;
+use ibc_proto::protobuf::Protobuf;
 use lcp_proto::ibc::core::client::v1::Height as ProtoHeight;
 use lcp_proto::ibc::lightclients::lcp::v1::ClientState as RawClientState;
 use lcp_types::{Any, Height, Time};
 use prost::Message;
 use prost_types::Any as ProtoAny;
 use serde::{Deserialize, Serialize};
-use tendermint_proto::Protobuf;
 
 pub const LCP_CLIENT_STATE_TYPE_URL: &str = "/ibc.lightclients.lcp.v1.ClientState";
 
@@ -117,11 +114,12 @@ impl TryFrom<ProtoAny> for ClientState {
 
     fn try_from(raw: ProtoAny) -> Result<Self, Self::Error> {
         match raw.type_url.as_str() {
-            "" => Err(Error::empty_client_state_response()),
             LCP_CLIENT_STATE_TYPE_URL => {
                 ClientState::try_from(RawClientState::decode(&*raw.value).unwrap())
             }
-            _ => Err(Error::unknown_client_state_type(raw.type_url)),
+            _ => Err(Error::UnknownClientStateType {
+                client_state_type: raw.type_url,
+            }),
         }
     }
 }
@@ -136,43 +134,9 @@ impl TryFrom<Any> for ClientState {
 
 impl From<ClientState> for Any {
     fn from(value: ClientState) -> Self {
-        ProtoAny::from(value).into()
+        ProtoAny::from(value).try_into().unwrap()
     }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct UpgradeOptions {}
-
-impl ibc::core::ics02_client::client_state::ClientState for ClientState {
-    type UpgradeOptions = UpgradeOptions;
-
-    fn chain_id(&self) -> ChainId {
-        todo!()
-    }
-
-    fn client_type(&self) -> ClientType {
-        // NOTE: ClientType is defined as enum in ibc-rs, so we cannot support an additional type
-        todo!()
-    }
-
-    fn latest_height(&self) -> ICS02Height {
-        self.latest_height.try_into().unwrap()
-    }
-
-    fn frozen_height(&self) -> Option<ICS02Height> {
-        todo!()
-    }
-
-    fn upgrade(
-        self,
-        upgrade_height: ICS02Height,
-        upgrade_options: UpgradeOptions,
-        chain_id: ChainId,
-    ) -> Self {
-        todo!()
-    }
-
-    fn wrap_any(self) -> AnyClientState {
-        todo!()
-    }
-}

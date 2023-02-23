@@ -9,17 +9,18 @@ use ibc::core::ics04_channel::packet::Sequence;
 use ibc::core::ics23_commitment::commitment::CommitmentProofBytes;
 use ibc::core::ics23_commitment::merkle::MerkleProof;
 use ibc::core::ics24_host::identifier::ClientId;
-use ibc::core::ics24_host::path::{ChannelEndsPath, CommitmentsPath, ConnectionsPath};
+use ibc::core::ics24_host::path::{ChannelEndPath, CommitmentPath, ConnectionPath};
 use ibc::core::ics24_host::Path;
 use ibc::Height;
+use ibc_proto::protobuf::Protobuf;
 use ibc_test_framework::prelude::*;
 use ibc_test_framework::util::random::random_u64_range;
 use lcp_types::Time;
+use relay_tendermint::types::{to_ibc_channel_id, to_ibc_connection_id, to_ibc_port_id};
 use relay_tendermint::Relayer;
 use std::str::FromStr;
 use std::sync::Arc;
 use std::{fs::File, io::Write, path::PathBuf};
-use tendermint_proto::Protobuf;
 use tokio::runtime::Runtime as TokioRuntime;
 
 pub struct CGenSuite {
@@ -206,7 +207,7 @@ impl<'e, ChainA: ChainHandle, ChainB: ChainHandle> CommandFileGenerator<'e, Chai
         )?;
         let input = UpdateClientInput {
             client_id,
-            any_header: target_header.into(),
+            any_header: target_header,
             current_timestamp: Time::now(),
             include_state: true,
         };
@@ -226,12 +227,14 @@ impl<'e, ChainA: ChainHandle, ChainB: ChainHandle> CommandFileGenerator<'e, Chai
 
     fn verify_connection(&mut self, client_id: ClientId) -> Result<(), anyhow::Error> {
         let res = self.rly.query_connection_proof(
-            self.channel
-                .connection
-                .connection
-                .a_connection_id()
-                .unwrap()
-                .clone(),
+            to_ibc_connection_id(
+                self.channel
+                    .connection
+                    .connection
+                    .a_connection_id()
+                    .unwrap()
+                    .clone(),
+            ),
             Some(
                 self.client_latest_height
                     .unwrap()
@@ -243,14 +246,14 @@ impl<'e, ChainA: ChainHandle, ChainB: ChainHandle> CommandFileGenerator<'e, Chai
         let input = VerifyMembershipInput {
             client_id,
             prefix: "ibc".into(),
-            path: Path::Connections(ConnectionsPath(
+            path: Path::Connection(ConnectionPath(to_ibc_connection_id(
                 self.channel
                     .connection
                     .connection
                     .a_connection_id()
                     .unwrap()
                     .clone(),
-            ))
+            )))
             .to_string(),
             value: res.0.encode_vec().unwrap(),
             proof: CommitmentProofPair(
@@ -267,8 +270,8 @@ impl<'e, ChainA: ChainHandle, ChainB: ChainHandle> CommandFileGenerator<'e, Chai
 
     fn verify_channel(&mut self, client_id: ClientId) -> Result<(), anyhow::Error> {
         let res = self.rly.query_channel_proof(
-            self.channel.channel.a_side.port_id().clone(),
-            self.channel.channel.a_side.channel_id().unwrap().clone(),
+            to_ibc_port_id(self.channel.channel.a_side.port_id().clone()),
+            to_ibc_channel_id(self.channel.channel.a_side.channel_id().unwrap().clone()),
             Some(
                 self.client_latest_height
                     .unwrap()
@@ -280,9 +283,9 @@ impl<'e, ChainA: ChainHandle, ChainB: ChainHandle> CommandFileGenerator<'e, Chai
         let input = VerifyMembershipInput {
             client_id,
             prefix: "ibc".into(),
-            path: Path::ChannelEnds(ChannelEndsPath(
-                self.channel.channel.a_side.port_id().clone(),
-                self.channel.channel.a_side.channel_id().unwrap().clone(),
+            path: Path::ChannelEnd(ChannelEndPath(
+                to_ibc_port_id(self.channel.channel.a_side.port_id().clone()),
+                to_ibc_channel_id(self.channel.channel.a_side.channel_id().unwrap().clone()),
             ))
             .to_string(),
             value: res.0.encode_vec().unwrap(),
@@ -304,8 +307,8 @@ impl<'e, ChainA: ChainHandle, ChainB: ChainHandle> CommandFileGenerator<'e, Chai
         sequence: Sequence,
     ) -> Result<(), anyhow::Error> {
         let res = self.rly.query_packet_proof(
-            self.channel.channel.a_side.port_id().clone(),
-            self.channel.channel.a_side.channel_id().unwrap().clone(),
+            to_ibc_port_id(self.channel.channel.a_side.port_id().clone()),
+            to_ibc_channel_id(self.channel.channel.a_side.channel_id().unwrap().clone()),
             sequence,
             Some(
                 self.client_latest_height
@@ -318,9 +321,11 @@ impl<'e, ChainA: ChainHandle, ChainB: ChainHandle> CommandFileGenerator<'e, Chai
         let input = VerifyMembershipInput {
             client_id,
             prefix: "ibc".into(),
-            path: Path::Commitments(CommitmentsPath {
-                port_id: self.channel.channel.a_side.port_id().clone(),
-                channel_id: self.channel.channel.a_side.channel_id().unwrap().clone(),
+            path: Path::Commitment(CommitmentPath {
+                port_id: to_ibc_port_id(self.channel.channel.a_side.port_id().clone()),
+                channel_id: to_ibc_channel_id(
+                    self.channel.channel.a_side.channel_id().unwrap().clone(),
+                ),
                 sequence,
             })
             .to_string(),
@@ -405,14 +410,14 @@ impl BinaryChannelTest for CGenSuite {
             &channel.channel_id_a.as_ref(),
             &wallet_a.as_ref(),
             &wallet_b.address(),
-            &denom_a,
-            a_to_b_amount,
+            &denom_a.with_amount(a_to_b_amount).as_ref(),
         )?;
 
         chains.node_a.chain_driver().assert_eventual_wallet_amount(
             &wallet_a.address(),
-            balance_a - a_to_b_amount,
-            &denom_a,
+            &denom_a
+                .with_amount(balance_a.amount().checked_sub(a_to_b_amount).unwrap())
+                .as_ref(),
         )?;
 
         log::info!(
