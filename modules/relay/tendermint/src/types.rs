@@ -32,6 +32,11 @@ use ibc_relayer_types::{core::ics24_host::identifier::ChainId as RChainId, Heigh
 use lcp_types::Any;
 use std::str::FromStr;
 
+/// WARNING: The following converters are very inefficient, so they should not be used except for testing purpose.
+/// ibc-relayer(hermes) has owned ibc crate, not cosmos/ibc-rs. Therefore, the following converters are required for now.
+
+/// relayer-types to lcp types
+
 pub fn relayer_header_to_any(value: RHeader) -> Any {
     let any = IBCRelayerAny::from(value);
     Any::new(any.type_url, any.value)
