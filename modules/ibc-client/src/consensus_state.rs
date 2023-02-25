@@ -83,19 +83,3 @@ impl From<ConsensusState> for Any {
         ProtoAny::from(value).try_into().unwrap()
     }
 }
-
-// impl ibc::core::ics02_client::client_consensus::ConsensusState for ConsensusState {
-//     type Error = Infallible;
-
-//     fn client_type(&self) -> ClientType {
-//         todo!()
-//     }
-
-//     fn root(&self) -> &CommitmentRoot {
-//         panic!("not supported")
-//     }
-
-//     fn wrap_any(self) -> AnyConsensusState {
-//         panic!("not supported")
-//     }
-// }
