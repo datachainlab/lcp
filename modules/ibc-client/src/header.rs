@@ -182,23 +182,3 @@ impl Header {
         }
     }
 }
-
-// impl ibc::core::ics02_client::header::Header for Header {
-//     fn client_type(&self) -> ClientType {
-//         // NOTE: ClientType is defined as enum in ibc-rs, so we cannot support an additional type
-//         todo!()
-//     }
-
-//     fn height(&self) -> ICS02Height {
-//         self.get_height().unwrap().try_into().unwrap()
-//     }
-
-//     fn timestamp(&self) -> Timestamp {
-//         self.get_timestamp().unwrap().into()
-//     }
-
-//     fn wrap_any(self) -> AnyHeader {
-//         // NOTE: AnyHeader is defined as enum in ibc-rs, so we cannot support an additional type
-//         todo!()
-//     }
-// }
