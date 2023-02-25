@@ -23,12 +23,10 @@ pub trait ClientReader {
 
     /// Returns the current timestamp of the local.
     fn host_timestamp(&self) -> Timestamp;
+
     /// Returns a natural number, counting how many clients have been created thus far.
     /// The value of this counter should increase only via method `ClientKeeper::increase_client_counter`.
     fn client_counter(&self) -> Result<u64, ICS02Error>;
-
-    // /// Returns the trait object for `ClientReader` defined in ibc-rs
-    // fn as_ibc_client_reader(&self) -> &dyn IBCClientReader;
 }
 
 pub trait ClientKeeper {
