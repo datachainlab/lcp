@@ -17,9 +17,6 @@ mod prelude {
     // Those are exported by default in the std prelude in Rust 2021
     pub use core::convert::{TryFrom, TryInto};
     pub use core::iter::FromIterator;
-
-    #[cfg(feature = "sgx")]
-    pub use bincode_sgx as bincode;
 }
 
 pub use crate::context::Context;
