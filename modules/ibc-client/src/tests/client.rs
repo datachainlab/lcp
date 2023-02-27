@@ -1,11 +1,9 @@
-use super::errors::Error;
 use crate::client_def::LCPClient;
 use crate::client_state::{ClientState, LCP_CLIENT_STATE_TYPE_URL};
 use crate::consensus_state::ConsensusState;
 use crate::header::Header;
 use crate::prelude::*;
 use commitments::{gen_state_id_from_any, UpdateClientCommitment};
-use ibc::core::ics02_client::error::ClientError as ICS02Error;
 use lcp_types::{Any, ClientId, Height};
 use light_client::{
     CreateClientResult, Error as LightClientError, HostClientReader, LightClient,
@@ -78,13 +76,8 @@ impl LightClient for LCPLightClient {
         // Use client_state to validate the new header against the latest consensus_state.
         // This function will return the new client_state (its latest_height changed) and a
         // consensus_state obtained from header. These will be later persisted by the keeper.
-        let (new_client_state, new_consensus_state) = LCPClient {}
-            .check_header_and_update_state(ctx, client_id, client_state, header)
-            .map_err(|e| {
-                Error::ics02(ICS02Error::HeaderVerificationFailure {
-                    reason: e.to_string(),
-                })
-            })?;
+        let (new_client_state, new_consensus_state) =
+            LCPClient {}.check_header_and_update_state(ctx, client_id, client_state, header)?;
 
         Ok(UpdateClientResult {
             new_any_client_state: Any::from_any(new_client_state),

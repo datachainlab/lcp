@@ -34,16 +34,17 @@ define_error! {
             format_args!("consensus_state not found: client_id={} height={}", e.client_id, e.height)
         },
 
-        LightClientInstance
-        [TraceError<Box<dyn LightClientInstanceError>>]
-        |_| { "Light Client instance error" }
+        LightClientSpecific
+        [TraceError<Box<dyn LightClientSpecificError>>]
+        |_| { "Light Client specific error" }
     }
 }
 
-pub trait LightClientInstanceError: core::fmt::Display + core::fmt::Debug + Sync + Send {}
+/// Each Light Client's error type should implement this trait
+pub trait LightClientSpecificError: core::fmt::Display + core::fmt::Debug + Sync + Send {}
 
-impl<T: 'static + LightClientInstanceError> From<T> for Error {
+impl<T: 'static + LightClientSpecificError> From<T> for Error {
     fn from(value: T) -> Self {
-        Self::light_client_instance(Box::new(value))
+        Self::light_client_specific(Box::new(value))
     }
 }

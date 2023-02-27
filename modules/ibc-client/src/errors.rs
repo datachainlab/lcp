@@ -1,7 +1,7 @@
 use crate::prelude::*;
 use core::time::Duration;
 use flex_error::*;
-use light_client::LightClientInstanceError;
+use light_client::LightClientSpecificError;
 
 define_error! {
     #[derive(Debug, Clone, PartialEq, Eq)]
@@ -63,4 +63,4 @@ impl From<lcp_types::TimeError> for Error {
     }
 }
 
-impl LightClientInstanceError for Error {}
+impl LightClientSpecificError for Error {}
