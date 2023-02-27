@@ -2,12 +2,12 @@ use crate::errors::TypeError;
 use crate::prelude::*;
 use core::cmp::Ordering;
 use core::str::FromStr;
-use ibc::core::ics02_client::error::Error as ICS02Error;
+use ibc::core::ics02_client::error::ClientError as ICS02Error;
 use ibc::core::ics02_client::height::Height as ICS02Height;
 use ibc::core::ics02_client::height::HeightError;
 use ibc_proto::ibc::core::client::v1::Height as RawHeight;
+use ibc_proto::protobuf::Protobuf;
 use serde::{Deserialize, Serialize};
-use tendermint_proto::Protobuf;
 
 #[derive(Default, Copy, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct Height {
@@ -51,7 +51,7 @@ impl Height {
 
     pub fn sub(&self, delta: u64) -> Result<Height, ICS02Error> {
         if self.revision_height <= delta {
-            return Err(ICS02Error::invalid_height_result());
+            return Err(ICS02Error::InvalidHeightResult);
         }
 
         Ok(Height {
@@ -130,12 +130,20 @@ impl TryFrom<&str> for Height {
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         let split: Vec<&str> = value.split('-').collect();
 
-        let revision_number = split[0]
-            .parse::<u64>()
-            .map_err(|e| HeightError::height_conversion(value.to_owned(), e))?;
-        let revision_height = split[1]
-            .parse::<u64>()
-            .map_err(|e| HeightError::height_conversion(value.to_owned(), e))?;
+        let revision_number =
+            split[0]
+                .parse::<u64>()
+                .map_err(|error| HeightError::HeightConversion {
+                    height: value.to_owned(),
+                    error,
+                })?;
+        let revision_height =
+            split[1]
+                .parse::<u64>()
+                .map_err(|error| HeightError::HeightConversion {
+                    height: value.to_owned(),
+                    error,
+                })?;
 
         Ok(Height::new(revision_number, revision_height))
     }
@@ -159,7 +167,7 @@ impl TryFrom<Height> for ICS02Height {
     type Error = ICS02Error;
 
     fn try_from(height: Height) -> Result<Self, Self::Error> {
-        if height.is_zero() {
+        if height.revision_height() == 0 {
             // XXX this is a trick for height type conversion due to ics02 height doesn't allow "zero" height
             Ok(serde_json::from_slice(&serde_json::to_vec(&height).unwrap()).unwrap())
         } else {

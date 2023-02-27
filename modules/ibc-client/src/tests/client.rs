@@ -5,8 +5,7 @@ use crate::consensus_state::ConsensusState;
 use crate::header::Header;
 use crate::prelude::*;
 use commitments::{gen_state_id_from_any, UpdateClientCommitment};
-use ibc::core::ics02_client::client_state::ClientState as ICS02ClientState;
-use ibc::core::ics02_client::error::Error as ICS02Error;
+use ibc::core::ics02_client::error::ClientError as ICS02Error;
 use ibc::core::ics24_host::identifier::ClientId;
 use lcp_types::{Any, Height};
 use light_client::{
@@ -36,7 +35,7 @@ impl LightClient for LCPLightClient {
             ClientState::try_from(any_client_state).map_err(LightClientError::ics02)?;
         let consensus_state =
             ConsensusState::try_from(any_consensus_state).map_err(LightClientError::ics02)?;
-        let height = client_state.latest_height().into();
+        let height = client_state.latest_height;
         let timestamp = consensus_state.timestamp;
 
         LCPClient {}
@@ -92,11 +91,15 @@ impl LightClient for LCPLightClient {
         // consensus_state obtained from header. These will be later persisted by the keeper.
         let (new_client_state, new_consensus_state) = LCPClient {}
             .check_header_and_update_state(ctx, client_id, client_state, header)
-            .map_err(|e| Error::ics02(ICS02Error::header_verification_failure(e.to_string())))?;
+            .map_err(|e| {
+                Error::ics02(ICS02Error::HeaderVerificationFailure {
+                    reason: e.to_string(),
+                })
+            })?;
 
         Ok(UpdateClientResult {
-            new_any_client_state: Any::new(new_client_state),
-            new_any_consensus_state: Any::new(new_consensus_state),
+            new_any_client_state: Any::from_any(new_client_state),
+            new_any_consensus_state: Any::from_any(new_consensus_state),
             height,
             commitment: UpdateClientCommitment::default(),
             prove: false,

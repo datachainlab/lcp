@@ -1,22 +1,14 @@
 use commitments::StateCommitmentProof;
 use crypto::Keccak256;
 use crypto::{verify_signature_address, Address};
-use ibc::core::ics02_client::client_consensus::AnyConsensusState;
-use ibc::core::ics02_client::client_state::AnyClientState;
-use ibc::core::ics02_client::error::Error as Ics02Error;
-use ibc::core::ics03_connection::connection::ConnectionEnd;
-use ibc::core::ics04_channel::channel::ChannelEnd;
-use ibc::core::ics04_channel::context::ChannelReader;
-use ibc::core::ics04_channel::packet::Sequence;
-use ibc::core::ics23_commitment::commitment::{
-    CommitmentPrefix, CommitmentProofBytes, CommitmentRoot,
-};
-use ibc::core::ics24_host::identifier::{ChannelId, ClientId, ConnectionId, PortId};
+use ibc::core::ics02_client::error::ClientError as Ics02Error;
+use ibc::core::ics23_commitment::commitment::{CommitmentPrefix, CommitmentProofBytes};
+use ibc::core::ics24_host::identifier::ClientId;
 use ibc::core::ics24_host::path::ClientConsensusStatePath;
 use ibc_proto::ibc::core::commitment::v1::MerkleProof;
-use lcp_types::Height;
+use ibc_proto::protobuf::Protobuf;
+use lcp_types::{Any, Height};
 use light_client::ClientReader;
-use tendermint_proto::Protobuf;
 use validation_context::{validation_predicate, ValidationContext};
 
 use crate::client_state::ClientState;
@@ -148,7 +140,7 @@ impl LCPClient {
         proof: &CommitmentProofBytes,
         client_id: &ClientId,
         consensus_height: Height,
-        expected_consensus_state: &AnyConsensusState,
+        expected_consensus_state: &Any,
     ) -> Result<(), Ics02Error> {
         // TODO return an error instead of assertion
 
@@ -237,121 +229,5 @@ impl LCPClient {
         assert!(consensus_state.is_empty());
 
         Ok(())
-    }
-
-    /// Verify a `proof` that a connection state matches that of the input `connection_end`.
-    #[allow(clippy::too_many_arguments)]
-    pub fn verify_connection_state(
-        &self,
-        client_state: &ClientState,
-        height: Height,
-        prefix: &CommitmentPrefix,
-        proof: &CommitmentProofBytes,
-        root: &CommitmentRoot,
-        connection_id: &ConnectionId,
-        expected_connection_end: &ConnectionEnd,
-    ) -> Result<(), Ics02Error> {
-        todo!()
-    }
-
-    /// Verify a `proof` that a channel state matches that of the input `channel_end`.
-    #[allow(clippy::too_many_arguments)]
-    pub fn verify_channel_state(
-        &self,
-        client_state: &ClientState,
-        height: Height,
-        prefix: &CommitmentPrefix,
-        proof: &CommitmentProofBytes,
-        root: &CommitmentRoot,
-        port_id: &PortId,
-        channel_id: &ChannelId,
-        expected_channel_end: &ChannelEnd,
-    ) -> Result<(), Ics02Error> {
-        todo!()
-    }
-
-    /// Verify the client state for this chain that it is stored on the counterparty chain.
-    #[allow(clippy::too_many_arguments)]
-    pub fn verify_client_full_state(
-        &self,
-        client_state: &ClientState,
-        height: Height,
-        prefix: &CommitmentPrefix,
-        proof: &CommitmentProofBytes,
-        root: &CommitmentRoot,
-        client_id: &ClientId,
-        expected_client_state: &AnyClientState,
-    ) -> Result<(), Ics02Error> {
-        todo!()
-    }
-
-    /// Verify a `proof` that a packet has been commited.
-    #[allow(clippy::too_many_arguments)]
-    pub fn verify_packet_data(
-        &self,
-        ctx: &dyn ChannelReader,
-        client_state: &ClientState,
-        height: Height,
-        connection_end: &ConnectionEnd,
-        proof: &CommitmentProofBytes,
-        root: &CommitmentRoot,
-        port_id: &PortId,
-        channel_id: &ChannelId,
-        sequence: Sequence,
-        commitment: String,
-    ) -> Result<(), Ics02Error> {
-        todo!()
-    }
-
-    /// Verify a `proof` that a packet has been commited.
-    #[allow(clippy::too_many_arguments)]
-    pub fn verify_packet_acknowledgement(
-        &self,
-        ctx: &dyn ChannelReader,
-        client_state: &ClientState,
-        height: Height,
-        connection_end: &ConnectionEnd,
-        proof: &CommitmentProofBytes,
-        root: &CommitmentRoot,
-        port_id: &PortId,
-        channel_id: &ChannelId,
-        sequence: Sequence,
-        ack: Vec<u8>,
-    ) -> Result<(), Ics02Error> {
-        todo!()
-    }
-
-    /// Verify a `proof` that of the next_seq_received.
-    #[allow(clippy::too_many_arguments)]
-    pub fn verify_next_sequence_recv(
-        &self,
-        ctx: &dyn ChannelReader,
-        client_state: &ClientState,
-        height: Height,
-        connection_end: &ConnectionEnd,
-        proof: &CommitmentProofBytes,
-        root: &CommitmentRoot,
-        port_id: &PortId,
-        channel_id: &ChannelId,
-        sequence: Sequence,
-    ) -> Result<(), Ics02Error> {
-        todo!()
-    }
-
-    /// Verify a `proof` that a packet has not been received.
-    #[allow(clippy::too_many_arguments)]
-    pub fn verify_packet_receipt_absence(
-        &self,
-        ctx: &dyn ChannelReader,
-        client_state: &ClientState,
-        height: Height,
-        connection_end: &ConnectionEnd,
-        proof: &CommitmentProofBytes,
-        root: &CommitmentRoot,
-        port_id: &PortId,
-        channel_id: &ChannelId,
-        sequence: Sequence,
-    ) -> Result<(), Ics02Error> {
-        todo!()
     }
 }

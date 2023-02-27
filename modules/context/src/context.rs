@@ -1,13 +1,8 @@
 use crate::prelude::*;
-use core::str::FromStr;
 use crypto::Signer;
 use ibc::{
     core::{
-        ics02_client::{
-            client_consensus::AnyConsensusState, client_state::AnyClientState,
-            client_type::ClientType, context::ClientReader as IBCClientReader,
-            error::Error as ICS02Error, height::Height as ICS02Height,
-        },
+        ics02_client::error::ClientError as ICS02Error,
         ics24_host::{
             identifier::ClientId,
             path::{ClientConsensusStatePath, ClientStatePath, ClientTypePath},
@@ -55,7 +50,9 @@ impl<'k, R: LightClientResolver, S: KVStore> ClientReader for Context<'k, R, S> 
             .store
             .get(format!("{}", ClientTypePath(client_id.clone())).as_bytes());
         if value.is_none() {
-            return Err(ICS02Error::client_not_found(client_id.clone()));
+            return Err(ICS02Error::ClientNotFound {
+                client_id: client_id.clone(),
+            });
         }
         Ok(String::from_utf8(value.unwrap()).unwrap())
     }
@@ -65,7 +62,9 @@ impl<'k, R: LightClientResolver, S: KVStore> ClientReader for Context<'k, R, S> 
             .store
             .get(format!("{}", ClientStatePath(client_id.clone())).as_bytes());
         if value.is_none() {
-            return Err(ICS02Error::client_not_found(client_id.clone()));
+            return Err(ICS02Error::ClientNotFound {
+                client_id: client_id.clone(),
+            });
         }
         Ok(bincode::deserialize(&value.unwrap()).unwrap())
     }
@@ -80,10 +79,10 @@ impl<'k, R: LightClientResolver, S: KVStore> ClientReader for Context<'k, R, S> 
         let value = match self.store.get(format!("{}", path).as_bytes()) {
             Some(value) => value,
             None => {
-                return Err(ICS02Error::consensus_state_not_found(
-                    client_id.clone(),
-                    height.try_into()?,
-                ));
+                return Err(ICS02Error::ConsensusStateNotFound {
+                    client_id: client_id.clone(),
+                    height: height.try_into()?,
+                });
             }
         };
         Ok(bincode::deserialize(&value).unwrap())
@@ -107,89 +106,6 @@ impl<'k, R: LightClientResolver, S: KVStore> ClientReader for Context<'k, R, S> 
             }
             None => Ok(0),
         }
-    }
-
-    fn as_ibc_client_reader(&self) -> &dyn IBCClientReader {
-        self
-    }
-}
-
-impl<'k, R: LightClientResolver, S: KVStore> IBCClientReader for Context<'k, R, S> {
-    fn client_type(&self, client_id: &ClientId) -> Result<ClientType, ICS02Error> {
-        let client_type = <Self as ClientReader>::client_type(&self, client_id)?;
-        ClientType::from_str(&client_type)
-    }
-
-    fn client_state(&self, client_id: &ClientId) -> Result<AnyClientState, ICS02Error> {
-        let client_state = <Self as ClientReader>::client_state(&self, client_id)?;
-        AnyClientState::try_from(client_state)
-    }
-
-    fn consensus_state(
-        &self,
-        client_id: &ClientId,
-        height: ICS02Height,
-    ) -> Result<AnyConsensusState, ICS02Error> {
-        let consensus_state =
-            <Self as ClientReader>::consensus_state(&self, client_id, height.into())?;
-        AnyConsensusState::try_from(consensus_state)
-    }
-
-    /// Similar to `consensus_state`, attempt to retrieve the consensus state,
-    /// but return `None` if no state exists at the given height.
-    fn maybe_consensus_state(
-        &self,
-        client_id: &ClientId,
-        height: ICS02Height,
-    ) -> Result<Option<AnyConsensusState>, ICS02Error> {
-        use ibc::core::ics02_client::error::ErrorDetail;
-        debug!("maybe_consensus_state: {:?}", height);
-        match <Self as ClientReader>::consensus_state(&self, client_id, height.into()) {
-            Ok(cs) => Ok(Some(cs.try_into()?)),
-            Err(e) => match e.detail() {
-                ErrorDetail::ConsensusStateNotFound(_) => Ok(None),
-                _ => Err(e),
-            },
-        }
-    }
-
-    fn next_consensus_state(
-        &self,
-        _client_id: &ClientId,
-        _height: ICS02Height,
-    ) -> Result<Option<AnyConsensusState>, ICS02Error> {
-        todo!()
-    }
-
-    fn prev_consensus_state(
-        &self,
-        _client_id: &ClientId,
-        _height: ICS02Height,
-    ) -> Result<Option<AnyConsensusState>, ICS02Error> {
-        // TODO implement this
-        Ok(None)
-    }
-
-    fn host_height(&self) -> ICS02Height {
-        <Self as ClientReader>::host_height(&self)
-            .try_into()
-            .unwrap()
-    }
-
-    fn host_timestamp(&self) -> Timestamp {
-        <Self as ClientReader>::host_timestamp(&self)
-    }
-
-    fn host_consensus_state(&self, _height: ICS02Height) -> Result<AnyConsensusState, ICS02Error> {
-        todo!()
-    }
-
-    fn pending_host_consensus_state(&self) -> Result<AnyConsensusState, ICS02Error> {
-        todo!()
-    }
-
-    fn client_counter(&self) -> Result<u64, ICS02Error> {
-        <Self as ClientReader>::client_counter(&self)
     }
 }
 

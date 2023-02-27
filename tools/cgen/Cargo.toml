@@ -5,15 +5,14 @@ edition = "2021"
 build = "build.rs"
 
 [dependencies]
+ibc = { version = "0.29.0", default-features = false, features = ["serde", "std"] }
+ibc-proto = { version = "0.26.0", default-features = false, features = ["parity-scale-codec", "borsh"] }
+ibc-relayer = { version = "0.22.0", default-features = false }
+ibc-test-framework = { version = "0.22.0", default-features = false }
+tendermint-rpc = { version = "0.28", default-features = false }
 clap = { version = "3.2", features = ["derive"] }
-ibc = { git = "https://github.com/informalsystems/ibc-rs", rev = "e8c98d440949abf971ac45a68ed9dd9e6e9f48ed", default-features = false }
-ibc-relayer = { git = "https://github.com/informalsystems/ibc-rs", rev = "e8c98d440949abf971ac45a68ed9dd9e6e9f48ed", default-features = false }
-ibc-proto = { git = "https://github.com/informalsystems/ibc-rs", rev = "e8c98d440949abf971ac45a68ed9dd9e6e9f48ed", default-features = false }
-ibc-test-framework = { git = "https://github.com/informalsystems/ibc-rs", rev = "e8c98d440949abf971ac45a68ed9dd9e6e9f48ed", default-features = false }
-tendermint-proto = { version = "=0.23.7", default-features = false }
-tendermint-rpc  = { version = "=0.23.7", features = ["http-client", "websocket-client"] }
 tempdir = "0.3.7"
-prost-types = { version = "0.10", default-features = false }
+prost-types = { version = "0.11", default-features = false }
 anyhow = { version = "1.0.56" }
 tokio = { version = "1.0" }
 log = "0.4.8"

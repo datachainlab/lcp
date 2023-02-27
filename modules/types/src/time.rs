@@ -8,7 +8,7 @@ use ibc::timestamp::Timestamp;
 use serde::{Deserialize, Serialize};
 use tendermint::Time as TmTime;
 
-#[derive(Copy, Clone, Debug, Eq, PartialEq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(transparent)]
 pub struct Time(TmTime);
 

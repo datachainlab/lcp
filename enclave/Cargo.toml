@@ -42,7 +42,7 @@ sgx_rand = { rev = "v1.1.6", git = "https://github.com/apache/incubator-teaclave
 
 [patch."crates-io"]
 # TODO these patches would be better as optional
-sha2-0102 = { git = "https://github.com/bluele/hashes", branch = "0.10.2-sha256-hwa-disabled", package = "sha2" }
+sha2-0106 = { git = "https://github.com/bluele/hashes", branch = "0.10.6-sha256-hwa-disabled", package = "sha2" }
 sha2-098 = { git = "https://github.com/bluele/hashes", branch = "0.9.8-sha256-hwa-disabled", package = "sha2" }
 
 [profile.release]

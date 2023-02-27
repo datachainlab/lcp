@@ -6,7 +6,7 @@ edition = "2021"
 [dependencies]
 sgx_tstd = { rev = "v1.1.6", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", optional = true }
 sgx_types = { rev = "v1.1.6", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", features = ["extra_traits"] }
-tendermint = { version = "=0.23.7", default-features = false }
+tendermint = { version = "0.29", default-features = false }
 log = { version = "0.4.8", default-features = false, optional = true }
 chrono = { version = "0.4.19", default-features = false, features = ["alloc"]}
 serde = { version = "1.0", default-features = false, features = ["alloc"] }

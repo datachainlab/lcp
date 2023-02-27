@@ -5,7 +5,7 @@ define_error! {
     #[derive(Debug, PartialEq, Eq)]
     Error {
         Ics02
-        [ibc::core::ics02_client::error::Error]
+        [TraceError<ibc::core::ics02_client::error::ClientError>]
         |_|  { "ICS02 client error" },
 
         LightClientInstance

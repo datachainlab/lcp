@@ -1,105 +1,123 @@
 /// MsgCreateClient defines a message to create an IBC client
 #[derive(::serde::Serialize, ::serde::Deserialize)]
+#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct MsgCreateClient {
     /// light client state
-    #[prost(message, optional, tag="1")]
-    pub client_state: ::core::option::Option<super::super::super::super::google::protobuf::Any>,
+    #[prost(message, optional, tag = "1")]
+    pub client_state: ::core::option::Option<
+        super::super::super::super::google::protobuf::Any,
+    >,
     /// consensus state associated with the client that corresponds to a given
     /// height.
-    #[prost(message, optional, tag="2")]
-    pub consensus_state: ::core::option::Option<super::super::super::super::google::protobuf::Any>,
+    #[prost(message, optional, tag = "2")]
+    pub consensus_state: ::core::option::Option<
+        super::super::super::super::google::protobuf::Any,
+    >,
     /// signer address
-    #[prost(string, tag="3")]
+    #[prost(string, tag = "3")]
     pub signer: ::prost::alloc::string::String,
 }
 /// MsgCreateClientResponse defines the Msg/CreateClient response type.
 #[derive(::serde::Serialize, ::serde::Deserialize)]
+#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct MsgCreateClientResponse {
-    #[prost(string, tag="1")]
+    #[prost(string, tag = "1")]
     pub client_id: ::prost::alloc::string::String,
-    #[prost(bytes="vec", tag="2")]
+    #[prost(bytes = "vec", tag = "2")]
     pub commitment: ::prost::alloc::vec::Vec<u8>,
-    #[prost(bytes="vec", tag="3")]
+    #[prost(bytes = "vec", tag = "3")]
     pub signer: ::prost::alloc::vec::Vec<u8>,
-    #[prost(bytes="vec", tag="4")]
+    #[prost(bytes = "vec", tag = "4")]
     pub signature: ::prost::alloc::vec::Vec<u8>,
 }
 /// MsgUpdateClient defines an sdk.Msg to update a IBC client state using
 /// the given header.
 #[derive(::serde::Serialize, ::serde::Deserialize)]
+#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct MsgUpdateClient {
     /// client unique identifier
-    #[prost(string, tag="1")]
+    #[prost(string, tag = "1")]
     pub client_id: ::prost::alloc::string::String,
     /// header to update the light client
-    #[prost(message, optional, tag="2")]
-    pub header: ::core::option::Option<super::super::super::super::google::protobuf::Any>,
+    #[prost(message, optional, tag = "2")]
+    pub header: ::core::option::Option<
+        super::super::super::super::google::protobuf::Any,
+    >,
     /// request to include state in a commitment
-    #[prost(bool, tag="3")]
+    #[prost(bool, tag = "3")]
     pub include_state: bool,
 }
 /// MsgUpdateClientResponse defines the Msg/UpdateClient response type.
 #[derive(::serde::Serialize, ::serde::Deserialize)]
+#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct MsgUpdateClientResponse {
-    #[prost(bytes="vec", tag="1")]
+    #[prost(bytes = "vec", tag = "1")]
     pub commitment: ::prost::alloc::vec::Vec<u8>,
-    #[prost(bytes="vec", tag="2")]
+    #[prost(bytes = "vec", tag = "2")]
     pub signer: ::prost::alloc::vec::Vec<u8>,
-    #[prost(bytes="vec", tag="3")]
+    #[prost(bytes = "vec", tag = "3")]
     pub signature: ::prost::alloc::vec::Vec<u8>,
 }
 #[derive(::serde::Serialize, ::serde::Deserialize)]
+#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct MsgVerifyMembership {
-    #[prost(string, tag="1")]
+    #[prost(string, tag = "1")]
     pub client_id: ::prost::alloc::string::String,
-    #[prost(bytes="vec", tag="2")]
+    #[prost(bytes = "vec", tag = "2")]
     pub prefix: ::prost::alloc::vec::Vec<u8>,
-    #[prost(string, tag="3")]
+    #[prost(string, tag = "3")]
     pub path: ::prost::alloc::string::String,
-    #[prost(bytes="vec", tag="4")]
+    #[prost(bytes = "vec", tag = "4")]
     pub value: ::prost::alloc::vec::Vec<u8>,
-    #[prost(message, optional, tag="5")]
-    pub proof_height: ::core::option::Option<super::super::super::super::ibc::core::client::v1::Height>,
-    #[prost(bytes="vec", tag="6")]
+    #[prost(message, optional, tag = "5")]
+    pub proof_height: ::core::option::Option<
+        super::super::super::super::ibc::core::client::v1::Height,
+    >,
+    #[prost(bytes = "vec", tag = "6")]
     pub proof: ::prost::alloc::vec::Vec<u8>,
 }
 #[derive(::serde::Serialize, ::serde::Deserialize)]
+#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct MsgVerifyMembershipResponse {
-    #[prost(bytes="vec", tag="1")]
+    #[prost(bytes = "vec", tag = "1")]
     pub commitment: ::prost::alloc::vec::Vec<u8>,
-    #[prost(bytes="vec", tag="2")]
+    #[prost(bytes = "vec", tag = "2")]
     pub signer: ::prost::alloc::vec::Vec<u8>,
-    #[prost(bytes="vec", tag="3")]
+    #[prost(bytes = "vec", tag = "3")]
     pub signature: ::prost::alloc::vec::Vec<u8>,
 }
 #[derive(::serde::Serialize, ::serde::Deserialize)]
+#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct MsgVerifyNonMembership {
-    #[prost(string, tag="1")]
+    #[prost(string, tag = "1")]
     pub client_id: ::prost::alloc::string::String,
-    #[prost(bytes="vec", tag="2")]
+    #[prost(bytes = "vec", tag = "2")]
     pub prefix: ::prost::alloc::vec::Vec<u8>,
-    #[prost(string, tag="3")]
+    #[prost(string, tag = "3")]
     pub path: ::prost::alloc::string::String,
-    #[prost(message, optional, tag="4")]
-    pub proof_height: ::core::option::Option<super::super::super::super::ibc::core::client::v1::Height>,
-    #[prost(bytes="vec", tag="5")]
+    #[prost(message, optional, tag = "4")]
+    pub proof_height: ::core::option::Option<
+        super::super::super::super::ibc::core::client::v1::Height,
+    >,
+    #[prost(bytes = "vec", tag = "5")]
     pub proof: ::prost::alloc::vec::Vec<u8>,
 }
 #[derive(::serde::Serialize, ::serde::Deserialize)]
+#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct MsgVerifyNonMembershipResponse {
-    #[prost(bytes="vec", tag="1")]
+    #[prost(bytes = "vec", tag = "1")]
     pub commitment: ::prost::alloc::vec::Vec<u8>,
-    #[prost(bytes="vec", tag="2")]
+    #[prost(bytes = "vec", tag = "2")]
     pub signer: ::prost::alloc::vec::Vec<u8>,
-    #[prost(bytes="vec", tag="3")]
+    #[prost(bytes = "vec", tag = "3")]
     pub signature: ::prost::alloc::vec::Vec<u8>,
 }
 /// Generated client implementations.
@@ -107,6 +125,7 @@ pub struct MsgVerifyNonMembershipResponse {
 pub mod msg_client {
     #![allow(unused_variables, dead_code, missing_docs, clippy::let_unit_value)]
     use tonic::codegen::*;
+    use tonic::codegen::http::Uri;
     /// Msg defines the ELC Msg service.
     #[derive(Debug, Clone)]
     pub struct MsgClient<T> {
@@ -134,6 +153,10 @@ pub mod msg_client {
             let inner = tonic::client::Grpc::new(inner);
             Self { inner }
         }
+        pub fn with_origin(inner: T, origin: Uri) -> Self {
+            let inner = tonic::client::Grpc::with_origin(inner, origin);
+            Self { inner }
+        }
         pub fn with_interceptor<F>(
             inner: T,
             interceptor: F,
@@ -153,19 +176,19 @@ pub mod msg_client {
         {
             MsgClient::new(InterceptedService::new(inner, interceptor))
         }
-        /// Compress requests with `gzip`.
+        /// Compress requests with the given encoding.
         ///
         /// This requires the server to support it otherwise it might respond with an
         /// error.
         #[must_use]
-        pub fn send_gzip(mut self) -> Self {
-            self.inner = self.inner.send_gzip();
+        pub fn send_compressed(mut self, encoding: CompressionEncoding) -> Self {
+            self.inner = self.inner.send_compressed(encoding);
             self
         }
-        /// Enable decompressing responses with `gzip`.
+        /// Enable decompressing responses.
         #[must_use]
-        pub fn accept_gzip(mut self) -> Self {
-            self.inner = self.inner.accept_gzip();
+        pub fn accept_compressed(mut self, encoding: CompressionEncoding) -> Self {
+            self.inner = self.inner.accept_compressed(encoding);
             self
         }
         /// CreateClient defines a rpc handler method for MsgCreateClient.
@@ -258,7 +281,7 @@ pub mod msg_client {
 pub mod msg_server {
     #![allow(unused_variables, dead_code, missing_docs, clippy::let_unit_value)]
     use tonic::codegen::*;
-    ///Generated trait containing gRPC methods that should be implemented for use with MsgServer.
+    /// Generated trait containing gRPC methods that should be implemented for use with MsgServer.
     #[async_trait]
     pub trait Msg: Send + Sync + 'static {
         /// CreateClient defines a rpc handler method for MsgCreateClient.
@@ -289,8 +312,8 @@ pub mod msg_server {
     #[derive(Debug)]
     pub struct MsgServer<T: Msg> {
         inner: _Inner<T>,
-        accept_compression_encodings: (),
-        send_compression_encodings: (),
+        accept_compression_encodings: EnabledCompressionEncodings,
+        send_compression_encodings: EnabledCompressionEncodings,
     }
     struct _Inner<T>(Arc<T>);
     impl<T: Msg> MsgServer<T> {
@@ -313,6 +336,18 @@ pub mod msg_server {
             F: tonic::service::Interceptor,
         {
             InterceptedService::new(Self::new(inner), interceptor)
+        }
+        /// Enable decompressing requests with the given encoding.
+        #[must_use]
+        pub fn accept_compressed(mut self, encoding: CompressionEncoding) -> Self {
+            self.accept_compression_encodings.enable(encoding);
+            self
+        }
+        /// Compress responses with the given encoding, if the client supports it.
+        #[must_use]
+        pub fn send_compressed(mut self, encoding: CompressionEncoding) -> Self {
+            self.send_compression_encodings.enable(encoding);
+            self
         }
     }
     impl<T, B> tonic::codegen::Service<http::Request<B>> for MsgServer<T>
@@ -522,32 +557,39 @@ pub mod msg_server {
             write!(f, "{:?}", self.0)
         }
     }
-    impl<T: Msg> tonic::transport::NamedService for MsgServer<T> {
+    impl<T: Msg> tonic::server::NamedService for MsgServer<T> {
         const NAME: &'static str = "lcp.service.elc.v1.Msg";
     }
 }
 #[derive(::serde::Serialize, ::serde::Deserialize)]
+#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct QueryClientRequest {
-    #[prost(string, tag="1")]
+    #[prost(string, tag = "1")]
     pub client_id: ::prost::alloc::string::String,
 }
 #[derive(::serde::Serialize, ::serde::Deserialize)]
+#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct QueryClientResponse {
     /// light client state
-    #[prost(message, optional, tag="1")]
-    pub client_state: ::core::option::Option<super::super::super::super::google::protobuf::Any>,
+    #[prost(message, optional, tag = "1")]
+    pub client_state: ::core::option::Option<
+        super::super::super::super::google::protobuf::Any,
+    >,
     /// consensus state associated with the client that corresponds to a given
     /// height.
-    #[prost(message, optional, tag="2")]
-    pub consensus_state: ::core::option::Option<super::super::super::super::google::protobuf::Any>,
+    #[prost(message, optional, tag = "2")]
+    pub consensus_state: ::core::option::Option<
+        super::super::super::super::google::protobuf::Any,
+    >,
 }
 /// Generated client implementations.
 #[cfg(feature = "client")]
 pub mod query_client {
     #![allow(unused_variables, dead_code, missing_docs, clippy::let_unit_value)]
     use tonic::codegen::*;
+    use tonic::codegen::http::Uri;
     /// Query defines the ELC Query service.
     #[derive(Debug, Clone)]
     pub struct QueryClient<T> {
@@ -575,6 +617,10 @@ pub mod query_client {
             let inner = tonic::client::Grpc::new(inner);
             Self { inner }
         }
+        pub fn with_origin(inner: T, origin: Uri) -> Self {
+            let inner = tonic::client::Grpc::with_origin(inner, origin);
+            Self { inner }
+        }
         pub fn with_interceptor<F>(
             inner: T,
             interceptor: F,
@@ -594,19 +640,19 @@ pub mod query_client {
         {
             QueryClient::new(InterceptedService::new(inner, interceptor))
         }
-        /// Compress requests with `gzip`.
+        /// Compress requests with the given encoding.
         ///
         /// This requires the server to support it otherwise it might respond with an
         /// error.
         #[must_use]
-        pub fn send_gzip(mut self) -> Self {
-            self.inner = self.inner.send_gzip();
+        pub fn send_compressed(mut self, encoding: CompressionEncoding) -> Self {
+            self.inner = self.inner.send_compressed(encoding);
             self
         }
-        /// Enable decompressing responses with `gzip`.
+        /// Enable decompressing responses.
         #[must_use]
-        pub fn accept_gzip(mut self) -> Self {
-            self.inner = self.inner.accept_gzip();
+        pub fn accept_compressed(mut self, encoding: CompressionEncoding) -> Self {
+            self.inner = self.inner.accept_compressed(encoding);
             self
         }
         pub async fn client(
@@ -635,7 +681,7 @@ pub mod query_client {
 pub mod query_server {
     #![allow(unused_variables, dead_code, missing_docs, clippy::let_unit_value)]
     use tonic::codegen::*;
-    ///Generated trait containing gRPC methods that should be implemented for use with QueryServer.
+    /// Generated trait containing gRPC methods that should be implemented for use with QueryServer.
     #[async_trait]
     pub trait Query: Send + Sync + 'static {
         async fn client(
@@ -647,8 +693,8 @@ pub mod query_server {
     #[derive(Debug)]
     pub struct QueryServer<T: Query> {
         inner: _Inner<T>,
-        accept_compression_encodings: (),
-        send_compression_encodings: (),
+        accept_compression_encodings: EnabledCompressionEncodings,
+        send_compression_encodings: EnabledCompressionEncodings,
     }
     struct _Inner<T>(Arc<T>);
     impl<T: Query> QueryServer<T> {
@@ -671,6 +717,18 @@ pub mod query_server {
             F: tonic::service::Interceptor,
         {
             InterceptedService::new(Self::new(inner), interceptor)
+        }
+        /// Enable decompressing requests with the given encoding.
+        #[must_use]
+        pub fn accept_compressed(mut self, encoding: CompressionEncoding) -> Self {
+            self.accept_compression_encodings.enable(encoding);
+            self
+        }
+        /// Compress responses with the given encoding, if the client supports it.
+        #[must_use]
+        pub fn send_compressed(mut self, encoding: CompressionEncoding) -> Self {
+            self.send_compression_encodings.enable(encoding);
+            self
         }
     }
     impl<T, B> tonic::codegen::Service<http::Request<B>> for QueryServer<T>
@@ -762,7 +820,7 @@ pub mod query_server {
             write!(f, "{:?}", self.0)
         }
     }
-    impl<T: Query> tonic::transport::NamedService for QueryServer<T> {
+    impl<T: Query> tonic::server::NamedService for QueryServer<T> {
         const NAME: &'static str = "lcp.service.elc.v1.Query";
     }
 }

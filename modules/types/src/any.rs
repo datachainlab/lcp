@@ -1,22 +1,24 @@
 use crate::prelude::*;
 use core::ops::Deref;
-use ibc::core::ics02_client::client_consensus::AnyConsensusState;
-use ibc::core::ics02_client::client_state::AnyClientState;
-use ibc::core::ics02_client::error::Error;
-use ibc::core::ics02_client::header::AnyHeader;
+use ibc::core::ics02_client::error::ClientError as Error;
 use ibc_proto::google::protobuf::Any as IBCAny;
+use ibc_proto::protobuf::Protobuf;
 use prost_types::Any as ProtoAny;
 use serde::{Deserialize, Serialize};
-use tendermint_proto::Protobuf;
 
 #[derive(Default, Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(transparent)]
 pub struct Any(#[serde(with = "ProtoAnyDef")] ProtoAny);
 
 impl Any {
-    pub fn new<A: Into<ProtoAny>>(any: A) -> Self {
+    pub fn new(type_url: String, value: Vec<u8>) -> Self {
+        Self(ProtoAny { type_url, value })
+    }
+
+    pub fn from_any<A: Into<ProtoAny>>(any: A) -> Self {
         Self(any.into())
     }
+
     pub fn to_proto(self) -> ProtoAny {
         self.into()
     }
@@ -27,12 +29,6 @@ impl Deref for Any {
 
     fn deref(&self) -> &Self::Target {
         &self.0
-    }
-}
-
-impl From<ProtoAny> for Any {
-    fn from(v: ProtoAny) -> Self {
-        Self(v)
     }
 }
 
@@ -60,52 +56,18 @@ impl From<IBCAny> for Any {
     }
 }
 
-impl TryFrom<Any> for AnyClientState {
-    type Error = Error;
-
-    fn try_from(value: Any) -> Result<Self, Self::Error> {
-        IBCAny::from(value).try_into()
-    }
-}
-
-impl From<AnyClientState> for Any {
-    fn from(v: AnyClientState) -> Self {
-        IBCAny::from(v).into()
-    }
-}
-
-impl TryFrom<Any> for AnyConsensusState {
-    type Error = Error;
-
-    fn try_from(value: Any) -> Result<Self, Self::Error> {
-        IBCAny::from(value).try_into()
-    }
-}
-
-impl From<AnyConsensusState> for Any {
-    fn from(v: AnyConsensusState) -> Self {
-        IBCAny::from(v).into()
-    }
-}
-
-impl TryFrom<Any> for AnyHeader {
-    type Error = Error;
-
-    fn try_from(value: Any) -> Result<Self, Self::Error> {
-        IBCAny::from(value).try_into()
-    }
-}
-
-impl From<AnyHeader> for Any {
-    fn from(v: AnyHeader) -> Self {
-        IBCAny::from(v).into()
-    }
-}
-
 impl TryFrom<Vec<u8>> for Any {
     type Error = Error;
     fn try_from(value: Vec<u8>) -> Result<Self, Self::Error> {
         Ok(Any::decode_vec(&value).unwrap())
+    }
+}
+
+impl TryFrom<ProtoAny> for Any {
+    type Error = Error;
+
+    fn try_from(value: ProtoAny) -> Result<Self, Self::Error> {
+        Ok(Self::from_any(value))
     }
 }
 

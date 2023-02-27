@@ -1,9 +1,6 @@
 use crate::prelude::*;
 use ibc::{
-    core::{
-        ics02_client::{context::ClientReader as IBCClientReader, error::Error as ICS02Error},
-        ics24_host::identifier::ClientId,
-    },
+    core::{ics02_client::error::ClientError as ICS02Error, ics24_host::identifier::ClientId},
     timestamp::Timestamp,
 };
 use lcp_types::{Any, Height};
@@ -26,12 +23,10 @@ pub trait ClientReader {
 
     /// Returns the current timestamp of the local.
     fn host_timestamp(&self) -> Timestamp;
+
     /// Returns a natural number, counting how many clients have been created thus far.
     /// The value of this counter should increase only via method `ClientKeeper::increase_client_counter`.
     fn client_counter(&self) -> Result<u64, ICS02Error>;
-
-    /// Returns the trait object for `ClientReader` defined in ibc-rs
-    fn as_ibc_client_reader(&self) -> &dyn IBCClientReader;
 }
 
 pub trait ClientKeeper {

@@ -1,146 +1,181 @@
+#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct MsgVerificationResponse {
-    #[prost(bytes="vec", tag="1")]
+    #[prost(bytes = "vec", tag = "1")]
     pub commitment: ::prost::alloc::vec::Vec<u8>,
-    #[prost(bytes="vec", tag="2")]
+    #[prost(bytes = "vec", tag = "2")]
     pub signer: ::prost::alloc::vec::Vec<u8>,
-    #[prost(bytes="vec", tag="3")]
+    #[prost(bytes = "vec", tag = "3")]
     pub signature: ::prost::alloc::vec::Vec<u8>,
 }
+#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct MsgVerifyClient {
-    #[prost(string, tag="1")]
+    #[prost(string, tag = "1")]
     pub client_id: ::prost::alloc::string::String,
-    #[prost(bytes="vec", tag="2")]
+    #[prost(bytes = "vec", tag = "2")]
     pub prefix: ::prost::alloc::vec::Vec<u8>,
-    #[prost(string, tag="3")]
+    #[prost(string, tag = "3")]
     pub counterparty_client_id: ::prost::alloc::string::String,
-    #[prost(message, optional, tag="4")]
-    pub expected_any_client_state: ::core::option::Option<super::super::super::super::google::protobuf::Any>,
-    #[prost(message, optional, tag="5")]
-    pub proof_height: ::core::option::Option<super::super::super::super::ibc::core::client::v1::Height>,
-    #[prost(bytes="vec", tag="6")]
+    #[prost(message, optional, tag = "4")]
+    pub expected_any_client_state: ::core::option::Option<
+        super::super::super::super::google::protobuf::Any,
+    >,
+    #[prost(message, optional, tag = "5")]
+    pub proof_height: ::core::option::Option<
+        super::super::super::super::ibc::core::client::v1::Height,
+    >,
+    #[prost(bytes = "vec", tag = "6")]
     pub proof: ::prost::alloc::vec::Vec<u8>,
 }
+#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct MsgVerifyClientConsensus {
-    #[prost(string, tag="1")]
+    #[prost(string, tag = "1")]
     pub client_id: ::prost::alloc::string::String,
-    #[prost(bytes="vec", tag="2")]
+    #[prost(bytes = "vec", tag = "2")]
     pub prefix: ::prost::alloc::vec::Vec<u8>,
-    #[prost(string, tag="3")]
+    #[prost(string, tag = "3")]
     pub counterparty_client_id: ::prost::alloc::string::String,
-    #[prost(message, optional, tag="4")]
-    pub consensus_height: ::core::option::Option<super::super::super::super::ibc::core::client::v1::Height>,
-    #[prost(message, optional, tag="5")]
-    pub expected_any_client_consensus_state: ::core::option::Option<super::super::super::super::google::protobuf::Any>,
-    #[prost(message, optional, tag="6")]
-    pub proof_height: ::core::option::Option<super::super::super::super::ibc::core::client::v1::Height>,
-    #[prost(bytes="vec", tag="7")]
+    #[prost(message, optional, tag = "4")]
+    pub consensus_height: ::core::option::Option<
+        super::super::super::super::ibc::core::client::v1::Height,
+    >,
+    #[prost(message, optional, tag = "5")]
+    pub expected_any_client_consensus_state: ::core::option::Option<
+        super::super::super::super::google::protobuf::Any,
+    >,
+    #[prost(message, optional, tag = "6")]
+    pub proof_height: ::core::option::Option<
+        super::super::super::super::ibc::core::client::v1::Height,
+    >,
+    #[prost(bytes = "vec", tag = "7")]
     pub proof: ::prost::alloc::vec::Vec<u8>,
 }
+#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct MsgVerifyConnection {
-    #[prost(string, tag="1")]
+    #[prost(string, tag = "1")]
     pub client_id: ::prost::alloc::string::String,
-    #[prost(bytes="vec", tag="2")]
+    #[prost(bytes = "vec", tag = "2")]
     pub prefix: ::prost::alloc::vec::Vec<u8>,
-    #[prost(string, tag="3")]
+    #[prost(string, tag = "3")]
     pub connection_id: ::prost::alloc::string::String,
-    #[prost(message, optional, tag="4")]
-    pub expected_connection: ::core::option::Option<super::super::super::super::ibc::core::connection::v1::ConnectionEnd>,
-    #[prost(message, optional, tag="5")]
-    pub proof_height: ::core::option::Option<super::super::super::super::ibc::core::client::v1::Height>,
-    #[prost(bytes="vec", tag="6")]
+    #[prost(message, optional, tag = "4")]
+    pub expected_connection: ::core::option::Option<
+        super::super::super::super::ibc::core::connection::v1::ConnectionEnd,
+    >,
+    #[prost(message, optional, tag = "5")]
+    pub proof_height: ::core::option::Option<
+        super::super::super::super::ibc::core::client::v1::Height,
+    >,
+    #[prost(bytes = "vec", tag = "6")]
     pub proof: ::prost::alloc::vec::Vec<u8>,
 }
+#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct MsgVerifyChannel {
-    #[prost(string, tag="1")]
+    #[prost(string, tag = "1")]
     pub client_id: ::prost::alloc::string::String,
-    #[prost(bytes="vec", tag="2")]
+    #[prost(bytes = "vec", tag = "2")]
     pub prefix: ::prost::alloc::vec::Vec<u8>,
-    #[prost(string, tag="3")]
+    #[prost(string, tag = "3")]
     pub port_id: ::prost::alloc::string::String,
-    #[prost(string, tag="4")]
+    #[prost(string, tag = "4")]
     pub channel_id: ::prost::alloc::string::String,
-    #[prost(message, optional, tag="5")]
-    pub expected_channel: ::core::option::Option<super::super::super::super::ibc::core::channel::v1::Channel>,
-    #[prost(message, optional, tag="6")]
-    pub proof_height: ::core::option::Option<super::super::super::super::ibc::core::client::v1::Height>,
-    #[prost(bytes="vec", tag="7")]
+    #[prost(message, optional, tag = "5")]
+    pub expected_channel: ::core::option::Option<
+        super::super::super::super::ibc::core::channel::v1::Channel,
+    >,
+    #[prost(message, optional, tag = "6")]
+    pub proof_height: ::core::option::Option<
+        super::super::super::super::ibc::core::client::v1::Height,
+    >,
+    #[prost(bytes = "vec", tag = "7")]
     pub proof: ::prost::alloc::vec::Vec<u8>,
 }
+#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct MsgVerifyPacket {
-    #[prost(string, tag="1")]
+    #[prost(string, tag = "1")]
     pub client_id: ::prost::alloc::string::String,
-    #[prost(bytes="vec", tag="2")]
+    #[prost(bytes = "vec", tag = "2")]
     pub prefix: ::prost::alloc::vec::Vec<u8>,
-    #[prost(string, tag="3")]
+    #[prost(string, tag = "3")]
     pub port_id: ::prost::alloc::string::String,
-    #[prost(string, tag="4")]
+    #[prost(string, tag = "4")]
     pub channel_id: ::prost::alloc::string::String,
-    #[prost(uint64, tag="5")]
+    #[prost(uint64, tag = "5")]
     pub sequence: u64,
-    #[prost(bytes="vec", tag="6")]
+    #[prost(bytes = "vec", tag = "6")]
     pub commitment: ::prost::alloc::vec::Vec<u8>,
-    #[prost(message, optional, tag="7")]
-    pub proof_height: ::core::option::Option<super::super::super::super::ibc::core::client::v1::Height>,
-    #[prost(bytes="vec", tag="8")]
+    #[prost(message, optional, tag = "7")]
+    pub proof_height: ::core::option::Option<
+        super::super::super::super::ibc::core::client::v1::Height,
+    >,
+    #[prost(bytes = "vec", tag = "8")]
     pub proof: ::prost::alloc::vec::Vec<u8>,
 }
+#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct MsgVerifyPacketAcknowledgement {
-    #[prost(string, tag="1")]
+    #[prost(string, tag = "1")]
     pub client_id: ::prost::alloc::string::String,
-    #[prost(bytes="vec", tag="2")]
+    #[prost(bytes = "vec", tag = "2")]
     pub prefix: ::prost::alloc::vec::Vec<u8>,
-    #[prost(string, tag="3")]
+    #[prost(string, tag = "3")]
     pub port_id: ::prost::alloc::string::String,
-    #[prost(string, tag="4")]
+    #[prost(string, tag = "4")]
     pub channel_id: ::prost::alloc::string::String,
-    #[prost(uint64, tag="5")]
+    #[prost(uint64, tag = "5")]
     pub sequence: u64,
-    #[prost(bytes="vec", tag="6")]
+    #[prost(bytes = "vec", tag = "6")]
     pub commitment: ::prost::alloc::vec::Vec<u8>,
-    #[prost(message, optional, tag="7")]
-    pub proof_height: ::core::option::Option<super::super::super::super::ibc::core::client::v1::Height>,
-    #[prost(bytes="vec", tag="8")]
+    #[prost(message, optional, tag = "7")]
+    pub proof_height: ::core::option::Option<
+        super::super::super::super::ibc::core::client::v1::Height,
+    >,
+    #[prost(bytes = "vec", tag = "8")]
     pub proof: ::prost::alloc::vec::Vec<u8>,
 }
+#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct MsgVerifyPacketReceiptAbsense {
-    #[prost(string, tag="1")]
+    #[prost(string, tag = "1")]
     pub client_id: ::prost::alloc::string::String,
-    #[prost(bytes="vec", tag="2")]
+    #[prost(bytes = "vec", tag = "2")]
     pub prefix: ::prost::alloc::vec::Vec<u8>,
-    #[prost(string, tag="3")]
+    #[prost(string, tag = "3")]
     pub port_id: ::prost::alloc::string::String,
-    #[prost(string, tag="4")]
+    #[prost(string, tag = "4")]
     pub channel_id: ::prost::alloc::string::String,
-    #[prost(uint64, tag="5")]
+    #[prost(uint64, tag = "5")]
     pub sequence: u64,
-    #[prost(message, optional, tag="6")]
-    pub proof_height: ::core::option::Option<super::super::super::super::ibc::core::client::v1::Height>,
-    #[prost(bytes="vec", tag="7")]
+    #[prost(message, optional, tag = "6")]
+    pub proof_height: ::core::option::Option<
+        super::super::super::super::ibc::core::client::v1::Height,
+    >,
+    #[prost(bytes = "vec", tag = "7")]
     pub proof: ::prost::alloc::vec::Vec<u8>,
 }
+#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct MsgVerifyNextSequenceRecv {
-    #[prost(string, tag="1")]
+    #[prost(string, tag = "1")]
     pub client_id: ::prost::alloc::string::String,
-    #[prost(bytes="vec", tag="2")]
+    #[prost(bytes = "vec", tag = "2")]
     pub prefix: ::prost::alloc::vec::Vec<u8>,
-    #[prost(string, tag="3")]
+    #[prost(string, tag = "3")]
     pub port_id: ::prost::alloc::string::String,
-    #[prost(string, tag="4")]
+    #[prost(string, tag = "4")]
     pub channel_id: ::prost::alloc::string::String,
-    #[prost(uint64, tag="5")]
+    #[prost(uint64, tag = "5")]
     pub next_sequence_recv: u64,
-    #[prost(message, optional, tag="6")]
-    pub proof_height: ::core::option::Option<super::super::super::super::ibc::core::client::v1::Height>,
-    #[prost(bytes="vec", tag="7")]
+    #[prost(message, optional, tag = "6")]
+    pub proof_height: ::core::option::Option<
+        super::super::super::super::ibc::core::client::v1::Height,
+    >,
+    #[prost(bytes = "vec", tag = "7")]
     pub proof: ::prost::alloc::vec::Vec<u8>,
 }
 /// Generated client implementations.
@@ -148,6 +183,7 @@ pub struct MsgVerifyNextSequenceRecv {
 pub mod msg_client {
     #![allow(unused_variables, dead_code, missing_docs, clippy::let_unit_value)]
     use tonic::codegen::*;
+    use tonic::codegen::http::Uri;
     /// Msg defines the ELC Msg service.
     #[derive(Debug, Clone)]
     pub struct MsgClient<T> {
@@ -175,6 +211,10 @@ pub mod msg_client {
             let inner = tonic::client::Grpc::new(inner);
             Self { inner }
         }
+        pub fn with_origin(inner: T, origin: Uri) -> Self {
+            let inner = tonic::client::Grpc::with_origin(inner, origin);
+            Self { inner }
+        }
         pub fn with_interceptor<F>(
             inner: T,
             interceptor: F,
@@ -194,19 +234,19 @@ pub mod msg_client {
         {
             MsgClient::new(InterceptedService::new(inner, interceptor))
         }
-        /// Compress requests with `gzip`.
+        /// Compress requests with the given encoding.
         ///
         /// This requires the server to support it otherwise it might respond with an
         /// error.
         #[must_use]
-        pub fn send_gzip(mut self) -> Self {
-            self.inner = self.inner.send_gzip();
+        pub fn send_compressed(mut self, encoding: CompressionEncoding) -> Self {
+            self.inner = self.inner.send_compressed(encoding);
             self
         }
-        /// Enable decompressing responses with `gzip`.
+        /// Enable decompressing responses.
         #[must_use]
-        pub fn accept_gzip(mut self) -> Self {
-            self.inner = self.inner.accept_gzip();
+        pub fn accept_compressed(mut self, encoding: CompressionEncoding) -> Self {
+            self.inner = self.inner.accept_compressed(encoding);
             self
         }
         /// VerifyClient defines a rpc handler method for MsgVerifyClient
@@ -376,7 +416,7 @@ pub mod msg_client {
 pub mod msg_server {
     #![allow(unused_variables, dead_code, missing_docs, clippy::let_unit_value)]
     use tonic::codegen::*;
-    ///Generated trait containing gRPC methods that should be implemented for use with MsgServer.
+    /// Generated trait containing gRPC methods that should be implemented for use with MsgServer.
     #[async_trait]
     pub trait Msg: Send + Sync + 'static {
         /// VerifyClient defines a rpc handler method for MsgVerifyClient
@@ -424,8 +464,8 @@ pub mod msg_server {
     #[derive(Debug)]
     pub struct MsgServer<T: Msg> {
         inner: _Inner<T>,
-        accept_compression_encodings: (),
-        send_compression_encodings: (),
+        accept_compression_encodings: EnabledCompressionEncodings,
+        send_compression_encodings: EnabledCompressionEncodings,
     }
     struct _Inner<T>(Arc<T>);
     impl<T: Msg> MsgServer<T> {
@@ -448,6 +488,18 @@ pub mod msg_server {
             F: tonic::service::Interceptor,
         {
             InterceptedService::new(Self::new(inner), interceptor)
+        }
+        /// Enable decompressing requests with the given encoding.
+        #[must_use]
+        pub fn accept_compressed(mut self, encoding: CompressionEncoding) -> Self {
+            self.accept_compression_encodings.enable(encoding);
+            self
+        }
+        /// Compress responses with the given encoding, if the client supports it.
+        #[must_use]
+        pub fn send_compressed(mut self, encoding: CompressionEncoding) -> Self {
+            self.send_compression_encodings.enable(encoding);
+            self
         }
     }
     impl<T, B> tonic::codegen::Service<http::Request<B>> for MsgServer<T>
@@ -817,7 +869,7 @@ pub mod msg_server {
             write!(f, "{:?}", self.0)
         }
     }
-    impl<T: Msg> tonic::transport::NamedService for MsgServer<T> {
+    impl<T: Msg> tonic::server::NamedService for MsgServer<T> {
         const NAME: &'static str = "lcp.service.ibc.v1.Msg";
     }
 }

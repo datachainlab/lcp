@@ -1,16 +1,12 @@
 use crate::prelude::*;
 use commitments::StateID;
-use core::convert::Infallible;
-use ibc::core::{
-    ics02_client::{client_consensus::AnyConsensusState, client_type::ClientType, error::Error},
-    ics23_commitment::commitment::CommitmentRoot,
-};
+use ibc::core::ics02_client::error::ClientError as Error;
+use ibc_proto::protobuf::Protobuf;
 use lcp_proto::ibc::lightclients::lcp::v1::ConsensusState as RawConsensusState;
 use lcp_types::{Any, Time};
 use prost::Message;
 use prost_types::Any as ProtoAny;
 use serde::{Deserialize, Serialize};
-use tendermint_proto::Protobuf;
 
 pub const LCP_CONSENSUS_STATE_TYPE_URL: &str = "/ibc.lightclients.lcp.v1.ConsensusState";
 
@@ -64,11 +60,12 @@ impl TryFrom<ProtoAny> for ConsensusState {
 
     fn try_from(raw: ProtoAny) -> Result<Self, Self::Error> {
         match raw.type_url.as_str() {
-            "" => Err(Error::empty_client_state_response()),
             LCP_CONSENSUS_STATE_TYPE_URL => {
                 ConsensusState::try_from(RawConsensusState::decode(&*raw.value).unwrap())
             }
-            _ => Err(Error::unknown_consensus_state_type(raw.type_url)),
+            _ => Err(Error::UnknownConsensusStateType {
+                consensus_state_type: raw.type_url,
+            }),
         }
     }
 }
@@ -83,22 +80,6 @@ impl TryFrom<Any> for ConsensusState {
 
 impl From<ConsensusState> for Any {
     fn from(value: ConsensusState) -> Self {
-        ProtoAny::from(value).into()
-    }
-}
-
-impl ibc::core::ics02_client::client_consensus::ConsensusState for ConsensusState {
-    type Error = Infallible;
-
-    fn client_type(&self) -> ClientType {
-        todo!()
-    }
-
-    fn root(&self) -> &CommitmentRoot {
-        panic!("not supported")
-    }
-
-    fn wrap_any(self) -> AnyConsensusState {
-        panic!("not supported")
+        ProtoAny::from(value).try_into().unwrap()
     }
 }

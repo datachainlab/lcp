@@ -4,11 +4,11 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-ibc = { git = "https://github.com/informalsystems/ibc-rs", rev = "e8c98d440949abf971ac45a68ed9dd9e6e9f48ed", default-features = false }
-ibc-proto = { git = "https://github.com/informalsystems/ibc-rs", rev = "e8c98d440949abf971ac45a68ed9dd9e6e9f48ed", default-features = false }
-tendermint-proto = { version = "=0.23.7", default-features = false }
-prost = { version = "0.10", default-features = false }
-prost-types = { version = "0.10", default-features = false }
+ibc = { version = "0.29.0", default-features = false, features = ["serde"] }
+ibc-proto = { version = "0.26.0", default-features = false, features = ["parity-scale-codec", "borsh"] }
+tendermint-proto = { version = "0.29", default-features = false }
+prost = { version = "0.11", default-features = false }
+prost-types = { version = "0.11", default-features = false }
 tiny-keccak = "1.4"
 serde = { version = "1.0", default-features = false, features = ["alloc", "derive"] }
 serde_json = { version = "1.0", default-features = false, features = ["alloc"] }
@@ -25,17 +25,20 @@ crypto = { path = "../crypto", default-features = false }
 
 [dev-dependencies]
 tempdir = "0.3.7"
+ibc = { version = "0.29.0", default-features = false, features = ["serde", "std"] }
 mock-lc = { path = "../mock-lc" }
 store = { path = "../store" }
 context = { path = "../context" }
-light-client-registry = { path = "../light-client-registry", default-features = false }
+light-client-registry = { path = "../light-client-registry", default-features = false, features = ["std"] }
 crypto = { path = "../crypto", default-features = false, features = ["std"] }
 
 [features]
 default = ["std"]
 std = [
+    "lcp-types/std",
     "attestation-report/std",
 ]
 sgx = [
+    "lcp-types/sgx",
     "attestation-report/sgx",
 ]

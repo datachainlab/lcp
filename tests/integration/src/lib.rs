@@ -14,10 +14,11 @@ mod tests {
         ics23_commitment::{commitment::CommitmentProofBytes, merkle::MerkleProof},
         ics24_host::{
             identifier::{ChannelId, PortId},
-            path::ChannelEndsPath,
+            path::ChannelEndPath,
             Path,
         },
     };
+    use ibc_proto::protobuf::Protobuf;
     use ibc_test_framework::prelude::{
         run_binary_channel_test, BinaryChannelTest, ChainHandle, Config, ConnectedChains,
         ConnectedChannel, Error, RelayerDriver, TestConfig, TestOverrides,
@@ -29,7 +30,6 @@ mod tests {
     use std::sync::{Arc, RwLock};
     use store::{host::HostStore, memory::MemStore};
     use tempdir::TempDir;
-    use tendermint_proto::Protobuf;
     use tokio::runtime::Runtime as TokioRuntime;
 
     static ENCLAVE_FILE: &'static str = "../../bin/enclave.signed.so";
@@ -150,7 +150,7 @@ mod tests {
         )?;
         let res = enclave.update_client(UpdateClientInput {
             client_id: client_id.clone(),
-            any_header: target_header.into(),
+            any_header: target_header,
             current_timestamp: Time::now(),
             include_state: true,
         })?;
@@ -176,7 +176,7 @@ mod tests {
         let _ = enclave.verify_membership(VerifyMembershipInput {
             client_id,
             prefix: "ibc".into(),
-            path: Path::ChannelEnds(ChannelEndsPath(port_id, channel_id)).to_string(),
+            path: Path::ChannelEnd(ChannelEndPath(port_id, channel_id)).to_string(),
             value: res.0.encode_vec().unwrap(),
             proof: CommitmentProofPair(
                 res.2.try_into().map_err(|e| anyhow!("{:?}", e))?,

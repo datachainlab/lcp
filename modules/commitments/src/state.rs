@@ -1,10 +1,9 @@
 use crate::prelude::*;
 use crate::Error;
-use ibc::core::ics02_client::{client_consensus::AnyConsensusState, client_state::AnyClientState};
 use lcp_types::Any;
 use prost::Message;
 use serde::{Deserialize, Serialize};
-use sha2::{Digest, Sha256};
+use sha2::Digest;
 
 pub const STATE_ID_SIZE: usize = 32;
 
@@ -44,16 +43,6 @@ impl TryFrom<&[u8]> for StateID {
 
 // TODO define owned error types
 
-pub fn gen_state_id(
-    any_client_state: AnyClientState,
-    any_consensus_state: AnyConsensusState,
-) -> Result<StateID, Error> {
-    gen_state_id_from_any(
-        &Any::from(any_client_state),
-        &Any::from(any_consensus_state),
-    )
-}
-
 pub fn gen_state_id_from_any(
     any_client_state: &Any,
     any_consensus_state: &Any,
@@ -69,9 +58,7 @@ pub fn gen_state_id_from_any(
 
 pub fn gen_state_id_from_bytes(bz: &[u8]) -> Result<StateID, Error> {
     let mut result: [u8; STATE_ID_SIZE] = Default::default();
-    let mut hasher = Sha256::new();
-    hasher.input(&bz);
-    let h = hasher.result();
+    let h = sha2::Sha256::digest(&bz).to_vec();
     result.copy_from_slice(&h);
     Ok(StateID::from_bytes_array(result))
 }
