@@ -21,11 +21,7 @@ pub fn update_client<R: LightClientResolver, S: KVStore>(
     }
 
     ctx.store_any_client_state(input.client_id.clone(), res.new_any_client_state)?;
-    ctx.store_any_consensus_state(
-        input.client_id.clone(),
-        res.height,
-        res.new_any_consensus_state,
-    )?;
+    ctx.store_any_consensus_state(input.client_id, res.height, res.new_any_consensus_state)?;
 
     let proof = if res.prove {
         prove_update_client_commitment(ek, res.commitment)?
