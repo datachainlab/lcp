@@ -1,9 +1,8 @@
+use crate::errors::Error;
 use crate::header::Commitment;
 use crate::prelude::*;
 use core::time::Duration;
 use crypto::Address;
-// use ibc::core::ics02_client::error::ClientError as Error;
-use crate::errors::Error;
 use ibc_proto::protobuf::Protobuf;
 use lcp_proto::ibc::core::client::v1::Height as ProtoHeight;
 use lcp_proto::ibc::lightclients::lcp::v1::ClientState as RawClientState;
