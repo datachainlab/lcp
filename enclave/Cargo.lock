@@ -98,6 +98,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "bincode"
+version = "2.0.0-rc.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7bb50c5a2ef4b9b1e7ae73e3a73b52ea24b20312d629f9c4df28260b7ad2c3c4"
+dependencies = [
+ "serde",
+]
+
+[[package]]
 name = "block-buffer"
 version = "0.7.3"
 source = "git+https://github.com/mesalock-linux/rustcrypto-utils-sgx#07ebf780554e018037f750186d61ea9bdc031148"
@@ -266,9 +275,7 @@ dependencies = [
 name = "context"
 version = "0.1.0"
 dependencies = [
- "bincode",
  "crypto",
- "ibc",
  "lcp-types",
  "light-client",
  "light-client-registry",
@@ -449,7 +456,6 @@ dependencies = [
  "attestation-report",
  "commitments",
  "flex-error",
- "ibc",
  "lcp-proto",
  "lcp-types",
  "serde",
@@ -462,7 +468,7 @@ name = "ecall-handler"
 version = "0.1.0"
 dependencies = [
  "attestation-report",
- "bincode",
+ "bincode 1.3.1",
  "commitments",
  "context",
  "crypto",
@@ -472,7 +478,6 @@ dependencies = [
  "enclave-utils",
  "flex-error",
  "hex",
- "ibc",
  "lcp-types",
  "light-client",
  "light-client-registry",
@@ -543,7 +548,7 @@ version = "0.1.0"
 dependencies = [
  "attestation-report",
  "base64 0.20.0-alpha.1",
- "bincode",
+ "bincode 1.3.1",
  "chrono",
  "crypto",
  "flex-error",
@@ -571,7 +576,7 @@ dependencies = [
 name = "enclave-runtime"
 version = "0.1.0"
 dependencies = [
- "bincode",
+ "bincode 1.3.1",
  "crypto",
  "ecall-commands",
  "ecall-handler",
@@ -795,7 +800,7 @@ dependencies = [
 name = "host-api"
 version = "0.1.0"
 dependencies = [
- "bincode",
+ "bincode 1.3.1",
  "flex-error",
  "ocall-commands",
  "sgx_types",
@@ -1014,12 +1019,15 @@ dependencies = [
 name = "light-client"
 version = "0.1.0"
 dependencies = [
+ "bincode 2.0.0-rc.2",
  "commitments",
+ "derive_more",
  "flex-error",
- "ibc",
  "lcp-types",
  "prost",
  "prost-types",
+ "serde",
+ "store",
 ]
 
 [[package]]

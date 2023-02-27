@@ -2,13 +2,12 @@ use crate::errors::Error;
 use crate::light_client::*;
 use crate::prelude::*;
 use core::str::FromStr;
-use ibc::core::ics24_host::identifier::ClientId;
 use lcp_proto::lcp::service::elc::v1::{
     MsgCreateClient, MsgCreateClientResponse, MsgUpdateClient, MsgUpdateClientResponse,
     MsgVerifyMembership, MsgVerifyMembershipResponse, MsgVerifyNonMembership,
     MsgVerifyNonMembershipResponse, QueryClientRequest, QueryClientResponse,
 };
-use lcp_types::Time;
+use lcp_types::{ClientId, Time};
 
 impl TryFrom<MsgCreateClient> for InitClientInput {
     type Error = Error;
@@ -36,7 +35,7 @@ impl TryFrom<MsgUpdateClient> for UpdateClientInput {
             .header
             .ok_or_else(|| Error::invalid_argument("header must be non-nil".into()))?
             .into();
-        let client_id = ClientId::from_str(&msg.client_id).map_err(Error::ics24)?;
+        let client_id = ClientId::from_str(&msg.client_id)?;
         Ok(Self {
             client_id,
             any_header,
@@ -50,7 +49,7 @@ impl TryFrom<MsgVerifyMembership> for VerifyMembershipInput {
     type Error = Error;
 
     fn try_from(msg: MsgVerifyMembership) -> Result<Self, Self::Error> {
-        let client_id = ClientId::from_str(&msg.client_id).map_err(Error::ics24)?;
+        let client_id = ClientId::from_str(&msg.client_id)?;
         let proof = CommitmentProofPair(
             msg.proof_height
                 .ok_or_else(|| Error::invalid_argument("proof_height must be non-nil".into()))?
@@ -71,7 +70,7 @@ impl TryFrom<MsgVerifyNonMembership> for VerifyNonMembershipInput {
     type Error = Error;
 
     fn try_from(msg: MsgVerifyNonMembership) -> Result<Self, Self::Error> {
-        let client_id = ClientId::from_str(&msg.client_id).map_err(Error::ics24)?;
+        let client_id = ClientId::from_str(&msg.client_id)?;
         let proof = CommitmentProofPair(
             msg.proof_height
                 .ok_or_else(|| Error::invalid_argument("proof_height must be non-nil".into()))?
@@ -90,7 +89,7 @@ impl TryFrom<MsgVerifyNonMembership> for VerifyNonMembershipInput {
 impl TryFrom<QueryClientRequest> for QueryClientInput {
     type Error = Error;
     fn try_from(query: QueryClientRequest) -> Result<Self, Error> {
-        let client_id = ClientId::from_str(&query.client_id).map_err(Error::ics24)?;
+        let client_id = ClientId::from_str(&query.client_id)?;
         Ok(Self { client_id })
     }
 }

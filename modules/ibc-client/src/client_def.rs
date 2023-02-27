@@ -1,21 +1,22 @@
 use commitments::StateCommitmentProof;
 use crypto::Keccak256;
 use crypto::{verify_signature_address, Address};
-use ibc::core::ics02_client::error::ClientError as Ics02Error;
 use ibc::core::ics23_commitment::commitment::{CommitmentPrefix, CommitmentProofBytes};
-use ibc::core::ics24_host::identifier::ClientId;
 use ibc::core::ics24_host::path::ClientConsensusStatePath;
 use ibc_proto::ibc::core::commitment::v1::MerkleProof;
 use ibc_proto::protobuf::Protobuf;
-use lcp_types::{Any, Height};
-use light_client::ClientReader;
+use lcp_types::{Any, ClientId, Height};
+use light_client::HostClientReader;
 use validation_context::{validation_predicate, ValidationContext};
 
 use crate::client_state::ClientState;
 use crate::consensus_state::ConsensusState;
+use crate::errors::Error;
 use crate::header::{Commitment, Header, RegisterEnclaveKeyHeader, UpdateClientHeader};
 use crate::report::verify_report;
 
+/// LCPClient is a PoC implementation of LCP Client
+/// This is aimed to testing purposes only for now
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct LCPClient {}
 
@@ -23,11 +24,11 @@ impl LCPClient {
     // check_header_and_update_state is called on UpdateClient
     pub fn check_header_and_update_state(
         &self,
-        ctx: &dyn ClientReader,
+        ctx: &dyn HostClientReader,
         client_id: ClientId,
         client_state: ClientState,
         header: Header,
-    ) -> Result<(ClientState, ConsensusState), Ics02Error> {
+    ) -> Result<(ClientState, ConsensusState), Error> {
         match header {
             Header::UpdateClient(header) => self.check_header_and_update_state_for_update_client(
                 ctx,
@@ -47,11 +48,11 @@ impl LCPClient {
 
     fn check_header_and_update_state_for_update_client(
         &self,
-        ctx: &dyn ClientReader,
+        ctx: &dyn HostClientReader,
         client_id: ClientId,
         client_state: ClientState,
         header: UpdateClientHeader,
-    ) -> Result<(ClientState, ConsensusState), Ics02Error> {
+    ) -> Result<(ClientState, ConsensusState), Error> {
         // TODO return an error instead of assertion
 
         if client_state.latest_height.is_zero() {
@@ -62,7 +63,8 @@ impl LCPClient {
             assert!(header.prev_height().is_some() && header.prev_state_id().is_some());
             // check if the previous consensus state exists in the store
             let prev_consensus_state: ConsensusState = ctx
-                .consensus_state(&client_id, header.prev_height().unwrap())?
+                .consensus_state(&client_id, &header.prev_height().unwrap())
+                .unwrap()
                 .try_into()?;
             assert!(prev_consensus_state.state_id == header.prev_state_id().unwrap());
         }
@@ -90,19 +92,21 @@ impl LCPClient {
 
     fn check_header_and_update_state_for_register_enclave_key(
         &self,
-        ctx: &dyn ClientReader,
+        ctx: &dyn HostClientReader,
         client_id: ClientId,
         client_state: ClientState,
         header: RegisterEnclaveKeyHeader,
-    ) -> Result<(ClientState, ConsensusState), Ics02Error> {
+    ) -> Result<(ClientState, ConsensusState), Error> {
         // TODO return an error instead of assertion
 
         let vctx = self.validation_context(ctx);
         let eavr = header.0;
         let (key, attestation_time) = verify_report(&vctx, &client_state, &eavr).unwrap();
 
-        let consensus_state =
-            ConsensusState::try_from(ctx.consensus_state(&client_id, client_state.latest_height)?)?;
+        let consensus_state = ConsensusState::try_from(
+            ctx.consensus_state(&client_id, &client_state.latest_height)
+                .unwrap(),
+        )?;
         // TODO consider to improve sybil attack resistance for persmissionless environment
         let new_client_state = client_state.with_new_key((key, attestation_time));
 
@@ -115,12 +119,12 @@ impl LCPClient {
         consensus_state: &ConsensusState,
         proof_upgrade_client: MerkleProof,
         proof_upgrade_consensus_state: MerkleProof,
-    ) -> Result<(ClientState, ConsensusState), Ics02Error> {
+    ) -> Result<(ClientState, ConsensusState), Error> {
         todo!()
     }
 
-    fn validation_context(&self, ctx: &dyn ClientReader) -> ValidationContext {
-        ValidationContext::new(ctx.host_timestamp().into_tm_time().unwrap().into())
+    fn validation_context(&self, ctx: &dyn HostClientReader) -> ValidationContext {
+        ValidationContext::new(ctx.host_timestamp())
     }
 
     /// Verification functions as specified in:
@@ -133,7 +137,7 @@ impl LCPClient {
     #[allow(clippy::too_many_arguments)]
     pub fn verify_client_consensus_state(
         &self,
-        ctx: &dyn ClientReader,
+        ctx: &dyn HostClientReader,
         client_state: &ClientState,
         height: Height,
         prefix: &CommitmentPrefix,
@@ -141,7 +145,7 @@ impl LCPClient {
         client_id: &ClientId,
         consensus_height: Height,
         expected_consensus_state: &Any,
-    ) -> Result<(), Ics02Error> {
+    ) -> Result<(), Error> {
         // TODO return an error instead of assertion
 
         // convert `proof` to StateCommitmentProof
@@ -155,7 +159,7 @@ impl LCPClient {
         assert!(
             commitment.path
                 == ClientConsensusStatePath {
-                    client_id: client_id.clone(),
+                    client_id: client_id.clone().into(),
                     epoch: consensus_height.revision_number(),
                     height: consensus_height.revision_height(),
                 }
@@ -171,7 +175,8 @@ impl LCPClient {
         );
 
         // check if `.state_id` matches the corresponding stored consensus state's state_id
-        let consensus_state = ConsensusState::try_from(ctx.consensus_state(client_id, height)?)?;
+        let consensus_state =
+            ConsensusState::try_from(ctx.consensus_state(client_id, &height).unwrap())?;
         assert!(consensus_state.state_id == commitment.state_id);
 
         // check if the `commitment_proof.signer` matches the commitment prover
@@ -195,7 +200,7 @@ impl LCPClient {
         &self,
         client_state: &ClientState,
         consensus_state: &ConsensusState,
-    ) -> Result<(), Ics02Error> {
+    ) -> Result<(), Error> {
         // An initial client state's keys must be empty
         assert!(client_state.keys.len() == 0);
         // key_expiration must not be 0
@@ -216,7 +221,7 @@ impl LCPClient {
         &self,
         client_state: &ClientState,
         consensus_state: &ConsensusState,
-    ) -> Result<(), Ics02Error> {
+    ) -> Result<(), Error> {
         // An initial client state's keys must not be empty
         assert!(client_state.keys.len() != 0);
         // key_expiration must not be 0

@@ -13,14 +13,13 @@ mod tests {
     use core::str::FromStr;
     use core::time::Duration;
     use crypto::{Address, EnclaveKey};
-    use ibc::core::ics24_host::identifier::ClientId;
     use ibc::{
         mock::{
             client_state::MockClientState, consensus_state::MockConsensusState, header::MockHeader,
         },
         Height as ICS02Height,
     };
-    use lcp_types::{Height, Time};
+    use lcp_types::{ClientId, Height, Time};
     use light_client::{ClientKeeper, LightClient};
     use light_client_registry::memory::HashMapLightClientRegistry;
     use light_client_registry::LightClientResolver;

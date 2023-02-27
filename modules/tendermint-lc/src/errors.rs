@@ -28,10 +28,6 @@ define_error! {
         [TraceError<ibc::core::ics23_commitment::error::CommitmentError>]
         |_| { "ICS23 commitment error" },
 
-        // IbcProof
-        // [TraceError<ibc::proofs::ProofError>]
-        // |_| { "IBC Proof error" },
-
         Commitment
         [commitments::Error]
         |_| { "Commitment error" }

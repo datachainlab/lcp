@@ -10,16 +10,15 @@ define_error! {
         |e| {
             format_args!("invalid argument: descr={}", e.descr)
         },
-        Ics03
-        [TraceError<ibc::core::ics03_connection::error::ConnectionError>]
-        |_| { "ICS03 connection error" },
+        LcpType
+        {}
+        [lcp_types::TypeError]
+        |_| { "Type error" }
+    }
+}
 
-        Ics04
-        [TraceError<ibc::core::ics04_channel::error::ChannelError>]
-        |_| { "ICS04 channel error" },
-
-        Ics24
-        [TraceError<ibc::core::ics24_host::error::ValidationError>]
-        |_| { "ICS24 host error" }
+impl From<lcp_types::TypeError> for Error {
+    fn from(err: lcp_types::TypeError) -> Self {
+        Error::lcp_type(err)
     }
 }

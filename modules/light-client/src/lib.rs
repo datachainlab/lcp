@@ -20,9 +20,10 @@ mod prelude {
 }
 
 pub use client::{CreateClientResult, LightClient, StateVerificationResult, UpdateClientResult};
-pub use context::{ClientKeeper, ClientReader};
-pub use errors::{Error, LightClientInstanceError};
+pub use context::{ClientKeeper, ClientReader, HostClientKeeper, HostClientReader, HostContext};
+pub use errors::{Error, ErrorDetail, LightClientInstanceError};
 
 mod client;
 mod context;
 mod errors;
+mod path;

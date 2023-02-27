@@ -1,10 +1,25 @@
 use crate::prelude::*;
 use core::time::Duration;
-use flex_error::define_error;
+use flex_error::*;
+use light_client::LightClientInstanceError;
 
 define_error! {
     #[derive(Debug, Clone, PartialEq, Eq)]
     Error {
+        UnexpectedClientType {
+            type_url: String
+        }
+        |e| {
+            format_args!("unexpected client_type: type_url={}", e.type_url)
+        },
+
+        UnexpectedHeaderType {
+            type_url: String
+        }
+        |e| {
+            format_args!("unexpected header type: type_url={}", e.type_url)
+        },
+
         ExpiredAvr {
             current_timestamp: lcp_types::Time,
             attestation_time: lcp_types::Time,
@@ -13,6 +28,7 @@ define_error! {
         |e| {
             format_args!("Expired AVR: current_timestamp= {:?} attestation_time={:?} client_state_key_expiration={:?}", e.current_timestamp, e.attestation_time, e.client_state_key_expiration)
         },
+
         MrenclaveMismatch {
             expected: Vec<u8>,
             actual: Vec<u8>
@@ -27,7 +43,11 @@ define_error! {
 
         Time
         [lcp_types::TimeError]
-        |_| { "Time error" }
+        |_| { "Time error" },
+
+        IbcProto
+        [TraceError<ibc_proto::protobuf::Error>]
+        |_| { "IBCProto error" }
     }
 }
 
@@ -42,3 +62,5 @@ impl From<lcp_types::TimeError> for Error {
         Error::time(err)
     }
 }
+
+impl LightClientInstanceError for Error {}

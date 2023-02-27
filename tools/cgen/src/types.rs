@@ -1,7 +1,7 @@
 use attestation_report::EndorsedAttestationVerificationReport;
 use commitments::{StateCommitmentProof, UpdateClientCommitmentProof};
 use ecall_commands::{InitClientInput, InitClientResult, UpdateClientInput, VerifyMembershipInput};
-use ibc::core::ics24_host::identifier::ClientId;
+use lcp_types::ClientId;
 use serde::{Deserialize, Serialize};
 
 pub trait JSONSerializer {

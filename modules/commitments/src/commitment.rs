@@ -23,12 +23,12 @@ pub struct UpdateClientCommitment {
 impl Default for UpdateClientCommitment {
     fn default() -> Self {
         UpdateClientCommitment {
+            timestamp: Time::unix_epoch(),
             prev_state_id: Default::default(),
             new_state_id: Default::default(),
             new_state: Default::default(),
             prev_height: Default::default(),
             new_height: Default::default(),
-            timestamp: Time::unix_epoch(),
             validation_params: Default::default(),
         }
     }
@@ -202,10 +202,7 @@ fn bytes_to_array(bz: &[u8]) -> Result<[u8; 32], Error> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ibc::{
-        clients::ics07_tendermint::client_type,
-        core::{ics02_client::client_type::ClientType, ics24_host::identifier::ClientId},
-    };
+    use ibc::{clients::ics07_tendermint::client_type, core::ics24_host::identifier::ClientId};
     use prost_types::Any as ProtoAny;
     use rand::{distributions::Uniform, thread_rng, Rng};
 

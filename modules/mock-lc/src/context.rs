@@ -1,18 +1,21 @@
+use crate::prelude::*;
 use crate::state::{ClientState, ConsensusState};
 use ibc::core::ics02_client::client_state::ClientState as Ics02ClientState;
+use ibc::core::ics02_client::error::ClientError;
+use ibc::core::ContextError;
 use ibc::core::{
     context::Router, ics02_client::consensus_state::ConsensusState as Ics02ConsensusState,
     ValidationContext,
 };
 use lcp_types::{Any, Height};
-use light_client::ClientReader;
+use light_client::{ErrorDetail as LightClientErrorDetail, HostClientReader};
 
 pub(crate) struct IBCContext<'a> {
-    parent: &'a dyn ClientReader,
+    parent: &'a dyn HostClientReader,
 }
 
 impl<'a> IBCContext<'a> {
-    pub fn new(parent: &'a dyn ClientReader) -> Self {
+    pub fn new(parent: &'a dyn HostClientReader) -> Self {
         Self { parent }
     }
 }
@@ -26,7 +29,16 @@ impl<'a> ValidationContext for IBCContext<'a> {
         alloc::boxed::Box<dyn ibc::core::ics02_client::client_state::ClientState>,
         ibc::core::ContextError,
     > {
-        let client_state = ClientState::try_from(self.parent.client_state(client_id)?).unwrap();
+        let client_state = ClientState::try_from(
+            self.parent
+                .client_state(&client_id.clone().into())
+                .map_err(|e| {
+                    ContextError::ClientError(ClientError::ClientSpecific {
+                        description: e.to_string(),
+                    })
+                })?,
+        )
+        .unwrap();
         Ok(client_state.0.into_box())
     }
 
@@ -49,12 +61,26 @@ impl<'a> ValidationContext for IBCContext<'a> {
         ibc::core::ContextError,
     > {
         let height = Height::new(client_cons_state_path.epoch, client_cons_state_path.height);
-        let consensus_state = ConsensusState::try_from(
-            self.parent
-                .consensus_state(&client_cons_state_path.client_id, height)?,
-        )
-        .unwrap();
-        Ok(consensus_state.0.into_box())
+        match self
+            .parent
+            .consensus_state(&client_cons_state_path.client_id.clone().into(), &height)
+        {
+            Ok(consensus_state) => {
+                let consensus_state = ConsensusState::try_from(consensus_state).unwrap();
+                Ok(consensus_state.0.into_box())
+            }
+            Err(e) => match e.detail() {
+                LightClientErrorDetail::ConsensusStateNotFound(d) => Err(
+                    ContextError::ClientError(ClientError::ConsensusStateNotFound {
+                        client_id: d.client_id.clone().into(),
+                        height: d.height.try_into().unwrap(),
+                    }),
+                ),
+                _ => Err(ContextError::ClientError(ClientError::ClientSpecific {
+                    description: e.to_string(),
+                })),
+            },
+        }
     }
 
     fn next_consensus_state(
@@ -80,11 +106,11 @@ impl<'a> ValidationContext for IBCContext<'a> {
     }
 
     fn host_height(&self) -> Result<ibc::Height, ibc::core::ContextError> {
-        Ok(self.parent.host_height().try_into().unwrap())
+        unimplemented!()
     }
 
     fn host_timestamp(&self) -> Result<ibc::timestamp::Timestamp, ibc::core::ContextError> {
-        Ok(self.parent.host_timestamp())
+        Ok(self.parent.host_timestamp().into())
     }
 
     fn host_consensus_state(
@@ -98,7 +124,11 @@ impl<'a> ValidationContext for IBCContext<'a> {
     }
 
     fn client_counter(&self) -> Result<u64, ibc::core::ContextError> {
-        Ok(self.parent.client_counter()?)
+        Ok(self.parent.client_counter().map_err(|e| {
+            ContextError::ClientError(ClientError::ClientSpecific {
+                description: e.to_string(),
+            })
+        })?)
     }
 
     fn connection_end(

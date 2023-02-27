@@ -1,20 +1,42 @@
 use crate::prelude::*;
 use flex_error::*;
+use lcp_types::{ClientId, Height};
 
 define_error! {
     #[derive(Debug, PartialEq, Eq)]
     Error {
-        Ics02
-        [TraceError<ibc::core::ics02_client::error::ClientError>]
-        |_|  { "ICS02 client error" },
+        Commitment
+        [commitments::Error]
+        |_| { "Commitment error" },
+
+        ClientTypeNotFound
+        {
+            client_id: ClientId
+        }
+        |e| {
+            format_args!("client_type not found: client_id={}", e.client_id)
+        },
+
+        ClientStateNotFound
+        {
+            client_id: ClientId
+        }
+        |e| {
+            format_args!("client_state not found: client_id={}", e.client_id)
+        },
+
+        ConsensusStateNotFound
+        {
+            client_id: ClientId,
+            height: Height
+        }
+        |e| {
+            format_args!("consensus_state not found: client_id={} height={}", e.client_id, e.height)
+        },
 
         LightClientInstance
         [TraceError<Box<dyn LightClientInstanceError>>]
-        |_| { "Light Client instance error" },
-
-        Commitment
-        [commitments::Error]
-        |_| { "Commitment error" }
+        |_| { "Light Client instance error" }
     }
 }
 

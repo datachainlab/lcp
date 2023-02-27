@@ -4,10 +4,6 @@ use flex_error::*;
 define_error! {
     #[derive(Debug, PartialEq, Eq)]
     Error {
-        Ics02
-        [TraceError<ibc::core::ics02_client::error::ClientError>]
-        |_| { "ICS02 client error" },
-
         LightClient
         [light_client::Error]
         |_| { "LightClient error" },
@@ -20,9 +16,10 @@ define_error! {
         [commitments::Error]
         |_| { "Commitment error" },
 
-        Ics24
-        [TraceError<ibc::core::ics24_host::error::ValidationError>]
-        |_| { "ICS24 host error" }
+        LcpType
+        {}
+        [lcp_types::TypeError]
+        |_| {"Type error"},
     }
 }
 
@@ -35,5 +32,11 @@ impl From<commitments::Error> for Error {
 impl From<light_client::Error> for Error {
     fn from(err: light_client::Error) -> Self {
         Error::light_client(err)
+    }
+}
+
+impl From<lcp_types::TypeError> for Error {
+    fn from(err: lcp_types::TypeError) -> Self {
+        Error::lcp_type(err)
     }
 }

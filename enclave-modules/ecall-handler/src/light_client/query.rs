@@ -11,10 +11,9 @@ pub fn query_client<R: LightClientResolver, S: KVStore>(
     input: QueryClientInput,
 ) -> Result<LightClientResult, Error> {
     let lc = get_light_client_by_client_id(ctx, &input.client_id)?;
-    let any_client_state = ctx.client_state(&input.client_id).map_err(Error::ics02)?;
-    let any_consensus_state = ctx
-        .consensus_state(&input.client_id, lc.latest_height(ctx, &input.client_id)?)
-        .map_err(Error::ics02)?;
+    let any_client_state = ctx.client_state(&input.client_id)?;
+    let any_consensus_state =
+        ctx.consensus_state(&input.client_id, &lc.latest_height(ctx, &input.client_id)?)?;
 
     Ok(LightClientResult::QueryClient(QueryClientResult {
         any_client_state,
