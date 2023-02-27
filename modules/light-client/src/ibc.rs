@@ -1,5 +1,6 @@
 use crate::prelude::*;
-use crate::state::{ClientState, ConsensusState};
+use crate::{ErrorDetail as LightClientErrorDetail, HostClientReader};
+use core::marker::PhantomData;
 use ibc::core::ics02_client::client_state::ClientState as Ics02ClientState;
 use ibc::core::ics02_client::error::ClientError;
 use ibc::core::ContextError;
@@ -7,21 +8,31 @@ use ibc::core::{
     context::Router, ics02_client::consensus_state::ConsensusState as Ics02ConsensusState,
     ValidationContext,
 };
-use lcp_types::{Any, Height};
-use light_client::{ErrorDetail as LightClientErrorDetail, HostClientReader};
+use ibc_proto::google::protobuf::Any as IBCAny;
+use lcp_types::Height;
 
-pub(crate) struct IBCContext<'a> {
+/// IBCContext is a context that implements ValidationContext from ibc-rs over elc's context
+/// NOTE: Since elc provides only 02-client equivalent functions, it implements only a very limited functions of ValidationContext trait.
+pub struct IBCContext<'a, ClientState: Ics02ClientState, ConsensusState: Ics02ConsensusState> {
     parent: &'a dyn HostClientReader,
+    marker: PhantomData<(ClientState, ConsensusState)>,
 }
 
-impl<'a> IBCContext<'a> {
+impl<'a, ClientState: Ics02ClientState, ConsensusState: Ics02ConsensusState>
+    IBCContext<'a, ClientState, ConsensusState>
+{
     pub fn new(parent: &'a dyn HostClientReader) -> Self {
-        Self { parent }
+        Self {
+            parent,
+            marker: Default::default(),
+        }
     }
 }
 
 #[allow(unused_variables)]
-impl<'a> ValidationContext for IBCContext<'a> {
+impl<'a, ClientState: Ics02ClientState, ConsensusState: Ics02ConsensusState> ValidationContext
+    for IBCContext<'a, ClientState, ConsensusState>
+{
     fn client_state(
         &self,
         client_id: &ibc::core::ics24_host::identifier::ClientId,
@@ -29,17 +40,16 @@ impl<'a> ValidationContext for IBCContext<'a> {
         alloc::boxed::Box<dyn ibc::core::ics02_client::client_state::ClientState>,
         ibc::core::ContextError,
     > {
-        let client_state = ClientState::try_from(
-            self.parent
-                .client_state(&client_id.clone().into())
-                .map_err(|e| {
-                    ContextError::ClientError(ClientError::ClientSpecific {
-                        description: e.to_string(),
-                    })
-                })?,
-        )
-        .unwrap();
-        Ok(client_state.0.into_box())
+        let any_client_state: IBCAny = self
+            .parent
+            .client_state(&client_id.clone().into())
+            .map_err(|e| {
+                ContextError::ClientError(ClientError::ClientSpecific {
+                    description: e.to_string(),
+                })
+            })?
+            .into();
+        Ok(ClientState::try_from(any_client_state)?.into_box())
     }
 
     fn decode_client_state(
@@ -49,8 +59,11 @@ impl<'a> ValidationContext for IBCContext<'a> {
         alloc::boxed::Box<dyn ibc::core::ics02_client::client_state::ClientState>,
         ibc::core::ContextError,
     > {
-        let any: Any = client_state.into();
-        Ok(ClientState::try_from(any).unwrap().0.into_box())
+        let any = IBCAny {
+            type_url: client_state.type_url,
+            value: client_state.value,
+        };
+        Ok(ClientState::try_from(any)?.into_box())
     }
 
     fn consensus_state(
@@ -65,9 +78,10 @@ impl<'a> ValidationContext for IBCContext<'a> {
             .parent
             .consensus_state(&client_cons_state_path.client_id.clone().into(), &height)
         {
-            Ok(consensus_state) => {
-                let consensus_state = ConsensusState::try_from(consensus_state).unwrap();
-                Ok(consensus_state.0.into_box())
+            Ok(any_consensus_state) => {
+                let any_consensus_state = IBCAny::from(any_consensus_state);
+                let consensus_state = ConsensusState::try_from(any_consensus_state).unwrap();
+                Ok(consensus_state.into_box())
             }
             Err(e) => match e.detail() {
                 LightClientErrorDetail::ConsensusStateNotFound(d) => Err(
@@ -250,7 +264,9 @@ impl<'a> ValidationContext for IBCContext<'a> {
 }
 
 #[allow(unused_variables)]
-impl<'a> Router for IBCContext<'a> {
+impl<'a, ClientState: Ics02ClientState, ConsensusState: Ics02ConsensusState> Router
+    for IBCContext<'a, ClientState, ConsensusState>
+{
     fn get_route(
         &self,
         module_id: &ibc::core::ics26_routing::context::ModuleId,

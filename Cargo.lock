@@ -2759,6 +2759,8 @@ dependencies = [
  "commitments",
  "derive_more",
  "flex-error",
+ "ibc",
+ "ibc-proto 0.26.0",
  "lcp-types",
  "prost",
  "prost-types",

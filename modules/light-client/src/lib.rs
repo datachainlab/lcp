@@ -26,4 +26,6 @@ pub use errors::{Error, ErrorDetail, LightClientInstanceError};
 mod client;
 mod context;
 mod errors;
+#[cfg(feature = "ibc")]
+pub mod ibc;
 mod path;

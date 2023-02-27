@@ -1,4 +1,3 @@
-use crate::context::IBCContext;
 use crate::errors::Error;
 use crate::header::Header;
 use crate::prelude::*;
@@ -28,7 +27,7 @@ use ibc::core::ics24_host::Path;
 use ibc_proto::ibc::core::commitment::v1::MerkleProof as RawMerkleProof;
 use lcp_types::{Any, ClientId, Height, Time};
 use light_client::{
-    CreateClientResult, Error as LightClientError, HostClientReader, LightClient,
+    ibc::IBCContext, CreateClientResult, Error as LightClientError, HostClientReader, LightClient,
     StateVerificationResult, UpdateClientResult,
 };
 use light_client_registry::LightClientRegistry;
@@ -150,7 +149,7 @@ impl LightClient for TendermintLightClient {
             consensus_state: new_consensus_state,
         } = client_state
             .check_header_and_update_state(
-                &IBCContext::new(ctx),
+                &IBCContext::<TendermintClientState, TendermintConsensusState>::new(ctx),
                 client_id.into(),
                 any_header.into(),
             )

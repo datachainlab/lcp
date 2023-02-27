@@ -1,4 +1,3 @@
-use crate::context::IBCContext;
 use crate::errors::Error;
 use crate::header::Header;
 use crate::prelude::*;
@@ -13,6 +12,7 @@ use ibc::core::ics02_client::header::Header as Ics02Header;
 use ibc::mock::client_state::{client_type, MockClientState, MOCK_CLIENT_STATE_TYPE_URL};
 use ibc::mock::consensus_state::MockConsensusState;
 use lcp_types::{Any, ClientId, Height, Time};
+use light_client::ibc::IBCContext;
 use light_client::{
     CreateClientResult, Error as LightClientError, HostClientReader, LightClient,
     StateVerificationResult, UpdateClientResult,
@@ -107,7 +107,7 @@ impl LightClient for MockLightClient {
             consensus_state: new_consensus_state,
         } = client_state
             .check_header_and_update_state(
-                &IBCContext::new(ctx),
+                &IBCContext::<MockClientState, MockConsensusState>::new(ctx),
                 client_id.into(),
                 any_header.into(),
             )
