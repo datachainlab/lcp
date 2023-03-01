@@ -60,6 +60,10 @@ impl LightClient for TendermintLightClient {
     ) -> Result<CreateClientResult, LightClientError> {
         let client_state = ClientState::try_from(any_client_state.clone())?;
         let consensus_state = ConsensusState::try_from(any_consensus_state)?;
+        let _ = client_state
+            .initialise(consensus_state.0.clone().into())
+            .map_err(Error::ics02)?;
+
         let canonical_client_state = canonicalize_state(&client_state);
         let height = client_state.latest_height().into();
         let timestamp: Time = consensus_state.timestamp.into();
