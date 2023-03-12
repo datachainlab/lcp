@@ -10,7 +10,7 @@ import (
 func RegisterInterfaces(registry codectypes.InterfaceRegistry) {
 	lcptypes.RegisterInterfaces(registry)
 	registry.RegisterImplementations(
-		(*core.ProverConfigI)(nil),
+		(*core.ProverConfig)(nil),
 		&ProverConfig{},
 	)
 }

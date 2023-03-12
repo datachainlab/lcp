@@ -22,8 +22,8 @@ import (
 
 type Prover struct {
 	config       ProverConfig
-	originChain  core.ChainI
-	originProver core.ProverI
+	originChain  core.Chain
+	originProver core.Prover
 
 	codec            codec.ProtoCodecMarshaler
 	path             *core.PathEnd
@@ -31,14 +31,14 @@ type Prover struct {
 }
 
 var (
-	_ core.ProverI = (*Prover)(nil)
+	_ core.Prover = (*Prover)(nil)
 )
 
-func NewProver(config ProverConfig, originChain core.ChainI, originProver core.ProverI) (*Prover, error) {
+func NewProver(config ProverConfig, originChain core.Chain, originProver core.Prover) (*Prover, error) {
 	return &Prover{config: config, originChain: originChain, originProver: originProver}, nil
 }
 
-func (pr *Prover) GetOriginProver() core.ProverI {
+func (pr *Prover) GetOriginProver() core.Prover {
 	return pr.originProver
 }
 
@@ -77,23 +77,8 @@ func (pr *Prover) GetChainID() string {
 	return pr.originChain.ChainID()
 }
 
-// QueryHeader returns the header corresponding to the height
-func (pr *Prover) QueryHeader(height int64) (out core.HeaderI, err error) {
-	return pr.originProver.QueryHeader(height)
-}
-
-// QueryLatestHeader returns the latest header from the chain
-func (pr *Prover) QueryLatestHeader() (out core.HeaderI, err error) {
-	return pr.originProver.QueryLatestHeader()
-}
-
-// GetLatestLightHeight returns the latest height on the light client
-func (pr *Prover) GetLatestLightHeight() (int64, error) {
-	return pr.originProver.GetLatestLightHeight()
-}
-
 // CreateMsgCreateClient creates a CreateClientMsg to this chain
-func (pr *Prover) CreateMsgCreateClient(clientID string, dstHeader core.HeaderI, signer sdk.AccAddress) (*clienttypes.MsgCreateClient, error) {
+func (pr *Prover) CreateMsgCreateClient(clientID string, dstHeader core.Header, signer sdk.AccAddress) (*clienttypes.MsgCreateClient, error) {
 	if err := pr.initServiceClient(); err != nil {
 		return nil, err
 	}
@@ -143,54 +128,59 @@ func (pr *Prover) CreateMsgCreateClient(clientID string, dstHeader core.HeaderI,
 	}, nil
 }
 
-// SetupHeader creates a new header based on a given header
-func (pr *Prover) SetupHeader(dst core.LightClientIBCQueryierI, baseSrcHeader core.HeaderI) (core.HeaderI, error) {
+// GetLatestFinalizedHeader returns the latest finalized header on this chain
+// The returned header is expected to be the latest one of headers that can be verified by the light client
+func (pr *Prover) GetLatestFinalizedHeader() (latestFinalizedHeader core.Header, err error) {
+	return pr.originProver.GetLatestFinalizedHeader()
+}
+
+// SetupHeadersForUpdate returns the finalized header and any intermediate headers needed to apply it to the client on the counterpaty chain
+// The order of the returned header slice should be as: [<intermediate headers>..., <update header>]
+// if the header slice's length == nil and err == nil, the relayer should skips the update-client
+func (pr *Prover) SetupHeadersForUpdate(dstChain core.ChainInfoICS02Querier, latestFinalizedHeader core.Header) ([]core.Header, error) {
 	if err := pr.initServiceClient(); err != nil {
 		return nil, err
 	}
-
-	baseSrcHeader, err := pr.originProver.SetupHeader(dst, baseSrcHeader)
+	headers, err := pr.originProver.SetupHeadersForUpdate(dstChain, latestFinalizedHeader)
 	if err != nil {
 		return nil, err
 	}
-	if baseSrcHeader == nil {
+	if len(headers) == 0 {
 		return nil, nil
 	}
-	anyHeader, err := clienttypes.PackHeader(baseSrcHeader)
-	if err != nil {
-		return nil, err
+	var updates []core.Header
+	for _, h := range headers {
+		anyHeader, err := clienttypes.PackHeader(h)
+		if err != nil {
+			return nil, err
+		}
+		res, err := pr.lcpServiceClient.UpdateClient(context.TODO(), &elc.MsgUpdateClient{
+			ClientId: pr.config.ElcClientId,
+			Header:   anyHeader,
+		})
+		if err != nil {
+			return nil, err
+		}
+		if _, err := lcptypes.ParseUpdateClientCommitment(res.Commitment); err != nil {
+			return nil, err
+		}
+		updates = append(updates, &lcptypes.UpdateClientHeader{
+			Commitment: res.Commitment,
+			Signer:     res.Signer,
+			Signature:  res.Signature,
+		})
 	}
-	msg := elc.MsgUpdateClient{
-		ClientId: pr.config.ElcClientId,
-		Header:   anyHeader,
-	}
-	res, err := pr.lcpServiceClient.UpdateClient(context.TODO(), &msg)
-	if err != nil {
-		return nil, err
-	}
-	if _, err := lcptypes.ParseUpdateClientCommitment(res.Commitment); err != nil {
-		return nil, err
-	}
-	return &lcptypes.UpdateClientHeader{
-		Commitment: res.Commitment,
-		Signer:     res.Signer,
-		Signature:  res.Signature,
-	}, nil
-}
-
-// UpdateLightWithHeader updates a header on the light client and returns the header and height corresponding to the chain
-func (pr *Prover) UpdateLightWithHeader() (header core.HeaderI, provableHeight int64, queryableHeight int64, err error) {
-	return pr.originProver.UpdateLightWithHeader()
+	return updates, nil
 }
 
 // QueryClientConsensusState returns the ClientConsensusState and its proof
-func (pr *Prover) QueryClientConsensusStateWithProof(height int64, dstClientConsHeight ibcexported.Height) (*clienttypes.QueryConsensusStateResponse, error) {
-	res, err := pr.originProver.QueryClientConsensusStateWithProof(height, dstClientConsHeight)
+func (pr *Prover) QueryClientConsensusStateWithProof(ctx core.QueryContext, dstClientConsHeight ibcexported.Height) (*clienttypes.QueryConsensusStateResponse, error) {
+	res, err := pr.originProver.QueryClientConsensusStateWithProof(ctx, dstClientConsHeight)
 	if err != nil {
 		return nil, err
 	}
 	res2, err := pr.lcpServiceClient.VerifyClientConsensus(
-		context.TODO(),
+		ctx.Context(),
 		&ibc.MsgVerifyClientConsensus{
 			ClientId:                        pr.config.ElcClientId,
 			Prefix:                          []byte(host.StoreKey),
@@ -216,14 +206,14 @@ func (pr *Prover) QueryClientConsensusStateWithProof(height int64, dstClientCons
 }
 
 // QueryClientStateWithProof returns the ClientState and its proof
-func (pr *Prover) QueryClientStateWithProof(height int64) (*clienttypes.QueryClientStateResponse, error) {
-	res, err := pr.originProver.QueryClientStateWithProof(height)
+func (pr *Prover) QueryClientStateWithProof(ctx core.QueryContext) (*clienttypes.QueryClientStateResponse, error) {
+	res, err := pr.originProver.QueryClientStateWithProof(ctx)
 	if err != nil {
 		return nil, err
 	}
 
 	res2, err := pr.lcpServiceClient.VerifyClient(
-		context.TODO(),
+		ctx.Context(),
 		&ibc.MsgVerifyClient{
 			ClientId:               pr.config.ElcClientId,
 			Prefix:                 []byte(host.StoreKey),
@@ -249,8 +239,8 @@ func (pr *Prover) QueryClientStateWithProof(height int64) (*clienttypes.QueryCli
 }
 
 // QueryConnectionWithProof returns the Connection and its proof
-func (pr *Prover) QueryConnectionWithProof(height int64) (*conntypes.QueryConnectionResponse, error) {
-	res, err := pr.originProver.QueryConnectionWithProof(height)
+func (pr *Prover) QueryConnectionWithProof(ctx core.QueryContext) (*conntypes.QueryConnectionResponse, error) {
+	res, err := pr.originProver.QueryConnectionWithProof(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -260,7 +250,7 @@ func (pr *Prover) QueryConnectionWithProof(height int64) (*conntypes.QueryConnec
 	}
 
 	res2, err := pr.lcpServiceClient.VerifyConnection(
-		context.TODO(),
+		ctx.Context(),
 		&ibc.MsgVerifyConnection{
 			ClientId:           pr.config.ElcClientId,
 			Prefix:             []byte(host.StoreKey),
@@ -286,8 +276,8 @@ func (pr *Prover) QueryConnectionWithProof(height int64) (*conntypes.QueryConnec
 }
 
 // QueryChannelWithProof returns the Channel and its proof
-func (pr *Prover) QueryChannelWithProof(height int64) (chanRes *chantypes.QueryChannelResponse, err error) {
-	res, err := pr.originProver.QueryChannelWithProof(height)
+func (pr *Prover) QueryChannelWithProof(ctx core.QueryContext) (chanRes *chantypes.QueryChannelResponse, err error) {
+	res, err := pr.originProver.QueryChannelWithProof(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -297,7 +287,7 @@ func (pr *Prover) QueryChannelWithProof(height int64) (chanRes *chantypes.QueryC
 	}
 
 	res2, err := pr.lcpServiceClient.VerifyChannel(
-		context.TODO(),
+		ctx.Context(),
 		&ibc.MsgVerifyChannel{
 			ClientId:        pr.config.ElcClientId,
 			Prefix:          []byte(host.StoreKey),
@@ -324,20 +314,13 @@ func (pr *Prover) QueryChannelWithProof(height int64) (chanRes *chantypes.QueryC
 }
 
 // QueryPacketCommitmentWithProof returns the packet commitment and its proof
-func (pr *Prover) QueryPacketCommitmentWithProof(height int64, seq uint64) (comRes *chantypes.QueryPacketCommitmentResponse, err error) {
-	if err := pr.initServiceClient(); err != nil {
-		return nil, err
-	}
-	if _, err := pr.syncUpstreamHeader(height, false); err != nil {
-		return nil, err
-	}
-
-	res, err := pr.originProver.QueryPacketCommitmentWithProof(height, seq)
+func (pr *Prover) QueryPacketCommitmentWithProof(ctx core.QueryContext, seq uint64) (comRes *chantypes.QueryPacketCommitmentResponse, err error) {
+	res, err := pr.originProver.QueryPacketCommitmentWithProof(ctx, seq)
 	if err != nil {
 		return nil, err
 	}
 
-	res2, err := pr.lcpServiceClient.VerifyPacket(context.TODO(), &ibc.MsgVerifyPacket{
+	res2, err := pr.lcpServiceClient.VerifyPacket(ctx.Context(), &ibc.MsgVerifyPacket{
 		ClientId:    pr.config.ElcClientId,
 		Prefix:      []byte(host.StoreKey),
 		PortId:      pr.path.PortID,
@@ -362,20 +345,13 @@ func (pr *Prover) QueryPacketCommitmentWithProof(height int64, seq uint64) (comR
 }
 
 // QueryPacketAcknowledgementCommitmentWithProof returns the packet acknowledgement commitment and its proof
-func (pr *Prover) QueryPacketAcknowledgementCommitmentWithProof(height int64, seq uint64) (ackRes *chantypes.QueryPacketAcknowledgementResponse, err error) {
-	if err := pr.initServiceClient(); err != nil {
-		return nil, err
-	}
-	if _, err := pr.syncUpstreamHeader(height, false); err != nil {
-		return nil, err
-	}
-
-	res, err := pr.originProver.QueryPacketAcknowledgementCommitmentWithProof(height, seq)
+func (pr *Prover) QueryPacketAcknowledgementCommitmentWithProof(ctx core.QueryContext, seq uint64) (ackRes *chantypes.QueryPacketAcknowledgementResponse, err error) {
+	res, err := pr.originProver.QueryPacketAcknowledgementCommitmentWithProof(ctx, seq)
 	if err != nil {
 		return nil, err
 	}
 	res2, err := pr.lcpServiceClient.VerifyPacketAcknowledgement(
-		context.TODO(),
+		ctx.Context(),
 		&ibc.MsgVerifyPacketAcknowledgement{
 			ClientId:    pr.config.ElcClientId,
 			Prefix:      []byte(host.StoreKey),

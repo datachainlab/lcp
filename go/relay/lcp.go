@@ -7,7 +7,7 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	clienttypes "github.com/cosmos/ibc-go/v4/modules/core/02-client/types"
-	"github.com/cosmos/ibc-go/v4/modules/core/exported"
+	ibcexported "github.com/cosmos/ibc-go/v4/modules/core/exported"
 	lcptypes "github.com/datachainlab/lcp/go/light-clients/lcp/types"
 	"github.com/datachainlab/lcp/go/relay/elc"
 	"github.com/datachainlab/lcp/go/relay/enclave"
@@ -15,7 +15,7 @@ import (
 	"github.com/hyperledger-labs/yui-relayer/core"
 )
 
-func (pr *Prover) syncUpstreamHeader(height int64, includeState bool) (*elc.MsgUpdateClientResponse, error) {
+func (pr *Prover) syncUpstreamHeader(includeState bool) ([]*elc.MsgUpdateClientResponse, error) {
 
 	// 1. check if the latest height of the client is less than the given height
 
@@ -23,42 +23,50 @@ func (pr *Prover) syncUpstreamHeader(height int64, includeState bool) (*elc.MsgU
 	if err != nil {
 		return nil, err
 	}
-	var clientState exported.ClientState
+	latestHeader, err := pr.originProver.GetLatestFinalizedHeader()
+	if err != nil {
+		return nil, err
+	}
+
+	var clientState ibcexported.ClientState
 	if err := pr.codec.UnpackAny(res.ClientState, &clientState); err != nil {
 		return nil, err
 	}
-	if clientState.GetLatestHeight().GetRevisionHeight() >= uint64(height) {
+	if clientState.GetLatestHeight().GTE(latestHeader.GetHeight()) {
 		return nil, nil
 	}
 
-	log.Printf("syncUpstreamHeader try to update the client in ELC: latest=%v got=%v", clientState.GetLatestHeight().GetRevisionHeight(), height)
+	log.Printf("syncUpstreamHeader try to update the client in ELC: latest=%v got=%v", clientState.GetLatestHeight(), latestHeader.GetHeight())
 
 	// 2. query the header from the upstream chain
 
-	lcpQuerier := NewLCPClientQueryier(pr.lcpServiceClient, pr.config.ElcClientId)
-	h, err := pr.originProver.QueryHeader(height)
+	headers, err := pr.originProver.SetupHeadersForUpdate(NewLCPQuerier(pr.lcpServiceClient, pr.config.ElcClientId), latestHeader)
 	if err != nil {
 		return nil, err
 	}
-	header, err := pr.originProver.SetupHeader(lcpQuerier, h)
-	if err != nil {
-		return nil, err
-	}
-	if header == nil {
+	if len(headers) == 0 {
 		return nil, nil
-	}
-	anyHeader, err := clienttypes.PackHeader(header)
-	if err != nil {
-		return nil, err
 	}
 
 	// 3. send a request that contains a header from 2 to update the client in ELC
+	var responses []*elc.MsgUpdateClientResponse
+	for _, header := range headers {
+		anyHeader, err := clienttypes.PackHeader(header)
+		if err != nil {
+			return nil, err
+		}
+		res, err := pr.lcpServiceClient.UpdateClient(context.TODO(), &elc.MsgUpdateClient{
+			ClientId:     pr.config.ElcClientId,
+			Header:       anyHeader,
+			IncludeState: includeState,
+		})
+		if err != nil {
+			return nil, err
+		}
+		responses = append(responses, res)
+	}
 
-	return pr.lcpServiceClient.UpdateClient(context.TODO(), &elc.MsgUpdateClient{
-		ClientId:     pr.config.ElcClientId,
-		Header:       anyHeader,
-		IncludeState: includeState,
-	})
+	return responses, nil
 }
 
 func registerEnclaveKey(pathEnd *core.PathEnd, prover *Prover, debug bool) error {
@@ -96,70 +104,84 @@ func registerEnclaveKey(pathEnd *core.PathEnd, prover *Prover, debug bool) error
 }
 
 func activateClient(pathEnd *core.PathEnd, src, dst *core.ProvableChain) error {
-	latestHeight, err := src.GetLatestHeight()
-	if err != nil {
-		return err
-	}
-	srcProver := src.ProverI.(*Prover)
+	srcProver := src.Prover.(*Prover)
 	if err := srcProver.initServiceClient(); err != nil {
 		return err
 	}
 
-	// LCP synchronizes with the latest header of the upstream chain
-
-	res, err := srcProver.syncUpstreamHeader(latestHeight, true)
+	// 1. LCP synchronises with the latest header of the upstream chain
+	updates, err := srcProver.syncUpstreamHeader(true)
 	if err != nil {
 		return err
 	}
 
-	// make MsgUpdateClient with the result of 2 and send it to the downstream chain
+	signer, err := dst.Chain.GetAddress()
+	if err != nil {
+		return err
+	}
 
-	updateClientHeader := &lcptypes.UpdateClientHeader{
-		Commitment: res.Commitment,
-		Signer:     res.Signer,
-		Signature:  res.Signature,
+	// 2. Create a `MsgUpdateClient`s to apply to the LCP Client with the results of 1.
+	var msgs []sdk.Msg
+	for _, update := range updates {
+		updateClientHeader := &lcptypes.UpdateClientHeader{
+			Commitment: update.Commitment,
+			Signer:     update.Signer,
+			Signature:  update.Signature,
+		}
+		if err := updateClientHeader.ValidateBasic(); err != nil {
+			return err
+		}
+		msg, err := clienttypes.NewMsgUpdateClient(pathEnd.ClientID, updateClientHeader, signer.String())
+		if err != nil {
+			return err
+		}
+		msgs = append(msgs, msg)
 	}
-	if err := updateClientHeader.ValidateBasic(); err != nil {
-		return err
-	}
-	signer, err := dst.ChainI.GetAddress()
-	if err != nil {
-		return err
-	}
-	msg, err := clienttypes.NewMsgUpdateClient(pathEnd.ClientID, updateClientHeader, signer.String())
-	if err != nil {
-		return err
-	}
-	if _, err := dst.SendMsgs([]sdk.Msg{msg}); err != nil {
+
+	// 3. Submit the msgs to the LCP Client
+	if _, err := dst.SendMsgs(msgs); err != nil {
 		return err
 	}
 	return nil
 }
 
-type LCPClientQueryier struct {
+type LCPQuerier struct {
 	serviceClient LCPServiceClient
 	clientID      string
-
-	core.LightClientIBCQueryierI
 }
 
-func NewLCPClientQueryier(serviceClient LCPServiceClient, clientID string) LCPClientQueryier {
-	return LCPClientQueryier{
+var _ core.ChainInfoICS02Querier = (*LCPQuerier)(nil)
+
+func NewLCPQuerier(serviceClient LCPServiceClient, clientID string) LCPQuerier {
+	return LCPQuerier{
 		serviceClient: serviceClient,
 		clientID:      clientID,
 	}
 }
 
-func (q LCPClientQueryier) GetLatestLightHeight() (int64, error) {
-	return 0, nil
+func (q LCPQuerier) ChainID() string {
+	return "lcp"
 }
 
-func (q LCPClientQueryier) QueryClientState(_ int64) (*clienttypes.QueryClientStateResponse, error) {
-	res, err := q.serviceClient.Client(context.TODO(), &elc.QueryClientRequest{ClientId: q.clientID})
+// LatestHeight returns the latest height of the chain
+func (q LCPQuerier) LatestHeight() (ibcexported.Height, error) {
+	return clienttypes.ZeroHeight(), nil
+}
+
+// QueryClientState returns the client state of dst chain
+// height represents the height of dst chain
+func (q LCPQuerier) QueryClientState(ctx core.QueryContext) (*clienttypes.QueryClientStateResponse, error) {
+	res, err := q.serviceClient.Client(ctx.Context(), &elc.QueryClientRequest{ClientId: q.clientID})
 	if err != nil {
 		return nil, err
 	}
 	return &clienttypes.QueryClientStateResponse{
 		ClientState: res.ClientState,
 	}, nil
+}
+
+// QueryClientConsensusState retrevies the latest consensus state for a client in state at a given height
+func (q LCPQuerier) QueryClientConsensusState(ctx core.QueryContext, dstClientConsHeight ibcexported.Height) (*clienttypes.QueryConsensusStateResponse, error) {
+	// TODO add query_client_consensus support to ecall-handler
+	panic("not implemented error")
 }

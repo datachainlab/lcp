@@ -10,7 +10,7 @@ import (
 	"github.com/hyperledger-labs/yui-relayer/core"
 )
 
-var _ core.ProverConfigI = (*ProverConfig)(nil)
+var _ core.ProverConfig = (*ProverConfig)(nil)
 
 var _ codectypes.UnpackInterfacesMessage = (*ProverConfig)(nil)
 
@@ -18,17 +18,17 @@ func (cfg *ProverConfig) UnpackInterfaces(unpacker codectypes.AnyUnpacker) error
 	if cfg == nil {
 		return nil
 	}
-	if err := unpacker.UnpackAny(cfg.OriginProver, new(core.ProverConfigI)); err != nil {
+	if err := unpacker.UnpackAny(cfg.OriginProver, new(core.ProverConfig)); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (pc ProverConfig) Build(chain core.ChainI) (core.ProverI, error) {
+func (pc ProverConfig) Build(chain core.Chain) (core.Prover, error) {
 	if err := pc.Validate(); err != nil {
 		return nil, err
 	}
-	prover, err := pc.OriginProver.GetCachedValue().(core.ProverConfigI).Build(chain)
+	prover, err := pc.OriginProver.GetCachedValue().(core.ProverConfig).Build(chain)
 	if err != nil {
 		return nil, err
 	}

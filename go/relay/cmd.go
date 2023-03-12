@@ -50,7 +50,7 @@ func registerEnclaveKeyCmd(ctx *config.Context) *cobra.Command {
 				pathEnd = path.Dst
 				target = c[dst]
 			}
-			prover := target.ProverI.(*Prover)
+			prover := target.Prover.(*Prover)
 			if err := prover.initServiceClient(); err != nil {
 				return err
 			}
