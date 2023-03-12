@@ -5,10 +5,6 @@ use flex_error::*;
 define_error! {
     #[derive(Debug, Clone, PartialEq, Eq)]
     Error {
-        Crypto
-        [crypto::Error]
-        |_| {"crypto error"},
-
         Ics02
         [TraceError<ibc::core::ics02_client::error::ClientError>]
         |_| {"ICS02 client error"},
@@ -49,6 +45,16 @@ define_error! {
         LcpTime
         [lcp_types::TimeError]
         |_| {"Time"}
+    }
+}
+
+#[cfg(feature = "prover")]
+define_error! {
+    #[derive(Debug, Clone, PartialEq, Eq)]
+    ProverError {
+        Crypto
+        [crypto::Error]
+        |_| {"crypto error"},
     }
 }
 

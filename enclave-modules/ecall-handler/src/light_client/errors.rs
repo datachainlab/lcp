@@ -16,6 +16,10 @@ define_error! {
         [commitments::Error]
         |_| { "Commitment error" },
 
+        CommitmentsProver
+        [commitments::ProverError]
+        |_| { "Commitments Prover error" },
+
         LcpType
         {}
         [lcp_types::TypeError]
@@ -38,5 +42,11 @@ impl From<light_client::Error> for Error {
 impl From<lcp_types::TypeError> for Error {
     fn from(err: lcp_types::TypeError) -> Self {
         Error::lcp_type(err)
+    }
+}
+
+impl From<commitments::ProverError> for Error {
+    fn from(err: commitments::ProverError) -> Self {
+        Error::commitments_prover(err)
     }
 }

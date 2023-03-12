@@ -17,8 +17,16 @@ flex-error = { version = "0.4.4", default-features = false }
 
 lcp-types = { path = "../types", default-features = false }
 validation-context = { path = "../validation-context", default-features = false }
-crypto = { path = "../crypto", default-features = false }
+crypto = { path = "../crypto", default-features = false, optional = true }
 
 [dev-dependencies]
 rand = { version = "0.8" }
 lcp-types = { path = "../types", default-features = false, features = ["std"] }
+
+[features]
+default = [
+    "prover"
+]
+prover = [
+    "crypto"
+]
