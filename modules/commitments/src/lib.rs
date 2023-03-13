@@ -19,7 +19,7 @@ mod prelude {
     pub use core::iter::FromIterator;
 }
 
-pub use commitment::{StateCommitment, UpdateClientCommitment};
+pub use commitment::{CommitmentPrefix, StateCommitment, UpdateClientCommitment};
 pub use errors::Error;
 #[cfg(feature = "prover")]
 pub use errors::ProverError;

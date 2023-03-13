@@ -1,7 +1,7 @@
 use crate::context::HostClientReader;
 use crate::errors::Error;
 use crate::prelude::*;
-use commitments::{StateCommitment, UpdateClientCommitment};
+use commitments::{CommitmentPrefix, StateCommitment, UpdateClientCommitment};
 use lcp_types::{Any, ClientId, Height};
 
 pub trait LightClient {
@@ -36,7 +36,7 @@ pub trait LightClient {
         &self,
         ctx: &dyn HostClientReader,
         client_id: ClientId,
-        prefix: Vec<u8>,
+        prefix: CommitmentPrefix,
         path: String,
         value: Vec<u8>,
         proof_height: Height,
@@ -48,7 +48,7 @@ pub trait LightClient {
         &self,
         ctx: &dyn HostClientReader,
         client_id: ClientId,
-        prefix: Vec<u8>,
+        prefix: CommitmentPrefix,
         path: String,
         proof_height: Height,
         proof: Vec<u8>,

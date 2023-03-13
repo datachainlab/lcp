@@ -149,11 +149,13 @@ impl LCPClient {
         // TODO return an error instead of assertion
 
         // convert `proof` to StateCommitmentProof
-        let commitment_proof: StateCommitmentProof = proof.clone().try_into().unwrap();
+        let commitment_proof =
+            StateCommitmentProof::try_from(Into::<Vec<u8>>::into(proof.clone()).as_slice())
+                .unwrap();
         let commitment = commitment_proof.commitment();
 
         // check if `.prefix` matches the counterparty connection's prefix
-        assert!(&commitment.prefix == prefix);
+        assert!(commitment.prefix.as_slice() == prefix.as_bytes());
 
         // check if `.path` matches expected the commitment path
         assert!(
@@ -163,7 +165,7 @@ impl LCPClient {
                     epoch: consensus_height.revision_number(),
                     height: consensus_height.revision_height(),
                 }
-                .into()
+                .to_string()
         );
 
         // check if `.height` matches proof height

@@ -2,7 +2,7 @@ use crate::errors::Error;
 use crate::header::Header;
 use crate::prelude::*;
 use crate::state::{canonicalize_state, gen_state_id, ClientState, ConsensusState};
-use commitments::{StateCommitment, UpdateClientCommitment};
+use commitments::{CommitmentPrefix, StateCommitment, UpdateClientCommitment};
 use core::str::FromStr;
 use crypto::Keccak256;
 use ibc::clients::ics07_tendermint::client_state::{
@@ -20,7 +20,8 @@ use ibc::core::ics02_client::error::ClientError as ICS02Error;
 use ibc::core::ics02_client::header::Header as Ics02Header;
 use ibc::core::ics03_connection::error::ConnectionError as ICS03Error;
 use ibc::core::ics23_commitment::commitment::{
-    CommitmentPrefix, CommitmentProofBytes, CommitmentRoot,
+    CommitmentPrefix as IBCCommitmentPrefix, CommitmentProofBytes as IBCCommitmentProofBytes,
+    CommitmentRoot,
 };
 use ibc::core::ics23_commitment::merkle::{apply_prefix, MerkleProof};
 use ibc::core::ics24_host::Path;
@@ -211,7 +212,7 @@ impl LightClient for TendermintLightClient {
         &self,
         ctx: &dyn HostClientReader,
         client_id: ClientId,
-        prefix: Vec<u8>,
+        prefix: CommitmentPrefix,
         path: String,
         value: Vec<u8>,
         proof_height: Height,
@@ -241,8 +242,8 @@ impl LightClient for TendermintLightClient {
 
         Ok(StateVerificationResult {
             state_commitment: StateCommitment::new(
-                prefix,
-                path,
+                prefix.into_vec(),
+                path.to_string(),
                 Some(value.keccak256()),
                 proof_height,
                 gen_state_id(canonicalize_state(&client_state), consensus_state)?,
@@ -282,8 +283,8 @@ impl LightClient for TendermintLightClient {
 
         Ok(StateVerificationResult {
             state_commitment: StateCommitment::new(
-                prefix,
-                path,
+                prefix.into_vec(),
+                path.to_string(),
                 None,
                 proof_height,
                 gen_state_id(canonicalize_state(&client_state), consensus_state)?,
@@ -304,9 +305,9 @@ impl TendermintLightClient {
         (
             ClientState,
             ConsensusState,
-            CommitmentPrefix,
+            IBCCommitmentPrefix,
             Path,
-            CommitmentProofBytes,
+            IBCCommitmentProofBytes,
         ),
         LightClientError,
     > {
@@ -322,8 +323,8 @@ impl TendermintLightClient {
         let consensus_state: ConsensusState =
             ctx.consensus_state(&client_id, &proof_height)?.try_into()?;
 
-        let proof: CommitmentProofBytes = proof.try_into().map_err(Error::ics23)?;
-        let prefix: CommitmentPrefix = counterparty_prefix.try_into().map_err(Error::ics23)?;
+        let proof: IBCCommitmentProofBytes = proof.try_into().map_err(Error::ics23)?;
+        let prefix: IBCCommitmentPrefix = counterparty_prefix.try_into().map_err(Error::ics23)?;
         let path: Path = Path::from_str(&path).unwrap();
         Ok((client_state, consensus_state, prefix, path, proof))
     }
@@ -340,8 +341,8 @@ pub fn register_implementations(registry: &mut dyn LightClientRegistry) {
 
 fn verify_membership(
     client_state: &ClientState,
-    prefix: &CommitmentPrefix,
-    proof: &CommitmentProofBytes,
+    prefix: &IBCCommitmentPrefix,
+    proof: &IBCCommitmentProofBytes,
     root: &CommitmentRoot,
     path: impl Into<Path>,
     value: Vec<u8>,
@@ -364,8 +365,8 @@ fn verify_membership(
 
 fn verify_non_membership(
     client_state: &ClientState,
-    prefix: &CommitmentPrefix,
-    proof: &CommitmentProofBytes,
+    prefix: &IBCCommitmentPrefix,
+    proof: &IBCCommitmentProofBytes,
     root: &CommitmentRoot,
     path: impl Into<Path>,
 ) -> Result<(), ICS02Error> {
