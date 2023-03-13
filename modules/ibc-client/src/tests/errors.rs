@@ -1,6 +1,5 @@
 use crate::prelude::*;
 use flex_error::*;
-use light_client::LightClientInstanceError;
 
 define_error! {
     #[derive(Debug, PartialEq, Eq)]
@@ -33,8 +32,6 @@ define_error! {
         |_| { "Commitment error" }
     }
 }
-
-impl LightClientInstanceError for Error {}
 
 impl From<commitments::Error> for Error {
     fn from(err: commitments::Error) -> Self {

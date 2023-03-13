@@ -19,13 +19,16 @@ mod prelude {
     pub use core::iter::FromIterator;
 }
 
-pub use commitment::{StateCommitment, UpdateClientCommitment};
+pub use commitment::{CommitmentPrefix, StateCommitment, UpdateClientCommitment};
 pub use errors::Error;
+#[cfg(feature = "prover")]
+pub use errors::ProverError;
 pub use proof::{StateCommitmentProof, UpdateClientCommitmentProof};
 pub use state::{gen_state_id_from_any, gen_state_id_from_bytes, StateID, STATE_ID_SIZE};
 
 mod commitment;
 mod errors;
 mod proof;
+#[cfg(feature = "prover")]
 pub mod prover;
 mod state;

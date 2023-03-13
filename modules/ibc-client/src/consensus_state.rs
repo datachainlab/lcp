@@ -1,6 +1,6 @@
+use crate::errors::Error;
 use crate::prelude::*;
 use commitments::StateID;
-use ibc::core::ics02_client::error::ClientError as Error;
 use ibc_proto::protobuf::Protobuf;
 use lcp_proto::ibc::lightclients::lcp::v1::ConsensusState as RawConsensusState;
 use lcp_types::{Any, Time};
@@ -63,9 +63,7 @@ impl TryFrom<ProtoAny> for ConsensusState {
             LCP_CONSENSUS_STATE_TYPE_URL => {
                 ConsensusState::try_from(RawConsensusState::decode(&*raw.value).unwrap())
             }
-            _ => Err(Error::UnknownConsensusStateType {
-                consensus_state_type: raw.type_url,
-            }),
+            _ => Err(Error::unexpected_client_type(raw.type_url)),
         }
     }
 }

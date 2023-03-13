@@ -1,6 +1,5 @@
 use crate::prelude::*;
-use crate::{commitment::UpdateClientCommitment, errors::Error, StateCommitment};
-use ibc::core::ics23_commitment::commitment::CommitmentProofBytes;
+use crate::{commitment::UpdateClientCommitment, Error, StateCommitment};
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
@@ -48,12 +47,11 @@ impl StateCommitmentProof {
     }
 }
 
-impl TryFrom<CommitmentProofBytes> for StateCommitmentProof {
+impl TryFrom<&[u8]> for StateCommitmentProof {
     type Error = Error;
 
-    fn try_from(value: CommitmentProofBytes) -> Result<Self, Self::Error> {
-        let proof = Into::<Vec<u8>>::into(value);
-        let r = rlp::Rlp::new(&proof);
+    fn try_from(value: &[u8]) -> Result<Self, Self::Error> {
+        let r = rlp::Rlp::new(value);
         Ok(Self {
             commitment_bytes: r.at(0)?.as_val::<Vec<u8>>()?,
             signer: r.at(1)?.as_val::<Vec<u8>>()?,

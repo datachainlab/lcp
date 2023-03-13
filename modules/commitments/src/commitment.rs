@@ -1,13 +1,12 @@
 use crate::prelude::*;
 use crate::{Error, StateID};
 use core::fmt::Display;
-use core::str::FromStr;
-use ibc::core::ics23_commitment::commitment::CommitmentPrefix;
-use ibc::core::ics24_host::Path;
 use lcp_types::{Any, Height, Time};
 use prost::Message;
 use serde::{Deserialize, Serialize};
 use validation_context::ValidationParams;
+
+pub type CommitmentPrefix = Vec<u8>;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct UpdateClientCommitment {
@@ -23,12 +22,12 @@ pub struct UpdateClientCommitment {
 impl Default for UpdateClientCommitment {
     fn default() -> Self {
         UpdateClientCommitment {
+            timestamp: Time::unix_epoch(),
             prev_state_id: Default::default(),
             new_state_id: Default::default(),
             new_state: Default::default(),
             prev_height: Default::default(),
             new_height: Default::default(),
-            timestamp: Time::unix_epoch(),
             validation_params: Default::default(),
         }
     }
@@ -82,7 +81,7 @@ impl UpdateClientCommitment {
             },
             new_state_id: r.at(1)?.as_val::<Vec<u8>>()?.as_slice().try_into()?,
             new_state: match r.at(2)?.as_val::<Vec<u8>>()? {
-                v if v.len() > 0 => Some(Any::try_from(v).map_err(Error::ics02)?),
+                v if v.len() > 0 => Some(Any::try_from(v)?),
                 _ => None,
             },
             prev_height: match r.at(3)?.as_val::<Vec<u8>>()?.as_slice() {
@@ -103,7 +102,7 @@ impl UpdateClientCommitment {
 #[derive(Debug, Clone, PartialEq)]
 pub struct StateCommitment {
     pub prefix: CommitmentPrefix,
-    pub path: Path,
+    pub path: String,
     pub value: Option<[u8; 32]>,
     pub height: Height,
     pub state_id: StateID,
@@ -126,7 +125,7 @@ impl Display for StateCommitment {
 impl StateCommitment {
     pub fn new(
         prefix: CommitmentPrefix,
-        path: Path,
+        path: String,
         value: Option<[u8; 32]>,
         height: Height,
         state_id: StateID,
@@ -142,7 +141,7 @@ impl StateCommitment {
 
     pub fn to_vec(self) -> Vec<u8> {
         let mut st = rlp::RlpStream::new_list(5);
-        st.append(&self.prefix.as_bytes());
+        st.append(&self.prefix.as_slice());
         st.append(&self.path.to_string());
         if let Some(value) = self.value {
             st.append(&value.as_slice());
@@ -157,12 +156,8 @@ impl StateCommitment {
     pub fn from_bytes(bz: &[u8]) -> Result<Self, Error> {
         let r = rlp::Rlp::new(bz);
         Ok(Self {
-            prefix: r
-                .at(0)?
-                .as_val::<Vec<u8>>()?
-                .try_into()
-                .map_err(Error::ics23)?,
-            path: Path::from_str(&r.at(1)?.as_val::<String>()?).map_err(Error::ics24)?,
+            prefix: r.at(0)?.as_val::<Vec<u8>>()?,
+            path: r.at(1)?.as_val::<String>()?,
             value: match r.at(2)?.as_val::<Vec<u8>>()?.as_slice() {
                 bz if bz.len() > 0 => Some(bytes_to_array(bz)?),
                 _ => None,
@@ -204,7 +199,7 @@ mod tests {
     use super::*;
     use ibc::{
         clients::ics07_tendermint::client_type,
-        core::{ics02_client::client_type::ClientType, ics24_host::identifier::ClientId},
+        core::ics24_host::{identifier::ClientId, path::Path},
     };
     use prost_types::Any as ProtoAny;
     use rand::{distributions::Uniform, thread_rng, Rng};
@@ -241,7 +236,8 @@ mod tests {
                 prefix: "ibc".as_bytes().to_vec().try_into().unwrap(),
                 path: Path::ClientType(ibc::core::ics24_host::path::ClientTypePath(
                     ClientId::new(client_type(), thread_rng().gen()).unwrap(),
-                )),
+                ))
+                .to_string(),
                 value: rand_or_none(|| bytes_to_array(gen_rand_vec(32).as_slice()).unwrap()),
                 height: gen_rand_height(),
                 state_id: gen_rand_state_id(),

@@ -10,6 +10,14 @@ define_error! {
             }
             |e| {
                 format_args!("height bytes length must be 16, but got {:?}", e.bz)
+            },
+        InvalidClientIdFormat
+            {
+                client_id_str: String,
+                reason: String,
+            }
+            |e| {
+                format_args!("invalid clientId format: got={:?} reason={:?}", e.client_id_str, e.reason)
             }
     }
 }

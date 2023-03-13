@@ -1,7 +1,6 @@
 use crate::prelude::*;
 use commitments::{StateCommitmentProof, UpdateClientCommitmentProof};
-use ibc::core::ics24_host::identifier::ClientId;
-use lcp_types::{Any, Height, Time};
+use lcp_types::{Any, ClientId, Height, Time};
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug)]

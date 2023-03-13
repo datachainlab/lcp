@@ -1,6 +1,6 @@
+use crate::errors::TypeError;
 use crate::prelude::*;
 use core::ops::Deref;
-use ibc::core::ics02_client::error::ClientError as Error;
 use ibc_proto::google::protobuf::Any as IBCAny;
 use ibc_proto::protobuf::Protobuf;
 use prost_types::Any as ProtoAny;
@@ -57,14 +57,14 @@ impl From<IBCAny> for Any {
 }
 
 impl TryFrom<Vec<u8>> for Any {
-    type Error = Error;
+    type Error = TypeError;
     fn try_from(value: Vec<u8>) -> Result<Self, Self::Error> {
         Ok(Any::decode_vec(&value).unwrap())
     }
 }
 
 impl TryFrom<ProtoAny> for Any {
-    type Error = Error;
+    type Error = TypeError;
 
     fn try_from(value: ProtoAny) -> Result<Self, Self::Error> {
         Ok(Self::from_any(value))

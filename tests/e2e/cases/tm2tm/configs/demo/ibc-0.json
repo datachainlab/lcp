@@ -15,9 +15,9 @@
       "trusting_period": "336h"
     },
     "lcp_service_address": "localhost:50051",
-    "mrenclave": "0x345d104a3f19dda3dc1527b851f73c960c22aa42a43af7d062c210f9c79e9fa4",
-    "allowed_quote_statuses": [],
-    "allowed_advisory_ids": [],
+    "mrenclave": "0x0b1a77ed4bce37295694e8e0870fe813c31cd9cd2679e34b7f0d3819a448f006",
+    "allowed_quote_statuses": ["GROUP_OUT_OF_DATE"],
+    "allowed_advisory_ids": ["INTEL-SA-00219","INTEL-SA-00289","INTEL-SA-00334","INTEL-SA-00477","INTEL-SA-00614","INTEL-SA-00615","INTEL-SA-00617"],
     "elc_client_id": "07-tendermint-1"
   }
 }

@@ -1,6 +1,6 @@
 use crate::prelude::*;
 use flex_error::*;
-use light_client::LightClientInstanceError;
+use light_client::LightClientSpecificError;
 
 define_error! {
     #[derive(Debug, PartialEq, Eq)]
@@ -28,17 +28,13 @@ define_error! {
         [TraceError<ibc::core::ics23_commitment::error::CommitmentError>]
         |_| { "ICS23 commitment error" },
 
-        // IbcProof
-        // [TraceError<ibc::proofs::ProofError>]
-        // |_| { "IBC Proof error" },
-
         Commitment
         [commitments::Error]
         |_| { "Commitment error" }
     }
 }
 
-impl LightClientInstanceError for Error {}
+impl LightClientSpecificError for Error {}
 
 impl From<commitments::Error> for Error {
     fn from(err: commitments::Error) -> Self {

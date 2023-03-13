@@ -1,4 +1,3 @@
-use crate::context::IBCContext;
 use crate::errors::Error;
 use crate::header::Header;
 use crate::prelude::*;
@@ -10,12 +9,12 @@ use ibc::core::ics02_client::client_state::{
 use ibc::core::ics02_client::consensus_state::downcast_consensus_state;
 use ibc::core::ics02_client::error::ClientError as ICS02Error;
 use ibc::core::ics02_client::header::Header as Ics02Header;
-use ibc::core::ics24_host::identifier::ClientId;
 use ibc::mock::client_state::{client_type, MockClientState, MOCK_CLIENT_STATE_TYPE_URL};
 use ibc::mock::consensus_state::MockConsensusState;
-use lcp_types::{Any, Height, Time};
+use lcp_types::{Any, ClientId, Height, Time};
+use light_client::ibc::IBCContext;
 use light_client::{
-    ClientReader, CreateClientResult, Error as LightClientError, LightClient,
+    CreateClientResult, Error as LightClientError, HostClientReader, LightClient,
     StateVerificationResult, UpdateClientResult,
 };
 use light_client_registry::LightClientRegistry;
@@ -31,19 +30,16 @@ impl LightClient for MockLightClient {
 
     fn latest_height(
         &self,
-        ctx: &dyn ClientReader,
+        ctx: &dyn HostClientReader,
         client_id: &ClientId,
     ) -> Result<Height, LightClientError> {
-        let client_state: ClientState = ctx
-            .client_state(client_id)
-            .map_err(Error::ics02)?
-            .try_into()?;
+        let client_state: ClientState = ctx.client_state(client_id)?.try_into()?;
         Ok(client_state.latest_height().into())
     }
 
     fn create_client(
         &self,
-        _: &dyn ClientReader,
+        _: &dyn HostClientReader,
         any_client_state: Any,
         any_consensus_state: Any,
     ) -> Result<CreateClientResult, LightClientError> {
@@ -71,20 +67,20 @@ impl LightClient for MockLightClient {
 
     fn update_client(
         &self,
-        ctx: &dyn ClientReader,
+        ctx: &dyn HostClientReader,
         client_id: ClientId,
         any_header: Any,
     ) -> Result<UpdateClientResult, LightClientError> {
         let header = Header::try_from(any_header.clone())?;
 
         // Read client state from the host chain store.
-        let client_state: ClientState = ctx
-            .client_state(&client_id)
-            .map_err(Error::ics02)?
-            .try_into()?;
+        let client_state: ClientState = ctx.client_state(&client_id)?.try_into()?;
 
         if client_state.is_frozen() {
-            return Err(Error::ics02(ICS02Error::ClientFrozen { client_id }).into());
+            return Err(Error::ics02(ICS02Error::ClientFrozen {
+                client_id: client_id.into(),
+            })
+            .into());
         }
 
         let height = header.height().into();
@@ -94,10 +90,10 @@ impl LightClient for MockLightClient {
 
         // Read consensus state from the host chain store.
         let latest_consensus_state: ConsensusState = ctx
-            .consensus_state(&client_id, latest_height.into())
+            .consensus_state(&client_id, &latest_height.into())
             .map_err(|_| {
                 Error::ics02(ICS02Error::ConsensusStateNotFound {
-                    client_id: client_id.clone(),
+                    client_id: client_id.clone().into(),
                     height: latest_height,
                 })
             })?
@@ -110,7 +106,11 @@ impl LightClient for MockLightClient {
             client_state: new_client_state,
             consensus_state: new_consensus_state,
         } = client_state
-            .check_header_and_update_state(&IBCContext::new(ctx), client_id, any_header.into())
+            .check_header_and_update_state(
+                &IBCContext::<MockClientState, MockConsensusState>::new(ctx),
+                client_id.into(),
+                any_header.into(),
+            )
             .map_err(|e| {
                 Error::ics02(ICS02Error::HeaderVerificationFailure {
                     reason: e.to_string(),
@@ -152,7 +152,7 @@ impl LightClient for MockLightClient {
     #[allow(unused_variables)]
     fn verify_membership(
         &self,
-        ctx: &dyn ClientReader,
+        ctx: &dyn HostClientReader,
         client_id: ClientId,
         prefix: Vec<u8>,
         path: String,
@@ -166,7 +166,7 @@ impl LightClient for MockLightClient {
     #[allow(unused_variables)]
     fn verify_non_membership(
         &self,
-        ctx: &dyn ClientReader,
+        ctx: &dyn HostClientReader,
         client_id: ClientId,
         prefix: Vec<u8>,
         path: String,

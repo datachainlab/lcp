@@ -6,8 +6,17 @@ edition = "2021"
 [dependencies]
 prost = { version = "0.11", default-features = false }
 prost-types = { version = "0.11", default-features = false }
-ibc = { version = "0.29.0", default-features = false, features = ["serde"] }
 flex-error = { version = "0.4.4", default-features = false }
+serde = { version = "1.0", default-features = false, features = ["alloc"] }
+derive_more = { version = "0.99.0", default-features = false }
+bincode = { version = "2.0.0-rc.2", default-features = false, features = ["serde", "alloc"] }
+ibc = { version = "0.29.0", default-features = false, features = ["serde"], optional = true }
+ibc-proto = { version = "0.26.0", default-features = false, features = ["parity-scale-codec", "borsh"], optional = true }
 
 lcp-types = { path = "../types", default-features = false }
 commitments = { path = "../commitments", default-features = false }
+store = { path = "../store", default-features = false }
+
+[features]
+default = []
+ibc = ["dep:ibc", "dep:ibc-proto"]

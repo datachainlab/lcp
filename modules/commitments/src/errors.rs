@@ -5,22 +5,6 @@ use flex_error::*;
 define_error! {
     #[derive(Debug, Clone, PartialEq, Eq)]
     Error {
-        Crypto
-        [crypto::Error]
-        |_| {"crypto error"},
-
-        Ics02
-        [TraceError<ibc::core::ics02_client::error::ClientError>]
-        |_| {"ICS02 client error"},
-
-        Ics23
-        [TraceError<ibc::core::ics23_commitment::error::CommitmentError>]
-        |_| {"ICS23 commitment error"},
-
-        Ics24
-        [TraceError<ibc::core::ics24_host::path::PathError>]
-        |_| {"ICS24 host error"},
-
         RlpDecode
         [TraceError<rlp::DecoderError>]
         |_| {"RLP decode error"},
@@ -49,6 +33,16 @@ define_error! {
         LcpTime
         [lcp_types::TimeError]
         |_| {"Time"}
+    }
+}
+
+#[cfg(feature = "prover")]
+define_error! {
+    #[derive(Debug, Clone, PartialEq, Eq)]
+    ProverError {
+        Crypto
+        [crypto::Error]
+        |_| {"crypto error"},
     }
 }
 

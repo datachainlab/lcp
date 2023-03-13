@@ -1,20 +1,24 @@
+use crate::context::HostClientReader;
+use crate::errors::Error;
 use crate::prelude::*;
-use crate::{context::ClientReader, Error};
-use commitments::{StateCommitment, UpdateClientCommitment};
-use ibc::core::ics24_host::identifier::ClientId;
-use lcp_types::{Any, Height};
+use commitments::{CommitmentPrefix, StateCommitment, UpdateClientCommitment};
+use lcp_types::{Any, ClientId, Height};
 
 pub trait LightClient {
     /// client_type returns a client type of the light client
     fn client_type(&self) -> String;
 
     /// latest_height returns the latest height that the light client tracks
-    fn latest_height(&self, ctx: &dyn ClientReader, client_id: &ClientId) -> Result<Height, Error>;
+    fn latest_height(
+        &self,
+        ctx: &dyn HostClientReader,
+        client_id: &ClientId,
+    ) -> Result<Height, Error>;
 
     /// create_client creates a new light client
     fn create_client(
         &self,
-        ctx: &dyn ClientReader,
+        ctx: &dyn HostClientReader,
         any_client_state: Any,
         any_consensus_state: Any,
     ) -> Result<CreateClientResult, Error>;
@@ -22,7 +26,7 @@ pub trait LightClient {
     /// update_client updates the light client with a header
     fn update_client(
         &self,
-        ctx: &dyn ClientReader,
+        ctx: &dyn HostClientReader,
         client_id: ClientId,
         any_header: Any,
     ) -> Result<UpdateClientResult, Error>;
@@ -30,9 +34,9 @@ pub trait LightClient {
     /// verify_membership is a generic proof verification method which verifies a proof of the existence of a value at a given path at the specified height.
     fn verify_membership(
         &self,
-        ctx: &dyn ClientReader,
+        ctx: &dyn HostClientReader,
         client_id: ClientId,
-        prefix: Vec<u8>,
+        prefix: CommitmentPrefix,
         path: String,
         value: Vec<u8>,
         proof_height: Height,
@@ -42,9 +46,9 @@ pub trait LightClient {
     /// verify_non_membership is a generic proof verification method which verifies the absence of a given path at a specified height.
     fn verify_non_membership(
         &self,
-        ctx: &dyn ClientReader,
+        ctx: &dyn HostClientReader,
         client_id: ClientId,
-        prefix: Vec<u8>,
+        prefix: CommitmentPrefix,
         path: String,
         proof_height: Height,
         proof: Vec<u8>,

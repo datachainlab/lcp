@@ -1,8 +1,8 @@
+use crate::errors::Error;
 use crate::header::Commitment;
 use crate::prelude::*;
 use core::time::Duration;
 use crypto::Address;
-use ibc::core::ics02_client::error::ClientError as Error;
 use ibc_proto::protobuf::Protobuf;
 use lcp_proto::ibc::core::client::v1::Height as ProtoHeight;
 use lcp_proto::ibc::lightclients::lcp::v1::ClientState as RawClientState;
@@ -114,12 +114,10 @@ impl TryFrom<ProtoAny> for ClientState {
 
     fn try_from(raw: ProtoAny) -> Result<Self, Self::Error> {
         match raw.type_url.as_str() {
-            LCP_CLIENT_STATE_TYPE_URL => {
-                ClientState::try_from(RawClientState::decode(&*raw.value).unwrap())
-            }
-            _ => Err(Error::UnknownClientStateType {
-                client_state_type: raw.type_url,
-            }),
+            LCP_CLIENT_STATE_TYPE_URL => Ok(ClientState::try_from(
+                RawClientState::decode(&*raw.value).unwrap(),
+            )?),
+            _ => Err(Error::unexpected_client_type(raw.type_url)),
         }
     }
 }

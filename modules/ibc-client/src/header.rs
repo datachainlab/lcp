@@ -1,8 +1,8 @@
+use crate::errors::Error;
 use crate::prelude::*;
 use attestation_report::EndorsedAttestationVerificationReport;
 use commitments::{StateID, UpdateClientCommitment};
 use crypto::Address;
-use ibc::core::ics02_client::error::ClientError as Error;
 use ibc_proto::protobuf::Protobuf;
 use lcp_proto::ibc::lightclients::lcp::v1::{
     RegisterEnclaveKeyHeader as RawRegisterEnclaveKeyHeader,
@@ -32,11 +32,9 @@ impl TryFrom<ProtoAny> for Header {
     fn try_from(raw: ProtoAny) -> Result<Self, Self::Error> {
         match raw.type_url.as_str() {
             LCP_HEADER_UPDATE_CLIENT_TYPE_URL => Ok(Header::UpdateClient(
-                UpdateClientHeader::decode_vec(&raw.value).map_err(Error::InvalidRawHeader)?,
+                UpdateClientHeader::decode_vec(&raw.value).map_err(Error::ibc_proto)?,
             )),
-            _ => Err(Error::UnknownHeaderType {
-                header_type: raw.type_url,
-            }),
+            _ => Err(Error::unexpected_header_type(raw.type_url)),
         }
     }
 }

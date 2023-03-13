@@ -672,6 +672,7 @@ mod tests {
             self.events.lock().unwrap().insert((self.self_rid, eid));
             self.cond.notify_all();
         }
+        #[allow(unused_must_use)]
         fn block_on(&self, rid: u64, eid: u64) {
             let events = self.events.lock().unwrap();
             self.cond
