@@ -23,27 +23,22 @@ import (
 type Prover struct {
 	config       ProverConfig
 	originChain  core.Chain
-	originProver OriginProver
+	originProver core.Prover
 
 	codec            codec.ProtoCodecMarshaler
 	path             *core.PathEnd
 	lcpServiceClient LCPServiceClient
 }
 
-type OriginProver interface {
-	core.LightClient
-	core.IBCProvableQuerier
-}
-
 var (
 	_ core.Prover = (*Prover)(nil)
 )
 
-func NewProver(config ProverConfig, originChain core.Chain, originProver OriginProver) (*Prover, error) {
+func NewProver(config ProverConfig, originChain core.Chain, originProver core.Prover) (*Prover, error) {
 	return &Prover{config: config, originChain: originChain, originProver: originProver}, nil
 }
 
-func (pr *Prover) GetOriginProver() OriginProver {
+func (pr *Prover) GetOriginProver() core.Prover {
 	return pr.originProver
 }
 
@@ -62,6 +57,12 @@ func (pr *Prover) initServiceClient() error {
 
 // Init initializes the chain
 func (pr *Prover) Init(homePath string, timeout time.Duration, codec codec.ProtoCodecMarshaler, debug bool) error {
+	if err := pr.originChain.Init(homePath, timeout, codec, debug); err != nil {
+		return err
+	}
+	if err := pr.originProver.Init(homePath, timeout, codec, debug); err != nil {
+		return err
+	}
 	pr.codec = codec
 	return nil
 }
