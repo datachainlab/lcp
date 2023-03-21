@@ -2,6 +2,7 @@ package relay
 
 import (
 	"context"
+	"errors"
 	"log"
 	"time"
 
@@ -33,6 +34,7 @@ func (pr *Prover) syncUpstreamHeader(includeState bool) ([]*elc.MsgUpdateClientR
 		return nil, err
 	}
 	if clientState.GetLatestHeight().GTE(latestHeader.GetHeight()) {
+		log.Println("")
 		return nil, nil
 	}
 
@@ -103,16 +105,32 @@ func registerEnclaveKey(pathEnd *core.PathEnd, prover *Prover, debug bool) error
 	return nil
 }
 
-func activateClient(pathEnd *core.PathEnd, src, dst *core.ProvableChain) error {
+func activateClient(pathEnd *core.PathEnd, src, dst *core.ProvableChain, interval time.Duration, timeout time.Duration) error {
 	srcProver := src.Prover.(*Prover)
 	if err := srcProver.initServiceClient(); err != nil {
 		return err
 	}
 
 	// 1. LCP synchronises with the latest header of the upstream chain
-	updates, err := srcProver.syncUpstreamHeader(true)
-	if err != nil {
-		return err
+	var (
+		updates []*elc.MsgUpdateClientResponse
+		err     error
+	)
+	intervalT := time.NewTicker(interval)
+	timeoutT := time.After(timeout)
+	for {
+		select {
+		case <-intervalT.C:
+			updates, err = srcProver.syncUpstreamHeader(true)
+			if err != nil {
+				return err
+			}
+		case <-timeoutT:
+			return errors.New("timeout error")
+		}
+		if len(updates) > 0 {
+			break
+		}
 	}
 
 	signer, err := dst.Chain.GetAddress()

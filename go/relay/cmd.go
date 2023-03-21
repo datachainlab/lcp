@@ -1,6 +1,8 @@
 package relay
 
 import (
+	"time"
+
 	"github.com/hyperledger-labs/yui-relayer/config"
 	"github.com/hyperledger-labs/yui-relayer/core"
 	"github.com/spf13/cobra"
@@ -8,7 +10,9 @@ import (
 )
 
 const (
-	flagSrc = "src"
+	flagSrc      = "src"
+	flagInterval = "interval"
+	flagTimeout  = "timeout"
 )
 
 func LCPCmd(ctx *config.Context) *cobra.Command {
@@ -87,15 +91,31 @@ func activateClientCmd(ctx *config.Context) *cobra.Command {
 				pathEnd = path.Dst
 				target, counterparty = c[dst], c[src]
 			}
-			return activateClient(pathEnd, target, counterparty)
+			return activateClient(pathEnd, target, counterparty, viper.GetDuration(flagInterval), viper.GetDuration(flagTimeout))
 		},
 	}
-	return srcFlag(cmd)
+	return timeoutFlag(checkIntervalFlag(srcFlag(cmd)))
 }
 
 func srcFlag(cmd *cobra.Command) *cobra.Command {
 	cmd.Flags().BoolP(flagSrc, "", true, "a boolean value whether src is the target chain")
 	if err := viper.BindPFlag(flagSrc, cmd.Flags().Lookup(flagSrc)); err != nil {
+		panic(err)
+	}
+	return cmd
+}
+
+func checkIntervalFlag(cmd *cobra.Command) *cobra.Command {
+	cmd.Flags().DurationP(flagInterval, "", time.Second, "time interval for checking whether there is an update of the upstream")
+	if err := viper.BindPFlag(flagInterval, cmd.Flags().Lookup(flagInterval)); err != nil {
+		panic(err)
+	}
+	return cmd
+}
+
+func timeoutFlag(cmd *cobra.Command) *cobra.Command {
+	cmd.Flags().DurationP(flagTimeout, "", time.Minute, "timeout for waiting an update of the upstream")
+	if err := viper.BindPFlag(flagTimeout, cmd.Flags().Lookup(flagTimeout)); err != nil {
 		panic(err)
 	}
 	return cmd
