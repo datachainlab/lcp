@@ -23,22 +23,27 @@ import (
 type Prover struct {
 	config       ProverConfig
 	originChain  core.Chain
-	originProver core.Prover
+	originProver OriginProver
 
 	codec            codec.ProtoCodecMarshaler
 	path             *core.PathEnd
 	lcpServiceClient LCPServiceClient
 }
 
+type OriginProver interface {
+	core.LightClient
+	core.IBCProvableQuerier
+}
+
 var (
 	_ core.Prover = (*Prover)(nil)
 )
 
-func NewProver(config ProverConfig, originChain core.Chain, originProver core.Prover) (*Prover, error) {
+func NewProver(config ProverConfig, originChain core.Chain, originProver OriginProver) (*Prover, error) {
 	return &Prover{config: config, originChain: originChain, originProver: originProver}, nil
 }
 
-func (pr *Prover) GetOriginProver() core.Prover {
+func (pr *Prover) GetOriginProver() OriginProver {
 	return pr.originProver
 }
 
