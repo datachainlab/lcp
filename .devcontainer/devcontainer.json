@@ -1,0 +1,18 @@
+{
+	"name": "LCP Development",
+	"dockerComposeFile": [
+	  "./docker-compose.yml"
+	],
+	"service": "lcp",
+	"workspaceFolder": "/workspace",
+	"remoteUser": "dev",
+	"updateRemoteUserUID": true,
+	"customizations": {
+	  "vscode": {
+		"extensions": [
+		  "rust-lang.rust-analyzer"
+		]
+	  }
+	}
+  }
+  

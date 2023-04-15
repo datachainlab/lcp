@@ -1,0 +1,17 @@
+version: "3"
+
+services:
+  lcp:
+    build:
+      context: ..
+      dockerfile: ./.devcontainer/Dockerfile
+    environment:
+      - SGX_MODE=SW
+    volumes:
+      - ~/.cargo:/home/dev/.cargo
+      - ..:/workspace:cached
+      - ~/.ssh:/home/dev/.ssh
+      - ~/.gitconfig:/home/dev/.gitconfig
+    command: sleep infinity
+    ports:
+      - "50051:50051"
