@@ -3,8 +3,6 @@ name = "enclave-remote-attestation"
 version = "0.1.0"
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
 sgx_types = { rev = "v1.1.6", git = "https://github.com/apache/incubator-teaclave-sgx-sdk" }
 sgx_tstd = { rev = "v1.1.6", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", features = ["net"] }
@@ -34,3 +32,8 @@ crypto = { path = "../../modules/crypto", default-features = false }
 attestation-report = { path = "../../modules/attestation-report", default-features = false }
 settings = { path = "../../modules/settings", default-features = false }
 ocall-commands = { path = "../../modules/ocall-commands", default-features = false }
+
+[features]
+sgx-sw = [
+    "sgx_tstd/untrusted_time"
+]

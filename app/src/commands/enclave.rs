@@ -1,17 +1,12 @@
 use crate::opts::Opts;
 use anyhow::{bail, Result};
-use attestation_report::EndorsedAttestationVerificationReport;
 use clap::Parser;
-use ecall_commands::{IASRemoteAttestationInput, InitEnclaveInput};
+use ecall_commands::InitEnclaveInput;
 use enclave_api::{Enclave, EnclaveCommandAPI, EnclaveProtoAPI};
 use log::*;
 use serde_json::json;
-use settings::{AVR_KEY_PATH, SEALED_ENCLAVE_KEY_PATH};
-use std::{
-    fs::{read, remove_file, OpenOptions},
-    io::Write,
-    path::PathBuf,
-};
+use settings::SEALED_ENCLAVE_KEY_PATH;
+use std::{fs::remove_file, path::PathBuf};
 use store::transaction::CommitStore;
 
 // `enclave` subcommand
@@ -21,10 +16,6 @@ pub enum EnclaveCmd {
     InitKey(InitKey),
     #[clap(about = "Print metadata of the enclave")]
     Metadata(Metadata),
-    #[clap(about = "Perform Remote Attestation with IAS")]
-    IASRemoteAttestation(IASRemoteAttestation),
-    #[clap(about = "Show the AVR info")]
-    ShowAVR(ShowAVR),
 }
 
 impl EnclaveCmd {
@@ -51,18 +42,6 @@ impl EnclaveCmd {
                     bail!("home directory doesn't exist at {:?}", home);
                 }
                 run_print_metadata(opts, cmd)
-            }
-            EnclaveCmd::IASRemoteAttestation(cmd) => {
-                if !home.exists() {
-                    bail!("home directory doesn't exist at {:?}", home);
-                }
-                run_ias_remote_attestation(enclave_loader(opts, cmd.enclave.as_ref())?, home, cmd)
-            }
-            EnclaveCmd::ShowAVR(cmd) => {
-                if !home.exists() {
-                    bail!("home directory doesn't exist at {:?}", home);
-                }
-                run_show_avr(opts, home, cmd)
             }
         }
     }
@@ -118,100 +97,6 @@ fn run_print_metadata(opts: &Opts, cmd: &Metadata) -> Result<()> {
         "{}",
         json! {{
             "mrenclave": format!("0x{}", hex::encode(metadata.enclave_css.body.enclave_hash.m))
-        }}
-    );
-    Ok(())
-}
-
-#[derive(Clone, Debug, Parser, PartialEq)]
-pub struct IASRemoteAttestation {
-    /// Path to the enclave binary
-    #[clap(long = "enclave", help = "Path to the enclave binary")]
-    pub enclave: Option<PathBuf>,
-
-    /// Boolean flag to overwrite an enclave key and AVR if it already exists
-    #[clap(
-        long = "force",
-        help = "Boolean flag to overwrite an enclave key and AVR if it already exists."
-    )]
-    pub force: bool,
-}
-
-fn run_ias_remote_attestation<E: EnclaveCommandAPI<S>, S: CommitStore>(
-    enclave: E,
-    home: PathBuf,
-    cmd: &IASRemoteAttestation,
-) -> Result<()> {
-    let spid = std::env::var("SPID")?;
-    let ias_key = std::env::var("IAS_KEY")?;
-
-    let avr_path = home.join(AVR_KEY_PATH);
-    if avr_path.exists() {
-        if cmd.force {
-            remove_file(&avr_path)?;
-        } else {
-            bail!(
-                "Init Key Failed: AVR path {:?} already exists",
-                avr_path.as_path(),
-            );
-        }
-    }
-
-    match enclave.ias_remote_attestation(IASRemoteAttestationInput {
-        spid: spid.as_bytes().to_vec(),
-        ias_key: ias_key.as_bytes().to_vec(),
-    }) {
-        Ok(res) => {
-            let s = serde_json::to_string(&res.report)?;
-            info!("successfully got the AVR");
-            // NOTE: Currently, enclave key and AVR file operations are not atomic.
-            // Therefore, if the service is running in the background, the service may read incomplete data (and its attempt will be failed).
-            // To solve this problem, consider using the traditional `rename` approach or a File DB such as rocksdb.
-            let mut f = OpenOptions::new()
-                .write(true)
-                .create_new(true)
-                .open(&avr_path)?;
-            f.write_all(s.as_bytes())?;
-            f.flush()?;
-            Ok(())
-        }
-        Err(e) => bail!("IAS Remote Attestation Failed {:?}!", e),
-    }
-}
-
-#[derive(Clone, Debug, Parser, PartialEq)]
-pub struct ShowAVR {
-    /// Path to the enclave binary
-    #[clap(long = "enclave", help = "Path to the enclave binary")]
-    pub enclave: Option<PathBuf>,
-    #[clap(long = "validate", help = "Check if the AVR is valid for the enclave")]
-    pub validate: bool,
-}
-
-fn run_show_avr(opts: &Opts, home: PathBuf, cmd: &ShowAVR) -> Result<()> {
-    let avr_path = home.join(AVR_KEY_PATH);
-    if !avr_path.exists() {
-        bail!("AVR not found: {:?}", avr_path.as_path());
-    }
-    let report: EndorsedAttestationVerificationReport =
-        serde_json::from_slice(read(avr_path)?.as_slice())?;
-    let avr = report.get_avr()?;
-    let quote = avr.parse_quote()?;
-    if cmd.validate {
-        let enclave_path = cmd.enclave.clone().unwrap_or(opts.default_enclave());
-        if !enclave_path.exists() {
-            bail!("Enclave not found: {:?}", enclave_path.as_path());
-        }
-        let metadata =
-            host::sgx_get_metadata(cmd.enclave.clone().unwrap_or(opts.default_enclave()))?;
-        quote.match_metadata(&metadata)?;
-    }
-    println!(
-        "{}",
-        json! {{
-            "mrenclave": format!("0x{}", hex::encode(quote.get_mrenclave().m)),
-            "enclave_key": format!("0x{}", quote.get_enclave_key_address()?.to_hex_string()),
-            "timestamp": avr.timestamp
         }}
     );
     Ok(())

@@ -24,6 +24,8 @@ pub use enclave_manage::{
     EnclaveManageCommand, EnclaveManageResult, IASRemoteAttestationInput,
     IASRemoteAttestationResult, InitEnclaveInput, InitEnclaveResult,
 };
+#[cfg(feature = "sgx-sw")]
+pub use enclave_manage::{SimulateRemoteAttestationInput, SimulateRemoteAttestationResult};
 pub use errors::Error;
 pub use light_client::{
     CommitmentProofPair, InitClientInput, InitClientResult, LightClientCommand, LightClientResult,

@@ -5,6 +5,7 @@ use core::fmt::Debug;
 use crypto::Address;
 use lcp_types::Time;
 use serde::{Deserialize, Serialize};
+use serde_json::json;
 use sgx_types::{metadata::metadata_t, sgx_measurement_t, sgx_quote_t};
 use tendermint::Time as TmTime;
 
@@ -57,22 +58,6 @@ pub struct AttestationVerificationReport {
     pub advisory_ids: Vec<String>,
 }
 
-impl TryFrom<&AttestationVerificationReport> for Vec<u8> {
-    type Error = serde_json::Error;
-
-    fn try_from(value: &AttestationVerificationReport) -> Result<Self, Self::Error> {
-        serde_json::to_vec(value)
-    }
-}
-
-impl TryFrom<&[u8]> for AttestationVerificationReport {
-    type Error = serde_json::Error;
-
-    fn try_from(value: &[u8]) -> Result<Self, Self::Error> {
-        serde_json::from_slice(value)
-    }
-}
-
 impl AttestationVerificationReport {
     pub fn parse_quote(&self) -> Result<Quote, Error> {
         if self.version != 4 {
@@ -98,6 +83,28 @@ impl AttestationVerificationReport {
             status: self.isv_enclave_quote_status.clone(),
             attestation_time,
         })
+    }
+
+    pub fn to_canonical_json(&self) -> Result<String, Error> {
+        if self.version != 4 {
+            return Err(Error::unexpected_attestation_report_version(
+                4,
+                self.version,
+            ));
+        }
+        Ok(format!(
+            "{}",
+            json!({
+                "id": self.id,
+                "timestamp": self.timestamp,
+                "version": self.version,
+                "advisoryURL": self.advisory_url,
+                "advisoryIDs": self.advisory_ids,
+                "isvEnclaveQuoteStatus": self.isv_enclave_quote_status,
+                "platformInfoBlob": self.platform_info_blob,
+                "isvEnclaveQuoteBody": self.isv_enclave_quote_body
+            })
+        ))
     }
 }
 

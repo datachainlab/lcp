@@ -28,17 +28,13 @@ define_error! {
         [enclave_remote_attestation::Error]
         |_| { "RemoteAttestation error" },
 
+        EcallCommand
+        [ecall_commands::Error]
+        |_| { "EcallCommand error" },
+
         Time
         [lcp_types::TimeError]
-        |_| { "Time error" },
-
-        InvalidSpIdLength
-        {
-            length: usize
-        }
-        |e| {
-            format_args!("invalid SPID length: expected=32 actual={}", e.length)
-        }
+        |_| { "Time error" }
     }
 }
 
@@ -57,5 +53,11 @@ impl From<attestation_report::Error> for Error {
 impl From<crypto::Error> for Error {
     fn from(err: crypto::Error) -> Self {
         Error::crypto(err)
+    }
+}
+
+impl From<ecall_commands::Error> for Error {
+    fn from(err: ecall_commands::Error) -> Self {
+        Error::ecall_command(err)
     }
 }

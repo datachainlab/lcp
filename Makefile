@@ -61,7 +61,11 @@ else
 	SGX_ENCLAVE_MODE = "Development Mode"
 	SGX_ENCLAVE_CONFIG = "enclave/Enclave.config.xml"
 	SGX_SIGN_KEY = "enclave/Enclave_private.pem"
-	CARGO_FEATURES = --features=default
+	ifeq ($(SGX_MODE), HW)
+		CARGO_FEATURES = --features=default
+	else
+		CARGO_FEATURES = --features=default,sgx-sw
+	endif
 endif
 
 ######## CUSTOM Settings ########

@@ -451,6 +451,7 @@ version = "0.1.0"
 dependencies = [
  "attestation-report",
  "commitments",
+ "enclave-environment",
  "flex-error",
  "lcp-proto",
  "lcp-types",

@@ -10,6 +10,9 @@ crate-type = ["staticlib"]
 
 [features]
 default = []
+sgx-sw = [
+    "enclave-runtime/sgx-sw"
+]
 
 [dependencies]
 sgx_tstd = { rev = "v1.1.6", git = "https://github.com/apache/incubator-teaclave-sgx-sdk" }

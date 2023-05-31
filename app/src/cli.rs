@@ -1,13 +1,12 @@
+use crate::{commands::CliCmd, opts::Opts};
 use anyhow::Result;
 use clap::Parser;
-
-use crate::{commands::CliCmd, opts::Opts};
 
 /// Entry point for LCP CLI.
 #[derive(Debug, Parser)]
 #[clap(
     name = env!("CARGO_PKG_NAME"),
-    version = env!("CARGO_PKG_VERSION"),
+    version = concat!(env!("CARGO_PKG_VERSION"), "-", env!("SGX_MODE")),
     author = env!("CARGO_PKG_AUTHORS"),
     about = env!("CARGO_PKG_DESCRIPTION"),
     arg_required_else_help = true,

@@ -3,7 +3,7 @@ use crate::prelude::*;
 use crypto::KeyManager;
 use ecall_commands::{CommandParams, InitEnclaveInput, InitEnclaveResult};
 
-pub fn init_enclave(
+pub(crate) fn init_enclave(
     _: InitEnclaveInput,
     params: CommandParams,
 ) -> Result<InitEnclaveResult, Error> {
