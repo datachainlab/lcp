@@ -199,7 +199,7 @@ lint-tools:
 .PHONY: lint
 lint:
 	@cargo check --locked --tests $(CARGO_TARGET)
-	@cargo udeps --locked --lib --tests --quiet $(CARGO_TARGET)
+	@cargo +nightly udeps --locked --lib --tests --quiet $(CARGO_TARGET)
 
 ######## Tools ########
 
