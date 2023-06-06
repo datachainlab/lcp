@@ -26,8 +26,3 @@ pub use environment_impl::Environment;
 mod environment;
 #[cfg(feature = "environment_impl")]
 mod environment_impl;
-
-pub const fn is_sgx_hw_mode() -> bool {
-    let mode = env!("SGX_MODE").as_bytes();
-    mode.len() == 2 && mode[0] == 'H' as u8 && mode[1] == 'W' as u8
-}
