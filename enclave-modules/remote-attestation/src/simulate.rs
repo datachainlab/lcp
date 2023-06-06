@@ -155,13 +155,20 @@ fn create_simulate_avr(
     Ok(AttestationVerificationReport {
         id: "23856791181030202675484781740313693463".to_string(),
         // TODO refactoring
-        timestamp: format!("{}000", now.format("%Y-%m-%dT%H:%M:%S%.f%z").to_string().strip_suffix("+0000").unwrap().to_string()),
+        timestamp: format!(
+            "{}000",
+            now.format("%Y-%m-%dT%H:%M:%S%.f%z")
+                .to_string()
+                .strip_suffix("+0000")
+                .unwrap()
+                .to_string()
+        ),
         version: 4,
         advisory_url: "https://security-center.intel.com".to_string(),
         advisory_ids,
         isv_enclave_quote_status,
-        platform_info_blob: Some("1502006504000F00000F0F020202800E0000000000000000000D00000C000000020000000000000BF154C1BDAEFB9BCA30B8D7F52CD6307340650A5973262D8C99CFA64D783507294F0FE90F467E0208EB14E9E2181C34E521BF8B43D91017D5697C490094E24D5F96".to_string()),
-        isv_enclave_quote_body: base64::encode(quote),
+        platform_info_blob: None,
+        isv_enclave_quote_body: base64::encode(&quote.as_slice()[..432]),
         ..Default::default()
     })
 }
