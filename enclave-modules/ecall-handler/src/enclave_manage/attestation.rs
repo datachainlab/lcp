@@ -21,7 +21,7 @@ pub(crate) fn ias_remote_attestation(
         .get_pubkey();
 
     let report = {
-        let spid = decode_spid(&input.spid)?;
+        let spid = decode_spid(&input.spid);
         let report = create_attestation_report(
             pub_key.as_report_data(),
             sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE,
@@ -57,17 +57,14 @@ pub(crate) fn simulate_remote_attestation(
     Ok(ecall_commands::SimulateRemoteAttestationResult { avr })
 }
 
-fn decode_spid(hex: &[u8]) -> Result<sgx_spid_t, Error> {
+// CONTRACT: `hex` length must be 32
+fn decode_spid(hex: &[u8]) -> sgx_spid_t {
+    assert!(hex.len() == 32);
     let mut spid = sgx_spid_t::default();
     let hex = String::from_utf8_lossy(hex);
     let hex = &hex.trim();
 
-    if hex.len() < 16 * 2 {
-        // Err(Error::invalid_sp_id_length(hex.len()))
-        panic!("invalid");
-    } else {
-        let decoded_vec = hex::decode(hex).unwrap();
-        spid.id.copy_from_slice(&decoded_vec[..16]);
-        Ok(spid)
-    }
+    let decoded_vec = hex::decode(hex).unwrap();
+    spid.id.copy_from_slice(&decoded_vec[..16]);
+    spid
 }
