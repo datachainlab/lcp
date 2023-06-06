@@ -1336,7 +1336,6 @@ version = "0.1.0"
 dependencies = [
  "attestation-report",
  "commitments",
- "enclave-environment",
  "flex-error",
  "lcp-proto",
  "lcp-types",
@@ -1447,15 +1446,6 @@ dependencies = [
  "prost-types",
  "sgx_types",
  "sgx_urts",
- "store",
-]
-
-[[package]]
-name = "enclave-environment"
-version = "0.1.0"
-dependencies = [
- "light-client",
- "light-client-registry",
  "store",
 ]
 
