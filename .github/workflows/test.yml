@@ -15,7 +15,7 @@ jobs:
             ./enclave
       - uses: actions-rs/cargo@v1
       - run: make lint-tools
-      - run: export SGX_MODE=HW && make lint
+      - run: make lint
 
   relayer:
     runs-on: ubuntu-latest
