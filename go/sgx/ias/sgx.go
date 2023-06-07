@@ -22,14 +22,14 @@ func (avr AttestationVerificationReport) GetTimestamp() time.Time {
 }
 
 func VerifyReport(report string, signature []byte, signingCertDer []byte, currentTime time.Time) error {
-	iasRootCert := GetIASRootCert()
+	rootCert := GetRARootCert()
 	signingCert, err := x509.ParseCertificate(signingCertDer)
 	if err != nil {
 		return err
 	}
 
 	chains, err := signingCert.Verify(x509.VerifyOptions{
-		Roots:       intelTrustRoots,
+		Roots:       trustRARoots,
 		CurrentTime: currentTime,
 	})
 	if err != nil {
@@ -40,7 +40,7 @@ func VerifyReport(report string, signature []byte, signingCertDer []byte, curren
 		return fmt.Errorf("unexpected chains length: %v", l)
 	} else if l := len(chains[0]); l != 2 {
 		return fmt.Errorf("unexpected certs length: %v", l)
-	} else if !iasRootCert.Equal(chains[0][1]) {
+	} else if !rootCert.Equal(chains[0][1]) {
 		return fmt.Errorf("unexpected root cert: %v", chains[0][1])
 	}
 

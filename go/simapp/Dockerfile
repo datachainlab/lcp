@@ -3,7 +3,7 @@ FROM golang:1.18.6-bullseye
 COPY . /root/
 WORKDIR /root/go/simapp
 
-RUN go build -mod readonly -o /usr/bin/simd ./simd
+RUN go build -tags customcert -mod readonly -o /usr/bin/simd ./simd
 RUN apt-get update -y && apt-get install -y jq
 
 WORKDIR /root/go/simapp
