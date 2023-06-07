@@ -6,7 +6,7 @@ mod tests {
     use anyhow::{anyhow, bail};
     use ecall_commands::{
         CommitmentProofPair, IASRemoteAttestationInput, InitClientInput, InitEnclaveInput,
-        SimulateRemoteAttestationInput, UpdateClientInput, VerifyMembershipInput,
+        UpdateClientInput, VerifyMembershipInput,
     };
     use enclave_api::{Enclave, EnclaveCommandAPI};
     use host_environment::Environment;
@@ -89,8 +89,7 @@ mod tests {
         mut rly: Relayer,
         enclave: &Enclave<store::memory::MemStore>,
     ) -> Result<(), anyhow::Error> {
-        let simulate = std::env::var("SGX_MODE").map_or(false, |m| m == "SW");
-        if simulate {
+        if cfg!(feature = "sgx-sw") {
             info!("this test is running in SW mode");
         } else {
             info!("this test is running in HW mode");
@@ -103,8 +102,7 @@ mod tests {
             }
         };
 
-        let simulate = std::env::var("SGX_MODE").map_or(false, |m| m == "SW");
-        if !simulate {
+        if cfg!(not(feature = "sgx-sw")) {
             let _ = match enclave.ias_remote_attestation(IASRemoteAttestationInput {
                 spid: std::env::var("SPID").unwrap().as_bytes().to_vec(),
                 ias_key: std::env::var("IAS_KEY").unwrap().as_bytes().to_vec(),
@@ -115,10 +113,13 @@ mod tests {
                 }
             };
         } else {
-            let _ = match enclave.simulate_remote_attestation(SimulateRemoteAttestationInput {
-                advisory_ids: vec![],
-                isv_enclave_quote_status: "OK".to_string(),
-            }) {
+            #[cfg(feature = "sgx-sw")]
+            let _ = match enclave.simulate_remote_attestation(
+                ecall_commands::SimulateRemoteAttestationInput {
+                    advisory_ids: vec![],
+                    isv_enclave_quote_status: "OK".to_string(),
+                },
+            ) {
                 Ok(res) => res.avr,
                 Err(e) => {
                     bail!("Simulate Remote Attestation Failed {:?}!", e);
