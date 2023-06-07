@@ -163,7 +163,11 @@ pub struct SimulateRemoteAttestation {
     )]
     pub force: bool,
 
-    #[clap(long = "signing_cert_path", help = "TODO")]
+    /// Path to a der-encoded file that contains X.509 certificate
+    #[clap(
+        long = "signing_cert_path",
+        help = "Path to a der-encoded file that contains X.509 certificate"
+    )]
     pub signing_cert_path: PathBuf,
 
     /// Path to a PEM-encoded file that contains PKCS#8 private key
@@ -173,9 +177,15 @@ pub struct SimulateRemoteAttestation {
     )]
     pub signing_key_path: PathBuf,
 
-    #[clap(long = "validate_cert", default_value = "true")]
+    /// Validate a signing certificate using openssl command
+    #[clap(
+        long = "validate_cert",
+        default_value = "true",
+        help = "Validate a signing certificate using openssl command"
+    )]
     pub validate_cert: bool,
 
+    /// Intel security advisory IDs to include in the report
     #[clap(
         long = "advisory_ids",
         value_delimiter = ',',
@@ -183,6 +193,7 @@ pub struct SimulateRemoteAttestation {
     )]
     pub advisory_ids: Vec<String>,
 
+    /// Quote status to include in the report
     #[clap(
         long = "isv_enclave_quote_status",
         default_value = "OK",
@@ -219,6 +230,8 @@ fn run_simulate_remote_attestation<E: EnclaveCommandAPI<S>, S: CommitStore>(
                 "x509",
                 "-noout",
                 "-modulus",
+                "-inform",
+                "der",
                 "-in",
                 cmd.signing_cert_path.to_str().unwrap(),
             ])
