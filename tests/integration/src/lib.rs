@@ -6,7 +6,7 @@ mod tests {
     use anyhow::{anyhow, bail};
     use ecall_commands::{
         CommitmentProofPair, IASRemoteAttestationInput, InitClientInput, InitEnclaveInput,
-        UpdateClientInput, VerifyMembershipInput,
+        SimulateRemoteAttestationInput, UpdateClientInput, VerifyMembershipInput,
     };
     use enclave_api::{Enclave, EnclaveCommandAPI};
     use host_environment::Environment;
@@ -112,6 +112,16 @@ mod tests {
                 Ok(res) => res.report,
                 Err(e) => {
                     bail!("IAS Remote Attestation Failed {:?}!", e);
+                }
+            };
+        } else {
+            let _ = match enclave.simulate_remote_attestation(SimulateRemoteAttestationInput {
+                advisory_ids: vec![],
+                isv_enclave_quote_status: "OK".to_string(),
+            }) {
+                Ok(res) => res.avr,
+                Err(e) => {
+                    bail!("Simulate Remote Attestation Failed {:?}!", e);
                 }
             };
         }
