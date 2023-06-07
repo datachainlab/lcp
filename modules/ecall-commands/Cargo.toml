@@ -17,3 +17,4 @@ lcp-proto = { path = "../../proto", default-features = false }
 [features]
 default = ["std"]
 std = ["lcp-types/std"]
+sgx-sw = []

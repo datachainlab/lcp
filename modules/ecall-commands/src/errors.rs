@@ -2,7 +2,7 @@ use crate::prelude::*;
 use flex_error::*;
 
 define_error! {
-    #[derive(Debug, PartialEq, Eq)]
+    #[derive(Debug, Clone, PartialEq, Eq)]
     Error {
         InvalidArgument {
             descr: String

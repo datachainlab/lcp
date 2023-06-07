@@ -18,7 +18,7 @@ use sgx_tstd::{
 use sgx_types::{c_int, sgx_spid_t};
 use sgx_types::{sgx_quote_nonce_t, sgx_quote_sign_type_t, sgx_report_data_t};
 
-const REPORT_DATA_SIZE: usize = 32;
+pub const REPORT_DATA_SIZE: usize = 32;
 
 pub const DEV_HOSTNAME: &str = "api.trustedservices.intel.com";
 
@@ -33,7 +33,6 @@ pub const SIGRL_SUFFIX: &str = "/sgx/dev/attestation/v4/sigrl/";
 pub const REPORT_SUFFIX: &str = "/sgx/dev/attestation/v4/report";
 
 //input: pub_k: &sgx_ec256_public_t, todo: make this the pubkey of the node
-#[allow(const_err)]
 pub fn create_attestation_report(
     report_data: sgx_report_data_t,
     sign_type: sgx_quote_sign_type_t,
@@ -385,7 +384,7 @@ pub fn make_ias_client_config() -> rustls::ClientConfig {
     config
 }
 
-fn as_u32_le(array: &[u8; 4]) -> u32 {
+pub(crate) fn as_u32_le(array: &[u8; 4]) -> u32 {
     ((array[0] as u32) << 0)
         + ((array[1] as u32) << 8)
         + ((array[2] as u32) << 16)

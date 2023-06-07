@@ -34,6 +34,23 @@ pub trait EnclaveCommandAPI<S: CommitStore>: EnclavePrimitiveAPI<S> {
         }
     }
 
+    /// simulate_remote_attestation simulates Remote Attestation
+    #[cfg(feature = "sgx-sw")]
+    fn simulate_remote_attestation(
+        &self,
+        input: ecall_commands::SimulateRemoteAttestationInput,
+    ) -> Result<ecall_commands::SimulateRemoteAttestationResult> {
+        match self.execute_command(
+            Command::EnclaveManage(EnclaveManageCommand::SimulateRemoteAttestation(input)),
+            None,
+        )? {
+            CommandResult::EnclaveManage(EnclaveManageResult::SimulateRemoteAttestation(res)) => {
+                Ok(res)
+            }
+            _ => unreachable!(),
+        }
+    }
+
     /// init_client initializes an ELC instance with given states
     fn init_client(&self, input: InitClientInput) -> Result<InitClientResult> {
         let update_key = Some(input.any_client_state.type_url.clone());

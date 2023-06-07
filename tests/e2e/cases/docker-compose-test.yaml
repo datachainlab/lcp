@@ -8,6 +8,8 @@ services:
   tendermint-chain0:
     container_name: tendermint-chain0
     image: tendermint-chain0:${TAG}
+    environment:
+      - LCP_RA_ROOT_CERT=${LCP_RA_ROOT_CERT}
     ports:
       - 26656:26656
       - 26657:26657
@@ -23,6 +25,8 @@ services:
   tendermint-chain1:
     container_name: tendermint-chain1
     image: tendermint-chain1:${TAG}
+    environment:
+      - LCP_RA_ROOT_CERT=${LCP_RA_ROOT_CERT}
     ports:
       - 26566:26656
       - 26557:26657

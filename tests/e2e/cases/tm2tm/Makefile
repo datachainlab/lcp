@@ -1,5 +1,5 @@
 DOCKER         ?= docker
-DOCKER_COMPOSE ?= docker-compose
+DOCKER_COMPOSE ?= docker compose
 DOCKER_REPO    ?= ""
 DOCKER_TAG     ?= latest
 DOCKER_BUILD   ?= $(DOCKER) build --rm --no-cache --pull
@@ -17,7 +17,7 @@ network:
 network-down:
 	TAG=${DOCKER_TAG} $(DOCKER_COMPOSE) \
 		-f ../docker-compose-test.yaml \
-		down --volume --remove-orphans
+		down --volumes --remove-orphans
 
 .PHONY: test
 test:

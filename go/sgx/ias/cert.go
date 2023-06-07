@@ -2,15 +2,15 @@ package ias
 
 import (
 	"crypto/x509"
+	"fmt"
 
 	"github.com/oasisprotocol/oasis-core/go/common/sgx/ias"
 )
 
-var intelTrustRoots = x509.NewCertPool()
-
-func init() {
-	intelTrustRoots.AddCert(GetIASRootCert())
-}
+var (
+	trustRARoots    = x509.NewCertPool()
+	trustRARootCert *x509.Certificate
+)
 
 const iasTrustRootCert = `-----BEGIN CERTIFICATE-----
 MIIFSzCCA7OgAwIBAgIJANEHdl0yo7CUMA0GCSqGSIb3DQEBCwUAMH4xCzAJBgNV
@@ -44,10 +44,27 @@ DD+gT9sSpssq0ascmvH49MOgjt1yoysLtdCtJW/9FZpoOypaHx0R+mJTLwPXVMrv
 DaVzWh5aiEx+idkSGMnX
 -----END CERTIFICATE-----`
 
-func GetIASRootCert() *x509.Certificate {
-	iasRootCert, _, err := ias.CertFromPEM([]byte(iasTrustRootCert))
+func initIAS() {
+	rootCert, _, err := ias.CertFromPEM([]byte(iasTrustRootCert))
 	if err != nil {
 		panic(err)
+	} else if rootCert == nil {
+		panic(fmt.Sprintf("invalid rootCert: %v", iasTrustRootCert))
 	}
-	return iasRootCert
+	setRARootCert(rootCert)
+}
+
+func GetRARootCert() *x509.Certificate {
+	if trustRARootCert == nil {
+		panic("`trustRARootCert` is not initialized")
+	}
+	return trustRARootCert
+}
+
+func setRARootCert(rootCert *x509.Certificate) {
+	if trustRARootCert != nil {
+		panic("`trustRARootCert` is already initialized")
+	}
+	trustRARootCert = rootCert
+	trustRARoots.AddCert(trustRARootCert)
 }

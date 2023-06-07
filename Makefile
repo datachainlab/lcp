@@ -61,7 +61,11 @@ else
 	SGX_ENCLAVE_MODE = "Development Mode"
 	SGX_ENCLAVE_CONFIG = "enclave/Enclave.config.xml"
 	SGX_SIGN_KEY = "enclave/Enclave_private.pem"
-	CARGO_FEATURES = --features=default
+	ifeq ($(SGX_MODE), HW)
+		CARGO_FEATURES = --features=default
+	else
+		CARGO_FEATURES = --features=default,sgx-sw
+	endif
 endif
 
 ######## CUSTOM Settings ########
@@ -195,7 +199,7 @@ lint-tools:
 .PHONY: lint
 lint:
 	@cargo check --locked --tests $(CARGO_TARGET)
-	@cargo udeps --locked --lib --tests --quiet $(CARGO_TARGET)
+	@cargo +nightly udeps --locked --lib --tests --quiet $(CARGO_TARGET)
 
 ######## Tools ########
 
@@ -219,7 +223,7 @@ test:
 
 .PHONY: integration-test
 integration-test: $(Signed_RustEnclave_Name) bin/gaiad
-	@PATH=${PATH}:$(CURDIR)/bin cargo test $(CARGO_TARGET) --package integration-test
+	@PATH=${PATH}:$(CURDIR)/bin cargo test $(CARGO_TARGET) --package integration-test $(CARGO_FEATURES)
 
 .PHONY: test-nodes
 test-setup-nodes: bin/gaiad

@@ -26,3 +26,9 @@ ecall-commands = { path = "../../modules/ecall-commands", default-features = fal
 commitments = { path = "../../modules/commitments", default-features = false, features = ["prover"] }
 light-client = { path = "../../modules/light-client", default-features = false }
 store = { path = "../../modules/store", default-features = false }
+
+[features]
+sgx-sw = [
+    "ecall-commands/sgx-sw",
+    "enclave-remote-attestation/sgx-sw"
+]

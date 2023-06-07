@@ -21,3 +21,9 @@ light-client-registry = { path = "../../modules/light-client-registry", default-
 
 store = { path = "../../modules/store", default-features = false }
 ecall-commands = { path = "../../modules/ecall-commands", default-features = false }
+
+[features]
+sgx-sw = [
+    "ecall-handler/sgx-sw",
+    "ecall-commands/sgx-sw"
+]

@@ -24,3 +24,6 @@ pub use errors::Error;
 pub mod attestation;
 mod errors;
 pub mod report;
+
+#[cfg(feature = "sgx-sw")]
+pub mod simulate;

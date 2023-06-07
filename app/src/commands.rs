@@ -1,4 +1,4 @@
-use self::{elc::ELCCmd, enclave::EnclaveCmd, service::ServiceCmd};
+use self::{attestation::AttestationCmd, elc::ELCCmd, enclave::EnclaveCmd, service::ServiceCmd};
 use crate::{enclave::build_enclave_loader, opts::Opts};
 use anyhow::Result;
 use clap::Parser;
@@ -6,6 +6,7 @@ use host_environment::Environment;
 use std::sync::{Arc, RwLock};
 use store::{host::HostStore, rocksdb::RocksDBStore};
 
+mod attestation;
 mod elc;
 mod enclave;
 mod service;
@@ -15,9 +16,11 @@ mod service;
 pub enum CliCmd {
     #[clap(subcommand, display_order = 1, about = "Enclave subcommands")]
     Enclave(EnclaveCmd),
-    #[clap(subcommand, display_order = 2, about = "ELC subcommands")]
+    #[clap(subcommand, display_order = 2, about = "Attestation subcommands")]
+    Attestation(AttestationCmd),
+    #[clap(subcommand, display_order = 3, about = "ELC subcommands")]
     ELC(ELCCmd),
-    #[clap(subcommand, display_order = 3, about = "Service subcommands")]
+    #[clap(subcommand, display_order = 4, about = "Service subcommands")]
     Service(ServiceCmd),
 }
 
@@ -29,6 +32,7 @@ impl CliCmd {
         host::set_environment(env).unwrap();
         match self {
             CliCmd::Enclave(cmd) => cmd.run(opts, enclave_loader),
+            CliCmd::Attestation(cmd) => cmd.run(opts, enclave_loader),
             CliCmd::Service(cmd) => cmd.run(opts, enclave_loader),
             CliCmd::ELC(cmd) => cmd.run(opts, enclave_loader),
         }

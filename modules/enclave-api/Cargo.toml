@@ -21,3 +21,4 @@ host-environment = { path = "../host-environment" }
 [features]
 default = ["rocksdb"]
 rocksdb = ["store/rocksdbstore"]
+sgx-sw = ["ecall-commands/sgx-sw"]

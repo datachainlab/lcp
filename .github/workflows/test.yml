@@ -57,6 +57,7 @@ jobs:
               "source /opt/sgxsdk/environment && \
               source /root/.cargo/env && \
               export SGX_MODE=SW && \
+              sed -i -e 's#deb https://download.01.org/intel-sgx/sgx_repo/ubuntu.*##g' /etc/apt/sources.list && \
               apt update -y && apt install -y libclang-dev && \
               make && make test integration-test cgen"
       - run: sudo chown -R runner:docker . ${HOME}/.cargo

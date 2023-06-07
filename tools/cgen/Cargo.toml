@@ -35,3 +35,7 @@ relay-tendermint = { path = "../../modules/relay/tendermint" }
 
 [features]
 default = []
+sgx-sw = [
+    "enclave-api/sgx-sw",
+    "ecall-commands/sgx-sw"
+]
