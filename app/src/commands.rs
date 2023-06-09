@@ -12,6 +12,7 @@ mod enclave;
 mod service;
 
 /// Cli Subcommands
+#[allow(clippy::upper_case_acronyms)]
 #[derive(Parser, Debug)]
 pub enum CliCmd {
     #[clap(subcommand, display_order = 1, about = "Enclave subcommands")]

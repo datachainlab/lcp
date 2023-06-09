@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
 use sgx_types::*;
 
+#[allow(clippy::large_enum_variant)]
 #[derive(Serialize, Deserialize, Debug)]
 pub enum RemoteAttestationCommand {
     InitQuote,

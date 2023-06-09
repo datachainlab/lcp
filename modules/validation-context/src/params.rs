@@ -29,11 +29,7 @@ impl ValidationParams {
         use ValidationParams::*;
 
         match self {
-            Empty => {
-                let mut bz = Vec::new();
-                bz.push(0);
-                bz
-            }
+            Empty => vec![0],
             Tendermint(params) => {
                 let mut bz = Vec::new();
                 bz.push(1);
@@ -45,7 +41,7 @@ impl ValidationParams {
 
     pub fn from_bytes(bz: &[u8]) -> Self {
         use ValidationParams::*;
-        assert!(bz.len() > 0);
+        assert!(!bz.is_empty());
         match bz[0] {
             0 => Empty,
             1 => Tendermint(TendermintValidationParams::from_bytes(&bz[1..])),

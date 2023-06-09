@@ -1,3 +1,5 @@
+use core::fmt::Display;
+
 use crate::prelude::*;
 use crate::Error;
 use lcp_types::Any;
@@ -15,16 +17,18 @@ impl StateID {
         StateID(bytes)
     }
 
-    pub fn to_string(&self) -> String {
-        format!("0x{}", hex::encode(self.0))
-    }
-
     pub fn to_vec(&self) -> Vec<u8> {
         self.0.to_vec()
     }
 
     pub fn is_zero(&self) -> bool {
         self == &StateID::default()
+    }
+}
+
+impl Display for StateID {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.write_str(format!("0x{}", hex::encode(self.0)).as_str())
     }
 }
 
@@ -58,7 +62,7 @@ pub fn gen_state_id_from_any(
 
 pub fn gen_state_id_from_bytes(bz: &[u8]) -> Result<StateID, Error> {
     let mut result: [u8; STATE_ID_SIZE] = Default::default();
-    let h = sha2::Sha256::digest(&bz).to_vec();
+    let h = sha2::Sha256::digest(bz).to_vec();
     result.copy_from_slice(&h);
     Ok(StateID::from_bytes_array(result))
 }

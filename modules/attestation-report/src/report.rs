@@ -26,7 +26,7 @@ pub struct EndorsedAttestationVerificationReport {
 
 impl EndorsedAttestationVerificationReport {
     pub fn get_avr(&self) -> Result<AttestationVerificationReport, Error> {
-        Ok(serde_json::from_slice(self.avr.as_bytes()).map_err(Error::serde_json)?)
+        serde_json::from_slice(self.avr.as_bytes()).map_err(Error::serde_json)
     }
 }
 
@@ -152,6 +152,6 @@ mod serde_base64 {
 
     pub fn deserialize<'de, D: Deserializer<'de>>(d: D) -> Result<Vec<u8>, D::Error> {
         let base64 = String::deserialize(d)?;
-        base64::decode(base64.as_bytes()).map_err(|e| serde::de::Error::custom(e))
+        base64::decode(base64.as_bytes()).map_err(serde::de::Error::custom)
     }
 }

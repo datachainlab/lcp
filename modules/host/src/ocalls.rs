@@ -22,6 +22,7 @@ pub fn get_environment() -> Option<&'static Environment> {
     HOST_ENVIRONMENT.get()
 }
 
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
 #[no_mangle]
 pub extern "C" fn ocall_execute_command(
     command: *const u8,

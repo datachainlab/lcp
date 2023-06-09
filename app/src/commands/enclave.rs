@@ -92,7 +92,11 @@ pub struct Metadata {
 }
 
 fn run_print_metadata(opts: &Opts, cmd: &Metadata) -> Result<()> {
-    let metadata = host::sgx_get_metadata(cmd.enclave.clone().unwrap_or(opts.default_enclave()))?;
+    let metadata = host::sgx_get_metadata(
+        cmd.enclave
+            .clone()
+            .unwrap_or_else(|| opts.default_enclave()),
+    )?;
     println!(
         "{}",
         json! {{

@@ -29,9 +29,7 @@ impl TryFrom<MsgVerifyClient> for MsgVerifyMembership {
         let path = Path::ClientState(ClientStatePath(counterparty_client_id)).to_string();
         let value = msg
             .expected_any_client_state
-            .ok_or(Status::invalid_argument(
-                "expected_any_client_state must be non-nil",
-            ))?
+            .ok_or_else(|| Status::invalid_argument("expected_any_client_state must be non-nil"))?
             .encode_to_vec();
         Ok(Self {
             client_id: msg.client_id,
@@ -54,7 +52,7 @@ impl TryFrom<MsgVerifyClientConsensus> for MsgVerifyMembership {
             })?;
         let consensus_height = msg
             .consensus_height
-            .ok_or(Status::invalid_argument("consensus_height must be non-nil"))?;
+            .ok_or_else(|| Status::invalid_argument("consensus_height must be non-nil"))?;
         let path = Path::ClientConsensusState(ClientConsensusStatePath {
             client_id: counterparty_client_id,
             epoch: consensus_height.revision_number,
@@ -63,9 +61,9 @@ impl TryFrom<MsgVerifyClientConsensus> for MsgVerifyMembership {
         .to_string();
         let value = msg
             .expected_any_client_consensus_state
-            .ok_or(Status::invalid_argument(
-                "expected_any_client_consensus_state must be non-nil",
-            ))?
+            .ok_or_else(|| {
+                Status::invalid_argument("expected_any_client_consensus_state must be non-nil")
+            })?
             .encode_to_vec();
         Ok(Self {
             client_id: msg.client_id,
@@ -88,9 +86,7 @@ impl TryFrom<MsgVerifyConnection> for MsgVerifyMembership {
 
         let value = msg
             .expected_connection
-            .ok_or(Status::invalid_argument(
-                "expected_connection must be non-nil",
-            ))?
+            .ok_or_else(|| Status::invalid_argument("expected_connection must be non-nil"))?
             .encode_to_vec();
 
         Ok(Self {
@@ -115,7 +111,7 @@ impl TryFrom<MsgVerifyChannel> for MsgVerifyMembership {
         let path = Path::ChannelEnd(ChannelEndPath(port_id, channel_id)).to_string();
         let value = msg
             .expected_channel
-            .ok_or(Status::invalid_argument("expected_channel must be non-nil"))?
+            .ok_or_else(|| Status::invalid_argument("expected_channel must be non-nil"))?
             .encode_to_vec();
 
         Ok(Self {

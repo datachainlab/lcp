@@ -54,13 +54,12 @@ pub fn verify_report(
         .map(|cert| cert.to_trust_anchor())
         .collect();
 
-    let mut chain: Vec<&[u8]> = Vec::new();
-    chain.push(&root_ca);
+    let chain = vec![root_ca.as_slice()];
 
     let report_cert = webpki::EndEntityCert::from(&report.signing_cert)
         .map_err(|e| Error::web_pki(e.to_string()))?;
 
-    let _ = report_cert
+    report_cert
         .verify_is_valid_tls_server_cert(
             SUPPORTED_SIG_ALGS,
             &webpki::TLSServerTrustAnchors(&trust_anchors),
@@ -69,7 +68,7 @@ pub fn verify_report(
         )
         .map_err(|e| Error::web_pki(e.to_string()))?;
 
-    let _ = report_cert
+    report_cert
         .verify_signature(
             &webpki::RSA_PKCS1_2048_8192_SHA256,
             report.avr.as_bytes(),

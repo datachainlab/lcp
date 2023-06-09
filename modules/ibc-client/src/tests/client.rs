@@ -97,7 +97,7 @@ impl LightClient for LCPLightClient {
         ctx: &dyn HostClientReader,
         client_id: &ClientId,
     ) -> Result<Height, LightClientError> {
-        let client_state: ClientState = ctx.client_state(&client_id)?.try_into()?;
+        let client_state: ClientState = ctx.client_state(client_id)?.try_into()?;
         Ok(client_state.latest_height)
     }
 

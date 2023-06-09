@@ -30,7 +30,7 @@ pub const IBC_GO_COMMIT: &str = include_str!("IBC_GO_COMMIT");
 
 /// Protobuf-encoded file descriptor set for all message types, used for gRPC reflection.
 #[cfg(feature = "server")]
-pub const FILE_DESCRIPTOR_SET: &'static [u8] = include_bytes!("descriptor.bin");
+pub const FILE_DESCRIPTOR_SET: &[u8] = include_bytes!("descriptor.bin");
 
 pub use ibc_proto::{cosmos, google};
 

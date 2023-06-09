@@ -23,7 +23,7 @@ pub struct ClientState {
 
 impl ClientState {
     pub fn contains(&self, key: &Address) -> bool {
-        self.keys.iter().find(|k| &k.0 == key).is_some()
+        self.keys.iter().any(|k| &k.0 == key)
     }
 
     pub fn is_active_key(&self, current_time: Time, key: &Address) -> bool {

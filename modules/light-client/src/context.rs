@@ -15,24 +15,24 @@ pub trait ClientReader: KVStore {
     /// Returns the ClientType for the given identifier `client_id`.
     fn client_type(&self, client_id: &ClientId) -> Result<String, Error> {
         let value = self.get(format!("{}", ClientTypePath::new(client_id)).as_bytes());
-        if value.is_none() {
-            Err(Error::client_type_not_found(client_id.clone()))
+        if let Some(value) = value {
+            Ok(String::from_utf8(value).unwrap())
         } else {
-            Ok(String::from_utf8(value.unwrap()).unwrap())
+            Err(Error::client_type_not_found(client_id.clone()))
         }
     }
 
     /// Returns the ClientState for the given identifier `client_id`.
     fn client_state(&self, client_id: &ClientId) -> Result<Any, Error> {
         let value = self.get(format!("{}", ClientStatePath::new(client_id)).as_bytes());
-        if value.is_none() {
-            Err(Error::client_state_not_found(client_id.clone()))
-        } else {
+        if let Some(value) = value {
             Ok(
-                bincode::serde::decode_from_slice(&value.unwrap(), bincode::config::standard())
+                bincode::serde::decode_from_slice(&value, bincode::config::standard())
                     .unwrap()
                     .0,
             )
+        } else {
+            Err(Error::client_state_not_found(client_id.clone()))
         }
     }
 
@@ -45,10 +45,7 @@ pub trait ClientReader: KVStore {
         let value = match self.get(format!("{}", path).as_bytes()) {
             Some(value) => value,
             None => {
-                return Err(Error::consensus_state_not_found(
-                    client_id.clone(),
-                    height.clone(),
-                ));
+                return Err(Error::consensus_state_not_found(client_id.clone(), *height));
             }
         };
         Ok(

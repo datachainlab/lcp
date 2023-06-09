@@ -66,7 +66,7 @@ impl Relayer {
                 self.client_state.clone().unwrap(),
             )),
         )?;
-        assert!(supporting.len() == 0);
+        assert!(supporting.is_empty());
         Ok(relayer_header_to_any(target))
     }
 

@@ -40,9 +40,9 @@ impl FromStr for ClientId {
     type Err = TypeError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Ok(validate_client_identifier(s)
+        validate_client_identifier(s)
             .map(|_| Self(s.to_string()))
-            .map_err(|e| TypeError::invalid_client_id_format(s.to_string(), e.to_string()))?)
+            .map_err(|e| TypeError::invalid_client_id_format(s.to_string(), e.to_string()))
     }
 }
 

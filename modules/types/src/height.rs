@@ -27,7 +27,7 @@ impl Height {
     }
 
     pub fn zero() -> Self {
-        return Height::new(0, 0);
+        Height::new(0, 0)
     }
 
     pub fn revision_number(&self) -> u64 {

@@ -32,8 +32,8 @@ mod tests {
     use tempdir::TempDir;
     use tokio::runtime::Runtime as TokioRuntime;
 
-    static ENCLAVE_FILE: &'static str = "../../bin/enclave.signed.so";
-    static ENV_SETUP_NODES: &'static str = "SETUP_NODES";
+    static ENCLAVE_FILE: &str = "../../bin/enclave.signed.so";
+    static ENV_SETUP_NODES: &str = "SETUP_NODES";
 
     struct ELCStateVerificationTest {
         enclave: Enclave<store::memory::MemStore>,
@@ -64,7 +64,7 @@ mod tests {
         let tmp_dir = TempDir::new("lcp").unwrap();
         let home = tmp_dir.path().to_str().unwrap().to_string();
         host::set_environment(Environment::new(
-            home.clone().into(),
+            home.into(),
             Arc::new(RwLock::new(HostStore::Memory(MemStore::default()))),
         ))
         .unwrap();
@@ -78,14 +78,14 @@ mod tests {
         }
     }
 
-    fn run_test<'e>(enclave: &Enclave<store::memory::MemStore>) -> Result<(), anyhow::Error> {
+    fn run_test(enclave: &Enclave<store::memory::MemStore>) -> Result<(), anyhow::Error> {
         env_logger::init();
         let rt = Arc::new(TokioRuntime::new()?);
         let rly = relayer::create_relayer(rt).unwrap();
         verify(rly, enclave)
     }
 
-    fn verify<'e>(
+    fn verify(
         mut rly: Relayer,
         enclave: &Enclave<store::memory::MemStore>,
     ) -> Result<(), anyhow::Error> {
@@ -142,8 +142,8 @@ mod tests {
 
         let res = enclave
             .init_client(InitClientInput {
-                any_client_state: client_state.into(),
-                any_consensus_state: consensus_state.into(),
+                any_client_state: client_state,
+                any_consensus_state: consensus_state,
                 current_timestamp: Time::now(),
             })
             .unwrap();
@@ -152,13 +152,7 @@ mod tests {
 
         info!("generated client id is {}", client_id.as_str().to_string());
 
-        let target_header = rly.create_header(
-            initial_height.try_into().map_err(|e| anyhow!("{:?}", e))?,
-            initial_height
-                .increment()
-                .try_into()
-                .map_err(|e| anyhow!("{:?}", e))?,
-        )?;
+        let target_header = rly.create_header(initial_height, initial_height.increment())?;
         let res = enclave.update_client(UpdateClientInput {
             client_id: client_id.clone(),
             any_header: target_header,

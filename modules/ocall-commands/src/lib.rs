@@ -20,12 +20,14 @@ pub struct OCallCommand {
     pub cmd: Command,
 }
 
+#[allow(clippy::large_enum_variant)]
 #[derive(Serialize, Deserialize, Debug)]
 pub enum Command {
     RemoteAttestation(RemoteAttestationCommand),
     Store(StoreCommand),
 }
 
+#[allow(clippy::large_enum_variant)]
 #[derive(Serialize, Deserialize, Debug)]
 pub enum CommandResult {
     RemoteAttestation(RemoteAttestationResult),

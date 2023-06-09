@@ -74,7 +74,7 @@ impl LightClient for TendermintLightClient {
             commitment: UpdateClientCommitment {
                 prev_state_id: None,
                 new_state_id: state_id,
-                new_state: Some(any_client_state.into()),
+                new_state: Some(any_client_state),
                 prev_height: None,
                 new_height: height,
                 timestamp,

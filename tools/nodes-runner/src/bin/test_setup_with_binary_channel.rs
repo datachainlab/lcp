@@ -69,7 +69,7 @@ impl BinaryChannelTest for Test {
         let listener = TcpListener::bind(&self.addr).unwrap();
         for stream in listener.incoming() {
             let mut stream = stream.unwrap();
-            stream.write("ok".as_bytes()).unwrap();
+            stream.write_all("ok".as_bytes()).unwrap();
             stream.flush().unwrap();
         }
         Ok(())

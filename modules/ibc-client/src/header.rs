@@ -18,6 +18,7 @@ pub const LCP_HEADER_REGISTER_ENCLAVE_KEY_TYPE_URL: &str =
     "/ibc.lightclients.lcp.v1.Header.RegisterEnclaveKey";
 pub const LCP_HEADER_UPDATE_CLIENT_TYPE_URL: &str = "/ibc.lightclients.lcp.v1.Header.UpdateClient";
 
+#[allow(clippy::large_enum_variant)]
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub enum Header {
     RegisterEnclaveKey(RegisterEnclaveKeyHeader),

@@ -42,7 +42,7 @@ impl Cli {
         let ias_key = std::env::var("IAS_KEY")?.as_bytes().to_vec();
 
         host::set_environment(Environment::new(
-            home.clone().into(),
+            home.into(),
             Arc::new(RwLock::new(HostStore::Memory(MemStore::default()))),
         ))
         .unwrap();

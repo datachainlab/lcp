@@ -55,7 +55,7 @@ impl LightClient for MockLightClient {
             commitment: UpdateClientCommitment {
                 prev_state_id: None,
                 new_state_id: state_id,
-                new_state: Some(any_client_state.into()),
+                new_state: Some(any_client_state),
                 prev_height: None,
                 new_height: height,
                 timestamp,
@@ -118,9 +118,7 @@ impl LightClient for MockLightClient {
             })?;
 
         let new_client_state = ClientState(
-            downcast_client_state::<MockClientState>(new_client_state.as_ref())
-                .unwrap()
-                .clone(),
+            *downcast_client_state::<MockClientState>(new_client_state.as_ref()).unwrap(),
         );
         let new_consensus_state = ConsensusState(
             downcast_consensus_state::<MockConsensusState>(new_consensus_state.as_ref())

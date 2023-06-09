@@ -13,14 +13,14 @@ use tendermint::Time as TmTime;
 pub struct Time(TmTime);
 
 impl Time {
-    #[cfg(feature = "std")]
+    #[cfg(all(feature = "std", not(feature = "sgx")))]
     pub fn now() -> Self {
         use std::time::{SystemTime, UNIX_EPOCH};
         let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
         Time(TmTime::from_unix_timestamp(now.as_secs() as i64, now.subsec_nanos()).unwrap())
     }
 
-    #[cfg(feature = "sgx")]
+    #[cfg(all(feature = "sgx", not(feature = "std")))]
     pub fn now() -> Self {
         use sgx_tstd::time::{SystemTime, UNIX_EPOCH};
         use sgx_tstd::untrusted::time::SystemTimeEx;
