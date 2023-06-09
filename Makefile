@@ -199,7 +199,7 @@ lint:
 
 .PHONY: udeps-tools
 lint-tools:
-	rustup component add clippy
+	rustup component add rustfmt clippy
 	cargo +nightly install cargo-udeps --locked
 
 .PHONY: udeps
