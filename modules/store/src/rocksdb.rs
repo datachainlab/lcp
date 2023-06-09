@@ -110,7 +110,7 @@ impl CommitStore for RocksDBStore {
         self.with_mut(|fields| {
             fields.latest_tx_id.safe_incr()?;
             if let Some(update_key) = update_key {
-                if update_key.len() == 0 {
+                if update_key.is_empty() {
                     return Err(Error::invalid_update_key_length(0));
                 }
                 if !fields.mutex.contains_key(&update_key) {
@@ -303,7 +303,7 @@ pub struct PreparedRocksDBTx;
 
 impl<T> Tx for RocksDBTx<T> {
     fn get_id(&self) -> TxId {
-        self.borrow_id().clone()
+        *self.borrow_id()
     }
 }
 
@@ -382,7 +382,7 @@ mod tests {
     fn test_store() {
         let _ = env_logger::try_init();
         let tmp_dir = TempDir::new("store-rocksdb").unwrap().into_path();
-        let mut store = RocksDBStore::open(tmp_dir.clone());
+        let mut store = RocksDBStore::open(tmp_dir);
 
         // case1: set key-value pair simply in update tx
         // pre:  initial state

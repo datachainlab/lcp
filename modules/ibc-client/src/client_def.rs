@@ -204,7 +204,7 @@ impl LCPClient {
         consensus_state: &ConsensusState,
     ) -> Result<(), Error> {
         // An initial client state's keys must be empty
-        assert!(client_state.keys.len() == 0);
+        assert!(client_state.keys.is_empty());
         // key_expiration must not be 0
         assert!(!client_state.key_expiration.is_zero());
         // An initial client state's latest height must be empty
@@ -225,13 +225,13 @@ impl LCPClient {
         consensus_state: &ConsensusState,
     ) -> Result<(), Error> {
         // An initial client state's keys must not be empty
-        assert!(client_state.keys.len() != 0);
+        assert!(!client_state.keys.is_empty());
         // key_expiration must not be 0
         assert!(!client_state.key_expiration.is_zero());
         // An initial client state's latest height must be empty
         assert!(client_state.latest_height.is_zero());
         // mr_enclave length must be 0
-        assert!(client_state.mr_enclave.len() == 0);
+        assert!(client_state.mr_enclave.is_empty());
         // An initial consensus state must be empty
         assert!(consensus_state.is_empty());
 

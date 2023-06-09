@@ -13,7 +13,8 @@ use std::{
 };
 use store::transaction::CommitStore;
 
-// `enclave` subcommand
+/// `attestation` subcommand
+#[allow(clippy::upper_case_acronyms)]
 #[derive(Debug, Parser)]
 pub enum AttestationCmd {
     #[clap(display_order = 1, about = "Remote Attestation with IAS")]
@@ -115,12 +116,18 @@ fn run_show_avr(opts: &Opts, home: PathBuf, cmd: &ShowAVR) -> Result<()> {
     let avr = report.get_avr()?;
     let quote = avr.parse_quote()?;
     if cmd.validate {
-        let enclave_path = cmd.enclave.clone().unwrap_or(opts.default_enclave());
+        let enclave_path = cmd
+            .enclave
+            .clone()
+            .unwrap_or_else(|| opts.default_enclave());
         if !enclave_path.exists() {
             bail!("Enclave not found: {:?}", enclave_path.as_path());
         }
-        let metadata =
-            host::sgx_get_metadata(cmd.enclave.clone().unwrap_or(opts.default_enclave()))?;
+        let metadata = host::sgx_get_metadata(
+            cmd.enclave
+                .clone()
+                .unwrap_or_else(|| opts.default_enclave()),
+        )?;
         quote.match_metadata(&metadata)?;
     }
     println!(

@@ -99,21 +99,21 @@ impl ValidationPredicate for TendermintValidationPredicate {
         assert!(Self::is_within_trust_period(
             params.trusted_consensus_state_timestamp,
             params.options.trusting_period,
-            vctx.current_timestamp.into(),
+            vctx.current_timestamp,
         ));
 
         // ensure the header isn't from a future time
         assert!(Self::is_header_from_past(
             params.untrusted_header_timestamp,
             params.options.clock_drift,
-            vctx.current_timestamp.into(),
+            vctx.current_timestamp,
         ));
 
         Ok(true)
     }
 }
 
-#[cfg(all(test, not(feature = "sgx")))]
+#[cfg(test)]
 mod tests {
     use super::*;
 

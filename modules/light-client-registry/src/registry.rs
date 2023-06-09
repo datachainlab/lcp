@@ -12,6 +12,7 @@ pub trait LightClientRegistry: LightClientResolver {
 }
 
 pub trait LightClientResolver {
+    #[allow(clippy::borrowed_box)]
     fn get_light_client(&self, type_url: &str) -> Option<&Box<dyn LightClient>>;
 }
 

@@ -42,7 +42,7 @@ fn get_ias_socket() -> Result<GetIASSocketResult> {
     let port = 443;
     let hostname = "api.trustedservices.intel.com";
     let addr = lookup_ipv4(hostname, port);
-    let sock = TcpStream::connect(&addr).expect("[-] Connect tls server failed!");
+    let sock = TcpStream::connect(addr).expect("[-] Connect tls server failed!");
 
     Ok(GetIASSocketResult {
         fd: sock.into_raw_fd(),

@@ -138,11 +138,11 @@ impl<'a, ClientState: Ics02ClientState, ConsensusState: Ics02ConsensusState> Val
     }
 
     fn client_counter(&self) -> Result<u64, ibc::core::ContextError> {
-        Ok(self.parent.client_counter().map_err(|e| {
+        self.parent.client_counter().map_err(|e| {
             ContextError::ClientError(ClientError::ClientSpecific {
                 description: e.to_string(),
             })
-        })?)
+        })
     }
 
     fn connection_end(

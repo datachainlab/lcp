@@ -38,7 +38,7 @@ impl Display for UpdateClientCommitment {
         write!(
             f,
             "prev_state_id={} new_state_id={} new_state_include={} prev_height={:?} new_height={:?} timestamp={} validation_params={{{}}}",
-            self.prev_state_id.map_or("".to_string(), |s| s.to_string()), self.new_state_id.to_string(), self.new_state.is_some(), self.prev_height.map_or("".to_string(), |h| h.to_string()), self.new_height.to_string(), self.timestamp, self.validation_params
+            self.prev_state_id.map_or("".to_string(), |s| s.to_string()), self.new_state_id, self.new_state.is_some(), self.prev_height.map_or("".to_string(), |h| h.to_string()), self.new_height.to_string(), self.timestamp, self.validation_params
         )
     }
 }
@@ -76,16 +76,16 @@ impl UpdateClientCommitment {
         let r = rlp::Rlp::new(bz);
         Ok(Self {
             prev_state_id: match r.at(0)?.as_val::<Vec<u8>>()? {
-                ref v if v.len() > 0 => Some(v.as_slice().try_into()?),
+                ref v if !v.is_empty() => Some(v.as_slice().try_into()?),
                 _ => None,
             },
             new_state_id: r.at(1)?.as_val::<Vec<u8>>()?.as_slice().try_into()?,
             new_state: match r.at(2)?.as_val::<Vec<u8>>()? {
-                v if v.len() > 0 => Some(Any::try_from(v)?),
+                v if !v.is_empty() => Some(Any::try_from(v)?),
                 _ => None,
             },
             prev_height: match r.at(3)?.as_val::<Vec<u8>>()?.as_slice() {
-                v if v.len() > 0 => Some(v.try_into()?),
+                v if !v.is_empty() => Some(v.try_into()?),
                 _ => None,
             },
             new_height: r.at(4)?.as_val::<Vec<u8>>()?.as_slice().try_into()?,
@@ -113,11 +113,7 @@ impl Display for StateCommitment {
         write!(
             f,
             "prefix={:?} path={} value={:?} height={} state_id={}",
-            self.prefix,
-            self.path,
-            self.value,
-            self.height.to_string(),
-            self.state_id.to_string()
+            self.prefix, self.path, self.value, self.height, self.state_id
         )
     }
 }
@@ -159,7 +155,7 @@ impl StateCommitment {
             prefix: r.at(0)?.as_val::<Vec<u8>>()?,
             path: r.at(1)?.as_val::<String>()?,
             value: match r.at(2)?.as_val::<Vec<u8>>()?.as_slice() {
-                bz if bz.len() > 0 => Some(bytes_to_array(bz)?),
+                bz if !bz.is_empty() => Some(bytes_to_array(bz)?),
                 _ => None,
             },
             height: r.at(3)?.as_val::<Vec<u8>>()?.as_slice().try_into()?,
@@ -233,7 +229,7 @@ mod tests {
     fn test_state_commitment_converter() {
         for _ in 0..256 {
             let c1 = StateCommitment {
-                prefix: "ibc".as_bytes().to_vec().try_into().unwrap(),
+                prefix: "ibc".as_bytes().to_vec(),
                 path: Path::ClientType(ibc::core::ics24_host::path::ClientTypePath(
                     ClientId::new(client_type(), thread_rng().gen()).unwrap(),
                 ))
@@ -251,7 +247,7 @@ mod tests {
     fn gen_rand_vec(size: usize) -> Vec<u8> {
         let mut rng = thread_rng();
         let range = Uniform::new(0, u8::MAX);
-        let vals: Vec<u8> = (0..size).map(|_| rng.sample(&range)).collect();
+        let vals: Vec<u8> = (0..size).map(|_| rng.sample(range)).collect();
         vals
     }
 

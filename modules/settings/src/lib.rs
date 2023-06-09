@@ -22,7 +22,7 @@ pub const SIGNING_METHOD: SigningMethod = SigningMethod::MRENCLAVE;
 pub const SIGNING_METHOD: SigningMethod = SigningMethod::MRSIGNER;
 
 #[cfg(feature = "production")]
-pub static RT_ALLOWED_STATUS: &'static [sgx_status_t] = &[];
+pub static RT_ALLOWED_STATUS: &[sgx_status_t] = &[];
 
 #[cfg(not(feature = "production"))]
-pub static RT_ALLOWED_STATUS: &'static [sgx_status_t] = &[sgx_status_t::SGX_ERROR_UPDATE_NEEDED];
+pub static RT_ALLOWED_STATUS: &[sgx_status_t] = &[sgx_status_t::SGX_ERROR_UPDATE_NEEDED];

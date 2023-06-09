@@ -4,6 +4,7 @@ use crate::prelude::*;
 use commitments::{CommitmentPrefix, StateCommitment, UpdateClientCommitment};
 use lcp_types::{Any, ClientId, Height};
 
+#[allow(clippy::too_many_arguments)]
 pub trait LightClient {
     /// client_type returns a client type of the light client
     fn client_type(&self) -> String;

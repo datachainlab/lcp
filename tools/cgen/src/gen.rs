@@ -60,7 +60,7 @@ pub enum Command {
 impl FromStr for Command {
     type Err = anyhow::Error;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let parts: Vec<&str> = s.split(":").collect();
+        let parts: Vec<&str> = s.split(':').collect();
         match parts[0] {
             "update_client" => Ok(Command::UpdateClient),
             "verify_connection" => Ok(Command::VerifyConnection),
@@ -168,8 +168,8 @@ impl<'e, ChainA: ChainHandle, ChainB: ChainHandle> CommandFileGenerator<'e, Chai
         );
 
         let input = InitClientInput {
-            any_client_state: client_state.into(),
-            any_consensus_state: consensus_state.into(),
+            any_client_state: client_state,
+            any_consensus_state: consensus_state,
             current_timestamp: Time::now(),
         };
 
@@ -196,13 +196,8 @@ impl<'e, ChainA: ChainHandle, ChainB: ChainHandle> CommandFileGenerator<'e, Chai
             "To update the client, you need to advance block's height with `wait_blocks`"
         );
         let target_header = self.rly.create_header(
-            self.client_latest_height
-                .unwrap()
-                .try_into()
-                .map_err(|e| anyhow!("{:?}", e))?,
-            self.chain_latest_provable_height
-                .try_into()
-                .map_err(|e| anyhow!("{:?}", e))?,
+            self.client_latest_height.unwrap(),
+            self.chain_latest_provable_height,
         )?;
         let input = UpdateClientInput {
             client_id,
@@ -234,12 +229,7 @@ impl<'e, ChainA: ChainHandle, ChainB: ChainHandle> CommandFileGenerator<'e, Chai
                     .unwrap()
                     .clone(),
             ),
-            Some(
-                self.client_latest_height
-                    .unwrap()
-                    .try_into()
-                    .map_err(|e| anyhow!("{:?}", e))?,
-            ),
+            self.client_latest_height,
         )?;
 
         let input = VerifyMembershipInput {
@@ -271,12 +261,7 @@ impl<'e, ChainA: ChainHandle, ChainB: ChainHandle> CommandFileGenerator<'e, Chai
         let res = self.rly.query_channel_proof(
             to_ibc_port_id(self.channel.channel.a_side.port_id().clone()),
             to_ibc_channel_id(self.channel.channel.a_side.channel_id().unwrap().clone()),
-            Some(
-                self.client_latest_height
-                    .unwrap()
-                    .try_into()
-                    .map_err(|e| anyhow!("{:?}", e))?,
-            ),
+            self.client_latest_height,
         )?;
 
         let input = VerifyMembershipInput {
@@ -309,12 +294,7 @@ impl<'e, ChainA: ChainHandle, ChainB: ChainHandle> CommandFileGenerator<'e, Chai
             to_ibc_port_id(self.channel.channel.a_side.port_id().clone()),
             to_ibc_channel_id(self.channel.channel.a_side.channel_id().unwrap().clone()),
             sequence,
-            Some(
-                self.client_latest_height
-                    .unwrap()
-                    .try_into()
-                    .map_err(|e| anyhow!("{:?}", e))?,
-            ),
+            self.client_latest_height,
         )?;
 
         let input = VerifyMembershipInput {

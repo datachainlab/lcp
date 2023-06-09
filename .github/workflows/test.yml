@@ -15,6 +15,7 @@ jobs:
             ./enclave
           cache-directories: |
             ~/.cargo/registry/src/**/librocksdb-sys-*
+      - run: make lint-tools
       - run: make lint
 
   udeps:
@@ -31,7 +32,7 @@ jobs:
             ./enclave
           cache-directories: |
             ~/.cargo/registry/src/**/librocksdb-sys-*
-      - run: make udeps-tools
+      - run: make lint-tools
       - run: make udeps
 
   relayer:

@@ -30,7 +30,7 @@ pub fn verify_report(
     }
 
     // check if `mr_enclave` that is included in the quote matches the expected value
-    if &quote.raw.report_body.mr_enclave.m != client_state.mr_enclave.as_slice() {
+    if quote.raw.report_body.mr_enclave.m != client_state.mr_enclave.as_slice() {
         return Err(Error::mrenclave_mismatch(
             quote.raw.report_body.mr_enclave.m.to_vec(),
             client_state.mr_enclave.clone(),

@@ -17,7 +17,7 @@ impl HashMapLightClientRegistry {
 
     pub fn seal(&mut self) -> Result<(), Error> {
         match self.sealed {
-            true => Err(Error::already_sealed().into()),
+            true => Err(Error::already_sealed()),
             false => {
                 self.sealed = true;
                 Ok(())

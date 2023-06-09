@@ -190,14 +190,16 @@ proto:
 
 .PHONY: fmt
 fmt:
-	@cargo fmt --all && cd ./enclave && cargo fmt --all
+	@cargo fmt --all $(CARGO_FMT_OPT) && cd ./enclave && cargo fmt --all $(CARGO_FMT_OPT)
 
 .PHONY: lint
 lint:
-	@cargo check --locked --tests $(CARGO_TARGET)
+	@$(MAKE) CARGO_FMT_OPT=--check fmt
+	@cargo clippy --locked --tests $(CARGO_TARGET) -- -D warnings
 
 .PHONY: udeps-tools
-udeps-tools:
+lint-tools:
+	rustup component add rustfmt clippy
 	cargo +nightly install cargo-udeps --locked
 
 .PHONY: udeps
