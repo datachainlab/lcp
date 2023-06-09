@@ -192,14 +192,17 @@ proto:
 fmt:
 	@cargo fmt --all && cd ./enclave && cargo fmt --all
 
-.PHONY: lint-tools
-lint-tools:
-	cargo +nightly install cargo-udeps --locked
-
 .PHONY: lint
 lint:
 	@cargo check --locked --tests $(CARGO_TARGET)
-	@cargo +nightly udeps --locked --lib --tests --quiet $(CARGO_TARGET)
+
+.PHONY: udeps-tools
+udeps-tools:
+	cargo +nightly install cargo-udeps --locked
+
+.PHONY: udeps
+udeps:
+	@cargo +nightly udeps --locked --lib --tests $(CARGO_TARGET)
 
 ######## Tools ########
 

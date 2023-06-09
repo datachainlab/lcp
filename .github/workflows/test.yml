@@ -4,18 +4,35 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - uses: actions-rs/toolchain@v1
         with:
             toolchain: nightly
-      - uses: Swatinem/rust-cache@v2
+      - uses: datachainlab/rust-cache@allow_registry_src_caching
         with:
           workspaces: |
             .
             ./enclave
-      - uses: actions-rs/cargo@v1
-      - run: make lint-tools
+          cache-directories: |
+            ~/.cargo/registry/src/**/librocksdb-sys-*
       - run: make lint
+
+  udeps:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions-rs/toolchain@v1
+        with:
+            toolchain: nightly
+      - uses: datachainlab/rust-cache@allow_registry_src_caching
+        with:
+          workspaces: |
+            .
+            ./enclave
+          cache-directories: |
+            ~/.cargo/registry/src/**/librocksdb-sys-*
+      - run: make udeps-tools
+      - run: make udeps
 
   relayer:
     runs-on: ubuntu-latest
@@ -41,12 +58,13 @@ jobs:
       - uses: actions-rs/toolchain@v1
         with:
             toolchain: nightly
-      - uses: Swatinem/rust-cache@v2
+      - uses: datachainlab/rust-cache@allow_registry_src_caching
         with:
           workspaces: |
             .
             ./enclave
-      - uses: actions-rs/cargo@v1
+          cache-directories: |
+            ~/.cargo/registry/src/**/librocksdb-sys-*
       - run: |
           docker run -w /root/lcp \
             -v $(pwd):/root/lcp \
