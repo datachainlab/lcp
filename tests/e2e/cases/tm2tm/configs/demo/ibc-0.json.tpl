@@ -14,20 +14,10 @@
       "@type": "/relayer.chains.tendermint.config.ProverConfig",
       "trusting_period": "336h"
     },
-    "lcp_service_address": "localhost:50052",
-    "mrenclave": "0x595eb32b9cc5ed0f46a83b19328ed9c39d2ad3d2baf5ded1f894465e5a095b57",
-    "allowed_quote_statuses": [
-      "GROUP_OUT_OF_DATE"
-    ],
-    "allowed_advisory_ids": [
-      "INTEL-SA-00219",
-      "INTEL-SA-00289",
-      "INTEL-SA-00334",
-      "INTEL-SA-00477",
-      "INTEL-SA-00614",
-      "INTEL-SA-00615",
-      "INTEL-SA-00617"
-    ],
+    "lcp_service_address": "localhost:50051",
+    "mrenclave": "$MRENCLAVE",
+    "allowed_quote_statuses": ["GROUP_OUT_OF_DATE"],
+    "allowed_advisory_ids": ["INTEL-SA-00219","INTEL-SA-00289","INTEL-SA-00334","INTEL-SA-00477","INTEL-SA-00614","INTEL-SA-00615","INTEL-SA-00617"],
     "elc_client_id": "07-tendermint-1"
   }
 }
