@@ -5,23 +5,17 @@ edition = "2021"
 
 [dependencies]
 sgx_types = { rev = "v1.1.6", git = "https://github.com/apache/incubator-teaclave-sgx-sdk" }
-prost-types = { version = "0.11", default-features = false }
-serde = { version = "1.0", default-features = false, features = ["alloc"] }
 hex = { version = "0.4", default-features = false, features = ["alloc"] }
-log = { version = "0.4.8", default-features = false }
 flex-error = { version = "0.4.4", default-features = false }
 
-enclave-utils = { path = "../utils" }
 enclave-remote-attestation = { path = "../remote-attestation" }
 crypto = { path = "../../modules/crypto", default-features = false, features = ["sgx"] }
 attestation-report = { path = "../../modules/attestation-report", default-features = false, features = ["sgx"] }
 context = { path = "../../modules/context", default-features = false }
 enclave-environment = { path = "../environment", default-features = false }
-bincode = { git = "https://github.com/bluele/bincode-sgx", branch = "serde" }
 
 lcp-types = { path = "../../modules/types", default-features = false }
 light-client-registry = { path = "../../modules/light-client-registry", default-features = false }
-settings = { path = "../../modules/settings", default-features = false }
 ecall-commands = { path = "../../modules/ecall-commands", default-features = false }
 commitments = { path = "../../modules/commitments", default-features = false, features = ["prover"] }
 light-client = { path = "../../modules/light-client", default-features = false }

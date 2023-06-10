@@ -18,23 +18,6 @@ jobs:
       - run: make lint-tools
       - run: make lint
 
-  udeps:
-    runs-on: ubuntu-22.04
-    steps:
-      - uses: actions/checkout@v3
-      - uses: actions-rs/toolchain@v1
-        with:
-            toolchain: nightly
-      - uses: datachainlab/rust-cache@allow_registry_src_caching
-        with:
-          workspaces: |
-            .
-            ./enclave
-          cache-directories: |
-            ~/.cargo/registry/src/**/librocksdb-sys-*
-      - run: make lint-tools
-      - run: make udeps
-
   relayer:
     runs-on: ubuntu-22.04
     steps:

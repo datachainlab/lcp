@@ -4,10 +4,6 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-prost-types = { version = "0.11", default-features = false }
-serde = { version = "1.0", default-features = false, features = ["alloc"] }
-log = { version = "0.4.8", default-features = false }
-
 lcp-types = { path = "../types", default-features = false }
 store = { path = "../store", default-features = false }
 crypto = { path = "../crypto", default-features = false }

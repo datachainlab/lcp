@@ -6,16 +6,12 @@ edition = "2021"
 [dependencies]
 sgx_types = { rev = "v1.1.6", git = "https://github.com/apache/incubator-teaclave-sgx-sdk" }
 sgx_tstd = { rev = "v1.1.6", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", features = ["net"] }
-sgx_trts = { rev = "v1.1.6", git = "https://github.com/apache/incubator-teaclave-sgx-sdk" }
 sgx_tse = { rev = "v1.1.6", git = "https://github.com/apache/incubator-teaclave-sgx-sdk" }
 sgx_tcrypto = { rev = "v1.1.6", git = "https://github.com/apache/incubator-teaclave-sgx-sdk" }
 
-serde = { version = "1.0", default-features = false, features = ["alloc"] }
-serde_json = { version = "1.0", default-features = false, features = ["alloc"] }
 itertools = { version = "0.8", default-features = false, features = [] }
 log = { version = "0.4.8", default-features = false }
 base64 = { git = "https://github.com/marshallpierce/rust-base64", default-features = false, features = ["alloc"] }
-hex = { version = "0.4", default-features = false, features = ["alloc"] }
 httparse = { version = "1.3", default-features = false }
 chrono = { version = "0.4.19", default-features = false, features = ["alloc"]}
 flex-error = { version = "0.4.4", default-features = false }
@@ -23,7 +19,6 @@ flex-error = { version = "0.4.4", default-features = false }
 webpki = { git = "https://github.com/mesalock-linux/webpki", branch = "mesalock_sgx" }
 webpki-roots = { git = "https://github.com/mesalock-linux/webpki-roots", rev = "6ff3be547ac13ccd46ae55605ad6506ce30688ef" }
 rustls = { git = "https://github.com/mesalock-linux/rustls", branch = "mesalock_sgx" }
-bincode = { git = "https://github.com/bluele/bincode-sgx", branch = "serde" }
 
 host-api = { path = "../host-api" }
 

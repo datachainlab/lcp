@@ -3,12 +3,6 @@ name = "enclave-store"
 version = "0.1.0"
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
-flex-error = { version = "0.4.4", default-features = false }
-
 host-api = { path = "../host-api" }
-
 store = { path = "../../modules/store", default-features = false }
-ocall-commands = { path = "../../modules/ocall-commands", default-features = false }

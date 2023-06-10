@@ -188,6 +188,11 @@ proto:
 
 ######## Lint ########
 
+.PHONY: udeps-tools
+lint-tools:
+	rustup component add rustfmt clippy
+	cargo install cargo-machete
+
 .PHONY: fmt
 fmt:
 	@cargo fmt --all $(CARGO_FMT_OPT) && cd ./enclave && cargo fmt --all $(CARGO_FMT_OPT)
@@ -196,14 +201,11 @@ fmt:
 lint:
 	@$(MAKE) CARGO_FMT_OPT=--check fmt
 	@cargo clippy --locked --tests $(CARGO_TARGET) -- -D warnings
-
-.PHONY: udeps-tools
-lint-tools:
-	rustup component add rustfmt clippy
-	cargo +nightly install cargo-udeps --locked
+	@cargo machete
 
 .PHONY: udeps
 udeps:
+	@cargo +nightly install cargo-udeps --locked
 	@cargo +nightly udeps --locked --lib --tests $(CARGO_TARGET)
 
 ######## Tools ########
