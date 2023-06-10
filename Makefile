@@ -210,7 +210,7 @@ udeps:
 
 .PHONY: yrly
 yrly:
-	go build -o ./bin/yrly ./go/relay/bin
+	go build -o ./bin/yrly -tags customcert ./go/relay/bin
 
 .PHONY: cgen
 cgen:
