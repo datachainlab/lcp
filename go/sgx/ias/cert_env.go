@@ -3,13 +3,14 @@
 package ias
 
 import (
+	"encoding/hex"
 	"fmt"
 	"os"
 
 	"github.com/oasisprotocol/oasis-core/go/common/sgx/ias"
 )
 
-const envRARootCert = "LCP_RA_ROOT_CERT"
+const envRARootCert = "LCP_RA_ROOT_CERT_HEX"
 
 func init() {
 	cert := os.Getenv(envRARootCert)
@@ -21,7 +22,11 @@ func init() {
 }
 
 func initFromEnv(cert string) {
-	rootCert, _, err := ias.CertFromPEM([]byte(cert))
+	pem, err := hex.DecodeString(cert)
+	if err != nil {
+		panic(err)
+	}
+	rootCert, _, err := ias.CertFromPEM(pem)
 	if err != nil {
 		panic(err)
 	} else if rootCert == nil {
