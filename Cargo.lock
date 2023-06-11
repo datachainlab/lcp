@@ -206,14 +206,12 @@ dependencies = [
  "flex-error",
  "hex",
  "lcp-types",
- "log 0.4.17",
  "pem 0.8.2",
  "pem 1.1.0",
  "rustls 0.19.0",
  "rustls 0.19.1",
  "serde",
  "serde_json",
- "sgx_tstd",
  "sgx_types",
  "tendermint 0.29.0",
  "webpki 0.21.4 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -699,20 +697,15 @@ dependencies = [
  "host-environment",
  "ibc",
  "ibc-proto 0.26.0",
- "ibc-relayer",
  "ibc-test-framework",
  "lcp-types",
  "log 0.4.17",
- "ocall-handler",
- "once_cell 1.17.1",
- "prost-types",
  "relay-tendermint",
  "rlp",
  "serde",
  "serde_json",
  "store",
  "tempdir",
- "tendermint-rpc",
  "tokio",
 ]
 
@@ -840,7 +833,6 @@ dependencies = [
  "hex",
  "ibc",
  "lcp-types",
- "log 0.4.17",
  "prost",
  "prost-types",
  "rand 0.8.5",
@@ -877,9 +869,6 @@ dependencies = [
  "lcp-types",
  "light-client",
  "light-client-registry",
- "log 0.4.17",
- "prost-types",
- "serde",
  "store",
 ]
 
@@ -1340,7 +1329,6 @@ dependencies = [
  "lcp-proto",
  "lcp-types",
  "serde",
- "serde_json",
  "store",
 ]
 
@@ -1439,11 +1427,8 @@ dependencies = [
  "ecall-commands",
  "flex-error",
  "host",
- "host-environment",
  "lcp-proto",
  "log 0.4.17",
- "prost",
- "prost-types",
  "sgx_types",
  "sgx_urts",
  "store",
@@ -2634,8 +2619,6 @@ dependencies = [
  "serde_json",
  "service",
  "settings",
- "sgx_types",
- "sgx_urts",
  "sha2 0.10.6",
  "store",
  "tokio",
@@ -2656,16 +2639,12 @@ dependencies = [
  "lcp-types",
  "light-client",
  "light-client-registry",
- "log 0.4.17",
  "mock-lc",
  "prost",
  "prost-types",
  "serde",
- "serde_json",
  "store",
  "tempdir",
- "tendermint-proto 0.29.0",
- "tiny-keccak 1.5.0",
  "validation-context",
 ]
 
@@ -2673,8 +2652,6 @@ dependencies = [
 name = "lcp-proto"
 version = "0.1.0"
 dependencies = [
- "base64 0.13.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "bytes",
  "ibc",
  "ibc-proto 0.26.0",
  "prost",
@@ -2695,7 +2672,6 @@ dependencies = [
  "serde_json",
  "sgx_tstd",
  "tendermint 0.29.0",
- "tendermint-proto 0.29.0",
 ]
 
 [[package]]
@@ -2789,8 +2765,6 @@ dependencies = [
  "ibc",
  "ibc-proto 0.26.0",
  "lcp-types",
- "prost",
- "prost-types",
  "serde",
  "store",
 ]
@@ -2946,12 +2920,7 @@ dependencies = [
  "lcp-types",
  "light-client",
  "light-client-registry",
- "log 0.4.17",
- "prost",
- "prost-types",
  "serde",
- "sha2 0.10.6",
- "time",
  "validation-context",
 ]
 
@@ -3895,7 +3864,6 @@ dependencies = [
  "ibc-relayer",
  "ibc-relayer-types",
  "lcp-types",
- "prost-types",
  "tendermint-light-client-verifier 0.28.0",
  "tendermint-rpc",
  "tokio",
@@ -4568,9 +4536,7 @@ dependencies = [
  "anyhow",
  "attestation-report",
  "enclave-api",
- "host",
  "lcp-proto",
- "log 0.4.17",
  "serde_json",
  "settings",
  "store",
@@ -5117,13 +5083,7 @@ dependencies = [
  "light-client",
  "light-client-registry",
  "log 0.4.17",
- "prost",
- "prost-types",
  "serde",
- "sha2 0.10.6",
- "tendermint-light-client-verifier 0.29.0",
- "tendermint-proto 0.29.0",
- "time",
  "validation-context",
 ]
 
@@ -5872,7 +5832,6 @@ dependencies = [
  "lcp-types",
  "rlp",
  "serde",
- "tendermint-light-client-verifier 0.29.0",
 ]
 
 [[package]]
