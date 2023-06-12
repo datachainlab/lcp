@@ -3,7 +3,7 @@ use std::fs::{copy, create_dir_all};
 use std::path::{Path, PathBuf};
 use std::process;
 
-use tempdir::TempDir;
+use tempfile::TempDir;
 use walkdir::WalkDir;
 
 use argh::FromArgs;
@@ -26,10 +26,10 @@ pub struct CompileCmd {
 
 impl CompileCmd {
     pub fn run(&self) {
-        let tmp_ibc = TempDir::new("ibc-proto-ibc-go").unwrap();
+        let tmp_ibc = TempDir::new().unwrap();
         Self::compile_ibc_protos(&self.ibc, tmp_ibc.as_ref());
 
-        let tmp_lcp = TempDir::new("lcp").unwrap();
+        let tmp_lcp = TempDir::new().unwrap();
         Self::compile_lcp_protos(&self.ibc, tmp_lcp.as_ref(), &self.descriptor);
 
         Self::copy_generated_files(tmp_lcp.as_ref(), tmp_ibc.as_ref(), &self.out);

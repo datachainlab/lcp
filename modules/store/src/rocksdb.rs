@@ -376,13 +376,13 @@ mod tests {
         thread,
         time::SystemTime,
     };
-    use tempdir::TempDir;
+    use tempfile::TempDir;
 
     #[test]
     fn test_store() {
         let _ = env_logger::try_init();
-        let tmp_dir = TempDir::new("store-rocksdb").unwrap().into_path();
-        let mut store = RocksDBStore::open(tmp_dir);
+        let tmp_dir = TempDir::new().unwrap();
+        let mut store = RocksDBStore::open(tmp_dir.as_ref());
 
         // case1: set key-value pair simply in update tx
         // pre:  initial state
@@ -625,7 +625,7 @@ mod tests {
 
     fn get_test_helpers<const S: usize>() -> (TempDir, Arc<RwLock<RocksDBStore>>, [TxRunner; S]) {
         let _ = env_logger::try_init();
-        let tmp_dir = TempDir::new("store-rocksdb").unwrap();
+        let tmp_dir = TempDir::new().unwrap();
         let store = Arc::new(RwLock::new(RocksDBStore::open(tmp_dir.path())));
         let cond = Arc::new(Condvar::new());
         let events = Arc::new(Mutex::new(HashSet::new()));

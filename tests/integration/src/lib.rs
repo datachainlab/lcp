@@ -29,7 +29,7 @@ mod tests {
     use std::str::FromStr;
     use std::sync::{Arc, RwLock};
     use store::{host::HostStore, memory::MemStore};
-    use tempdir::TempDir;
+    use tempfile::TempDir;
     use tokio::runtime::Runtime as TokioRuntime;
 
     static ENCLAVE_FILE: &str = "../../bin/enclave.signed.so";
@@ -61,7 +61,7 @@ mod tests {
 
     #[test]
     fn test_elc_state_verification() {
-        let tmp_dir = TempDir::new("lcp").unwrap();
+        let tmp_dir = TempDir::new().unwrap();
         let home = tmp_dir.path().to_str().unwrap().to_string();
         host::set_environment(Environment::new(
             home.into(),
