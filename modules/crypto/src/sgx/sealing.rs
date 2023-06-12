@@ -2,7 +2,7 @@ use crate::prelude::*;
 use crate::traits::SealedKey;
 use crate::EnclaveKey;
 use crate::Error;
-use secp256k1::{util::SECRET_KEY_SIZE, SecretKey};
+use libsecp256k1::{util::SECRET_KEY_SIZE, SecretKey};
 use sgx_tstd::{
     io::{Read, Write},
     sgxfs::SgxFile,
