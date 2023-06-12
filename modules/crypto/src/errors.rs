@@ -43,7 +43,7 @@ define_error! {
         },
 
         Secp256k1
-        [TraceError<secp256k1::Error>]
+        [TraceError<libsecp256k1::Error>]
         |_| { "secp256k1 error" },
 
         UnexpectedSigner

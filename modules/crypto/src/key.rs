@@ -2,7 +2,7 @@ use crate::prelude::*;
 use crate::{Error, Verifier};
 #[cfg(any(feature = "std", feature = "sgx"))]
 use crate::{Keccak256, Signer};
-use secp256k1::{
+use libsecp256k1::{
     curve::Scalar,
     util::{COMPRESSED_PUBLIC_KEY_SIZE, SECRET_KEY_SIZE},
     Message, PublicKey, RecoveryId, SecretKey, Signature,
@@ -118,7 +118,7 @@ impl Signer for EnclaveKey {
     fn sign(&self, bz: &[u8]) -> Result<Vec<u8>, Error> {
         let mut s = Scalar::default();
         let _ = s.set_b32(&bz.keccak256());
-        let (sig, rid) = secp256k1::sign(&Message(s), &self.secret_key);
+        let (sig, rid) = libsecp256k1::sign(&Message(s), &self.secret_key);
         let mut ret = vec![0; 65];
         ret[..64].copy_from_slice(&sig.serialize());
         ret[64] = rid.serialize();
@@ -156,9 +156,9 @@ pub fn verify_signature(sign_bytes: &[u8], signature: &[u8]) -> Result<EnclavePu
     let mut s = Scalar::default();
     let _ = s.set_b32(&sign_hash);
 
-    let sig = Signature::parse_slice(&signature[..64]).map_err(Error::secp256k1)?;
+    let sig = Signature::parse_overflowing_slice(&signature[..64]).map_err(Error::secp256k1)?;
     let rid = RecoveryId::parse(signature[64]).map_err(Error::secp256k1)?;
-    let signer = secp256k1::recover(&Message(s), &sig, &rid).map_err(Error::secp256k1)?;
+    let signer = libsecp256k1::recover(&Message(s), &sig, &rid).map_err(Error::secp256k1)?;
     Ok(EnclavePublicKey(signer))
 }
 
