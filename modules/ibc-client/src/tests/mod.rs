@@ -24,7 +24,6 @@ use light_client_registry::memory::HashMapLightClientRegistry;
 use light_client_registry::LightClientResolver;
 use mock_lc::MockLightClient;
 use store::memory::MemStore;
-use tempdir::TempDir;
 
 fn build_lc_registry() -> Arc<dyn LightClientResolver> {
     let registry = HashMapLightClientRegistry::new();
@@ -44,9 +43,6 @@ fn test_ibc_client() {
     let mock_client = MockLightClient::default();
 
     let registry = build_lc_registry();
-
-    let tmp_dir = TempDir::new("lcp").unwrap();
-    let home = tmp_dir.path().to_str().unwrap().to_string();
 
     // 1. initializes Light Client for LCP on the downstream side
     let lcp_client_id = {

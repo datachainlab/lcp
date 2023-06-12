@@ -10,7 +10,7 @@ use std::{
     sync::{Arc, RwLock},
 };
 use store::{host::HostStore, memory::MemStore};
-use tempdir::TempDir;
+use tempfile::TempDir;
 
 /// Entry point for LCP CLI.
 #[derive(Debug, Parser)]
@@ -35,7 +35,7 @@ pub struct Cli {
 
 impl Cli {
     pub fn run(self) -> Result<()> {
-        let tmp_dir = TempDir::new("lcp")?;
+        let tmp_dir = TempDir::new()?;
         let home = tmp_dir.path().to_str().unwrap().to_string();
 
         let spid = std::env::var("SPID")?.as_bytes().to_vec();
