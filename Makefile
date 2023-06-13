@@ -52,19 +52,20 @@ endif
 
 SGX_COMMON_CFLAGS += -fstack-protector
 
+ENCLAVE_CARGO_FEATURES = --features=default
+APP_CARGO_FEATURES     = --features=default
 ifeq ($(SGX_PRODUCTION), 1)
 	SGX_ENCLAVE_MODE = "Production Mode"
-	SGX_ENCLAVE_CONFIG = "enclave/Enclave.config.production.xml"
+	SGX_ENCLAVE_CONFIG = $(SGX_ENCLAVE_CONFIG)
 	SGX_SIGN_KEY = $(SGX_COMMERCIAL_KEY)
-	CARGO_FEATURES = --features=production
+	ENCLAVE_CARGO_FEATURES = --features=production
 else
 	SGX_ENCLAVE_MODE = "Development Mode"
 	SGX_ENCLAVE_CONFIG = "enclave/Enclave.config.xml"
 	SGX_SIGN_KEY = "enclave/Enclave_private.pem"
-	ifeq ($(SGX_MODE), HW)
-		CARGO_FEATURES = --features=default
-	else
-		CARGO_FEATURES = --features=default,sgx-sw
+	ifneq ($(SGX_MODE), HW)
+		ENCLAVE_CARGO_FEATURES = --features=default,sgx-sw
+		APP_CARGO_FEATURES     = --features=default,sgx-sw
 	endif
 endif
 
@@ -81,7 +82,7 @@ Enclave_EDL_Files := enclave/Enclave_t.c enclave/Enclave_t.h app/Enclave_u.c app
 
 ######## APP Settings ########
 
-App_Rust_Flags := $(CARGO_TARGET) $(CARGO_FEATURES)
+App_Rust_Flags := $(CARGO_TARGET) $(APP_CARGO_FEATURES)
 App_SRC_Files := $(shell find app/ -type f -name '*.rs') $(shell find app/ -type f -name 'Cargo.toml')
 App_Include_Paths := -I ./app -I./include -I$(SGX_SDK)/include -I$(CUSTOM_EDL_PATH)
 App_C_Flags := $(SGX_COMMON_CFLAGS) -fPIC -Wno-attributes $(App_Include_Paths)
@@ -177,7 +178,7 @@ $(Signed_RustEnclave_Name): $(RustEnclave_Name)
 
 .PHONY: enclave
 enclave:
-	@cd enclave && RUSTFLAGS=$(RUSTFLAGS) cargo build $(CARGO_TARGET) $(CARGO_FEATURES)
+	@cd enclave && RUSTFLAGS=$(RUSTFLAGS) cargo build $(CARGO_TARGET) $(ENCLAVE_CARGO_FEATURES)
 	@cp enclave/target/$(OUTPUT_PATH)/libproxy_enclave.a ./lib/libenclave.a
 
 ######## Code generator ########
@@ -230,7 +231,7 @@ test:
 
 .PHONY: integration-test
 integration-test: $(Signed_RustEnclave_Name) bin/gaiad
-	@PATH=${PATH}:$(CURDIR)/bin cargo test $(CARGO_TARGET) --package integration-test $(CARGO_FEATURES)
+	@PATH=${PATH}:$(CURDIR)/bin cargo test $(CARGO_TARGET) --package integration-test $(APP_CARGO_FEATURES)
 
 .PHONY: test-nodes
 test-setup-nodes: bin/gaiad
