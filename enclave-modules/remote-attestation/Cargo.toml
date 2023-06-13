@@ -25,10 +25,10 @@ host-api = { path = "../host-api" }
 lcp-types = { path = "../../modules/types", default-features = false, features = ["sgx"] }
 crypto = { path = "../../modules/crypto", default-features = false }
 attestation-report = { path = "../../modules/attestation-report", default-features = false }
-settings = { path = "../../modules/settings", default-features = false }
 ocall-commands = { path = "../../modules/ocall-commands", default-features = false }
 
 [features]
+production = []
 sgx-sw = [
     "sgx_tstd/untrusted_time"
 ]

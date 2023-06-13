@@ -26,3 +26,6 @@ sgx-sw = [
     "ecall-commands/sgx-sw",
     "enclave-remote-attestation/sgx-sw"
 ]
+production = [
+    "enclave-remote-attestation/production"
+]

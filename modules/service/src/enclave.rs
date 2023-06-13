@@ -1,6 +1,3 @@
-use std::fs::File;
-use std::io::Read;
-
 use crate::service::AppService;
 use attestation_report::EndorsedAttestationVerificationReport;
 use enclave_api::EnclaveProtoAPI;
@@ -8,7 +5,9 @@ use lcp_proto::lcp::service::enclave::v1::{
     query_server::Query, QueryAttestedVerificationReportRequest,
     QueryAttestedVerificationReportResponse,
 };
-
+use settings::AVR_KEY_PATH;
+use std::fs::File;
+use std::io::Read;
 use store::transaction::CommitStore;
 use tonic::{Request, Response, Status};
 
@@ -22,7 +21,7 @@ where
         &self,
         _: Request<QueryAttestedVerificationReportRequest>,
     ) -> Result<Response<QueryAttestedVerificationReportResponse>, Status> {
-        let path = self.home.join(settings::AVR_KEY_PATH);
+        let path = self.home.join(AVR_KEY_PATH);
         let mut json = String::new();
         File::open(path)?.read_to_string(&mut json)?;
 

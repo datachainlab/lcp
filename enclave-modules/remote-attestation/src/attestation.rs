@@ -1,5 +1,6 @@
 use crate::errors::Error;
 use crate::prelude::*;
+use crate::{IAS_HOSTNAME, REPORT_SUFFIX, SIGRL_SUFFIX};
 use alloc::str;
 use attestation_report::EndorsedAttestationVerificationReport;
 use crypto::sgx::rand::fill_bytes;
@@ -7,7 +8,6 @@ use host_api::remote_attestation::{get_ias_socket, get_quote, init_quote};
 use itertools::Itertools;
 use log::*;
 use ocall_commands::{GetIASSocketResult, GetQuoteInput, GetQuoteResult, InitQuoteResult};
-use settings::{SigningMethod, SIGNING_METHOD};
 use sgx_tcrypto::rsgx_sha256_slice;
 use sgx_tse::{rsgx_create_report, rsgx_verify_report};
 use sgx_tstd::{
@@ -19,18 +19,6 @@ use sgx_types::{c_int, sgx_spid_t};
 use sgx_types::{sgx_quote_nonce_t, sgx_quote_sign_type_t, sgx_report_data_t};
 
 pub const REPORT_DATA_SIZE: usize = 32;
-
-pub const DEV_HOSTNAME: &str = "api.trustedservices.intel.com";
-
-#[cfg(feature = "production")]
-pub const SIGRL_SUFFIX: &str = "/sgx/attestation/v4/sigrl/";
-#[cfg(feature = "production")]
-pub const REPORT_SUFFIX: &str = "/sgx/attestation/v4/report";
-
-#[cfg(all(not(feature = "production")))]
-pub const SIGRL_SUFFIX: &str = "/sgx/dev/attestation/v4/sigrl/";
-#[cfg(all(not(feature = "production")))]
-pub const REPORT_SUFFIX: &str = "/sgx/dev/attestation/v4/report";
 
 //input: pub_k: &sgx_ec256_public_t, todo: make this the pubkey of the node
 pub fn create_attestation_report(
@@ -70,23 +58,10 @@ pub fn create_attestation_report(
 
     let report = match rsgx_create_report(&target_info, &report_data) {
         Ok(r) => {
-            match SIGNING_METHOD {
-                SigningMethod::MRENCLAVE => {
-                    trace!(
-                        "Report creation => success. Using MR_SIGNER: {:?}",
-                        r.body.mr_signer.m
-                    );
-                }
-                SigningMethod::MRSIGNER => {
-                    trace!(
-                        "Report creation => success. Got MR_ENCLAVE {:?}",
-                        r.body.mr_signer.m
-                    );
-                }
-                SigningMethod::NONE => {
-                    trace!("Report creation => success. Not using any verification");
-                }
-            }
+            trace!(
+                "Report creation => success. Got MR_ENCLAVE {:?}",
+                r.body.mr_enclave.m
+            );
             r
         }
         Err(e) => {
@@ -184,12 +159,12 @@ pub fn get_sigrl_from_intel(fd: c_int, gid: u32, ias_key: &[u8]) -> Vec<u8> {
     let req = format!("GET {}{:08x} HTTP/1.1\r\nHOST: {}\r\nOcp-Apim-Subscription-Key: {}\r\nConnection: Close\r\n\r\n",
                       SIGRL_SUFFIX,
                       gid,
-                      DEV_HOSTNAME,
+                      IAS_HOSTNAME,
                       ias_key);
 
     trace!("get_sigrl_from_intel: {}", req);
 
-    let dns_name = webpki::DNSNameRef::try_from_ascii_str(DEV_HOSTNAME).unwrap();
+    let dns_name = webpki::DNSNameRef::try_from_ascii_str(IAS_HOSTNAME).unwrap();
     let mut sess = rustls::ClientSession::new(&Arc::new(config), dns_name);
     let mut sock = TcpStream::new(fd).unwrap();
     let mut tls = rustls::Stream::new(&mut sess, &mut sock);
@@ -230,13 +205,13 @@ pub fn get_report_from_intel(
 
     let req = format!("POST {} HTTP/1.1\r\nHOST: {}\r\nOcp-Apim-Subscription-Key:{}\r\nContent-Length:{}\r\nContent-Type: application/json\r\nConnection: close\r\n\r\n{}",
                       REPORT_SUFFIX,
-                      DEV_HOSTNAME,
+                      IAS_HOSTNAME,
                       ias_key,
                       encoded_json.len(),
                       encoded_json);
 
     trace!("{}", req);
-    let dns_name = webpki::DNSNameRef::try_from_ascii_str(DEV_HOSTNAME).unwrap();
+    let dns_name = webpki::DNSNameRef::try_from_ascii_str(IAS_HOSTNAME).unwrap();
     let mut sess = rustls::ClientSession::new(&Arc::new(config), dns_name);
     let mut sock = TcpStream::new(fd).unwrap();
     let mut tls = rustls::Stream::new(&mut sess, &mut sock);

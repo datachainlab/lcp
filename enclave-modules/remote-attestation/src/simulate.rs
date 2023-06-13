@@ -7,7 +7,6 @@ use host_api::remote_attestation::{get_quote, init_quote};
 use itertools::Itertools;
 use log::*;
 use ocall_commands::{GetQuoteInput, GetQuoteResult, InitQuoteResult};
-use settings::{SigningMethod, SIGNING_METHOD};
 use sgx_tcrypto::rsgx_sha256_slice;
 use sgx_tse::{rsgx_create_report, rsgx_verify_report};
 use sgx_types::{sgx_quote_nonce_t, sgx_quote_sign_type_t, sgx_report_data_t};
@@ -39,23 +38,10 @@ pub fn create_attestation_report(
 
     let report = match rsgx_create_report(&target_info, &report_data) {
         Ok(r) => {
-            match SIGNING_METHOD {
-                SigningMethod::MRENCLAVE => {
-                    trace!(
-                        "Report creation => success. Using MR_SIGNER: {:?}",
-                        r.body.mr_signer.m
-                    );
-                }
-                SigningMethod::MRSIGNER => {
-                    trace!(
-                        "Report creation => success. Got MR_ENCLAVE {:?}",
-                        r.body.mr_signer.m
-                    );
-                }
-                SigningMethod::NONE => {
-                    trace!("Report creation => success. Not using any verification");
-                }
-            }
+            trace!(
+                "Report creation => success. Got MR_ENCLAVE {:?}",
+                r.body.mr_enclave.m
+            );
             r
         }
         Err(e) => {

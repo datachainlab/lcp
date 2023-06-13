@@ -22,3 +22,6 @@ sgx-sw = [
     "ecall-handler/sgx-sw",
     "ecall-commands/sgx-sw"
 ]
+production = [
+    "ecall-handler/production"
+]
