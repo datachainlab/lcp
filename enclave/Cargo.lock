@@ -492,7 +492,6 @@ dependencies = [
  "log 0.4.17",
  "ocall-commands",
  "rustls",
- "settings",
  "sgx_tcrypto",
  "sgx_tse",
  "sgx_tstd",
@@ -1422,9 +1421,6 @@ dependencies = [
 [[package]]
 name = "settings"
 version = "0.1.0"
-dependencies = [
- "sgx_types",
-]
 
 [[package]]
 name = "sgx_alloc"

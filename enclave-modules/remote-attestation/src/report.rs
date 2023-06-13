@@ -6,7 +6,6 @@ use host_api::remote_attestation::get_report_attestation_status;
 use lcp_types::Time;
 use log::*;
 use ocall_commands::{GetReportAttestationStatusInput, GetReportAttestationStatusResult};
-use settings::RT_ALLOWED_STATUS;
 use sgx_types::{sgx_platform_info_t, sgx_status_t};
 
 pub fn validate_quote_status(avr: &AttestationVerificationReport) -> Result<Quote, Error> {
@@ -66,12 +65,6 @@ pub fn validate_quote_status(avr: &AttestationVerificationReport) -> Result<Quot
                         "update_info.ucodeUpdate: {}",
                         update_info.ucodeUpdate as i32
                     );
-                    if !RT_ALLOWED_STATUS.contains(&ret) {
-                        return Err(Error::sgx_error(
-                            ret,
-                            "the status is not allowed".to_string(),
-                        ));
-                    }
                 }
             } else {
                 info!("attestation report doesn't contain platformInfoBlob");

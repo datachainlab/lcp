@@ -4407,9 +4407,6 @@ dependencies = [
 [[package]]
 name = "settings"
 version = "0.1.0"
-dependencies = [
- "sgx_types",
-]
 
 [[package]]
 name = "sgx_alloc"

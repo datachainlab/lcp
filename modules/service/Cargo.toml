@@ -13,8 +13,8 @@ serde_json = { version = "1.0", default-features = false, features = ["alloc"] }
 enclave-api = { path = "../enclave-api" }
 lcp-proto = { path = "../../proto", default-features = false }
 attestation-report = { path = "../attestation-report" }
-settings = { path = "../settings" }
 store = { path = "../store", features = ["rocksdbstore"] }
+settings = { path = "../settings" }
 
 [features]
 sgx-sw = [
