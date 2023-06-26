@@ -27,15 +27,35 @@ pub enum CliCmd {
 
 impl CliCmd {
     pub fn run(self, opts: &Opts) -> Result<()> {
-        let store = HostStore::RocksDB(RocksDBStore::open(opts.get_store_path()));
-        let enclave_loader = build_enclave_loader::<RocksDBStore>();
+        match self {
+            CliCmd::Enclave(cmd) => {
+                Self::setup_read_only_env(opts);
+                cmd.run(opts, build_enclave_loader::<RocksDBStore>())
+            }
+            CliCmd::Attestation(cmd) => {
+                Self::setup_read_only_env(opts);
+                cmd.run(opts, build_enclave_loader::<RocksDBStore>())
+            }
+            CliCmd::Service(cmd) => {
+                Self::setup_env(opts);
+                cmd.run(opts, build_enclave_loader::<RocksDBStore>())
+            }
+            CliCmd::ELC(cmd) => {
+                Self::setup_env(opts);
+                cmd.run(opts, build_enclave_loader::<RocksDBStore>())
+            }
+        }
+    }
+
+    fn setup_env(opts: &Opts) {
+        let store = HostStore::RocksDB(RocksDBStore::open(opts.get_state_store_path()));
         let env = Environment::new(opts.get_home(), Arc::new(RwLock::new(store)));
         host::set_environment(env).unwrap();
-        match self {
-            CliCmd::Enclave(cmd) => cmd.run(opts, enclave_loader),
-            CliCmd::Attestation(cmd) => cmd.run(opts, enclave_loader),
-            CliCmd::Service(cmd) => cmd.run(opts, enclave_loader),
-            CliCmd::ELC(cmd) => cmd.run(opts, enclave_loader),
-        }
+    }
+
+    fn setup_read_only_env(opts: &Opts) {
+        let store = HostStore::RocksDB(RocksDBStore::open_read_only(opts.get_state_store_path()));
+        let env = Environment::new(opts.get_home(), Arc::new(RwLock::new(store)));
+        host::set_environment(env).unwrap();
     }
 }
