@@ -4,7 +4,8 @@ use core::marker::PhantomData;
 use log::*;
 use ouroboros::self_referencing;
 use rocksdb::{
-    SnapshotWithThreadMode, Transaction, TransactionDB, TransactionOptions, WriteOptions,
+    Error as RocksDBError, SnapshotWithThreadMode, Transaction, TransactionDB, TransactionOptions,
+    WriteOptions, DB,
 };
 use std::collections::HashMap;
 use std::path::Path;
@@ -14,7 +15,7 @@ use std::sync::{Mutex, MutexGuard};
 /// `RocksDBStore` is a store implementation with RocksDB
 #[self_referencing]
 pub struct RocksDBStore {
-    db: TransactionDB,
+    db: InnerDB,
     latest_tx_id: TxId,
     #[borrows(db)]
     #[covariant]
@@ -28,7 +29,7 @@ unsafe impl Sync for RocksDBStore {}
 impl RocksDBStore {
     pub fn create(db: TransactionDB) -> Self {
         RocksDBStoreBuilder {
-            db,
+            db: InnerDB::TransactionDB(db),
             latest_tx_id: Default::default(),
             txs_builder: |_| Default::default(),
             mutex: Default::default(),
@@ -38,6 +39,17 @@ impl RocksDBStore {
 
     pub fn open<P: AsRef<Path>>(path: P) -> Self {
         Self::create(TransactionDB::open_default(path).unwrap())
+    }
+
+    pub fn open_read_only<P: AsRef<Path>>(path: P) -> Self {
+        let db = DB::open_for_read_only(&Default::default(), path, false).unwrap();
+        RocksDBStoreBuilder {
+            db: InnerDB::ReadOnlyDB(db),
+            latest_tx_id: Default::default(),
+            txs_builder: |_| Default::default(),
+            mutex: Default::default(),
+        }
+        .build()
     }
 
     pub fn finalize_tx<T>(
@@ -66,15 +78,15 @@ impl RocksDBStore {
 
 impl KVStore for RocksDBStore {
     fn set(&mut self, key: Vec<u8>, value: Vec<u8>) {
-        self.borrow_db().put(key, value).unwrap()
+        self.borrow_db().set(key, value).unwrap()
     }
 
     fn get(&self, key: &[u8]) -> Option<Vec<u8>> {
-        self.borrow_db().get(key).unwrap()
+        self.borrow_db().get(key)
     }
 
     fn remove(&mut self, key: &[u8]) {
-        self.borrow_db().delete(key).unwrap()
+        self.borrow_db().remove(key)
     }
 }
 
@@ -109,22 +121,31 @@ impl CommitStore for RocksDBStore {
         debug!("create tx: {:?}", update_key);
         self.with_mut(|fields| {
             fields.latest_tx_id.safe_incr()?;
-            if let Some(update_key) = update_key {
-                if update_key.is_empty() {
-                    return Err(Error::invalid_update_key_length(0));
+
+            match fields.db {
+                InnerDB::ReadOnlyDB(_) => {
+                    // NOTE: ignore `update_key`
+                    Ok(RocksDBTx::new_read_tx(*fields.latest_tx_id))
                 }
-                if !fields.mutex.contains_key(&update_key) {
-                    let mutex = Rc::new(Mutex::new(()));
-                    let _ = fields.mutex.insert(update_key.clone(), mutex);
+                InnerDB::TransactionDB(_) => {
+                    if let Some(update_key) = update_key {
+                        if update_key.is_empty() {
+                            return Err(Error::invalid_update_key_length(0));
+                        }
+                        if !fields.mutex.contains_key(&update_key) {
+                            let mutex = Rc::new(Mutex::new(()));
+                            let _ = fields.mutex.insert(update_key.clone(), mutex);
+                        }
+                        let mutex = fields.mutex.get(&update_key).unwrap().clone();
+                        Ok(RocksDBTx::new_update_tx(
+                            *fields.latest_tx_id,
+                            update_key,
+                            mutex,
+                        ))
+                    } else {
+                        Ok(RocksDBTx::new_read_tx(*fields.latest_tx_id))
+                    }
                 }
-                let mutex = fields.mutex.get(&update_key).unwrap().clone();
-                Ok(RocksDBTx::new_update_tx(
-                    *fields.latest_tx_id,
-                    update_key,
-                    mutex,
-                ))
-            } else {
-                Ok(RocksDBTx::new_read_tx(*fields.latest_tx_id))
             }
         })
     }
@@ -135,21 +156,29 @@ impl CommitStore for RocksDBStore {
             let mut tx_opt = TransactionOptions::default();
             tx_opt.set_snapshot(true);
 
-            let stx = if tx.is_update_tx() {
-                StoreTransaction::Update(
-                    UpdateTransactionBuilder {
-                        tx: fields.db.transaction_opt(&WriteOptions::default(), &tx_opt),
-                        snapshot_builder: |tx| tx.snapshot(),
-                    }
-                    .build(),
-                )
-            } else {
-                let snapshot = fields.db.snapshot();
-                StoreTransaction::Read(ReadTransaction {
-                    snapshot,
+            let stx = match fields.db {
+                InnerDB::ReadOnlyDB(db) => StoreTransaction::ReadSnapshot(ReadSnapshot {
+                    snapshot: db.snapshot(),
                     buffer: HashMap::default(),
-                })
+                }),
+                InnerDB::TransactionDB(db) => {
+                    if tx.is_update_tx() {
+                        StoreTransaction::Update(
+                            UpdateTransactionBuilder {
+                                tx: db.transaction_opt(&WriteOptions::default(), &tx_opt),
+                                snapshot_builder: |tx| tx.snapshot(),
+                            }
+                            .build(),
+                        )
+                    } else {
+                        StoreTransaction::Read(ReadTransaction {
+                            snapshot: db.snapshot(),
+                            buffer: HashMap::default(),
+                        })
+                    }
+                }
             };
+
             fields.txs.insert(tx.get_id(), stx);
             Ok(())
         })
@@ -166,24 +195,59 @@ impl CommitStore for RocksDBStore {
     }
 }
 
-/// StoreTransaction implements two transaction types
+/// InnerDB defines multiple DB types
+pub enum InnerDB {
+    TransactionDB(TransactionDB),
+    ReadOnlyDB(DB),
+}
+
+impl InnerDB {
+    pub(crate) fn set(
+        &self,
+        key: Vec<u8>,
+        value: Vec<u8>,
+    ) -> core::result::Result<(), RocksDBError> {
+        match self {
+            Self::TransactionDB(db) => db.put(key, value),
+            Self::ReadOnlyDB(db) => db.put(key, value),
+        }
+    }
+
+    pub(crate) fn get(&self, key: &[u8]) -> Option<Vec<u8>> {
+        match self {
+            Self::TransactionDB(db) => db.get(key).unwrap(),
+            Self::ReadOnlyDB(db) => db.get(key).unwrap(),
+        }
+    }
+
+    pub(crate) fn remove(&self, key: &[u8]) {
+        match self {
+            Self::TransactionDB(db) => db.delete(key).unwrap(),
+            Self::ReadOnlyDB(db) => db.delete(key).unwrap(),
+        }
+    }
+}
+
+/// StoreTransaction implements multiple transaction types
 pub enum StoreTransaction<'a> {
     Read(ReadTransaction<'a>),
     Update(UpdateTransaction<'a>),
+    ReadSnapshot(ReadSnapshot<'a>),
 }
 
+#[allow(clippy::single_match)]
 impl<'a> StoreTransaction<'a> {
     fn commit(self) -> Result<()> {
         match self {
-            StoreTransaction::Read(stx) => stx.commit(),
             StoreTransaction::Update(stx) => stx.commit(),
+            _ => Ok(()),
         }
     }
 
     fn rollback(&self) {
         match self {
-            StoreTransaction::Read(stx) => stx.rollback(),
             StoreTransaction::Update(stx) => stx.rollback(),
+            _ => {}
         }
     }
 }
@@ -193,6 +257,7 @@ impl<'a> KVStore for StoreTransaction<'a> {
         match self {
             StoreTransaction::Read(stx) => stx.set(key, value),
             StoreTransaction::Update(stx) => stx.set(key, value),
+            StoreTransaction::ReadSnapshot(stx) => stx.set(key, value),
         }
     }
 
@@ -200,6 +265,7 @@ impl<'a> KVStore for StoreTransaction<'a> {
         match self {
             StoreTransaction::Read(stx) => stx.get(key),
             StoreTransaction::Update(stx) => stx.get(key),
+            StoreTransaction::ReadSnapshot(stx) => stx.get(key),
         }
     }
 
@@ -207,6 +273,7 @@ impl<'a> KVStore for StoreTransaction<'a> {
         match self {
             StoreTransaction::Read(stx) => stx.remove(key),
             StoreTransaction::Update(stx) => stx.remove(key),
+            StoreTransaction::ReadSnapshot(stx) => stx.remove(key),
         }
     }
 }
@@ -217,14 +284,6 @@ impl<'a> KVStore for StoreTransaction<'a> {
 pub struct ReadTransaction<'a> {
     snapshot: SnapshotWithThreadMode<'a, TransactionDB>,
     buffer: HashMap<Vec<u8>, Option<Vec<u8>>>,
-}
-
-impl<'a> ReadTransaction<'a> {
-    fn commit(self) -> Result<()> {
-        Ok(())
-    }
-
-    fn rollback(&self) {}
 }
 
 impl<'a> KVStore for ReadTransaction<'a> {
@@ -280,6 +339,32 @@ impl<'a> KVStore for UpdateTransaction<'a> {
 
     fn remove(&mut self, key: &[u8]) {
         self.with_tx(|tx| tx.delete(key)).unwrap()
+    }
+}
+
+/// ReadSnapshot is a `read-only` transaction.
+/// All read operations are performed based on a specific version of snapshot.
+/// All write operations are applied to the transaction's buffer, but they are never committed to the DB.
+pub struct ReadSnapshot<'a> {
+    snapshot: SnapshotWithThreadMode<'a, DB>,
+    buffer: HashMap<Vec<u8>, Option<Vec<u8>>>,
+}
+
+impl<'a> KVStore for ReadSnapshot<'a> {
+    fn set(&mut self, key: Vec<u8>, value: Vec<u8>) {
+        self.buffer.insert(key, Some(value));
+    }
+
+    fn get(&self, key: &[u8]) -> Option<Vec<u8>> {
+        match self.buffer.get(key) {
+            Some(Some(v)) => Some(v.to_vec()),
+            Some(None) => None, // already removed in the tx
+            None => self.snapshot.get(key).unwrap(),
+        }
+    }
+
+    fn remove(&mut self, key: &[u8]) {
+        self.buffer.insert(key.to_vec(), None);
     }
 }
 
@@ -464,7 +549,7 @@ mod tests {
 
     #[test]
     fn test_concurrent_write_tx_with_same_update_key_1() {
-        let (_tmp_dir, store, [r1, r2]) = get_test_helpers::<2>();
+        let (_tmp_dir, store, [r1, r2]) = get_test_helpers::<2>(vec![]);
 
         // r1: create&prepare -> begin  -> commit
         //                     \                   \
@@ -476,7 +561,7 @@ mod tests {
                 .prepare()
                 .emit_event(2)
                 .begin()
-                .set("k0", "v0")
+                .set(key_s(0), value_s(0))
                 .commit()
         });
 
@@ -486,8 +571,8 @@ mod tests {
                 .block_on(1, 2)
                 .prepare()
                 .begin()
-                .get("k0", Some("v0"))
-                .set("k0", "v1")
+                .get(key_s(0), Some(value_s(0)))
+                .set(key_s(0), value_s(1))
                 .commit()
         });
 
@@ -499,7 +584,7 @@ mod tests {
 
     #[test]
     fn test_concurrent_write_tx_with_same_update_key_2() {
-        let (_tmp_dir, store, [r1, r2]) = get_test_helpers::<2>();
+        let (_tmp_dir, store, [r1, r2]) = get_test_helpers::<2>(vec![]);
 
         // r1:        create -> prepare -> begin -> commit
         //           /                                    \
@@ -511,7 +596,7 @@ mod tests {
                 .prepare()
                 .emit_event(1)
                 .begin()
-                .set("k0", "v0")
+                .set(key_s(0), value_s(0))
                 .commit()
         });
 
@@ -521,8 +606,8 @@ mod tests {
                 .block_on(1, 1)
                 .prepare()
                 .begin()
-                .get("k0", Some("v0"))
-                .set("k0", "v1")
+                .get(key_s(0), Some(value_s(0)))
+                .set(key_s(0), value_s(1))
                 .commit()
         });
 
@@ -534,7 +619,7 @@ mod tests {
 
     #[test]
     fn test_concurrent_read_tx() {
-        let (_tmp_dir, store, runners) = get_test_helpers::<8>();
+        let (_tmp_dir, store, runners) = get_test_helpers::<8>(vec![]);
 
         let mut ths = vec![];
         let start = SystemTime::now();
@@ -544,7 +629,7 @@ mod tests {
                     .create(None)
                     .prepare()
                     .begin()
-                    .get("k0", None)
+                    .get(key_s(0), None)
                     .execute(|| thread::sleep(Duration::from_secs(1)))
                     .commit()
             });
@@ -560,7 +645,7 @@ mod tests {
 
     #[test]
     fn test_concurrent_include_rollback() {
-        let (_tmp_dir, store, [r1, r2]) = get_test_helpers::<2>();
+        let (_tmp_dir, store, [r1, r2]) = get_test_helpers::<2>(vec![]);
 
         let th1 = thread::spawn(move || {
             r1.create(Some("test"))
@@ -568,7 +653,7 @@ mod tests {
                 .emit_event(1)
                 .block_on(2, 1)
                 .begin()
-                .set("k0", "v0")
+                .set(key_s(0), value_s(0))
                 .commit()
         });
 
@@ -578,8 +663,8 @@ mod tests {
                 .emit_event(1)
                 .prepare()
                 .begin()
-                .get("k0", Some("v0"))
-                .set("k0", "v1")
+                .get(key_s(0), Some(value_s(0)))
+                .set(key_s(0), value_s(1))
                 .rollback()
         });
 
@@ -591,17 +676,17 @@ mod tests {
 
     #[test]
     fn test_concurrent_write_different_update_keys() {
-        let (_tmp_dir, store, runners) = get_test_helpers::<8>();
+        let (_tmp_dir, store, runners) = get_test_helpers::<8>(vec![]);
 
         let mut ths = vec![];
         let start = SystemTime::now();
         for r in runners {
             let th = thread::spawn(move || {
-                let key = format!("key-{}", r.id);
+                let key = key_s(r.id);
                 r.create(Some(key.as_str()))
                     .prepare()
                     .begin()
-                    .set(key.as_str(), "v0")
+                    .set(key, value_s(0))
                     .execute(|| thread::sleep(Duration::from_secs(1)))
                     .commit()
             });
@@ -615,18 +700,78 @@ mod tests {
         assert_eq!(store.read().unwrap().borrow_mutex().len(), 0);
     }
 
-    fn key(idx: u32) -> Vec<u8> {
-        format!("k{}", idx).into_bytes()
+    #[test]
+    fn test_write_and_snapshot() {
+        let (tmp_dir, store, [r1, r2, r3]) = get_test_helpers::<3>(vec![2, 3]);
+
+        let th1 = thread::spawn(move || {
+            r1.create(Some("test"))
+                .emit_event(1)
+                .prepare()
+                .emit_event(2)
+                .begin()
+                .set(key_s(0), value_s(0))
+                .commit()
+        });
+
+        let th2 = thread::spawn(move || {
+            r2.block_on(1, 1)
+                .create(Some("test"))
+                .block_on(1, 2)
+                .prepare()
+                .begin()
+                .get(key_s(0), None)
+                .set(key_s(0), value_s(1))
+                .commit()
+        });
+
+        th1.join().unwrap();
+        th2.join().unwrap();
+
+        assert!(store.read().unwrap().get(&key(0)).eq(&Some(value(0))));
+
+        // snapshot does not reflect the update
+        let th3 = thread::spawn(move || {
+            r3.create(None)
+                .prepare()
+                .begin()
+                .get(key_s(0), None)
+                .commit()
+        });
+        th3.join().unwrap();
+
+        // So, reopen the DB as snapshot
+        let new_snapshot = Arc::new(RwLock::new(RocksDBStore::open_read_only(tmp_dir.path())));
+        assert!(new_snapshot
+            .read()
+            .unwrap()
+            .get(&key(0))
+            .eq(&Some(value(0))));
     }
 
-    fn value(idx: u32) -> Vec<u8> {
-        format!("v{}", idx).into_bytes()
+    fn key(idx: u64) -> Vec<u8> {
+        key_s(idx).into_bytes()
     }
 
-    fn get_test_helpers<const S: usize>() -> (TempDir, Arc<RwLock<RocksDBStore>>, [TxRunner; S]) {
+    fn value(idx: u64) -> Vec<u8> {
+        value_s(idx).into_bytes()
+    }
+
+    fn key_s(idx: u64) -> String {
+        format!("k{}", idx)
+    }
+
+    fn value_s(idx: u64) -> String {
+        format!("v{}", idx)
+    }
+
+    fn get_test_helpers<const S: usize>(
+        read_only_ids: Vec<usize>,
+    ) -> (TempDir, Arc<RwLock<RocksDBStore>>, [TxRunner; S]) {
         let _ = env_logger::try_init();
         let tmp_dir = TempDir::new().unwrap();
         let store = Arc::new(RwLock::new(RocksDBStore::open(tmp_dir.path())));
+        let r_store = Arc::new(RwLock::new(RocksDBStore::open_read_only(tmp_dir.path())));
         let cond = Arc::new(Condvar::new());
         let events = Arc::new(Mutex::new(HashSet::new()));
 
@@ -634,11 +779,30 @@ mod tests {
             let mut arr: [std::mem::MaybeUninit<TxRunner>; S] =
                 unsafe { std::mem::MaybeUninit::uninit().assume_init() };
             for (i, elem) in arr.iter_mut().enumerate() {
-                unsafe {
-                    std::ptr::write(
-                        elem.as_mut_ptr(),
-                        TxRunner::new((i + 1) as u64, store.clone(), cond.clone(), events.clone()),
-                    );
+                if read_only_ids.contains(&(i + 1)) {
+                    unsafe {
+                        std::ptr::write(
+                            elem.as_mut_ptr(),
+                            TxRunner::new(
+                                (i + 1) as u64,
+                                r_store.clone(),
+                                cond.clone(),
+                                events.clone(),
+                            ),
+                        );
+                    }
+                } else {
+                    unsafe {
+                        std::ptr::write(
+                            elem.as_mut_ptr(),
+                            TxRunner::new(
+                                (i + 1) as u64,
+                                store.clone(),
+                                cond.clone(),
+                                events.clone(),
+                            ),
+                        );
+                    }
                 }
             }
             let ptr = &mut arr as *mut _ as *mut [TxRunner; S];
