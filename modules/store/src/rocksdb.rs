@@ -235,6 +235,7 @@ pub enum StoreTransaction<'a> {
     ReadSnapshot(ReadSnapshot<'a>),
 }
 
+#[allow(clippy::single_match)]
 impl<'a> StoreTransaction<'a> {
     fn commit(self) -> Result<()> {
         match self {
