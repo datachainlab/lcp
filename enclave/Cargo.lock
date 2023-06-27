@@ -9,7 +9,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2c99f64d1e06488f620f932677e24bc6e2897582980441ae90a671415bd7ec2f"
 dependencies = [
  "cfg-if",
- "once_cell 1.16.0",
+ "once_cell",
  "version_check",
 ]
 
@@ -85,6 +85,12 @@ checksum = "9e1b586273c5702936fe7b7d6896644d8be71e6314cfe09d3167c95f712589e8"
 name = "base64"
 version = "0.20.0-alpha.1"
 source = "git+https://github.com/marshallpierce/rust-base64#7fa4339da21d0eeeab22cd07cbac27e15ce549be"
+
+[[package]]
+name = "base64"
+version = "0.21.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "604178f6c5c21f02dc555784810edfb88d34ac2c73b2eae109655649ee73ce3d"
 
 [[package]]
 name = "bincode"
@@ -512,7 +518,7 @@ dependencies = [
  "enclave-utils",
  "flex-error",
  "log 0.4.17",
- "once_cell 1.16.0",
+ "once_cell",
  "sgx_tstd",
  "sgx_types",
 ]
@@ -1020,14 +1026,6 @@ dependencies = [
 
 [[package]]
 name = "once_cell"
-version = "1.4.0"
-source = "git+https://github.com/mesalock-linux/once_cell-sgx#cefcaa03fed4d85276b3235d875f1b45d399cc3c"
-dependencies = [
- "sgx_tstd",
-]
-
-[[package]]
-name = "once_cell"
 version = "1.16.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "86f0b0d4bf799edbc74508c1e8bf170ff5f41238e5f8225603ca7caaae2b7860"
@@ -1070,13 +1068,11 @@ checksum = "b1de2e551fb905ac83f73f7aedf2f0cb4a0da7e35efa24a202a936269f1f18e1"
 
 [[package]]
 name = "pem"
-version = "0.8.2"
-source = "git+https://github.com/mesalock-linux/pem-rs-sgx#fdfef4f24a9fb3fa72e8a71bb28bd8ff15feff2f"
+version = "2.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6b13fe415cdf3c8e44518e18a7c95a13431d9bdf6d15367d82b23c377fdd441a"
 dependencies = [
- "base64 0.13.0",
- "once_cell 1.4.0",
- "regex",
- "sgx_tstd",
+ "base64 0.21.2",
 ]
 
 [[package]]
@@ -1117,7 +1113,7 @@ version = "1.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "66618389e4ec1c7afe67d51a9bf34ff9236480f8d51e7489b7d5ab0303c13f34"
 dependencies = [
- "once_cell 1.16.0",
+ "once_cell",
  "toml_edit",
 ]
 
@@ -1186,23 +1182,6 @@ name = "rand_core"
 version = "0.6.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ec0be4795e2f6a28069bec0b5ff3e2ac9bafc99e6a9a7dc3547996c5c816922c"
-
-[[package]]
-name = "regex"
-version = "1.3.1"
-source = "git+https://github.com/mesalock-linux/regex-sgx#76aef86f9836532d17764523d0fa23bb7d2e31cf"
-dependencies = [
- "regex-syntax",
- "sgx_tstd",
-]
-
-[[package]]
-name = "regex-syntax"
-version = "0.6.12"
-source = "git+https://github.com/mesalock-linux/regex-sgx#76aef86f9836532d17764523d0fa23bb7d2e31cf"
-dependencies = [
- "sgx_tstd",
-]
 
 [[package]]
 name = "ring"
@@ -1573,7 +1552,7 @@ source = "git+https://github.com/bluele/rust-simple_logger?branch=sgx#9cf5a3234b
 dependencies = [
  "atty",
  "log 0.4.17",
- "once_cell 1.16.0",
+ "once_cell",
  "sgx_tstd",
  "winapi",
 ]
@@ -1662,7 +1641,7 @@ dependencies = [
  "flex-error",
  "futures",
  "num-traits",
- "once_cell 1.16.0",
+ "once_cell",
  "prost",
  "prost-types",
  "serde",
