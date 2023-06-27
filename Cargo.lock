@@ -15,8 +15,8 @@ dependencies = [
  "clap",
  "color-eyre",
  "fs-err",
- "once_cell 1.17.1",
- "regex 1.7.1",
+ "once_cell",
+ "regex",
  "secrecy",
  "semver",
  "serde",
@@ -69,7 +69,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fcb51a0695d8f838b1ee009b3fbf66bda078cd64590202a864a8f3e8c4315c47"
 dependencies = [
  "getrandom 0.2.7",
- "once_cell 1.17.1",
+ "once_cell",
  "version_check",
 ]
 
@@ -200,8 +200,7 @@ dependencies = [
  "flex-error",
  "hex",
  "lcp-types",
- "pem 0.8.2",
- "pem 1.1.0",
+ "pem",
  "rustls 0.19.0",
  "rustls 0.19.1",
  "serde",
@@ -364,7 +363,7 @@ dependencies = [
  "peeking_take_while",
  "proc-macro2",
  "quote",
- "regex 1.7.1",
+ "regex",
  "rustc-hash",
  "shlex",
 ]
@@ -687,7 +686,7 @@ dependencies = [
  "clap_derive",
  "clap_lex",
  "indexmap",
- "once_cell 1.17.1",
+ "once_cell",
  "strsim",
  "termcolor",
  "textwrap",
@@ -744,7 +743,7 @@ dependencies = [
  "color-spantrace",
  "eyre",
  "indenter",
- "once_cell 1.17.1",
+ "once_cell",
  "owo-colors",
  "tracing-error",
 ]
@@ -755,7 +754,7 @@ version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1ba75b3d9449ecdccb27ecbc479fdc0b87fa2dd43d2f8298f9bf0e59aacc8dce"
 dependencies = [
- "once_cell 1.17.1",
+ "once_cell",
  "owo-colors",
  "tracing-core",
  "tracing-error",
@@ -1017,7 +1016,7 @@ checksum = "48fcaf066a053a41a81dfb14d57d99738b767febb8b735c3016e469fac5da690"
 dependencies = [
  "cc",
  "codespan-reporting",
- "once_cell 1.17.1",
+ "once_cell",
  "proc-macro2",
  "quote",
  "scratch",
@@ -1085,7 +1084,7 @@ dependencies = [
  "cfg-if 1.0.0",
  "hashbrown",
  "lock_api",
- "once_cell 1.17.1",
+ "once_cell",
  "parking_lot_core",
 ]
 
@@ -1366,7 +1365,7 @@ dependencies = [
  "atty",
  "humantime",
  "log 0.4.17",
- "regex 1.7.1",
+ "regex",
  "termcolor",
 ]
 
@@ -1436,7 +1435,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4c2b6b5a29c02cdc822728b7d7b8ae1bab3e3b05d44522770ddd49722eeac7eb"
 dependencies = [
  "indenter",
- "once_cell 1.17.1",
+ "once_cell",
 ]
 
 [[package]]
@@ -1835,7 +1834,7 @@ dependencies = [
  "log 0.4.17",
  "ocall-commands",
  "ocall-handler",
- "once_cell 1.17.1",
+ "once_cell",
  "sgx_types",
  "sgx_urts",
 ]
@@ -2132,7 +2131,7 @@ dependencies = [
  "num-bigint",
  "num-rational",
  "prost",
- "regex 1.7.1",
+ "regex",
  "retry",
  "ripemd",
  "secp256k1",
@@ -2186,7 +2185,7 @@ dependencies = [
  "ibc-telemetry",
  "itertools",
  "oneline-eyre",
- "regex 1.7.1",
+ "regex",
  "serde",
  "serde_json",
  "signal-hook",
@@ -2253,7 +2252,7 @@ dependencies = [
  "dashmap",
  "ibc-relayer-types",
  "moka",
- "once_cell 1.17.1",
+ "once_cell",
  "opentelemetry",
  "opentelemetry-prometheus",
  "prometheus",
@@ -2402,7 +2401,7 @@ dependencies = [
  "lcp-types",
  "log 0.4.17",
  "ocall-handler",
- "once_cell 1.17.1",
+ "once_cell",
  "prost-types",
  "relay-tendermint",
  "store",
@@ -2851,7 +2850,7 @@ dependencies = [
  "crossbeam-epoch",
  "crossbeam-utils 0.8.15",
  "num_cpus",
- "once_cell 1.17.1",
+ "once_cell",
  "parking_lot",
  "quanta",
  "rustc_version",
@@ -3055,14 +3054,6 @@ dependencies = [
 
 [[package]]
 name = "once_cell"
-version = "1.4.0"
-source = "git+https://github.com/mesalock-linux/once_cell-sgx#cefcaa03fed4d85276b3235d875f1b45d399cc3c"
-dependencies = [
- "sgx_tstd",
-]
-
-[[package]]
-name = "once_cell"
 version = "1.17.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b7e5500299e16ebb147ae15a00a942af264cf3688f47923b8fc2cd5858f23ad3"
@@ -3120,7 +3111,7 @@ dependencies = [
  "futures-util",
  "indexmap",
  "js-sys",
- "once_cell 1.17.1",
+ "once_cell",
  "pin-project-lite",
  "thiserror",
 ]
@@ -3138,7 +3129,7 @@ dependencies = [
  "futures-channel",
  "futures-executor",
  "futures-util",
- "once_cell 1.17.1",
+ "once_cell",
  "opentelemetry_api",
  "percent-encoding",
  "rand 0.8.5",
@@ -3286,22 +3277,11 @@ checksum = "c719dcf55f09a3a7e764c6649ab594c18a177e3599c467983cdf644bfc0a4088"
 
 [[package]]
 name = "pem"
-version = "0.8.2"
-source = "git+https://github.com/mesalock-linux/pem-rs-sgx#fdfef4f24a9fb3fa72e8a71bb28bd8ff15feff2f"
-dependencies = [
- "base64 0.13.0 (git+https://github.com/mesalock-linux/rust-base64-sgx)",
- "once_cell 1.4.0",
- "regex 1.3.1",
- "sgx_tstd",
-]
-
-[[package]]
-name = "pem"
-version = "1.1.0"
+version = "2.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "03c64931a1a212348ec4f3b4362585eca7159d0d09cbdf4a7f74f02173596fd4"
+checksum = "6b13fe415cdf3c8e44518e18a7c95a13431d9bdf6d15367d82b23c377fdd441a"
 dependencies = [
- "base64 0.13.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "base64 0.21.0",
 ]
 
 [[package]]
@@ -3411,7 +3391,7 @@ version = "1.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "66618389e4ec1c7afe67d51a9bf34ff9236480f8d51e7489b7d5ab0303c13f34"
 dependencies = [
- "once_cell 1.17.1",
+ "once_cell",
  "toml_edit",
 ]
 
@@ -3522,7 +3502,7 @@ dependencies = [
  "crossbeam-utils 0.8.15",
  "libc",
  "mach",
- "once_cell 1.17.1",
+ "once_cell",
  "raw-cpuid",
  "wasi 0.10.2+wasi-snapshot-preview1",
  "web-sys",
@@ -3661,22 +3641,13 @@ dependencies = [
 
 [[package]]
 name = "regex"
-version = "1.3.1"
-source = "git+https://github.com/mesalock-linux/regex-sgx#76aef86f9836532d17764523d0fa23bb7d2e31cf"
-dependencies = [
- "regex-syntax 0.6.12",
- "sgx_tstd",
-]
-
-[[package]]
-name = "regex"
 version = "1.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "48aaa5748ba571fb95cd2c85c09f629215d3a6ece942baa100950af03a34f733"
 dependencies = [
  "aho-corasick",
  "memchr",
- "regex-syntax 0.6.27",
+ "regex-syntax",
 ]
 
 [[package]]
@@ -3685,15 +3656,7 @@ version = "0.1.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6c230d73fb8d8c1b9c0b3135c5142a8acee3a0558fb8db5cf1cb65f8d7862132"
 dependencies = [
- "regex-syntax 0.6.27",
-]
-
-[[package]]
-name = "regex-syntax"
-version = "0.6.12"
-source = "git+https://github.com/mesalock-linux/regex-sgx#76aef86f9836532d17764523d0fa23bb7d2e31cf"
-dependencies = [
- "sgx_tstd",
+ "regex-syntax",
 ]
 
 [[package]]
@@ -3738,7 +3701,7 @@ dependencies = [
  "js-sys",
  "log 0.4.17",
  "mime",
- "once_cell 1.17.1",
+ "once_cell",
  "percent-encoding",
  "pin-project-lite",
  "rustls 0.20.6",
@@ -3793,7 +3756,7 @@ checksum = "3053cf52e236a3ed746dfc745aa9cacf1b791d846bdaf412f60a8d7d6e17c8fc"
 dependencies = [
  "cc",
  "libc",
- "once_cell 1.17.1",
+ "once_cell",
  "spin",
  "untrusted",
  "web-sys",
@@ -4824,7 +4787,7 @@ dependencies = [
  "futures",
  "k256",
  "num-traits",
- "once_cell 1.17.1",
+ "once_cell",
  "prost",
  "prost-types",
  "ripemd160",
@@ -4854,7 +4817,7 @@ dependencies = [
  "flex-error",
  "futures",
  "num-traits",
- "once_cell 1.17.1",
+ "once_cell",
  "prost",
  "prost-types",
  "serde",
@@ -5077,7 +5040,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3fdd6f064ccff2d6567adcb3873ca630700f00b5ad3f060c25b5dcfd9a4ce152"
 dependencies = [
  "cfg-if 1.0.0",
- "once_cell 1.17.1",
+ "once_cell",
 ]
 
 [[package]]
@@ -5125,7 +5088,7 @@ checksum = "62cc94d358b5a1e84a5cb9109f559aa3c4d634d2b1b4de3d0fa4adc7c78e2861"
 dependencies = [
  "anyhow",
  "hmac 0.12.1",
- "once_cell 1.17.1",
+ "once_cell",
  "pbkdf2",
  "rand 0.8.5",
  "rustc-hash",
@@ -5425,7 +5388,7 @@ version = "0.1.30"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "24eb03ba0eab1fd845050058ce5e616558e8f8d8fca633e6b163fe25c797213a"
 dependencies = [
- "once_cell 1.17.1",
+ "once_cell",
  "valuable",
 ]
 
@@ -5478,8 +5441,8 @@ checksum = "a6176eae26dd70d0c919749377897b54a9276bd7061339665dd68777926b5a70"
 dependencies = [
  "matchers",
  "nu-ansi-term",
- "once_cell 1.17.1",
- "regex 1.7.1",
+ "once_cell",
+ "regex",
  "serde",
  "serde_json",
  "sharded-slab",

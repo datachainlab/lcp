@@ -2,8 +2,6 @@ use crate::prelude::*;
 use crate::{errors::Error, EndorsedAttestationVerificationReport};
 use lcp_types::Time;
 #[cfg(feature = "sgx")]
-use pem_sgx as pem;
-#[cfg(feature = "sgx")]
 use rustls_sgx as rustls;
 use tendermint::Time as TmTime;
 #[cfg(feature = "sgx")]
@@ -41,11 +39,11 @@ pub fn verify_report(
     };
     let now = webpki::Time::from_seconds_since_unix_epoch(secs);
     let root_ca_pem = pem::parse(IAS_REPORT_CA).expect("failed to parse pem bytes");
-    let root_ca = root_ca_pem.contents;
+    let root_ca = root_ca_pem.contents();
 
     let mut root_store = rustls::RootCertStore::empty();
     root_store
-        .add(&rustls::Certificate(root_ca.clone()))
+        .add(&rustls::Certificate(root_ca.to_vec()))
         .map_err(|e| Error::web_pki(e.to_string()))?;
 
     let trust_anchors: Vec<webpki::TrustAnchor> = root_store
@@ -54,7 +52,7 @@ pub fn verify_report(
         .map(|cert| cert.to_trust_anchor())
         .collect();
 
-    let chain = vec![root_ca.as_slice()];
+    let chain = vec![root_ca];
 
     let report_cert = webpki::EndEntityCert::from(&report.signing_cert)
         .map_err(|e| Error::web_pki(e.to_string()))?;
