@@ -1,13 +1,13 @@
 use crate::enclave_manage::Error;
 use crate::prelude::*;
 use crypto::{EnclaveKey, SealingKey};
-use ecall_commands::{CommandParams, InitEnclaveInput, InitEnclaveResult};
+use ecall_commands::{CommandContext, InitEnclaveInput, InitEnclaveResult};
 
 pub(crate) fn init_enclave(
+    cctx: CommandContext,
     _: InitEnclaveInput,
-    params: CommandParams,
 ) -> Result<InitEnclaveResult, Error> {
-    assert!(params.sealed_ek.len() == 0);
+    assert!(cctx.sealed_ek.len() == 0);
     let ek = EnclaveKey::new()?;
     let sealed_ek = ek.seal()?;
     Ok(InitEnclaveResult {

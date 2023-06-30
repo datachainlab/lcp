@@ -19,7 +19,7 @@ mod prelude {
     pub use core::iter::FromIterator;
 }
 
-pub use commands::{Command, CommandParams, CommandResult, ECallCommand};
+pub use commands::{Command, CommandContext, CommandResult, ECallCommand};
 pub use enclave_manage::{
     EnclaveManageCommand, EnclaveManageResult, IASRemoteAttestationInput,
     IASRemoteAttestationResult, InitEnclaveInput, InitEnclaveResult,

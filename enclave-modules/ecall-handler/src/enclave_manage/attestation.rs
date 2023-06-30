@@ -2,7 +2,7 @@ use crate::enclave_manage::errors::Error;
 use crate::prelude::*;
 use attestation_report::verify_report;
 use crypto::{EnclaveKey, SealingKey};
-use ecall_commands::{CommandParams, IASRemoteAttestationInput, IASRemoteAttestationResult};
+use ecall_commands::{CommandContext, IASRemoteAttestationInput, IASRemoteAttestationResult};
 use enclave_remote_attestation::{
     attestation::create_attestation_report, report::validate_quote_status,
 };
@@ -10,11 +10,11 @@ use lcp_types::Time;
 use sgx_types::{sgx_quote_sign_type_t, sgx_spid_t};
 
 pub(crate) fn ias_remote_attestation(
+    cctx: CommandContext,
     input: IASRemoteAttestationInput,
-    params: CommandParams,
 ) -> Result<IASRemoteAttestationResult, Error> {
     input.validate()?;
-    let pub_key = EnclaveKey::unseal(params.sealed_ek)?.get_pubkey();
+    let pub_key = EnclaveKey::unseal(cctx.sealed_ek)?.get_pubkey();
     let report = {
         let spid = decode_spid(&input.spid);
         let report = create_attestation_report(
@@ -32,11 +32,11 @@ pub(crate) fn ias_remote_attestation(
 
 #[cfg(feature = "sgx-sw")]
 pub(crate) fn simulate_remote_attestation(
+    cctx: CommandContext,
     input: ecall_commands::SimulateRemoteAttestationInput,
-    params: CommandParams,
 ) -> Result<ecall_commands::SimulateRemoteAttestationResult, Error> {
     input.validate()?;
-    let pub_key = EnclaveKey::unseal(params.sealed_ek)?.get_pubkey();
+    let pub_key = EnclaveKey::unseal(cctx.sealed_ek)?.get_pubkey();
     let avr = enclave_remote_attestation::simulate::create_attestation_report(
         pub_key.as_report_data(),
         sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE,

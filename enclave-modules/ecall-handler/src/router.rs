@@ -10,14 +10,14 @@ use enclave_environment::Env;
 pub fn dispatch<E: Env>(env: E, command: ECallCommand) -> Result<CommandResult> {
     match command.cmd {
         Command::EnclaveManage(cmd) => {
-            enclave_manage::dispatch(cmd, command.params).map_err(Error::enclave_manage_command)
+            enclave_manage::dispatch(command.ctx, cmd).map_err(Error::enclave_manage_command)
         }
         Command::LightClient(cmd) => {
-            validate_sealed_enclave_key(&command.params.sealed_ek)?;
-            let signer = SealedEnclaveKey::new_from_bytes(&command.params.sealed_ek)?;
+            validate_sealed_enclave_key(&command.ctx.sealed_ek)?;
+            let signer = SealedEnclaveKey::new_from_bytes(&command.ctx.sealed_ek)?;
             let mut ctx = Context::new(
                 env.get_lc_registry(),
-                env.new_store(command.params.tx_id),
+                env.new_store(command.ctx.tx_id),
                 &signer,
             );
             match light_client::dispatch(&mut ctx, cmd) {
