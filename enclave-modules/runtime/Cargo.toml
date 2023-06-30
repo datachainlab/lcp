@@ -14,7 +14,6 @@ once_cell = { version = "1.15.0", default-features = false, features = ["alloc"]
 enclave-utils = { path = "../utils" }
 ecall-handler = { path = "../ecall-handler" }
 enclave-environment = { path = "../environment" }
-crypto = { path = "../../modules/crypto", default-features = false, features = ["sgx"] }
 ecall-commands = { path = "../../modules/ecall-commands", default-features = false }
 
 [features]

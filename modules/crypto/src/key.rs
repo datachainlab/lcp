@@ -1,7 +1,5 @@
 use crate::prelude::*;
-use crate::{Error, Verifier};
-#[cfg(any(feature = "std", feature = "sgx"))]
-use crate::{Keccak256, Signer};
+use crate::{Error, Keccak256, Signer, Verifier};
 use libsecp256k1::{
     curve::Scalar,
     util::{COMPRESSED_PUBLIC_KEY_SIZE, SECRET_KEY_SIZE},
@@ -113,7 +111,6 @@ impl From<Address> for Vec<u8> {
     }
 }
 
-#[cfg(any(feature = "std", feature = "sgx"))]
 impl Signer for EnclaveKey {
     fn sign(&self, bz: &[u8]) -> Result<Vec<u8>, Error> {
         let mut s = Scalar::default();

@@ -924,6 +924,7 @@ dependencies = [
  "settings",
  "sgx_rand",
  "sgx_trts",
+ "sgx_tseal",
  "sgx_tstd",
  "sgx_types",
  "tiny-keccak 1.5.0",
@@ -4410,6 +4411,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "sgx_tcrypto"
+version = "1.1.6"
+source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?rev=v1.1.6#c3d82372dff81e5bafb07f71bc8ad532d06b504e"
+dependencies = [
+ "sgx_types",
+]
+
+[[package]]
 name = "sgx_tprotected_fs"
 version = "1.1.6"
 source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?rev=v1.1.6#c3d82372dff81e5bafb07f71bc8ad532d06b504e"
@@ -4424,6 +4433,25 @@ version = "1.1.6"
 source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?rev=v1.1.6#c3d82372dff81e5bafb07f71bc8ad532d06b504e"
 dependencies = [
  "sgx_libc",
+ "sgx_types",
+]
+
+[[package]]
+name = "sgx_tse"
+version = "1.1.6"
+source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?rev=v1.1.6#c3d82372dff81e5bafb07f71bc8ad532d06b504e"
+dependencies = [
+ "sgx_types",
+]
+
+[[package]]
+name = "sgx_tseal"
+version = "1.1.6"
+source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?rev=v1.1.6#c3d82372dff81e5bafb07f71bc8ad532d06b504e"
+dependencies = [
+ "sgx_tcrypto",
+ "sgx_trts",
+ "sgx_tse",
  "sgx_types",
 ]
 
@@ -6067,16 +6095,6 @@ version = "1.1.6"
 source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?rev=v1.1.6#c3d82372dff81e5bafb07f71bc8ad532d06b504e"
 
 [[patch.unused]]
-name = "sgx_tcrypto"
-version = "1.1.6"
-source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?rev=v1.1.6#c3d82372dff81e5bafb07f71bc8ad532d06b504e"
-
-[[patch.unused]]
 name = "sgx_tcrypto_helper"
-version = "1.1.6"
-source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?rev=v1.1.6#c3d82372dff81e5bafb07f71bc8ad532d06b504e"
-
-[[patch.unused]]
-name = "sgx_tse"
 version = "1.1.6"
 source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?rev=v1.1.6#c3d82372dff81e5bafb07f71bc8ad532d06b504e"

@@ -8,6 +8,8 @@ sgx_types = { rev = "v1.1.6", git = "https://github.com/apache/incubator-teaclav
 sgx_tstd = { rev = "v1.1.6", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", optional = true }
 sgx_trts = { rev = "v1.1.6", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", optional = true }
 sgx_rand = { rev = "v1.1.6", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", optional = true }
+sgx_tseal = { rev = "v1.1.6", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", optional = true }
+
 rand = { version = "0.8", default-features = false, optional = true }
 tiny-keccak = "1.4"
 serde = { version = "1.0", default-features = false, features = ["alloc", "derive"] }
@@ -26,5 +28,6 @@ sgx = [
     "sgx_tstd",
     "sgx_trts",
     "sgx_rand",
+    "sgx_tseal",
     "settings"
 ]

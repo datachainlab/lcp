@@ -56,6 +56,7 @@ pub enum EnclaveManageResult {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct InitEnclaveResult {
     pub pub_key: Vec<u8>,
+    pub sealed_ek: Vec<u8>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Default)]

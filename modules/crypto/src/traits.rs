@@ -13,12 +13,12 @@ pub trait Signer {
     fn use_verifier(&self, f: &mut dyn FnMut(&dyn Verifier));
 }
 
-pub trait SealedKey
+pub trait SealingKey
 where
     Self: core::marker::Sized,
 {
-    fn seal(&self, filepath: &str) -> Result<(), Error>;
-    fn unseal(filepath: &str) -> Result<Self, Error>;
+    fn seal(&self) -> Result<Vec<u8>, Error>;
+    fn unseal(bz: Vec<u8>) -> Result<Self, Error>;
 }
 
 pub trait Keccak256 {

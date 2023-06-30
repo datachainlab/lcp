@@ -15,8 +15,8 @@ define_error! {
             format_args!("SGX error: {:?}", e.status)
         },
 
-        EnclaveKeyNotFound
-        |_| { "Enclave Key not found" },
+        InvalidSealedEnclaveKey
+        |_| { "Invalid sealed Enclave Key" },
 
         Store
         [store::Error]
@@ -28,6 +28,16 @@ define_error! {
 
         LightClientCommand
         [crate::light_client::Error]
-        |_| { "LightClientCommand error" }
+        |_| { "LightClientCommand error" },
+
+        Crypto
+        [crypto::Error]
+        |_| { "Crypto error" },
+    }
+}
+
+impl From<crypto::Error> for Error {
+    fn from(value: crypto::Error) -> Self {
+        Self::crypto(value)
     }
 }

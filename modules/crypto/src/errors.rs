@@ -16,20 +16,26 @@ define_error! {
 
         FailedSeal
         {
-            err: String,
-            path: String,
+            descr: String
         }
         |e| {
-            format_args!("failed to seal: path={} err={}", e.path, e.err)
+            format_args!("failed to seal: descr={}", e.descr)
         },
 
         FailedUnseal
         {
-            err: String,
-            path: String,
+            descr: String,
         }
         |e| {
-            format_args!("failed to unseal: path={} err={}", e.path, e.err)
+            format_args!("failed to unseal: descr={}", e.descr)
+        },
+
+        InvalidSealedEnclaveKey
+        {
+            descr: String,
+        }
+        |e| {
+            format_args!("invalid sealed Enclave Key: descr={}", e.descr)
         },
 
         InsufficientSecretKeySize
@@ -54,5 +60,17 @@ define_error! {
         |e| {
             format_args!("unexpected signer: expected={:?} actual={:?}", e.expected, e.actual)
         }
+    }
+}
+
+impl From<sgx_status_t> for Error {
+    fn from(value: sgx_status_t) -> Self {
+        Self::sgx_error(value)
+    }
+}
+
+impl From<libsecp256k1::Error> for Error {
+    fn from(value: libsecp256k1::Error) -> Self {
+        Self::secp256k1(value)
     }
 }

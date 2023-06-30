@@ -18,13 +18,13 @@ impl ECallCommand {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct CommandParams {
-    pub home: String,
+    pub sealed_ek: Vec<u8>,
     pub tx_id: TxId,
 }
 
 impl CommandParams {
-    pub fn new(home: String, tx_id: TxId) -> Self {
-        Self { home, tx_id }
+    pub fn new(sealed_ek: Vec<u8>, tx_id: TxId) -> Self {
+        Self { sealed_ek, tx_id }
     }
 }
 
