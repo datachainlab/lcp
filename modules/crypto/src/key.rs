@@ -1,3 +1,5 @@
+use core::fmt::Display;
+
 use crate::prelude::*;
 use crate::{Error, Keccak256, Signer, Verifier};
 use libsecp256k1::{
@@ -88,6 +90,12 @@ pub struct Address(pub [u8; 20]);
 impl Address {
     pub fn to_hex_string(&self) -> String {
         hex::encode(self)
+    }
+}
+
+impl Display for Address {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.write_str(&self.to_hex_string())
     }
 }
 

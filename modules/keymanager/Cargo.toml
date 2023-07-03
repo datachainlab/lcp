@@ -4,6 +4,11 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+log = "0.4.8"
 flex-error = { version = "0.4.4", default-features = false }
+serde = { version = "1.0", default-features = false, features = ["alloc"] }
+fslock = { version = "0.2.1" }
+serde_json = { version = "1.0", default-features = false, features = ["alloc"] }
+tempfile = "3"
 
 crypto = { path = "../crypto", default-features = false }

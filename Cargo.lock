@@ -1519,6 +1519,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0845fa252299212f0389d64ba26f34fa32cfe41588355f21ed507c59a0f64541"
 
 [[package]]
+name = "fslock"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "04412b8935272e3a9bae6f48c7bfff74c2911f60525404edfdd28e49884c3bfb"
+dependencies = [
+ "libc",
+ "winapi",
+]
+
+[[package]]
 name = "funty"
 version = "2.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2489,6 +2499,11 @@ version = "0.1.0"
 dependencies = [
  "crypto",
  "flex-error",
+ "fslock",
+ "log 0.4.17",
+ "serde",
+ "serde_json",
+ "tempfile",
 ]
 
 [[package]]
