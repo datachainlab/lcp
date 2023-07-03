@@ -48,6 +48,16 @@ define_error! {
 
         TimeError
         [lcp_types::TimeError]
-        |_| { "Time error" }
+        |_| { "Time error" },
+
+        CryptoError
+        [crypto::Error]
+        |_| { "Crypto error" }
+    }
+}
+
+impl From<crypto::Error> for Error {
+    fn from(value: crypto::Error) -> Self {
+        Self::crypto_error(value)
     }
 }

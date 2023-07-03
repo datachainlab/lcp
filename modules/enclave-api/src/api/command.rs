@@ -1,21 +1,24 @@
 use crate::{EnclavePrimitiveAPI, Result};
 use ecall_commands::{
-    Command, CommandResult, EnclaveManageCommand, EnclaveManageResult, IASRemoteAttestationInput,
-    IASRemoteAttestationResult, InitClientInput, InitClientResult, InitEnclaveInput,
-    InitEnclaveResult, LightClientCommand, LightClientResult, QueryClientInput, QueryClientResult,
-    UpdateClientInput, UpdateClientResult, VerifyMembershipInput, VerifyMembershipResult,
-    VerifyNonMembershipInput, VerifyNonMembershipResult,
+    Command, CommandResult, EnclaveManageCommand, EnclaveManageResult, GenerateEnclaveKeyInput,
+    GenerateEnclaveKeyResult, IASRemoteAttestationInput, IASRemoteAttestationResult,
+    InitClientInput, InitClientResult, LightClientCommand, LightClientResult, QueryClientInput,
+    QueryClientResult, UpdateClientInput, UpdateClientResult, VerifyMembershipInput,
+    VerifyMembershipResult, VerifyNonMembershipInput, VerifyNonMembershipResult,
 };
 use store::transaction::CommitStore;
 
 pub trait EnclaveCommandAPI<S: CommitStore>: EnclavePrimitiveAPI<S> {
-    /// init_enclave_key generates a new key and perform remote attestation to generates an AVR
-    fn init_enclave_key(&self, input: InitEnclaveInput) -> Result<InitEnclaveResult> {
+    /// generate_enclave_key generates a new key and perform remote attestation to generates an AVR
+    fn generate_enclave_key(
+        &self,
+        input: GenerateEnclaveKeyInput,
+    ) -> Result<GenerateEnclaveKeyResult> {
         match self.execute_command(
-            Command::EnclaveManage(EnclaveManageCommand::InitEnclave(input)),
+            Command::EnclaveManage(EnclaveManageCommand::GenerateEnclaveKey(input)),
             None,
         )? {
-            CommandResult::EnclaveManage(EnclaveManageResult::InitEnclave(res)) => Ok(res),
+            CommandResult::EnclaveManage(EnclaveManageResult::GenerateEnclaveKey(res)) => Ok(res),
             _ => unreachable!(),
         }
     }

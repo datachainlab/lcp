@@ -45,6 +45,10 @@ define_error! {
         [lcp_types::TimeError]
         |_| { "Time error" },
 
+        CryptoError
+        [crypto::Error]
+        |_| { "Crypto error" },
+
         IbcProto
         [TraceError<ibc_proto::protobuf::Error>]
         |_| { "IBCProto error" }
@@ -60,6 +64,12 @@ impl From<attestation_report::Error> for Error {
 impl From<lcp_types::TimeError> for Error {
     fn from(err: lcp_types::TimeError) -> Self {
         Error::time(err)
+    }
+}
+
+impl From<crypto::Error> for Error {
+    fn from(value: crypto::Error) -> Self {
+        Self::crypto_error(value)
     }
 }
 

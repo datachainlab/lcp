@@ -1,11 +1,11 @@
 use crate::{prelude::*, EnclaveKeySelector, Error};
 use attestation_report::EndorsedAttestationVerificationReport;
-use crypto::{Address, SealedEnclaveKey};
+use crypto::{Address, EnclavePublicKey, SealedEnclaveKey};
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub enum EnclaveManageCommand {
-    InitEnclave(InitEnclaveInput),
+    GenerateEnclaveKey(GenerateEnclaveKeyInput),
     IASRemoteAttestation(IASRemoteAttestationInput),
     #[cfg(feature = "sgx-sw")]
     SimulateRemoteAttestation(SimulateRemoteAttestationInput),
@@ -14,7 +14,7 @@ pub enum EnclaveManageCommand {
 impl EnclaveKeySelector for EnclaveManageCommand {
     fn get_enclave_key(&self) -> Option<Address> {
         match self {
-            Self::InitEnclave(_) => None,
+            Self::GenerateEnclaveKey(_) => None,
             Self::IASRemoteAttestation(input) => Some(input.target_enclave_key),
             #[cfg(feature = "sgx-sw")]
             Self::SimulateRemoteAttestation(input) => Some(input.target_enclave_key),
@@ -23,7 +23,7 @@ impl EnclaveKeySelector for EnclaveManageCommand {
 }
 
 #[derive(Serialize, Deserialize, Debug, Default)]
-pub struct InitEnclaveInput;
+pub struct GenerateEnclaveKeyInput;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct IASRemoteAttestationInput {
@@ -61,15 +61,15 @@ impl SimulateRemoteAttestationInput {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub enum EnclaveManageResult {
-    InitEnclave(InitEnclaveResult),
+    GenerateEnclaveKey(GenerateEnclaveKeyResult),
     IASRemoteAttestation(IASRemoteAttestationResult),
     #[cfg(feature = "sgx-sw")]
     SimulateRemoteAttestation(SimulateRemoteAttestationResult),
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct InitEnclaveResult {
-    pub pub_key: Vec<u8>,
+pub struct GenerateEnclaveKeyResult {
+    pub pub_key: EnclavePublicKey,
     pub sealed_ek: SealedEnclaveKey,
 }
 

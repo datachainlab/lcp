@@ -2,6 +2,7 @@ use crate::errors::Error;
 use crate::light_client::*;
 use crate::prelude::*;
 use core::str::FromStr;
+use crypto::Address;
 use lcp_proto::lcp::service::elc::v1::{
     MsgCreateClient, MsgCreateClientResponse, MsgUpdateClient, MsgUpdateClientResponse,
     MsgVerifyMembership, MsgVerifyMembershipResponse, MsgVerifyNonMembership,
@@ -24,7 +25,7 @@ impl TryFrom<MsgCreateClient> for InitClientInput {
             any_client_state,
             any_consensus_state,
             current_timestamp: Time::now(),
-            signer: todo!(),
+            signer: Address::try_from(msg.signer.as_slice())?,
         })
     }
 }
@@ -42,7 +43,7 @@ impl TryFrom<MsgUpdateClient> for UpdateClientInput {
             any_header,
             include_state: msg.include_state,
             current_timestamp: Time::now(),
-            signer: todo!(),
+            signer: Address::try_from(msg.signer.as_slice())?,
         })
     }
 }
@@ -64,7 +65,7 @@ impl TryFrom<MsgVerifyMembership> for VerifyMembershipInput {
             proof,
             path: msg.path,
             value: msg.value,
-            signer: todo!(),
+            signer: Address::try_from(msg.signer.as_slice())?,
         })
     }
 }
@@ -85,7 +86,7 @@ impl TryFrom<MsgVerifyNonMembership> for VerifyNonMembershipInput {
             prefix: msg.prefix,
             proof,
             path: msg.path,
-            signer: todo!(),
+            signer: Address::try_from(msg.signer.as_slice())?,
         })
     }
 }

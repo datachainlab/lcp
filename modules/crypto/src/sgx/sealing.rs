@@ -1,10 +1,9 @@
 use crate::key::{SealedEnclaveKey, SEALED_DATA_32_SIZE, SEALED_DATA_32_USIZE};
-use crate::prelude::*;
 use crate::traits::SealingKey;
 use crate::EnclaveKey;
 use crate::Error;
 use crate::Signer;
-use crate::Verifier;
+use crate::{prelude::*, EnclavePublicKey};
 use libsecp256k1::{util::SECRET_KEY_SIZE, SecretKey};
 use sgx_tseal::SgxSealedData;
 use sgx_types::{marker::ContiguousMemory, sgx_sealed_data_t};
@@ -54,9 +53,7 @@ impl Signer for SealedEnclaveKey {
     fn sign(&self, msg: &[u8]) -> Result<Vec<u8>, Error> {
         EnclaveKey::unseal(self)?.sign(msg)
     }
-
-    // TODO remove this method
-    fn use_verifier(&self, f: &mut dyn FnMut(&dyn Verifier)) {
-        EnclaveKey::unseal(self).unwrap().use_verifier(f)
+    fn pubkey(&self) -> Result<EnclavePublicKey, Error> {
+        Ok(EnclaveKey::unseal(self)?.get_pubkey())
     }
 }

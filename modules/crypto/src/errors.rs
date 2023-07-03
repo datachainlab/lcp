@@ -38,6 +38,14 @@ define_error! {
             format_args!("invalid sealed Enclave Key: descr={}", e.descr)
         },
 
+        InvalidAddressLength
+        {
+            length: usize,
+        }
+        |e| {
+            format_args!("invalid address length: expected=20 actual={}", e.length)
+        },
+
         InsufficientSecretKeySize
         {
             path: String,

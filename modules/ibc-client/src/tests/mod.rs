@@ -132,7 +132,11 @@ fn test_ibc_client() {
             )
         };
 
-        let res = prove_update_client_commitment(ctx.get_enclave_key(), res.commitment);
+        let res = prove_update_client_commitment(
+            ctx.get_enclave_key(),
+            ctx.get_enclave_key().pubkey().unwrap().into(),
+            res.commitment,
+        );
         assert!(res.is_ok(), "res={:?}", res);
 
         ctx.store_any_client_state(upstream_client_id.clone(), client_state)

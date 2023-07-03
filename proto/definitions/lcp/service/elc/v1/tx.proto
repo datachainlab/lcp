@@ -33,8 +33,8 @@ message MsgCreateClient {
   // consensus state associated with the client that corresponds to a given
   // height.
   google.protobuf.Any consensus_state = 2 [(gogoproto.moretags) = "yaml:\"consensus_state\""];
-  // signer address
-  string signer = 3;
+  // enclave key for signing
+  bytes signer = 3;
 }
 
 // MsgCreateClientResponse defines the Msg/CreateClient response type.
@@ -60,6 +60,8 @@ message MsgUpdateClient {
   google.protobuf.Any header = 2;
   // request to include state in a commitment
   bool include_state = 3;
+  // enclave key for signing
+  bytes signer = 4;
 }
 
 // MsgUpdateClientResponse defines the Msg/UpdateClient response type.
@@ -82,6 +84,8 @@ message MsgVerifyMembership {
   bytes value = 4;
   ibc.core.client.v1.Height proof_height = 5 [(gogoproto.nullable) = false];
   bytes proof = 6;
+  // enclave key for signing
+  bytes signer = 7;
 }
 
 message MsgVerifyMembershipResponse {
@@ -102,6 +106,8 @@ message MsgVerifyNonMembership {
   string path = 3;
   ibc.core.client.v1.Height proof_height = 4 [(gogoproto.nullable) = false];
   bytes proof = 5;
+  // enclave key for signing
+  bytes signer = 6;
 }
 
 message MsgVerifyNonMembershipResponse {

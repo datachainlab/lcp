@@ -42,6 +42,14 @@ pub struct StateCommitmentProof {
 }
 
 impl StateCommitmentProof {
+    pub fn new(commitment_bytes: Vec<u8>, signer: Vec<u8>, signature: Vec<u8>) -> Self {
+        Self {
+            commitment_bytes,
+            signer,
+            signature,
+        }
+    }
+
     pub fn commitment(&self) -> StateCommitment {
         StateCommitment::from_bytes(&self.commitment_bytes).unwrap()
     }

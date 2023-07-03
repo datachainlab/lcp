@@ -30,7 +30,7 @@ pub fn init_client<R: LightClientResolver, S: KVStore>(
     ctx.increase_client_counter();
 
     let proof = if res.prove {
-        prove_update_client_commitment(ek, res.commitment)?
+        prove_update_client_commitment(ek, input.signer, res.commitment)?
     } else {
         UpdateClientCommitmentProof::new_with_no_signature(res.commitment.to_vec())
     };

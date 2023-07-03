@@ -17,7 +17,7 @@ where
             opts.default_enclave()
         };
         let env = host::get_environment().unwrap();
-        let km = EnclaveKeyManager::new(&env.home);
+        let km = EnclaveKeyManager::new(&env.home)?;
         match Enclave::create(&path, km, env.store.clone()) {
             Ok(enclave) => Ok(enclave),
             Err(x) => {

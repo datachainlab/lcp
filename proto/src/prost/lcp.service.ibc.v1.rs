@@ -27,6 +27,9 @@ pub struct MsgVerifyClient {
     >,
     #[prost(bytes = "vec", tag = "6")]
     pub proof: ::prost::alloc::vec::Vec<u8>,
+    /// enclave key for signing
+    #[prost(bytes = "vec", tag = "7")]
+    pub signer: ::prost::alloc::vec::Vec<u8>,
 }
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -51,6 +54,9 @@ pub struct MsgVerifyClientConsensus {
     >,
     #[prost(bytes = "vec", tag = "7")]
     pub proof: ::prost::alloc::vec::Vec<u8>,
+    /// enclave key for signing
+    #[prost(bytes = "vec", tag = "8")]
+    pub signer: ::prost::alloc::vec::Vec<u8>,
 }
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -71,6 +77,9 @@ pub struct MsgVerifyConnection {
     >,
     #[prost(bytes = "vec", tag = "6")]
     pub proof: ::prost::alloc::vec::Vec<u8>,
+    /// enclave key for signing
+    #[prost(bytes = "vec", tag = "7")]
+    pub signer: ::prost::alloc::vec::Vec<u8>,
 }
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -93,6 +102,9 @@ pub struct MsgVerifyChannel {
     >,
     #[prost(bytes = "vec", tag = "7")]
     pub proof: ::prost::alloc::vec::Vec<u8>,
+    /// enclave key for signing
+    #[prost(bytes = "vec", tag = "8")]
+    pub signer: ::prost::alloc::vec::Vec<u8>,
 }
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -115,6 +127,9 @@ pub struct MsgVerifyPacket {
     >,
     #[prost(bytes = "vec", tag = "8")]
     pub proof: ::prost::alloc::vec::Vec<u8>,
+    /// enclave key for signing
+    #[prost(bytes = "vec", tag = "9")]
+    pub signer: ::prost::alloc::vec::Vec<u8>,
 }
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -137,6 +152,9 @@ pub struct MsgVerifyPacketAcknowledgement {
     >,
     #[prost(bytes = "vec", tag = "8")]
     pub proof: ::prost::alloc::vec::Vec<u8>,
+    /// enclave key for signing
+    #[prost(bytes = "vec", tag = "9")]
+    pub signer: ::prost::alloc::vec::Vec<u8>,
 }
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -157,6 +175,9 @@ pub struct MsgVerifyPacketReceiptAbsense {
     >,
     #[prost(bytes = "vec", tag = "7")]
     pub proof: ::prost::alloc::vec::Vec<u8>,
+    /// enclave key for signing
+    #[prost(bytes = "vec", tag = "8")]
+    pub signer: ::prost::alloc::vec::Vec<u8>,
 }
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -177,6 +198,9 @@ pub struct MsgVerifyNextSequenceRecv {
     >,
     #[prost(bytes = "vec", tag = "7")]
     pub proof: ::prost::alloc::vec::Vec<u8>,
+    /// enclave key for signing
+    #[prost(bytes = "vec", tag = "8")]
+    pub signer: ::prost::alloc::vec::Vec<u8>,
 }
 /// Generated client implementations.
 #[cfg(feature = "client")]

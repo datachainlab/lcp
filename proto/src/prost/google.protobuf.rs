@@ -44,9 +44,14 @@ pub struct FileDescriptorProto {
     #[prost(message, optional, tag = "9")]
     pub source_code_info: ::core::option::Option<SourceCodeInfo>,
     /// The syntax of the proto file.
-    /// The supported values are "proto2" and "proto3".
+    /// The supported values are "proto2", "proto3", and "editions".
+    ///
+    /// If `edition` is present, this value must be "editions".
     #[prost(string, optional, tag = "12")]
     pub syntax: ::core::option::Option<::prost::alloc::string::String>,
+    /// The edition of the proto file, which is an opaque string.
+    #[prost(string, optional, tag = "13")]
+    pub edition: ::core::option::Option<::prost::alloc::string::String>,
 }
 /// Describes a message type.
 #[allow(clippy::derive_partial_eq_without_eq)]
@@ -80,8 +85,10 @@ pub mod descriptor_proto {
     #[allow(clippy::derive_partial_eq_without_eq)]
     #[derive(Clone, PartialEq, ::prost::Message)]
     pub struct ExtensionRange {
+        /// Inclusive.
         #[prost(int32, optional, tag = "1")]
         pub start: ::core::option::Option<i32>,
+        /// Exclusive.
         #[prost(int32, optional, tag = "2")]
         pub end: ::core::option::Option<i32>,
         #[prost(message, optional, tag = "3")]
@@ -137,7 +144,6 @@ pub struct FieldDescriptorProto {
     /// For booleans, "true" or "false".
     /// For strings, contains the default text contents (not escaped in any way).
     /// For bytes, contains the C escaped value.  All bytes >= 128 are escaped.
-    /// TODO(kenton):  Base-64 encode?
     #[prost(string, optional, tag = "7")]
     pub default_value: ::core::option::Option<::prost::alloc::string::String>,
     /// If set, gives the index of a oneof in the containing type's oneof_decl
@@ -152,6 +158,29 @@ pub struct FieldDescriptorProto {
     pub json_name: ::core::option::Option<::prost::alloc::string::String>,
     #[prost(message, optional, tag = "8")]
     pub options: ::core::option::Option<FieldOptions>,
+    /// If true, this is a proto3 "optional". When a proto3 field is optional, it
+    /// tracks presence regardless of field type.
+    ///
+    /// When proto3_optional is true, this field must be belong to a oneof to
+    /// signal to old proto3 clients that presence is tracked for this field. This
+    /// oneof is known as a "synthetic" oneof, and this field must be its sole
+    /// member (each proto3 optional field gets its own synthetic oneof). Synthetic
+    /// oneofs exist in the descriptor only, and do not generate any API. Synthetic
+    /// oneofs must be ordered after all "real" oneofs.
+    ///
+    /// For message fields, proto3_optional doesn't create any semantic change,
+    /// since non-repeated message fields always track presence. However it still
+    /// indicates the semantic detail of whether the user wrote "optional" or not.
+    /// This can be useful for round-tripping the .proto file. For consistency we
+    /// give message fields a synthetic oneof also, even though it is not required
+    /// to track presence. This is especially important because the parser can't
+    /// tell if a field is a message or an enum, so it must always create a
+    /// synthetic oneof.
+    ///
+    /// Proto2 optional fields do not set this flag, because they already indicate
+    /// optional with `LABEL_OPTIONAL`.
+    #[prost(bool, optional, tag = "17")]
+    pub proto3_optional: ::core::option::Option<bool>,
 }
 /// Nested message and enum types in `FieldDescriptorProto`.
 pub mod field_descriptor_proto {
@@ -396,17 +425,17 @@ pub struct FileOptions {
     /// domain names.
     #[prost(string, optional, tag = "1")]
     pub java_package: ::core::option::Option<::prost::alloc::string::String>,
-    /// If set, all the classes from the .proto file are wrapped in a single
-    /// outer class with the given name.  This applies to both Proto1
-    /// (equivalent to the old "--one_java_file" option) and Proto2 (where
-    /// a .proto always translates to a single class, but you may want to
-    /// explicitly choose the class name).
+    /// Controls the name of the wrapper Java class generated for the .proto file.
+    /// That class will always contain the .proto file's getDescriptor() method as
+    /// well as any top-level extensions defined in the .proto file.
+    /// If java_multiple_files is disabled, then all the other classes from the
+    /// .proto file will be nested inside the single wrapper outer class.
     #[prost(string, optional, tag = "8")]
     pub java_outer_classname: ::core::option::Option<::prost::alloc::string::String>,
-    /// If set true, then the Java code generator will generate a separate .java
+    /// If enabled, then the Java code generator will generate a separate .java
     /// file for each top-level message, enum, and service defined in the .proto
-    /// file.  Thus, these types will *not* be nested inside the outer class
-    /// named by java_outer_classname.  However, the outer class will still be
+    /// file.  Thus, these types will *not* be nested inside the wrapper class
+    /// named by java_outer_classname.  However, the wrapper class will still be
     /// generated to contain the file's getDescriptor() method as well as any
     /// top-level extensions defined in the file.
     #[prost(bool, optional, tag = "10", default = "false")]
@@ -463,7 +492,7 @@ pub struct FileOptions {
     pub deprecated: ::core::option::Option<bool>,
     /// Enables the use of arenas for the proto messages in this file. This applies
     /// only to generated classes for C++.
-    #[prost(bool, optional, tag = "31", default = "false")]
+    #[prost(bool, optional, tag = "31", default = "true")]
     pub cc_enable_arenas: ::core::option::Option<bool>,
     /// Sets the objective c class prefix which is prepended to all objective c
     /// generated classes from this .proto. There is no default.
@@ -488,8 +517,8 @@ pub struct FileOptions {
     #[prost(string, optional, tag = "41")]
     pub php_namespace: ::core::option::Option<::prost::alloc::string::String>,
     /// Use this option to change the namespace of php generated metadata classes.
-    /// Default is empty. When this option is empty, the proto file name will be used
-    /// for determining the namespace.
+    /// Default is empty. When this option is empty, the proto file name will be
+    /// used for determining the namespace.
     #[prost(string, optional, tag = "44")]
     pub php_metadata_namespace: ::core::option::Option<::prost::alloc::string::String>,
     /// Use this option to change the package of ruby generated classes. Default
@@ -584,6 +613,10 @@ pub struct MessageOptions {
     /// this is a formalization for deprecating messages.
     #[prost(bool, optional, tag = "3", default = "false")]
     pub deprecated: ::core::option::Option<bool>,
+    /// NOTE: Do not set the option in .proto files. Always use the maps syntax
+    /// instead. The option should only be implicitly set by the proto compiler
+    /// parser.
+    ///
     /// Whether the message is an automatically generated map entry type for the
     /// maps field.
     ///
@@ -599,14 +632,23 @@ pub struct MessageOptions {
     ///
     /// Implementations may choose not to generate the map_entry=true message, but
     /// use a native map in the target language to hold the keys and values.
-    /// The reflection APIs in such implementions still need to work as
+    /// The reflection APIs in such implementations still need to work as
     /// if the field is a repeated message field.
-    ///
-    /// NOTE: Do not set the option in .proto files. Always use the maps syntax
-    /// instead. The option should only be implicitly set by the proto compiler
-    /// parser.
     #[prost(bool, optional, tag = "7")]
     pub map_entry: ::core::option::Option<bool>,
+    /// Enable the legacy handling of JSON field name conflicts.  This lowercases
+    /// and strips underscored from the fields before comparison in proto3 only.
+    /// The new behavior takes `json_name` into account and applies to proto2 as
+    /// well.
+    ///
+    /// This should only be used as a temporary measure against broken builds due
+    /// to the change in behavior for JSON field name conflicts.
+    ///
+    /// TODO(b/261750190) This is legacy behavior we plan to remove once downstream
+    /// teams have had time to migrate.
+    #[deprecated]
+    #[prost(bool, optional, tag = "11")]
+    pub deprecated_legacy_json_field_conflicts: ::core::option::Option<bool>,
     /// The parser stores options it doesn't recognize here. See above.
     #[prost(message, repeated, tag = "999")]
     pub uninterpreted_option: ::prost::alloc::vec::Vec<UninterpretedOption>,
@@ -667,7 +709,6 @@ pub struct FieldOptions {
     /// call from multiple threads concurrently, while non-const methods continue
     /// to require exclusive access.
     ///
-    ///
     /// Note that implementations may choose not to check required fields within
     /// a lazy sub-message.  That is, calling IsInitialized() on the outer message
     /// may return true even if the inner message has missing required fields.
@@ -678,8 +719,16 @@ pub struct FieldOptions {
     /// implementation must either *always* check its required fields, or *never*
     /// check its required fields, regardless of whether or not the message has
     /// been parsed.
+    ///
+    /// As of May 2022, lazy verifies the contents of the byte stream during
+    /// parsing.  An invalid byte stream will cause the overall parsing to fail.
     #[prost(bool, optional, tag = "5", default = "false")]
     pub lazy: ::core::option::Option<bool>,
+    /// unverified_lazy does no correctness checks on the byte stream. This should
+    /// only be used where lazy with verification is prohibitive for performance
+    /// reasons.
+    #[prost(bool, optional, tag = "15", default = "false")]
+    pub unverified_lazy: ::core::option::Option<bool>,
     /// Is this field deprecated?
     /// Depending on the target platform, this can emit Deprecated annotations
     /// for accessors, or it will be completely ignored; in the very least, this
@@ -689,6 +738,14 @@ pub struct FieldOptions {
     /// For Google-internal migration only. Do not use.
     #[prost(bool, optional, tag = "10", default = "false")]
     pub weak: ::core::option::Option<bool>,
+    /// Indicate that the field value should not be printed out when using debug
+    /// formats, e.g. when the field contains sensitive credentials.
+    #[prost(bool, optional, tag = "16", default = "false")]
+    pub debug_redact: ::core::option::Option<bool>,
+    #[prost(enumeration = "field_options::OptionRetention", optional, tag = "17")]
+    pub retention: ::core::option::Option<i32>,
+    #[prost(enumeration = "field_options::OptionTargetType", optional, tag = "18")]
+    pub target: ::core::option::Option<i32>,
     /// The parser stores options it doesn't recognize here. See above.
     #[prost(message, repeated, tag = "999")]
     pub uninterpreted_option: ::prost::alloc::vec::Vec<UninterpretedOption>,
@@ -777,6 +834,114 @@ pub mod field_options {
             }
         }
     }
+    /// If set to RETENTION_SOURCE, the option will be omitted from the binary.
+    /// Note: as of January 2023, support for this is in progress and does not yet
+    /// have an effect (b/264593489).
+    #[derive(
+        Clone,
+        Copy,
+        Debug,
+        PartialEq,
+        Eq,
+        Hash,
+        PartialOrd,
+        Ord,
+        ::prost::Enumeration
+    )]
+    #[repr(i32)]
+    pub enum OptionRetention {
+        RetentionUnknown = 0,
+        RetentionRuntime = 1,
+        RetentionSource = 2,
+    }
+    impl OptionRetention {
+        /// String value of the enum field names used in the ProtoBuf definition.
+        ///
+        /// The values are not transformed in any way and thus are considered stable
+        /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+        pub fn as_str_name(&self) -> &'static str {
+            match self {
+                OptionRetention::RetentionUnknown => "RETENTION_UNKNOWN",
+                OptionRetention::RetentionRuntime => "RETENTION_RUNTIME",
+                OptionRetention::RetentionSource => "RETENTION_SOURCE",
+            }
+        }
+        /// Creates an enum from field names used in the ProtoBuf definition.
+        pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+            match value {
+                "RETENTION_UNKNOWN" => Some(Self::RetentionUnknown),
+                "RETENTION_RUNTIME" => Some(Self::RetentionRuntime),
+                "RETENTION_SOURCE" => Some(Self::RetentionSource),
+                _ => None,
+            }
+        }
+    }
+    /// This indicates the types of entities that the field may apply to when used
+    /// as an option. If it is unset, then the field may be freely used as an
+    /// option on any kind of entity. Note: as of January 2023, support for this is
+    /// in progress and does not yet have an effect (b/264593489).
+    #[derive(
+        Clone,
+        Copy,
+        Debug,
+        PartialEq,
+        Eq,
+        Hash,
+        PartialOrd,
+        Ord,
+        ::prost::Enumeration
+    )]
+    #[repr(i32)]
+    pub enum OptionTargetType {
+        TargetTypeUnknown = 0,
+        TargetTypeFile = 1,
+        TargetTypeExtensionRange = 2,
+        TargetTypeMessage = 3,
+        TargetTypeField = 4,
+        TargetTypeOneof = 5,
+        TargetTypeEnum = 6,
+        TargetTypeEnumEntry = 7,
+        TargetTypeService = 8,
+        TargetTypeMethod = 9,
+    }
+    impl OptionTargetType {
+        /// String value of the enum field names used in the ProtoBuf definition.
+        ///
+        /// The values are not transformed in any way and thus are considered stable
+        /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+        pub fn as_str_name(&self) -> &'static str {
+            match self {
+                OptionTargetType::TargetTypeUnknown => "TARGET_TYPE_UNKNOWN",
+                OptionTargetType::TargetTypeFile => "TARGET_TYPE_FILE",
+                OptionTargetType::TargetTypeExtensionRange => {
+                    "TARGET_TYPE_EXTENSION_RANGE"
+                }
+                OptionTargetType::TargetTypeMessage => "TARGET_TYPE_MESSAGE",
+                OptionTargetType::TargetTypeField => "TARGET_TYPE_FIELD",
+                OptionTargetType::TargetTypeOneof => "TARGET_TYPE_ONEOF",
+                OptionTargetType::TargetTypeEnum => "TARGET_TYPE_ENUM",
+                OptionTargetType::TargetTypeEnumEntry => "TARGET_TYPE_ENUM_ENTRY",
+                OptionTargetType::TargetTypeService => "TARGET_TYPE_SERVICE",
+                OptionTargetType::TargetTypeMethod => "TARGET_TYPE_METHOD",
+            }
+        }
+        /// Creates an enum from field names used in the ProtoBuf definition.
+        pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+            match value {
+                "TARGET_TYPE_UNKNOWN" => Some(Self::TargetTypeUnknown),
+                "TARGET_TYPE_FILE" => Some(Self::TargetTypeFile),
+                "TARGET_TYPE_EXTENSION_RANGE" => Some(Self::TargetTypeExtensionRange),
+                "TARGET_TYPE_MESSAGE" => Some(Self::TargetTypeMessage),
+                "TARGET_TYPE_FIELD" => Some(Self::TargetTypeField),
+                "TARGET_TYPE_ONEOF" => Some(Self::TargetTypeOneof),
+                "TARGET_TYPE_ENUM" => Some(Self::TargetTypeEnum),
+                "TARGET_TYPE_ENUM_ENTRY" => Some(Self::TargetTypeEnumEntry),
+                "TARGET_TYPE_SERVICE" => Some(Self::TargetTypeService),
+                "TARGET_TYPE_METHOD" => Some(Self::TargetTypeMethod),
+                _ => None,
+            }
+        }
+    }
 }
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -798,6 +963,15 @@ pub struct EnumOptions {
     /// is a formalization for deprecating enums.
     #[prost(bool, optional, tag = "3", default = "false")]
     pub deprecated: ::core::option::Option<bool>,
+    /// Enable the legacy handling of JSON field name conflicts.  This lowercases
+    /// and strips underscored from the fields before comparison in proto3 only.
+    /// The new behavior takes `json_name` into account and applies to proto2 as
+    /// well.
+    /// TODO(b/261750190) Remove this legacy behavior once downstream teams have
+    /// had time to migrate.
+    #[deprecated]
+    #[prost(bool, optional, tag = "6")]
+    pub deprecated_legacy_json_field_conflicts: ::core::option::Option<bool>,
     /// The parser stores options it doesn't recognize here. See above.
     #[prost(message, repeated, tag = "999")]
     pub uninterpreted_option: ::prost::alloc::vec::Vec<UninterpretedOption>,
@@ -926,8 +1100,8 @@ pub mod uninterpreted_option {
     /// The name of the uninterpreted option.  Each string represents a segment in
     /// a dot-separated name.  is_extension is true iff a segment represents an
     /// extension (denoted with parentheses in options specs in .proto files).
-    /// E.g.,{ ["foo", false], ["bar.baz", true], ["qux", false] } represents
-    /// "foo.(bar.baz).qux".
+    /// E.g.,{ ["foo", false], ["bar.baz", true], ["moo", false] } represents
+    /// "foo.(bar.baz).moo".
     #[allow(clippy::derive_partial_eq_without_eq)]
     #[derive(Clone, PartialEq, ::prost::Message)]
     pub struct NamePart {
@@ -979,7 +1153,7 @@ pub struct SourceCodeInfo {
     ///    beginning of the "extend" block and is shared by all extensions within
     ///    the block.
     /// - Just because a location's span is a subset of some other location's span
-    ///    does not mean that it is a descendent.  For example, a "group" defines
+    ///    does not mean that it is a descendant.  For example, a "group" defines
     ///    both a type and a field in a single declaration.  Thus, the locations
     ///    corresponding to the type and field and their components will overlap.
     /// - Code which tries to interpret locations should probably be designed to
@@ -997,8 +1171,8 @@ pub mod source_code_info {
         /// location.
         ///
         /// Each element is a field number or an index.  They form a path from
-        /// the root FileDescriptorProto to the place where the definition.  For
-        /// example, this path:
+        /// the root FileDescriptorProto to the place where the definition occurs.
+        /// For example, this path:
         ///    [ 4, 3, 2, 7, 1 ]
         /// refers to:
         ///    file.message_type(3)  // 4, 3
@@ -1052,13 +1226,13 @@ pub mod source_code_info {
         ///    // Comment attached to baz.
         ///    // Another line attached to baz.
         ///
-        ///    // Comment attached to qux.
+        ///    // Comment attached to moo.
         ///    //
-        ///    // Another line attached to qux.
-        ///    optional double qux = 4;
+        ///    // Another line attached to moo.
+        ///    optional double moo = 4;
         ///
         ///    // Detached comment for corge. This is not leading or trailing comments
-        ///    // to qux or corge because there are blank lines separating it from
+        ///    // to moo or corge because there are blank lines separating it from
         ///    // both.
         ///
         ///    // Detached comment for corge paragraph 2.
@@ -1110,10 +1284,59 @@ pub mod generated_code_info {
         #[prost(int32, optional, tag = "3")]
         pub begin: ::core::option::Option<i32>,
         /// Identifies the ending offset in bytes in the generated code that
-        /// relates to the identified offset. The end offset should be one past
+        /// relates to the identified object. The end offset should be one past
         /// the last relevant byte (so the length of the text = end - begin).
         #[prost(int32, optional, tag = "4")]
         pub end: ::core::option::Option<i32>,
+        #[prost(enumeration = "annotation::Semantic", optional, tag = "5")]
+        pub semantic: ::core::option::Option<i32>,
+    }
+    /// Nested message and enum types in `Annotation`.
+    pub mod annotation {
+        /// Represents the identified object's effect on the element in the original
+        /// .proto file.
+        #[derive(
+            Clone,
+            Copy,
+            Debug,
+            PartialEq,
+            Eq,
+            Hash,
+            PartialOrd,
+            Ord,
+            ::prost::Enumeration
+        )]
+        #[repr(i32)]
+        pub enum Semantic {
+            /// There is no effect or the effect is indescribable.
+            None = 0,
+            /// The element is set or otherwise mutated.
+            Set = 1,
+            /// An alias to the element is returned.
+            Alias = 2,
+        }
+        impl Semantic {
+            /// String value of the enum field names used in the ProtoBuf definition.
+            ///
+            /// The values are not transformed in any way and thus are considered stable
+            /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+            pub fn as_str_name(&self) -> &'static str {
+                match self {
+                    Semantic::None => "NONE",
+                    Semantic::Set => "SET",
+                    Semantic::Alias => "ALIAS",
+                }
+            }
+            /// Creates an enum from field names used in the ProtoBuf definition.
+            pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+                match value {
+                    "NONE" => Some(Self::None),
+                    "SET" => Some(Self::Set),
+                    "ALIAS" => Some(Self::Alias),
+                    _ => None,
+                }
+            }
+        }
     }
 }
 /// `Any` contains an arbitrary serialized protocol buffer message along with a
@@ -1234,17 +1457,19 @@ pub struct Any {
     #[prost(bytes = "vec", tag = "2")]
     pub value: ::prost::alloc::vec::Vec<u8>,
 }
-/// A Timestamp represents a point in time independent of any time zone
-/// or calendar, represented as seconds and fractions of seconds at
-/// nanosecond resolution in UTC Epoch time. It is encoded using the
-/// Proleptic Gregorian Calendar which extends the Gregorian calendar
-/// backwards to year one. It is encoded assuming all minutes are 60
-/// seconds long, i.e. leap seconds are "smeared" so that no leap second
-/// table is needed for interpretation. Range is from
-/// 0001-01-01T00:00:00Z to 9999-12-31T23:59:59.999999999Z.
-/// By restricting to that range, we ensure that we can convert to
-/// and from  RFC 3339 date strings.
-/// See \[<https://www.ietf.org/rfc/rfc3339.txt\](https://www.ietf.org/rfc/rfc3339.txt>).
+/// A Timestamp represents a point in time independent of any time zone or local
+/// calendar, encoded as a count of seconds and fractions of seconds at
+/// nanosecond resolution. The count is relative to an epoch at UTC midnight on
+/// January 1, 1970, in the proleptic Gregorian calendar which extends the
+/// Gregorian calendar backwards to year one.
+///
+/// All minutes are 60 seconds long. Leap seconds are "smeared" so that no leap
+/// second table is needed for interpretation, using a [24-hour linear
+/// smear](<https://developers.google.com/time/smear>).
+///
+/// The range is from 0001-01-01T00:00:00Z to 9999-12-31T23:59:59.999999999Z. By
+/// restricting to that range, we ensure that we can convert to and from [RFC
+/// 3339](<https://www.ietf.org/rfc/rfc3339.txt>) date strings.
 ///
 /// # Examples
 ///
@@ -1282,8 +1507,15 @@ pub struct Any {
 ///      Timestamp timestamp = Timestamp.newBuilder().setSeconds(millis / 1000)
 ///          .setNanos((int) ((millis % 1000) * 1000000)).build();
 ///
+/// Example 5: Compute Timestamp from Java `Instant.now()`.
 ///
-/// Example 5: Compute Timestamp from current time in Python.
+///      Instant now = Instant.now();
+///
+///      Timestamp timestamp =
+///          Timestamp.newBuilder().setSeconds(now.getEpochSecond())
+///              .setNanos(now.getNano()).build();
+///
+/// Example 6: Compute Timestamp from current time in Python.
 ///
 ///      timestamp = Timestamp()
 ///      timestamp.GetCurrentTime()
@@ -1305,14 +1537,15 @@ pub struct Any {
 /// 01:30 UTC on January 15, 2017.
 ///
 /// In JavaScript, one can convert a Date object to this format using the
-/// standard \[toISOString()](<https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date/toISOString\]>
+/// standard
+/// \[toISOString()\](<https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date/toISOString>)
 /// method. In Python, a standard `datetime.datetime` object can be converted
-/// to this format using \[`strftime`\](<https://docs.python.org/2/library/time.html#time.strftime>)
-/// with the time format spec '%Y-%m-%dT%H:%M:%S.%fZ'. Likewise, in Java, one
-/// can use the Joda Time's \[`ISODateTimeFormat.dateTime()`\](
-/// <http://www.joda.org/joda-time/apidocs/org/joda/time/format/ISODateTimeFormat.html#dateTime-->
+/// to this format using
+/// \[`strftime`\](<https://docs.python.org/2/library/time.html#time.strftime>) with
+/// the time format spec '%Y-%m-%dT%H:%M:%S.%fZ'. Likewise, in Java, one can use
+/// the Joda Time's \[`ISODateTimeFormat.dateTime()`\](
+/// <http://www.joda.org/joda-time/apidocs/org/joda/time/format/ISODateTimeFormat.html#dateTime%2D%2D>
 /// ) to obtain a formatter capable of generating timestamps in this format.
-///
 ///
 #[derive(::serde::Serialize, ::serde::Deserialize)]
 #[allow(clippy::derive_partial_eq_without_eq)]

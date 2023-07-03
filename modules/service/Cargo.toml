@@ -14,7 +14,6 @@ enclave-api = { path = "../enclave-api" }
 lcp-proto = { path = "../../proto", default-features = false }
 attestation-report = { path = "../attestation-report" }
 store = { path = "../store", features = ["rocksdbstore"] }
-settings = { path = "../settings" }
 
 [features]
 sgx-sw = [

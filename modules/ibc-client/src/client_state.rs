@@ -63,7 +63,7 @@ impl From<ClientState> for RawClientState {
             allowed_advisory_ids: Default::default(),
         };
         value.keys.into_iter().for_each(|k| {
-            client_state.keys.push(k.0.into());
+            client_state.keys.push(k.0 .0.to_vec());
             client_state
                 .attestation_times
                 .push(k.1.as_unix_timestamp_secs());
@@ -83,7 +83,7 @@ impl TryFrom<RawClientState> for ClientState {
             .zip(raw.attestation_times.iter())
             .map(|entry| {
                 (
-                    Address::from(entry.0.as_slice()),
+                    Address::try_from(entry.0.as_slice()).unwrap(),
                     Time::from_unix_timestamp_secs(*entry.1).unwrap(),
                 )
             })

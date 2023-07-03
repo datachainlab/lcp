@@ -24,7 +24,7 @@ pub fn update_client<R: LightClientResolver, S: KVStore>(
     ctx.store_any_consensus_state(input.client_id, res.height, res.new_any_consensus_state)?;
 
     let proof = if res.prove {
-        prove_update_client_commitment(ek, res.commitment)?
+        prove_update_client_commitment(ek, input.signer, res.commitment)?
     } else {
         UpdateClientCommitmentProof::new_with_no_signature(res.commitment.to_vec())
     };

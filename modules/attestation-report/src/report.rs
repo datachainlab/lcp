@@ -121,7 +121,7 @@ impl Quote {
         if data.len() < 20 {
             Err(Error::invalid_report_data_size(data.len()))
         } else {
-            Ok(Address::from(&data[..20]))
+            Ok(Address::try_from(&data[..20])?)
         }
     }
 

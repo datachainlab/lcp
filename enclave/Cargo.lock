@@ -276,7 +276,6 @@ dependencies = [
  "libsecp256k1",
  "serde",
  "serde-big-array",
- "settings",
  "sgx_rand",
  "sgx_trts",
  "sgx_tseal",
@@ -1407,10 +1406,6 @@ dependencies = [
  "quote",
  "syn",
 ]
-
-[[package]]
-name = "settings"
-version = "0.1.0"
 
 [[package]]
 name = "sgx_alloc"

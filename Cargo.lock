@@ -922,7 +922,6 @@ dependencies = [
  "rand 0.8.5",
  "serde",
  "serde-big-array",
- "settings",
  "sgx_rand",
  "sgx_trts",
  "sgx_tseal",
@@ -2497,6 +2496,7 @@ checksum = "f9b7d56ba4a8344d6be9729995e6b06f928af29998cdf79fe390cbf6b1fee838"
 name = "keymanager"
 version = "0.1.0"
 dependencies = [
+ "attestation-report",
  "crypto",
  "flex-error",
  "fslock",
@@ -2528,6 +2528,7 @@ dependencies = [
  "anyhow",
  "attestation-report",
  "clap",
+ "crypto",
  "dirs",
  "ecall-commands",
  "enclave-api",
@@ -2541,7 +2542,6 @@ dependencies = [
  "serde",
  "serde_json",
  "service",
- "settings",
  "sha2 0.10.6",
  "store",
  "tokio",
@@ -4392,16 +4392,11 @@ dependencies = [
  "enclave-api",
  "lcp-proto",
  "serde_json",
- "settings",
  "store",
  "tokio",
  "tonic",
  "tonic-reflection",
 ]
-
-[[package]]
-name = "settings"
-version = "0.1.0"
 
 [[package]]
 name = "sgx_alloc"

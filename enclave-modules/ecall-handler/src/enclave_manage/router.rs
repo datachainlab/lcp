@@ -1,5 +1,5 @@
 use crate::enclave_manage::{
-    attestation::ias_remote_attestation, init_enclave::init_enclave, Error,
+    attestation::ias_remote_attestation, enclave::generate_enclave_key, Error,
 };
 use crate::prelude::*;
 use ecall_commands::{CommandContext, CommandResult, EnclaveManageCommand, EnclaveManageResult};
@@ -11,9 +11,9 @@ pub fn dispatch(
     use EnclaveManageCommand::*;
 
     let res = match command {
-        InitEnclave(input) => CommandResult::EnclaveManage(EnclaveManageResult::InitEnclave(
-            init_enclave(cctx, input)?,
-        )),
+        GenerateEnclaveKey(input) => CommandResult::EnclaveManage(
+            EnclaveManageResult::GenerateEnclaveKey(generate_enclave_key(input)?),
+        ),
         IASRemoteAttestation(input) => CommandResult::EnclaveManage(
             EnclaveManageResult::IASRemoteAttestation(ias_remote_attestation(cctx, input)?),
         ),

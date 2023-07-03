@@ -15,7 +15,6 @@ members = [
     "modules/crypto",
     "modules/keymanager",
     "modules/store",
-    "modules/settings",
     "modules/ibc-client",
     "modules/validation-context",
     "modules/light-client",

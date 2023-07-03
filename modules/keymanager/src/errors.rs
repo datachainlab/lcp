@@ -6,6 +6,11 @@ define_error! {
         HomeDirNotFound
         |_| { "Home directory not found" },
 
+        Crypto
+        {}
+        [crypto::Error]
+        |_| { "Crypto error" },
+
         Io
         [TraceError<std::io::Error>]
         |_| { "IO error" },
@@ -17,6 +22,12 @@ define_error! {
         SerdeJson
         [TraceError<serde_json::Error>]
         |_| { "serde_json error" },
+    }
+}
+
+impl From<crypto::Error> for Error {
+    fn from(value: crypto::Error) -> Self {
+        Self::crypto(value)
     }
 }
 

@@ -27,7 +27,7 @@ pub fn verify_membership<R: LightClientResolver, S: KVStore>(
     )?;
 
     Ok(LightClientResult::VerifyMembership(VerifyMembershipResult(
-        prove_state_commitment(ek, res.state_commitment)?,
+        prove_state_commitment(ek, input.signer, res.state_commitment)?,
     )))
 }
 
@@ -48,6 +48,10 @@ pub fn verify_non_membership<R: LightClientResolver, S: KVStore>(
     )?;
 
     Ok(LightClientResult::VerifyNonMembership(
-        VerifyNonMembershipResult(prove_state_commitment(ek, res.state_commitment)?),
+        VerifyNonMembershipResult(prove_state_commitment(
+            ek,
+            input.signer,
+            res.state_commitment,
+        )?),
     ))
 }

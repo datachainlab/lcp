@@ -1,5 +1,6 @@
 pub mod errors;
 use crate::errors::Error;
+use attestation_report::EndorsedAttestationVerificationReport;
 use crypto::{Address, SealedEnclaveKey};
 use fslock::LockFile;
 use log::*;
@@ -10,6 +11,7 @@ use tempfile::NamedTempFile;
 
 pub static ENCLAVE_KEYS_DIR: &str = "keys";
 pub static LOCK_FILE: &str = "keys.lock";
+pub static ENCLAVE_KEY_PREFIX: &str = "key_";
 
 /**
  * Directory layout:
@@ -46,23 +48,43 @@ impl EnclaveKeyManager {
         self.create_file(address, &bz)
     }
 
-    pub fn save_avr(&self, address: Address, avr: String) -> Result<(), Error> {
+    pub fn save_avr(
+        &self,
+        address: Address,
+        avr: EndorsedAttestationVerificationReport,
+    ) -> Result<(), Error> {
         let _lock = self.lock_blocking()?;
         let mut ski = self.load(address)?;
-        assert!(ski.avr.is_empty());
-        ski.avr = avr;
+        // assert!(ski.avr.is_none());
+        ski.avr = Some(avr);
         let bz = serde_json::to_vec(&ski)?;
         self.create_file(address, &bz)
     }
 
-    pub fn list(&self) -> Result<Vec<SealedEnclaveKeyInfo>, Error> {
+    pub fn all(&self) -> Result<Vec<SealedEnclaveKeyInfo>, Error> {
         let _lock = self.lock_blocking()?;
         let mut skis = Vec::new();
         for entry in fs::read_dir(&self.key_dir)? {
             let entry = entry?;
             if let Some(name) = entry.file_name().to_str() {
-                if name.starts_with("key_") {
+                if name.starts_with(ENCLAVE_KEY_PREFIX) {
                     skis.push(self.read_file(entry.path())?);
+                }
+            }
+        }
+        Ok(skis)
+    }
+
+    pub fn list(&self) -> Result<Vec<Address>, Error> {
+        let _lock = self.lock_blocking()?;
+        let mut skis = Vec::new();
+        for entry in fs::read_dir(&self.key_dir)? {
+            let entry = entry?;
+            if let Some(name) = entry.file_name().to_str() {
+                if name.starts_with(ENCLAVE_KEY_PREFIX) {
+                    skis.push(Address::from_hex_string(
+                        name.strip_prefix(ENCLAVE_KEY_PREFIX).unwrap(),
+                    )?);
                 }
             }
         }
@@ -94,7 +116,7 @@ impl EnclaveKeyManager {
     }
 
     fn key_path(&self, address: Address) -> PathBuf {
-        self.key_dir.join(format!("{}.key", address))
+        self.key_dir.join(format!("{ENCLAVE_KEY_PREFIX}{address}"))
     }
 }
 
@@ -102,5 +124,5 @@ impl EnclaveKeyManager {
 pub struct SealedEnclaveKeyInfo {
     pub address: Address,
     pub sealed_ek: SealedEnclaveKey,
-    pub avr: String,
+    pub avr: Option<EndorsedAttestationVerificationReport>,
 }

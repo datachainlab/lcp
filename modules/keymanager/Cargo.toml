@@ -12,3 +12,4 @@ serde_json = { version = "1.0", default-features = false, features = ["alloc"] }
 tempfile = "3"
 
 crypto = { path = "../crypto", default-features = false }
+attestation-report = { path = "../attestation-report" }

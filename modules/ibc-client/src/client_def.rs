@@ -187,7 +187,7 @@ impl LCPClient {
             &commitment_proof.signature,
         )
         .unwrap();
-        assert!(Address::from(&commitment_proof.signer as &[u8]) == signer);
+        assert!(Address::try_from(&commitment_proof.signer as &[u8]).unwrap() == signer);
 
         // check if the specified signer is not expired and exists in the client state
         let vctx = self.validation_context(ctx);
