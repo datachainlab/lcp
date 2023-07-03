@@ -1,4 +1,5 @@
 use crate::errors::Result;
+use keymanager::EnclaveKeyManager;
 use sgx_types::{metadata::metadata_t, sgx_enclave_id_t, SgxResult};
 use sgx_urts::SgxEnclave;
 use std::path::PathBuf;
@@ -10,7 +11,7 @@ use store::transaction::{CommitStore, CreatedTx, UpdateKey};
 /// `Enclave` keeps an enclave id and reference to the host environement
 pub struct Enclave<S> {
     pub(crate) path: PathBuf,
-    pub(crate) home_path: PathBuf,
+    pub(crate) key_manager: EnclaveKeyManager,
     pub(crate) store: Arc<RwLock<HostStore>>,
     pub(crate) sgx_enclave: SgxEnclave,
     _marker: PhantomData<S>,
@@ -19,13 +20,13 @@ pub struct Enclave<S> {
 impl<S> Enclave<S> {
     pub fn new(
         path: impl Into<PathBuf>,
-        home_path: impl Into<PathBuf>,
+        key_manager: EnclaveKeyManager,
         store: Arc<RwLock<HostStore>>,
         sgx_enclave: SgxEnclave,
     ) -> Self {
         Enclave {
             path: path.into(),
-            home_path: home_path.into(),
+            key_manager,
             store,
             sgx_enclave,
             _marker: PhantomData::default(),
@@ -34,12 +35,12 @@ impl<S> Enclave<S> {
 
     pub fn create(
         path: impl Into<PathBuf>,
-        home_path: impl Into<PathBuf>,
+        key_manager: EnclaveKeyManager,
         store: Arc<RwLock<HostStore>>,
     ) -> SgxResult<Self> {
         let path = path.into();
         let enclave = host::create_enclave(path.clone())?;
-        Ok(Self::new(path, home_path, store, enclave))
+        Ok(Self::new(path, key_manager, store, enclave))
     }
 
     pub fn destroy(self) {
@@ -49,19 +50,15 @@ impl<S> Enclave<S> {
 
 /// `EnclaveInfo` is an accessor to enclave information
 pub trait EnclaveInfo {
-    /// `get_home` returns a path to the home directory
-    fn get_home(&self) -> String;
     /// `get_eid` returns the enclave id
     fn get_eid(&self) -> sgx_enclave_id_t;
     /// `metadata` returns the metadata of the enclave
     fn metadata(&self) -> SgxResult<metadata_t>;
+    /// `get_key_manager` returns a key manager for Enclave Keys
+    fn get_key_manager(&self) -> &EnclaveKeyManager;
 }
 
 impl<S> EnclaveInfo for Enclave<S> {
-    /// `get_home` returns a path to the home directory
-    fn get_home(&self) -> String {
-        self.home_path.to_str().unwrap().to_string()
-    }
     /// `get_eid` returns the enclave id
     fn get_eid(&self) -> sgx_enclave_id_t {
         self.sgx_enclave.geteid()
@@ -69,6 +66,10 @@ impl<S> EnclaveInfo for Enclave<S> {
     /// `metadata` returns the metadata of the enclave
     fn metadata(&self) -> SgxResult<metadata_t> {
         host::sgx_get_metadata(&self.path)
+    }
+    /// `get_keymanager` returns a key manager for Enclave Keys
+    fn get_key_manager(&self) -> &EnclaveKeyManager {
+        &self.key_manager
     }
 }
 

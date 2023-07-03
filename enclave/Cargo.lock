@@ -275,6 +275,7 @@ dependencies = [
  "hex",
  "libsecp256k1",
  "serde",
+ "serde-big-array",
  "settings",
  "sgx_rand",
  "sgx_trts",
@@ -405,6 +406,7 @@ version = "0.1.0"
 dependencies = [
  "attestation-report",
  "commitments",
+ "crypto",
  "flex-error",
  "lcp-proto",
  "lcp-types",
@@ -1326,6 +1328,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d193d69bae983fc11a79df82342761dfbf28a99fc8d203dca4c3c1b590948965"
 dependencies = [
  "serde_derive",
+]
+
+[[package]]
+name = "serde-big-array"
+version = "0.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "11fc7cc2c76d73e0f27ee52abbd64eec84d46f370c88371120433196934e4b7f"
+dependencies = [
+ "serde",
 ]
 
 [[package]]

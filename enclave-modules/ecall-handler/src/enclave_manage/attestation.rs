@@ -14,7 +14,8 @@ pub(crate) fn ias_remote_attestation(
     input: IASRemoteAttestationInput,
 ) -> Result<IASRemoteAttestationResult, Error> {
     input.validate()?;
-    let pub_key = EnclaveKey::unseal(cctx.sealed_ek)?.get_pubkey();
+    let pub_key =
+        EnclaveKey::unseal(&cctx.sealed_ek.ok_or(Error::enclave_key_not_found())?)?.get_pubkey();
     let report = {
         let spid = decode_spid(&input.spid);
         let report = create_attestation_report(
@@ -36,7 +37,8 @@ pub(crate) fn simulate_remote_attestation(
     input: ecall_commands::SimulateRemoteAttestationInput,
 ) -> Result<ecall_commands::SimulateRemoteAttestationResult, Error> {
     input.validate()?;
-    let pub_key = EnclaveKey::unseal(cctx.sealed_ek)?.get_pubkey();
+    let pub_key =
+        EnclaveKey::unseal(&cctx.sealed_ek.ok_or(Error::enclave_key_not_found())?)?.get_pubkey();
     let avr = enclave_remote_attestation::simulate::create_attestation_report(
         pub_key.as_report_data(),
         sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE,

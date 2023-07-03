@@ -1,5 +1,6 @@
-use crate::prelude::*;
+use crate::{prelude::*, EnclaveKeySelector};
 use commitments::{StateCommitmentProof, UpdateClientCommitmentProof};
+use crypto::Address;
 use lcp_types::{Any, ClientId, Height, Time};
 use serde::{Deserialize, Serialize};
 
@@ -14,11 +15,24 @@ pub enum LightClientCommand {
     QueryClient(QueryClientInput),
 }
 
+impl EnclaveKeySelector for LightClientCommand {
+    fn get_enclave_key(&self) -> Option<Address> {
+        match self {
+            Self::InitClient(input) => Some(input.signer),
+            Self::UpdateClient(input) => Some(input.signer),
+            Self::VerifyMembership(input) => Some(input.signer),
+            Self::VerifyNonMembership(input) => Some(input.signer),
+            _ => None,
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug)]
 pub struct InitClientInput {
     pub any_client_state: Any,
     pub any_consensus_state: Any,
     pub current_timestamp: Time,
+    pub signer: Address,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -27,6 +41,7 @@ pub struct UpdateClientInput {
     pub any_header: Any,
     pub include_state: bool,
     pub current_timestamp: Time,
+    pub signer: Address,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -36,6 +51,7 @@ pub struct VerifyMembershipInput {
     pub path: String,
     pub value: Vec<u8>,
     pub proof: CommitmentProofPair,
+    pub signer: Address,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -44,6 +60,7 @@ pub struct VerifyNonMembershipInput {
     pub prefix: Vec<u8>,
     pub path: String,
     pub proof: CommitmentProofPair,
+    pub signer: Address,
 }
 
 #[derive(Serialize, Deserialize, Debug)]

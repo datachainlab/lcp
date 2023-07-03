@@ -24,6 +24,7 @@ impl TryFrom<MsgCreateClient> for InitClientInput {
             any_client_state,
             any_consensus_state,
             current_timestamp: Time::now(),
+            signer: todo!(),
         })
     }
 }
@@ -41,6 +42,7 @@ impl TryFrom<MsgUpdateClient> for UpdateClientInput {
             any_header,
             include_state: msg.include_state,
             current_timestamp: Time::now(),
+            signer: todo!(),
         })
     }
 }
@@ -62,6 +64,7 @@ impl TryFrom<MsgVerifyMembership> for VerifyMembershipInput {
             proof,
             path: msg.path,
             value: msg.value,
+            signer: todo!(),
         })
     }
 }
@@ -82,6 +85,7 @@ impl TryFrom<MsgVerifyNonMembership> for VerifyNonMembershipInput {
             prefix: msg.prefix,
             proof,
             path: msg.path,
+            signer: todo!(),
         })
     }
 }

@@ -11,6 +11,7 @@ log = "0.4.8"
 flex-error = { version = "0.4.4" }
 
 ecall-commands = { path = "../ecall-commands", features = ["std"] }
+keymanager = { path = "../keymanager" }
 lcp-proto = { path = "../../proto", features = ["server"] }
 store = { path = "../store" }
 host = { path = "../host" }

@@ -20,6 +20,7 @@ mod prelude {
 }
 
 pub use commands::{Command, CommandContext, CommandResult, ECallCommand};
+use crypto::Address;
 pub use enclave_manage::{
     EnclaveManageCommand, EnclaveManageResult, IASRemoteAttestationInput,
     IASRemoteAttestationResult, InitEnclaveInput, InitEnclaveResult,
@@ -40,3 +41,7 @@ mod errors;
 mod light_client;
 #[cfg(feature = "std")]
 pub mod msgs;
+
+pub trait EnclaveKeySelector {
+    fn get_enclave_key(&self) -> Option<Address>;
+}

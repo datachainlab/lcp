@@ -13,6 +13,7 @@ members = [
     "modules/commitments",
     "modules/context",
     "modules/crypto",
+    "modules/keymanager",
     "modules/store",
     "modules/settings",
     "modules/ibc-client",

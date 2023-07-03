@@ -28,6 +28,7 @@ ecall-commands = { path = "../modules/ecall-commands" }
 settings = { path = "../modules/settings" }
 attestation-report = { path = "../modules/attestation-report" }
 store = { path = "../modules/store", features = ["rocksdbstore"] }
+keymanager = { path = "../modules/keymanager" }
 
 [features]
 default = []

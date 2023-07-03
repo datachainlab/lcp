@@ -7,7 +7,7 @@ pub(crate) fn init_enclave(
     cctx: CommandContext,
     _: InitEnclaveInput,
 ) -> Result<InitEnclaveResult, Error> {
-    assert!(cctx.sealed_ek.len() == 0);
+    assert!(cctx.sealed_ek.is_none());
     let ek = EnclaveKey::new()?;
     let sealed_ek = ek.seal()?;
     Ok(InitEnclaveResult {

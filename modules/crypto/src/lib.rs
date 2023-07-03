@@ -21,6 +21,7 @@ mod prelude {
 
 pub use crate::key::{
     verify_signature, verify_signature_address, Address, EnclaveKey, EnclavePublicKey,
+    SealedEnclaveKey,
 };
 pub use errors::Error;
 pub use traits::{Keccak256, SealingKey, Signer, Verifier};

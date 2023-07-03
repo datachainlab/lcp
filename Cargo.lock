@@ -921,6 +921,7 @@ dependencies = [
  "libsecp256k1",
  "rand 0.8.5",
  "serde",
+ "serde-big-array",
  "settings",
  "sgx_rand",
  "sgx_trts",
@@ -1233,6 +1234,7 @@ version = "0.1.0"
 dependencies = [
  "attestation-report",
  "commitments",
+ "crypto",
  "flex-error",
  "lcp-proto",
  "lcp-types",
@@ -1335,6 +1337,7 @@ dependencies = [
  "ecall-commands",
  "flex-error",
  "host",
+ "keymanager",
  "lcp-proto",
  "log 0.4.17",
  "sgx_types",
@@ -2481,6 +2484,14 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f9b7d56ba4a8344d6be9729995e6b06f928af29998cdf79fe390cbf6b1fee838"
 
 [[package]]
+name = "keymanager"
+version = "0.1.0"
+dependencies = [
+ "crypto",
+ "flex-error",
+]
+
+[[package]]
 name = "lazy_static"
 version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2509,6 +2520,7 @@ dependencies = [
  "hex",
  "host",
  "host-environment",
+ "keymanager",
  "log 0.4.17",
  "rsa",
  "serde",
@@ -4229,6 +4241,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bb7d1f0d3021d347a83e556fc4683dea2ea09d87bccdf88ff5c12545d89d5efb"
 dependencies = [
  "serde_derive",
+]
+
+[[package]]
+name = "serde-big-array"
+version = "0.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "11fc7cc2c76d73e0f27ee52abbd64eec84d46f370c88371120433196934e4b7f"
+dependencies = [
+ "serde",
 ]
 
 [[package]]

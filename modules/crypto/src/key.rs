@@ -6,7 +6,8 @@ use libsecp256k1::{
     Message, PublicKey, RecoveryId, SecretKey, Signature,
 };
 use serde::{Deserialize, Serialize};
-use sgx_types::sgx_report_data_t;
+use serde_big_array::BigArray;
+use sgx_types::{sgx_report_data_t, sgx_sealed_data_t};
 use tiny_keccak::Keccak;
 
 #[derive(Default)]
@@ -81,7 +82,7 @@ impl From<&EnclavePublicKey> for Address {
     }
 }
 
-#[derive(Clone, Default, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Copy, Clone, Default, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Address(pub [u8; 20]);
 
 impl Address {
@@ -170,4 +171,45 @@ fn keccak256(bz: &[u8]) -> [u8; 32] {
     keccak.update(bz);
     keccak.finalize(result.as_mut());
     result
+}
+
+pub const SEALED_DATA_32_SIZE: u32 = calc_raw_sealed_data_size(0, 32);
+pub const SEALED_DATA_32_USIZE: usize = safe_u32_to_usize(SEALED_DATA_32_SIZE);
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct SealedEnclaveKey(#[serde(with = "BigArray")] pub(crate) [u8; SEALED_DATA_32_USIZE]);
+
+impl SealedEnclaveKey {
+    pub fn new(sealed_ek: [u8; SEALED_DATA_32_USIZE]) -> Self {
+        Self(sealed_ek)
+    }
+
+    pub fn new_from_bytes(bz: &[u8]) -> Result<Self, Error> {
+        if bz.len() != SEALED_DATA_32_USIZE {
+            return Err(Error::failed_unseal("".to_owned()));
+        }
+        let mut data = [0; SEALED_DATA_32_USIZE];
+        data.copy_from_slice(bz);
+        Ok(Self::new(data))
+    }
+}
+
+// modified copy from sgx_tseal/src/internal.rs
+const fn calc_raw_sealed_data_size(add_mac_txt_size: u32, encrypt_txt_size: u32) -> u32 {
+    let max = u32::MAX;
+    let sealed_data_size = core::mem::size_of::<sgx_sealed_data_t>() as u32;
+
+    if add_mac_txt_size > max - encrypt_txt_size {
+        return max;
+    }
+    let payload_size: u32 = add_mac_txt_size + encrypt_txt_size;
+    if payload_size > max - sealed_data_size {
+        return max;
+    }
+    sealed_data_size + payload_size
+}
+
+const fn safe_u32_to_usize(v: u32) -> usize {
+    assert!(usize::BITS >= 32);
+    v as usize
 }

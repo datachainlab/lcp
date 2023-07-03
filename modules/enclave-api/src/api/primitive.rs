@@ -2,7 +2,7 @@ use crate::{
     enclave::{EnclaveInfo, HostStoreTxManager},
     ffi, Error, Result,
 };
-use ecall_commands::{Command, CommandContext, CommandResult, ECallCommand};
+use ecall_commands::{Command, CommandContext, CommandResult, ECallCommand, EnclaveKeySelector};
 use log::*;
 use sgx_types::{sgx_enclave_id_t, sgx_status_t};
 use store::transaction::{CommitStore, Tx};
@@ -12,7 +12,16 @@ pub trait EnclavePrimitiveAPI<S: CommitStore>: EnclaveInfo + HostStoreTxManager<
     fn execute_command(&self, cmd: Command, update_key: Option<String>) -> Result<CommandResult> {
         debug!("execute_command: cmd={:?} update_key={:?}", cmd, update_key);
         let tx = self.begin_tx(update_key)?;
-        let ecmd = ECallCommand::new(CommandContext::new(self.get_home(), tx.get_id()), cmd);
+
+        let cctx = match cmd.get_enclave_key() {
+            Some(addr) => {
+                let ski = self.get_key_manager().load(addr).unwrap();
+                CommandContext::new(Some(ski.sealed_ek), tx.get_id())
+            }
+            None => CommandContext::new(None, tx.get_id()),
+        };
+
+        let ecmd = ECallCommand::new(cctx, cmd);
         match raw_execute_command(self.get_eid(), ecmd) {
             Ok(res) => {
                 self.commit_tx(tx)?;

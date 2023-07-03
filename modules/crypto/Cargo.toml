@@ -13,6 +13,7 @@ sgx_tseal = { rev = "v1.1.6", git = "https://github.com/apache/incubator-teaclav
 rand = { version = "0.8", default-features = false, optional = true }
 tiny-keccak = "1.4"
 serde = { version = "1.0", default-features = false, features = ["alloc", "derive"] }
+serde-big-array = "0.5.1"
 hex = { version = "0.4", default-features = false, features = ["alloc"] }
 flex-error = { version = "0.4.4", default-features = false }
 libsecp256k1 = { version = "0.7.1", default-features = false, features = ["static-context", "hmac"] }

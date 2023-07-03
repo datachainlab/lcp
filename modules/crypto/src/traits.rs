@@ -1,5 +1,6 @@
 use crate::prelude::*;
 use crate::Error;
+use crate::SealedEnclaveKey;
 use tiny_keccak::Keccak;
 
 pub trait Verifier {
@@ -17,8 +18,8 @@ pub trait SealingKey
 where
     Self: core::marker::Sized,
 {
-    fn seal(&self) -> Result<Vec<u8>, Error>;
-    fn unseal(bz: Vec<u8>) -> Result<Self, Error>;
+    fn seal(&self) -> Result<SealedEnclaveKey, Error>;
+    fn unseal(sek: &SealedEnclaveKey) -> Result<Self, Error>;
 }
 
 pub trait Keccak256 {
