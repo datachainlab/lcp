@@ -1,5 +1,5 @@
 pub mod errors;
-use crate::errors::Error;
+pub use crate::errors::Error;
 use attestation_report::EndorsedAttestationVerificationReport;
 use crypto::{Address, SealedEnclaveKey};
 use fslock::LockFile;

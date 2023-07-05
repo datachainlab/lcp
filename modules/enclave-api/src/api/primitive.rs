@@ -15,7 +15,7 @@ pub trait EnclavePrimitiveAPI<S: CommitStore>: EnclaveInfo + HostStoreTxManager<
 
         let cctx = match cmd.get_enclave_key() {
             Some(addr) => {
-                let ski = self.get_key_manager().load(addr).unwrap();
+                let ski = self.get_key_manager().load(addr)?;
                 CommandContext::new(Some(ski.sealed_ek), tx.get_id())
             }
             None => CommandContext::new(None, tx.get_id()),

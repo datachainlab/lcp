@@ -1,6 +1,5 @@
 use crate::opts::Opts;
 use anyhow::{bail, Result};
-use attestation_report::EndorsedAttestationVerificationReport;
 use clap::Parser;
 use crypto::Address;
 use ecall_commands::IASRemoteAttestationInput;
@@ -68,19 +67,13 @@ fn run_ias_remote_attestation<E: EnclaveCommandAPI<S>, S: CommitStore>(
 ) -> Result<()> {
     let spid = std::env::var("SPID")?;
     let ias_key = std::env::var("IAS_KEY")?;
-
     let target_enclave_key = Address::from_hex_string(&cmd.enclave_key)?;
     match enclave.ias_remote_attestation(IASRemoteAttestationInput {
         target_enclave_key,
         spid: spid.as_bytes().to_vec(),
         ias_key: ias_key.as_bytes().to_vec(),
     }) {
-        Ok(res) => {
-            enclave
-                .get_key_manager()
-                .save_avr(target_enclave_key, res.report)?;
-            Ok(())
-        }
+        Ok(_) => Ok(()),
         Err(e) => bail!("failed to perform IAS Remote Attestation: {:?}!", e),
     }
 }
@@ -143,14 +136,10 @@ fn run_simulate_remote_attestation<E: EnclaveCommandAPI<S>, S: CommitStore>(
     enclave: E,
     cmd: &SimulateRemoteAttestation,
 ) -> Result<()> {
-    use rsa::{
-        pkcs1v15::SigningKey,
-        pkcs8::DecodePrivateKey,
-        signature::{SignatureEncoding, Signer},
-        traits::PublicKeyParts,
-        RsaPrivateKey,
+    use enclave_api::rsa::{
+        pkcs1v15::SigningKey, pkcs8::DecodePrivateKey, traits::PublicKeyParts, RsaPrivateKey,
     };
-    use sha2::Sha256;
+    use enclave_api::sha2::Sha256;
     use std::fs;
 
     let pk = RsaPrivateKey::read_pkcs8_pem_file(&cmd.signing_key_path)?;
@@ -191,25 +180,16 @@ fn run_simulate_remote_attestation<E: EnclaveCommandAPI<S>, S: CommitStore>(
     }
 
     let target_enclave_key = Address::from_hex_string(&cmd.enclave_key)?;
-    let avr =
-        match enclave.simulate_remote_attestation(ecall_commands::SimulateRemoteAttestationInput {
+    match enclave.simulate_remote_attestation(
+        ecall_commands::SimulateRemoteAttestationInput {
             target_enclave_key,
             advisory_ids: cmd.advisory_ids.clone(),
             isv_enclave_quote_status: cmd.isv_enclave_quote_status.clone(),
-        }) {
-            Ok(res) => res.avr,
-            Err(e) => bail!("failed to simulate Remote Attestation: {:?}!", e),
-        };
-
-    let avr_json = avr.to_canonical_json()?;
-    let signature = signing_key.sign(avr_json.as_bytes()).to_vec();
-    let eavr = EndorsedAttestationVerificationReport {
-        avr: avr_json,
-        signature,
+        },
+        signing_key,
         signing_cert,
-    };
-    enclave
-        .get_key_manager()
-        .save_avr(target_enclave_key, eavr)?;
-    Ok(())
+    ) {
+        Ok(_) => Ok(()),
+        Err(e) => bail!("failed to simulate Remote Attestation: {:?}!", e),
+    }
 }

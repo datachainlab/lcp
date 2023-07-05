@@ -1332,6 +1332,7 @@ dependencies = [
 name = "enclave-api"
 version = "0.1.0"
 dependencies = [
+ "attestation-report",
  "bincode 1.3.3",
  "ecall-commands",
  "flex-error",
@@ -1339,8 +1340,10 @@ dependencies = [
  "keymanager",
  "lcp-proto",
  "log 0.4.17",
+ "rsa",
  "sgx_types",
  "sgx_urts",
+ "sha2 0.10.6",
  "store",
 ]
 
@@ -2401,6 +2404,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "attestation-report",
+ "crypto",
  "ecall-commands",
  "enclave-api",
  "env_logger",
@@ -2411,6 +2415,7 @@ dependencies = [
  "ibc-proto 0.26.0",
  "ibc-relayer",
  "ibc-test-framework",
+ "keymanager",
  "lcp-types",
  "log 0.4.17",
  "ocall-handler",
@@ -2538,11 +2543,9 @@ dependencies = [
  "host-environment",
  "keymanager",
  "log 0.4.17",
- "rsa",
  "serde",
  "serde_json",
  "service",
- "sha2 0.10.6",
  "store",
  "tokio",
 ]

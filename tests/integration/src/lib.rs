@@ -4,9 +4,10 @@ mod relayer;
 mod tests {
     use super::*;
     use anyhow::{anyhow, bail};
+    use crypto::Address;
     use ecall_commands::{
-        CommitmentProofPair, IASRemoteAttestationInput, InitClientInput, InitEnclaveInput,
-        UpdateClientInput, VerifyMembershipInput,
+        CommitmentProofPair, GenerateEnclaveKeyInput, InitClientInput, UpdateClientInput,
+        VerifyMembershipInput,
     };
     use enclave_api::{Enclave, EnclaveCommandAPI};
     use host_environment::Environment;
@@ -23,6 +24,7 @@ mod tests {
         run_binary_channel_test, BinaryChannelTest, ChainHandle, Config, ConnectedChains,
         ConnectedChannel, Error, RelayerDriver, TestConfig, TestOverrides,
     };
+    use keymanager::EnclaveKeyManager;
     use lcp_types::Time;
     use log::*;
     use relay_tendermint::Relayer;
@@ -70,7 +72,8 @@ mod tests {
         .unwrap();
 
         let env = host::get_environment().unwrap();
-        let enclave = Enclave::create(ENCLAVE_FILE, &env.home, env.store.clone()).unwrap();
+        let km = EnclaveKeyManager::new(&env.home).unwrap();
+        let enclave = Enclave::create(ENCLAVE_FILE, km, env.store.clone()).unwrap();
 
         match std::env::var(ENV_SETUP_NODES).map(|v| v.to_lowercase()) {
             Ok(v) if v == "false" => run_test(&enclave).unwrap(),
@@ -95,30 +98,38 @@ mod tests {
             info!("this test is running in HW mode");
         }
 
-        let _ = match enclave.init_enclave_key(InitEnclaveInput::default()) {
-            Ok(res) => res,
+        let signer = match enclave.generate_enclave_key(GenerateEnclaveKeyInput::default()) {
+            Ok(res) => Address::from(res.pub_key),
             Err(e) => {
                 bail!("Init Enclave Failed {:?}!", e);
             }
         };
 
-        if cfg!(not(feature = "sgx-sw")) {
+        #[cfg(not(feature = "sgx-sw"))]
+        {
             let _ = match enclave.ias_remote_attestation(IASRemoteAttestationInput {
-                spid: std::env::var("SPID").unwrap().as_bytes().to_vec(),
-                ias_key: std::env::var("IAS_KEY").unwrap().as_bytes().to_vec(),
+                target_enclave_key: signer,
+                spid: std::env::var("SPID")?.as_bytes().to_vec(),
+                ias_key: std::env::var("IAS_KEY")?.as_bytes().to_vec(),
             }) {
                 Ok(res) => res.report,
                 Err(e) => {
                     bail!("IAS Remote Attestation Failed {:?}!", e);
                 }
             };
-        } else {
-            #[cfg(feature = "sgx-sw")]
+        }
+        #[cfg(feature = "sgx-sw")]
+        {
+            use enclave_api::rsa::{pkcs1v15::SigningKey, rand_core::OsRng};
+            use enclave_api::sha2::Sha256;
             let _ = match enclave.simulate_remote_attestation(
                 ecall_commands::SimulateRemoteAttestationInput {
+                    target_enclave_key: signer,
                     advisory_ids: vec![],
                     isv_enclave_quote_status: "OK".to_string(),
                 },
+                SigningKey::<Sha256>::random(&mut OsRng, 3072)?,
+                Default::default(), // TODO set valid certificate
             ) {
                 Ok(res) => res.avr,
                 Err(e) => {
@@ -140,13 +151,12 @@ mod tests {
             initial_height, client_state, consensus_state
         );
 
-        let res = enclave
-            .init_client(InitClientInput {
-                any_client_state: client_state,
-                any_consensus_state: consensus_state,
-                current_timestamp: Time::now(),
-            })
-            .unwrap();
+        let res = enclave.init_client(InitClientInput {
+            any_client_state: client_state,
+            any_consensus_state: consensus_state,
+            current_timestamp: Time::now(),
+            signer,
+        })?;
         assert!(!res.proof.is_proven());
         let client_id = res.client_id;
 
@@ -158,6 +168,7 @@ mod tests {
             any_header: target_header,
             current_timestamp: Time::now(),
             include_state: true,
+            signer,
         })?;
         info!("update_client's result is {:?}", res);
         assert!(res.0.is_proven());
@@ -182,11 +193,12 @@ mod tests {
             client_id,
             prefix: "ibc".into(),
             path: Path::ChannelEnd(ChannelEndPath(port_id, channel_id)).to_string(),
-            value: res.0.encode_vec().unwrap(),
+            value: res.0.encode_vec()?,
             proof: CommitmentProofPair(
                 res.2.try_into().map_err(|e| anyhow!("{:?}", e))?,
                 merkle_proof_to_bytes(res.1)?,
             ),
+            signer,
         })?;
 
         Ok(())

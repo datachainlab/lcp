@@ -14,13 +14,16 @@ pub trait EnclaveCommandAPI<S: CommitStore>: EnclavePrimitiveAPI<S> {
         &self,
         input: GenerateEnclaveKeyInput,
     ) -> Result<GenerateEnclaveKeyResult> {
-        match self.execute_command(
+        let res = match self.execute_command(
             Command::EnclaveManage(EnclaveManageCommand::GenerateEnclaveKey(input)),
             None,
         )? {
-            CommandResult::EnclaveManage(EnclaveManageResult::GenerateEnclaveKey(res)) => Ok(res),
+            CommandResult::EnclaveManage(EnclaveManageResult::GenerateEnclaveKey(res)) => res,
             _ => unreachable!(),
-        }
+        };
+        self.get_key_manager()
+            .save((&res.pub_key).into(), res.sealed_ek.clone())?;
+        Ok(res)
     }
 
     /// ias_remote_attestation performs Remote Attestation with IAS(Intel Attestation Service)
@@ -28,13 +31,17 @@ pub trait EnclaveCommandAPI<S: CommitStore>: EnclavePrimitiveAPI<S> {
         &self,
         input: IASRemoteAttestationInput,
     ) -> Result<IASRemoteAttestationResult> {
-        match self.execute_command(
+        let target_enclave_key = input.target_enclave_key;
+        let res = match self.execute_command(
             Command::EnclaveManage(EnclaveManageCommand::IASRemoteAttestation(input)),
             None,
         )? {
-            CommandResult::EnclaveManage(EnclaveManageResult::IASRemoteAttestation(res)) => Ok(res),
+            CommandResult::EnclaveManage(EnclaveManageResult::IASRemoteAttestation(res)) => res,
             _ => unreachable!(),
-        }
+        };
+        self.get_key_manager()
+            .save_avr(target_enclave_key, res.report.clone())?;
+        Ok(res)
     }
 
     /// simulate_remote_attestation simulates Remote Attestation
@@ -42,16 +49,31 @@ pub trait EnclaveCommandAPI<S: CommitStore>: EnclavePrimitiveAPI<S> {
     fn simulate_remote_attestation(
         &self,
         input: ecall_commands::SimulateRemoteAttestationInput,
+        signing_key: rsa::pkcs1v15::SigningKey<sha2::Sha256>,
+        signing_cert: Vec<u8>,
     ) -> Result<ecall_commands::SimulateRemoteAttestationResult> {
-        match self.execute_command(
+        use attestation_report::EndorsedAttestationVerificationReport;
+        use rsa::signature::{SignatureEncoding, Signer};
+
+        let target_enclave_key = input.target_enclave_key;
+        let res = match self.execute_command(
             Command::EnclaveManage(EnclaveManageCommand::SimulateRemoteAttestation(input)),
             None,
         )? {
             CommandResult::EnclaveManage(EnclaveManageResult::SimulateRemoteAttestation(res)) => {
-                Ok(res)
+                res
             }
             _ => unreachable!(),
-        }
+        };
+        let avr_json = res.avr.to_canonical_json().unwrap();
+        let signature = signing_key.sign(avr_json.as_bytes()).to_vec();
+        let eavr = EndorsedAttestationVerificationReport {
+            avr: avr_json,
+            signature,
+            signing_cert,
+        };
+        self.get_key_manager().save_avr(target_enclave_key, eavr)?;
+        Ok(res)
     }
 
     /// init_client initializes an ELC instance with given states

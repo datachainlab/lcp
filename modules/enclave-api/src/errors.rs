@@ -39,7 +39,15 @@ define_error! {
 
         Store
         [store::Error]
-        |_| { "Store error" }
+        |_| { "Store error" },
+
+        KeyManager
+        [keymanager::Error]
+        |_| { "KeyManager error" },
+
+        AttestationReport
+        [attestation_report::Error]
+        |_| { "AttestationReport error" }
     }
 }
 
@@ -52,5 +60,17 @@ impl From<ecall_commands::Error> for Error {
 impl From<store::Error> for Error {
     fn from(err: store::Error) -> Self {
         Error::store(err)
+    }
+}
+
+impl From<keymanager::Error> for Error {
+    fn from(err: keymanager::Error) -> Self {
+        Error::key_manager(err)
+    }
+}
+
+impl From<attestation_report::Error> for Error {
+    fn from(err: attestation_report::Error) -> Self {
+        Error::attestation_report(err)
     }
 }
