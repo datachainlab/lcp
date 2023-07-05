@@ -6,6 +6,7 @@ use fslock::LockFile;
 use log::*;
 use serde::{Deserialize, Serialize};
 use std::fs;
+use std::path::Path;
 use std::{io::Write, path::PathBuf, time::SystemTime};
 use tempfile::NamedTempFile;
 
@@ -23,7 +24,7 @@ pub struct EnclaveKeyManager {
 }
 
 impl EnclaveKeyManager {
-    pub fn new(home_dir: &PathBuf) -> Result<Self, Error> {
+    pub fn new(home_dir: &Path) -> Result<Self, Error> {
         let key_dir = home_dir.join(ENCLAVE_KEYS_DIR);
 
         if !key_dir.exists() {

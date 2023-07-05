@@ -1,3 +1,4 @@
+#![allow(clippy::large_enum_variant)]
 #![cfg_attr(not(feature = "std"), no_std)]
 extern crate alloc;
 

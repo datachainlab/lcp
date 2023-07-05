@@ -257,6 +257,7 @@ const fn calc_raw_sealed_data_size(add_mac_txt_size: u32, encrypt_txt_size: u32)
     sealed_data_size + payload_size
 }
 
+#[allow(clippy::assertions_on_constants)]
 const fn safe_u32_to_usize(v: u32) -> usize {
     assert!(usize::BITS >= 32);
     v as usize

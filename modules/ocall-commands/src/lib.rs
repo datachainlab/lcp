@@ -1,5 +1,6 @@
 #![no_std]
 #![allow(incomplete_features)]
+#![allow(clippy::large_enum_variant)]
 #![feature(generic_const_exprs)]
 extern crate alloc;
 pub use crate::store::{StoreCommand, StoreResult};
@@ -20,14 +21,12 @@ pub struct OCallCommand {
     pub cmd: Command,
 }
 
-#[allow(clippy::large_enum_variant)]
 #[derive(Serialize, Deserialize, Debug)]
 pub enum Command {
     RemoteAttestation(RemoteAttestationCommand),
     Store(StoreCommand),
 }
 
-#[allow(clippy::large_enum_variant)]
 #[derive(Serialize, Deserialize, Debug)]
 pub enum CommandResult {
     RemoteAttestation(RemoteAttestationResult),
