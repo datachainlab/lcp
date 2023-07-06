@@ -215,10 +215,6 @@ udeps:
 yrly:
 	go build -o ./bin/yrly -tags customcert ./go/relay/bin
 
-.PHONY: cgen
-cgen:
-	@cargo build $(CARGO_TARGET) --package cgen
-
 .PHONY: nodes-runner
 nodes-runner:
 	@cargo build $(CARGO_TARGET) --package nodes-runner
