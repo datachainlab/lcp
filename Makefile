@@ -189,10 +189,10 @@ proto:
 
 ######## Lint ########
 
-.PHONY: udeps-tools
+.PHONY: lint-tools
 lint-tools:
 	rustup component add rustfmt clippy
-	cargo install cargo-machete
+	cargo +nightly install cargo-machete
 
 .PHONY: fmt
 fmt:
