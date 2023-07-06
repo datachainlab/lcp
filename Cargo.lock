@@ -619,33 +619,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
 
 [[package]]
-name = "cgen"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "attestation-report",
- "base64 0.20.0-alpha.1",
- "clap",
- "commitments",
- "ecall-commands",
- "enclave-api",
- "host",
- "host-environment",
- "ibc",
- "ibc-proto 0.26.0",
- "ibc-test-framework",
- "lcp-types",
- "log 0.4.17",
- "relay-tendermint",
- "rlp",
- "serde",
- "serde_json",
- "store",
- "tempfile",
- "tokio",
-]
-
-[[package]]
 name = "chrono"
 version = "0.4.22"
 source = "registry+https://github.com/rust-lang/crates.io-index"

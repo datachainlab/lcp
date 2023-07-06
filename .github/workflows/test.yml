@@ -55,4 +55,3 @@ jobs:
       - run: source /opt/sgxsdk/environment && make -B
       - run: source /opt/sgxsdk/environment && make test
       - run: source /opt/sgxsdk/environment && make integration-test
-      - run: source /opt/sgxsdk/environment && make cgen
