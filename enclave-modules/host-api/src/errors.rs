@@ -20,8 +20,11 @@ define_error! {
         |e| {
             format_args!("Command error: status={:?} description={}", e.status, e.descr)
         },
-        Bincode
-        [TraceError<bincode::Error>]
-        |_| { "bincode error" }
+        BincodeEncode
+        [TraceError<bincode::error::EncodeError>]
+        |_| { "bincode encode error" },
+        BincodeDecode
+        [TraceError<bincode::error::DecodeError>]
+        |_| { "bincode decode error" }
     }
 }

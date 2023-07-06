@@ -37,15 +37,16 @@ pub extern "C" fn ocall_execute_command(
         return e;
     }
 
-    let cmd: OCallCommand =
-        match bincode::deserialize(unsafe { slice::from_raw_parts(command, command_len as usize) })
-        {
-            Ok(cmd) => cmd,
-            Err(e) => {
-                error!("failed to bincode::deserialize: {:?}", e);
-                return sgx_status_t::SGX_ERROR_UNEXPECTED;
-            }
-        };
+    let cmd: OCallCommand = match bincode::serde::decode_borrowed_from_slice(
+        unsafe { slice::from_raw_parts(command, command_len as usize) },
+        bincode::config::standard(),
+    ) {
+        Ok(cmd) => cmd,
+        Err(e) => {
+            error!("failed to bincode::deserialize: {:?}", e);
+            return sgx_status_t::SGX_ERROR_UNEXPECTED;
+        }
+    };
 
     let (status, result) = match ocall_handler::dispatch(
         HOST_ENVIRONMENT
@@ -60,7 +61,7 @@ pub extern "C" fn ocall_execute_command(
         ),
     };
 
-    let res = match bincode::serialize(&result) {
+    let res = match bincode::serde::encode_to_vec(&result, bincode::config::standard()) {
         Ok(res) => {
             if res.len() > output_buf_maxlen as usize {
                 error!(

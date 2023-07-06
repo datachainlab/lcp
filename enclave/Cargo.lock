@@ -94,19 +94,9 @@ checksum = "604178f6c5c21f02dc555784810edfb88d34ac2c73b2eae109655649ee73ce3d"
 
 [[package]]
 name = "bincode"
-version = "1.3.1"
-source = "git+https://github.com/bluele/bincode-sgx?branch=serde#7696436fed56cc8ee92e3ae2e28e00689ad2867f"
-dependencies = [
- "byteorder 1.3.4",
- "serde",
- "sgx_tstd",
-]
-
-[[package]]
-name = "bincode"
-version = "2.0.0-rc.2"
+version = "2.0.0-rc.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7bb50c5a2ef4b9b1e7ae73e3a73b52ea24b20312d629f9c4df28260b7ad2c3c4"
+checksum = "f11ea1a0346b94ef188834a65c068a03aec181c94896d481d7a0a40d85b0ce95"
 dependencies = [
  "serde",
 ]
@@ -179,14 +169,6 @@ name = "byte-slice-cast"
 version = "1.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c3ac9f8b63eca6fd385229b3675f6cc0dc5c8a5c8a54a59d4f52ffd670d87b0c"
-
-[[package]]
-name = "byteorder"
-version = "1.3.4"
-source = "git+https://github.com/mesalock-linux/byteorder-sgx#325f392dcd294109eb05f0a3c45e4141514c7784"
-dependencies = [
- "sgx_tstd",
-]
 
 [[package]]
 name = "byteorder"
@@ -310,7 +292,7 @@ version = "4.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1c359b7249347e46fb28804470d071c921156ad62b3eef5d34e2ba867533dec8"
 dependencies = [
- "byteorder 1.4.3",
+ "byteorder",
  "digest 0.9.0",
  "rand_core",
  "subtle-ng",
@@ -512,7 +494,7 @@ dependencies = [
 name = "enclave-runtime"
 version = "0.1.0"
 dependencies = [
- "bincode 1.3.1",
+ "bincode",
  "ecall-commands",
  "ecall-handler",
  "enclave-environment",
@@ -706,7 +688,7 @@ dependencies = [
 name = "host-api"
 version = "0.1.0"
 dependencies = [
- "bincode 1.3.1",
+ "bincode",
  "flex-error",
  "ocall-commands",
  "sgx_types",
@@ -932,7 +914,7 @@ dependencies = [
 name = "light-client"
 version = "0.1.0"
 dependencies = [
- "bincode 2.0.0-rc.2",
+ "bincode",
  "commitments",
  "derive_more",
  "flex-error",
@@ -1812,7 +1794,7 @@ version = "0.9.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a45526d29728d135c2900b0d30573fe3ee79fceb12ef534c7bb30e810a91b601"
 dependencies = [
- "byteorder 1.4.3",
+ "byteorder",
  "crunchy",
  "hex",
  "static_assertions",

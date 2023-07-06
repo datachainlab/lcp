@@ -5,7 +5,7 @@ import (
 	"strconv"
 
 	"github.com/cosmos/cosmos-sdk/client/flags"
-	tmclient "github.com/cosmos/ibc-go/v4/modules/light-clients/07-tendermint/types"
+	tmclient "github.com/cosmos/ibc-go/v7/modules/light-clients/07-tendermint"
 	"github.com/datachainlab/lcp/go/relay"
 	"github.com/hyperledger-labs/yui-relayer/chains/tendermint"
 	"github.com/hyperledger-labs/yui-relayer/config"

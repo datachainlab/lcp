@@ -189,10 +189,10 @@ proto:
 
 ######## Lint ########
 
-.PHONY: udeps-tools
+.PHONY: lint-tools
 lint-tools:
 	rustup component add rustfmt clippy
-	cargo install cargo-machete
+	cargo +nightly install cargo-machete
 
 .PHONY: fmt
 fmt:
@@ -214,10 +214,6 @@ udeps:
 .PHONY: yrly
 yrly:
 	go build -o ./bin/yrly -tags customcert ./go/relay/bin
-
-.PHONY: cgen
-cgen:
-	@cargo build $(CARGO_TARGET) --package cgen
 
 .PHONY: nodes-runner
 nodes-runner:

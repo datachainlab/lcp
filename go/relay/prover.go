@@ -7,11 +7,11 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	clienttypes "github.com/cosmos/ibc-go/v4/modules/core/02-client/types"
-	conntypes "github.com/cosmos/ibc-go/v4/modules/core/03-connection/types"
-	chantypes "github.com/cosmos/ibc-go/v4/modules/core/04-channel/types"
-	host "github.com/cosmos/ibc-go/v4/modules/core/24-host"
-	ibcexported "github.com/cosmos/ibc-go/v4/modules/core/exported"
+	clienttypes "github.com/cosmos/ibc-go/v7/modules/core/02-client/types"
+	conntypes "github.com/cosmos/ibc-go/v7/modules/core/03-connection/types"
+	chantypes "github.com/cosmos/ibc-go/v7/modules/core/04-channel/types"
+	"github.com/cosmos/ibc-go/v7/modules/core/exported"
+	ibcexported "github.com/cosmos/ibc-go/v7/modules/core/exported"
 	lcptypes "github.com/datachainlab/lcp/go/light-clients/lcp/types"
 	"github.com/datachainlab/lcp/go/relay/elc"
 	"github.com/datachainlab/lcp/go/relay/ibc"
@@ -156,7 +156,7 @@ func (pr *Prover) SetupHeadersForUpdate(dstChain core.ChainInfoICS02Querier, lat
 	}
 	var updates []core.Header
 	for _, h := range headers {
-		anyHeader, err := clienttypes.PackHeader(h)
+		anyHeader, err := clienttypes.PackClientMessage(h)
 		if err != nil {
 			return nil, err
 		}
@@ -189,7 +189,7 @@ func (pr *Prover) QueryClientConsensusStateWithProof(ctx core.QueryContext, dstC
 		ctx.Context(),
 		&ibc.MsgVerifyClientConsensus{
 			ClientId:                        pr.config.ElcClientId,
-			Prefix:                          []byte(host.StoreKey),
+			Prefix:                          []byte(exported.StoreKey),
 			CounterpartyClientId:            pr.path.ClientID,
 			ConsensusHeight:                 dstClientConsHeight.(clienttypes.Height),
 			ExpectedAnyClientConsensusState: res.ConsensusState,
@@ -222,7 +222,7 @@ func (pr *Prover) QueryClientStateWithProof(ctx core.QueryContext) (*clienttypes
 		ctx.Context(),
 		&ibc.MsgVerifyClient{
 			ClientId:               pr.config.ElcClientId,
-			Prefix:                 []byte(host.StoreKey),
+			Prefix:                 []byte(exported.StoreKey),
 			CounterpartyClientId:   pr.path.ClientID,
 			ExpectedAnyClientState: res.ClientState,
 			ProofHeight:            res.ProofHeight,
@@ -259,7 +259,7 @@ func (pr *Prover) QueryConnectionWithProof(ctx core.QueryContext) (*conntypes.Qu
 		ctx.Context(),
 		&ibc.MsgVerifyConnection{
 			ClientId:           pr.config.ElcClientId,
-			Prefix:             []byte(host.StoreKey),
+			Prefix:             []byte(exported.StoreKey),
 			ConnectionId:       pr.path.ConnectionID,
 			ExpectedConnection: *res.Connection,
 			ProofHeight:        res.ProofHeight,
@@ -296,7 +296,7 @@ func (pr *Prover) QueryChannelWithProof(ctx core.QueryContext) (chanRes *chantyp
 		ctx.Context(),
 		&ibc.MsgVerifyChannel{
 			ClientId:        pr.config.ElcClientId,
-			Prefix:          []byte(host.StoreKey),
+			Prefix:          []byte(exported.StoreKey),
 			PortId:          pr.path.PortID,
 			ChannelId:       pr.path.ChannelID,
 			ExpectedChannel: *res.Channel,
@@ -328,7 +328,7 @@ func (pr *Prover) QueryPacketCommitmentWithProof(ctx core.QueryContext, seq uint
 
 	res2, err := pr.lcpServiceClient.VerifyPacket(ctx.Context(), &ibc.MsgVerifyPacket{
 		ClientId:    pr.config.ElcClientId,
-		Prefix:      []byte(host.StoreKey),
+		Prefix:      []byte(exported.StoreKey),
 		PortId:      pr.path.PortID,
 		ChannelId:   pr.path.ChannelID,
 		Sequence:    seq,
@@ -360,7 +360,7 @@ func (pr *Prover) QueryPacketAcknowledgementCommitmentWithProof(ctx core.QueryCo
 		ctx.Context(),
 		&ibc.MsgVerifyPacketAcknowledgement{
 			ClientId:    pr.config.ElcClientId,
-			Prefix:      []byte(host.StoreKey),
+			Prefix:      []byte(exported.StoreKey),
 			PortId:      pr.path.PortID,
 			ChannelId:   pr.path.ChannelID,
 			Sequence:    seq,

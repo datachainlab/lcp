@@ -19,35 +19,6 @@ pub fn set_environment<E: Env + 'static>(env: E) -> Result<(), SetEnvironmentErr
         .map_err(|_| SetEnvironmentError)
 }
 
-fn raw_ecall_execute_command(
-    command: *const u8,
-    command_len: u32,
-) -> (sgx_status_t, CommandResult) {
-    let cmd: ECallCommand = match bincode::deserialize(unsafe {
-        alloc::slice::from_raw_parts(command, command_len as usize)
-    }) {
-        Ok(cmd) => cmd,
-        Err(e) => {
-            return (
-                sgx_status_t::SGX_ERROR_UNEXPECTED,
-                CommandResult::CommandError(format!("failed to bincode::deserialize: {:?}", e)),
-            );
-        }
-    };
-    match dispatch(
-        ENCLAVE_ENVIRONMENT
-            .get()
-            .expect("you must initialize ENCLAVE_ENVIRONMENT before executing the command"),
-        cmd,
-    ) {
-        Ok(result) => (sgx_status_t::SGX_SUCCESS, result),
-        Err(e) => (
-            sgx_status_t::SGX_ERROR_UNEXPECTED,
-            CommandResult::CommandError(format!("{:?}", e)),
-        ),
-    }
-}
-
 pub fn ecall_execute_command(
     command: *const u8,
     command_len: u32,
@@ -63,7 +34,7 @@ pub fn ecall_execute_command(
     );
 
     let (status, result) = raw_ecall_execute_command(command, command_len);
-    let res = match bincode::serialize(&result) {
+    let res = match bincode::serde::encode_to_vec(&result, bincode::config::standard()) {
         Ok(res) => {
             if res.len() > output_buf_maxlen as usize {
                 error!(
@@ -84,4 +55,34 @@ pub fn ecall_execute_command(
     *output_len = res.len() as u32;
 
     status
+}
+
+fn raw_ecall_execute_command(
+    command: *const u8,
+    command_len: u32,
+) -> (sgx_status_t, CommandResult) {
+    let cmd: ECallCommand = match bincode::serde::decode_borrowed_from_slice(
+        unsafe { alloc::slice::from_raw_parts(command, command_len as usize) },
+        bincode::config::standard(),
+    ) {
+        Ok(cmd) => cmd,
+        Err(e) => {
+            return (
+                sgx_status_t::SGX_ERROR_UNEXPECTED,
+                CommandResult::CommandError(format!("failed to bincode::deserialize: {:?}", e)),
+            );
+        }
+    };
+    match dispatch(
+        ENCLAVE_ENVIRONMENT
+            .get()
+            .expect("you must initialize ENCLAVE_ENVIRONMENT before executing the command"),
+        cmd,
+    ) {
+        Ok(result) => (sgx_status_t::SGX_SUCCESS, result),
+        Err(e) => (
+            sgx_status_t::SGX_ERROR_UNEXPECTED,
+            CommandResult::CommandError(format!("{:?}", e)),
+        ),
+    }
 }

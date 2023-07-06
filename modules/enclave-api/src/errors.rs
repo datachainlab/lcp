@@ -21,9 +21,13 @@ define_error! {
             format_args!("SGX error: {:?}", e.status)
         },
 
-        Bincode
-        [TraceError<bincode::Error>]
-        |_| { "Bincode error" },
+        BincodeEncode
+        [TraceError<bincode::error::EncodeError>]
+        |_| { "bincode encode error" },
+
+        BincodeDecode
+        [TraceError<bincode::error::DecodeError>]
+        |_| { "bincode decode error" },
 
         Command {
             status: sgx_status_t,

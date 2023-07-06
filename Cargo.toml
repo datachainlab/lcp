@@ -26,7 +26,6 @@ members = [
     "proto",
     "tests/integration",
     "tools/nodes-runner",
-    "tools/cgen"
 ]
 exclude = [
     "enclave",
