@@ -7,9 +7,10 @@ import (
 	context "context"
 	fmt "fmt"
 	types "github.com/cosmos/cosmos-sdk/codec/types"
-	types1 "github.com/cosmos/ibc-go/v4/modules/core/02-client/types"
-	_ "github.com/gogo/protobuf/gogoproto"
-	proto "github.com/gogo/protobuf/proto"
+	_ "github.com/cosmos/gogoproto/gogoproto"
+	grpc1 "github.com/cosmos/gogoproto/grpc"
+	proto "github.com/cosmos/gogoproto/proto"
+	types1 "github.com/cosmos/ibc-go/v7/modules/core/02-client/types"
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
@@ -443,10 +444,10 @@ type MsgClient interface {
 }
 
 type msgClient struct {
-	cc *grpc.ClientConn
+	cc grpc1.ClientConn
 }
 
-func NewMsgClient(cc *grpc.ClientConn) MsgClient {
+func NewMsgClient(cc grpc1.ClientConn) MsgClient {
 	return &msgClient{cc}
 }
 
@@ -515,7 +516,7 @@ func (*UnimplementedMsgServer) VerifyNonMembership(ctx context.Context, req *Msg
 	return nil, status.Errorf(codes.Unimplemented, "method VerifyNonMembership not implemented")
 }
 
-func RegisterMsgServer(s *grpc.Server, srv MsgServer) {
+func RegisterMsgServer(s grpc1.Server, srv MsgServer) {
 	s.RegisterService(&_Msg_serviceDesc, srv)
 }
 

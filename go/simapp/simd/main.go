@@ -14,10 +14,9 @@ func main() {
 	// WARNING: if you use the simd in production, you must remove the following code:
 	ias.SetAllowDebugEnclaves()
 	defer ias.UnsetAllowDebugEnclaves()
-	// END WARNING
 
 	rootCmd, _ := cmd.NewRootCmd()
-	if err := svrcmd.Execute(rootCmd, simapp.DefaultNodeHome); err != nil {
+	if err := svrcmd.Execute(rootCmd, "simd", simapp.DefaultNodeHome); err != nil {
 		switch e := err.(type) {
 		case server.ErrorCode:
 			os.Exit(e.Code)

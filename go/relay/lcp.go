@@ -6,8 +6,8 @@ import (
 	"time"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	clienttypes "github.com/cosmos/ibc-go/v4/modules/core/02-client/types"
-	ibcexported "github.com/cosmos/ibc-go/v4/modules/core/exported"
+	clienttypes "github.com/cosmos/ibc-go/v7/modules/core/02-client/types"
+	ibcexported "github.com/cosmos/ibc-go/v7/modules/core/exported"
 	lcptypes "github.com/datachainlab/lcp/go/light-clients/lcp/types"
 	"github.com/datachainlab/lcp/go/relay/elc"
 	"github.com/datachainlab/lcp/go/relay/enclave"
@@ -51,7 +51,7 @@ func (pr *Prover) syncUpstreamHeader(includeState bool) ([]*elc.MsgUpdateClientR
 	// 3. send a request that contains a header from 2 to update the client in ELC
 	var responses []*elc.MsgUpdateClientResponse
 	for _, header := range headers {
-		anyHeader, err := clienttypes.PackHeader(header)
+		anyHeader, err := clienttypes.PackClientMessage(header)
 		if err != nil {
 			return nil, err
 		}
