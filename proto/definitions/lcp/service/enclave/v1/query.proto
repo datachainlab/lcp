@@ -7,14 +7,28 @@ option go_package = "github.com/datachainlab/lcp/go/relay/enclave";
 option (gogoproto.goproto_getters_all) = false;
 
 service Query {
-    rpc AttestedVerificationReport(QueryAttestedVerificationReportRequest) returns (QueryAttestedVerificationReportResponse);
+  rpc AvailableEnclaveKeys(QueryAvailableEnclaveKeysRequest) returns (QueryAvailableEnclaveKeysResponse);
+  rpc EnclaveKey(QueryEnclaveKeyRequest) returns (QueryEnclaveKeyResponse);
 }
 
-message QueryAttestedVerificationReportRequest {}
+message QueryAvailableEnclaveKeysRequest {}
 
-message QueryAttestedVerificationReportResponse {
-    bytes enclave_address = 1;
-    string report = 2;
-    bytes signature = 3;
-    bytes signing_cert = 4;
+message QueryAvailableEnclaveKeysResponse {
+  repeated EnclaveKeyInfo keys = 1;
+}
+
+message EnclaveKeyInfo {
+  bytes enclave_key_address = 1;
+  string report = 2;
+  bytes signature = 3;
+  bytes signing_cert = 4;
+  bytes extension = 5;
+}
+
+message QueryEnclaveKeyRequest {
+  bytes enclave_key_address = 1;
+}
+
+message QueryEnclaveKeyResponse {
+  EnclaveKeyInfo key = 1;
 }
