@@ -35,7 +35,8 @@ fn raw_execute_command(eid: sgx_enclave_id_t, cmd: ECallCommand) -> Result<Comma
     let output_ptr = output_buf.as_mut_ptr();
     let mut ret = sgx_status_t::SGX_SUCCESS;
 
-    let command_bytes = bincode::serialize(&cmd).map_err(Error::bincode)?;
+    let command_bytes = bincode::serde::encode_to_vec(&cmd, bincode::config::standard())
+        .map_err(Error::bincode_encode)?;
     let result = unsafe {
         ffi::ecall_execute_command(
             eid,
@@ -54,8 +55,11 @@ fn raw_execute_command(eid: sgx_enclave_id_t, cmd: ECallCommand) -> Result<Comma
         unsafe {
             output_buf.set_len(output_len as usize);
         }
-        let res =
-            bincode::deserialize(&output_buf[..output_len as usize]).map_err(Error::bincode)?;
+        let res = bincode::serde::decode_borrowed_from_slice(
+            &output_buf[..output_len as usize],
+            bincode::config::standard(),
+        )
+        .map_err(Error::bincode_decode)?;
 
         if ret == sgx_status_t::SGX_SUCCESS {
             Ok(res)

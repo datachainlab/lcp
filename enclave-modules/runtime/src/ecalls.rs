@@ -34,9 +34,10 @@ pub fn ecall_execute_command(
         sgx_status_t::SGX_ERROR_UNEXPECTED
     );
 
-    let cmd: ECallCommand = match bincode::deserialize(unsafe {
-        alloc::slice::from_raw_parts(command, command_len as usize)
-    }) {
+    let cmd: ECallCommand = match bincode::serde::decode_borrowed_from_slice(
+        unsafe { alloc::slice::from_raw_parts(command, command_len as usize) },
+        bincode::config::standard(),
+    ) {
         Ok(cmd) => cmd,
         Err(e) => {
             error!("failed to bincode::deserialize: {:?}", e);
@@ -59,7 +60,7 @@ pub fn ecall_execute_command(
         ),
     };
 
-    let res = match bincode::serialize(&result) {
+    let res = match bincode::serde::encode_to_vec(&result, bincode::config::standard()) {
         Ok(res) => {
             if res.len() > output_buf_maxlen as usize {
                 error!(
