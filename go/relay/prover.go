@@ -8,13 +8,9 @@ import (
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	clienttypes "github.com/cosmos/ibc-go/v7/modules/core/02-client/types"
-	conntypes "github.com/cosmos/ibc-go/v7/modules/core/03-connection/types"
-	chantypes "github.com/cosmos/ibc-go/v7/modules/core/04-channel/types"
 	"github.com/cosmos/ibc-go/v7/modules/core/exported"
-	ibcexported "github.com/cosmos/ibc-go/v7/modules/core/exported"
 	lcptypes "github.com/datachainlab/lcp/go/light-clients/lcp/types"
 	"github.com/datachainlab/lcp/go/relay/elc"
-	"github.com/datachainlab/lcp/go/relay/ibc"
 	"github.com/hyperledger-labs/yui-relayer/core"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -179,206 +175,25 @@ func (pr *Prover) SetupHeadersForUpdate(dstChain core.ChainInfoICS02Querier, lat
 	return updates, nil
 }
 
-// QueryClientConsensusState returns the ClientConsensusState and its proof
-func (pr *Prover) QueryClientConsensusStateWithProof(ctx core.QueryContext, dstClientConsHeight ibcexported.Height) (*clienttypes.QueryConsensusStateResponse, error) {
-	res, err := pr.originProver.QueryClientConsensusStateWithProof(ctx, dstClientConsHeight)
+func (pr *Prover) ProveState(ctx core.QueryContext, path string, value []byte) ([]byte, clienttypes.Height, error) {
+	proof, proofHeight, err := pr.originProver.ProveState(ctx, path, value)
 	if err != nil {
-		return nil, err
+		return nil, clienttypes.Height{}, err
 	}
-	res2, err := pr.lcpServiceClient.VerifyClientConsensus(
-		ctx.Context(),
-		&ibc.MsgVerifyClientConsensus{
-			ClientId:                        pr.config.ElcClientId,
-			Prefix:                          []byte(exported.StoreKey),
-			CounterpartyClientId:            pr.path.ClientID,
-			ConsensusHeight:                 dstClientConsHeight.(clienttypes.Height),
-			ExpectedAnyClientConsensusState: res.ConsensusState,
-			ProofHeight:                     res.ProofHeight,
-			Proof:                           res.Proof,
-		},
-	)
-	if err != nil {
-		return nil, err
-	}
-	commitment, err := lcptypes.ParseStateCommitment(res2.Commitment)
-	if err != nil {
-		return nil, err
-	}
-	return &clienttypes.QueryConsensusStateResponse{
-		ConsensusState: res.ConsensusState,
-		Proof:          lcptypes.NewStateCommitmentProof(res2.Commitment, res2.Signer, res2.Signature).ToRLPBytes(),
-		ProofHeight:    commitment.Height,
-	}, nil
-}
-
-// QueryClientStateWithProof returns the ClientState and its proof
-func (pr *Prover) QueryClientStateWithProof(ctx core.QueryContext) (*clienttypes.QueryClientStateResponse, error) {
-	res, err := pr.originProver.QueryClientStateWithProof(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	res2, err := pr.lcpServiceClient.VerifyClient(
-		ctx.Context(),
-		&ibc.MsgVerifyClient{
-			ClientId:               pr.config.ElcClientId,
-			Prefix:                 []byte(exported.StoreKey),
-			CounterpartyClientId:   pr.path.ClientID,
-			ExpectedAnyClientState: res.ClientState,
-			ProofHeight:            res.ProofHeight,
-			Proof:                  res.Proof,
-		},
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	commitment, err := lcptypes.ParseStateCommitment(res2.Commitment)
-	if err != nil {
-		return nil, err
-	}
-	return &clienttypes.QueryClientStateResponse{
-		ClientState: res.ClientState,
-		Proof:       lcptypes.NewStateCommitmentProof(res2.Commitment, res2.Signer, res2.Signature).ToRLPBytes(),
-		ProofHeight: commitment.Height,
-	}, nil
-}
-
-// QueryConnectionWithProof returns the Connection and its proof
-func (pr *Prover) QueryConnectionWithProof(ctx core.QueryContext) (*conntypes.QueryConnectionResponse, error) {
-	res, err := pr.originProver.QueryConnectionWithProof(ctx)
-	if err != nil {
-		return nil, err
-	}
-	// NOTE: if res.Proof length is zero, this means that the connection doesn't exist
-	if len(res.Proof) == 0 {
-		return res, nil
-	}
-
-	res2, err := pr.lcpServiceClient.VerifyConnection(
-		ctx.Context(),
-		&ibc.MsgVerifyConnection{
-			ClientId:           pr.config.ElcClientId,
-			Prefix:             []byte(exported.StoreKey),
-			ConnectionId:       pr.path.ConnectionID,
-			ExpectedConnection: *res.Connection,
-			ProofHeight:        res.ProofHeight,
-			Proof:              res.Proof,
-		},
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	commitment, err := lcptypes.ParseStateCommitment(res2.Commitment)
-	if err != nil {
-		return nil, err
-	}
-	return &conntypes.QueryConnectionResponse{
-		Connection:  res.Connection,
-		Proof:       lcptypes.NewStateCommitmentProof(res2.Commitment, res2.Signer, res2.Signature).ToRLPBytes(),
-		ProofHeight: commitment.Height,
-	}, nil
-}
-
-// QueryChannelWithProof returns the Channel and its proof
-func (pr *Prover) QueryChannelWithProof(ctx core.QueryContext) (chanRes *chantypes.QueryChannelResponse, err error) {
-	res, err := pr.originProver.QueryChannelWithProof(ctx)
-	if err != nil {
-		return nil, err
-	}
-	// NOTE: if res.Proof length is zero, this means that the connection doesn't exist
-	if len(res.Proof) == 0 {
-		return res, nil
-	}
-
-	res2, err := pr.lcpServiceClient.VerifyChannel(
-		ctx.Context(),
-		&ibc.MsgVerifyChannel{
-			ClientId:        pr.config.ElcClientId,
-			Prefix:          []byte(exported.StoreKey),
-			PortId:          pr.path.PortID,
-			ChannelId:       pr.path.ChannelID,
-			ExpectedChannel: *res.Channel,
-			ProofHeight:     res.ProofHeight,
-			Proof:           res.Proof,
-		},
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	commitment, err := lcptypes.ParseStateCommitment(res2.Commitment)
-	if err != nil {
-		return nil, err
-	}
-	return &chantypes.QueryChannelResponse{
-		Channel:     res.Channel,
-		Proof:       lcptypes.NewStateCommitmentProof(res2.Commitment, res2.Signer, res2.Signature).ToRLPBytes(),
-		ProofHeight: commitment.Height,
-	}, nil
-}
-
-// QueryPacketCommitmentWithProof returns the packet commitment and its proof
-func (pr *Prover) QueryPacketCommitmentWithProof(ctx core.QueryContext, seq uint64) (comRes *chantypes.QueryPacketCommitmentResponse, err error) {
-	res, err := pr.originProver.QueryPacketCommitmentWithProof(ctx, seq)
-	if err != nil {
-		return nil, err
-	}
-
-	res2, err := pr.lcpServiceClient.VerifyPacket(ctx.Context(), &ibc.MsgVerifyPacket{
+	res, err := pr.lcpServiceClient.VerifyMembership(ctx.Context(), &elc.MsgVerifyMembership{
 		ClientId:    pr.config.ElcClientId,
 		Prefix:      []byte(exported.StoreKey),
-		PortId:      pr.path.PortID,
-		ChannelId:   pr.path.ChannelID,
-		Sequence:    seq,
-		Commitment:  res.Commitment,
-		ProofHeight: res.ProofHeight,
-		Proof:       res.Proof,
+		Path:        path,
+		Value:       value,
+		ProofHeight: proofHeight,
+		Proof:       proof,
 	})
 	if err != nil {
-		return nil, err
+		return nil, clienttypes.Height{}, err
 	}
-	commitment, err := lcptypes.ParseStateCommitment(res2.Commitment)
+	commitment, err := lcptypes.ParseStateCommitment(res.Commitment)
 	if err != nil {
-		return nil, err
+		return nil, clienttypes.Height{}, err
 	}
-	return &chantypes.QueryPacketCommitmentResponse{
-		Commitment:  res.Commitment,
-		Proof:       lcptypes.NewStateCommitmentProof(res2.Commitment, res2.Signer, res2.Signature).ToRLPBytes(),
-		ProofHeight: commitment.Height,
-	}, nil
-}
-
-// QueryPacketAcknowledgementCommitmentWithProof returns the packet acknowledgement commitment and its proof
-func (pr *Prover) QueryPacketAcknowledgementCommitmentWithProof(ctx core.QueryContext, seq uint64) (ackRes *chantypes.QueryPacketAcknowledgementResponse, err error) {
-	res, err := pr.originProver.QueryPacketAcknowledgementCommitmentWithProof(ctx, seq)
-	if err != nil {
-		return nil, err
-	}
-	res2, err := pr.lcpServiceClient.VerifyPacketAcknowledgement(
-		ctx.Context(),
-		&ibc.MsgVerifyPacketAcknowledgement{
-			ClientId:    pr.config.ElcClientId,
-			Prefix:      []byte(exported.StoreKey),
-			PortId:      pr.path.PortID,
-			ChannelId:   pr.path.ChannelID,
-			Sequence:    seq,
-			Commitment:  res.Acknowledgement,
-			ProofHeight: res.ProofHeight,
-			Proof:       res.Proof,
-		},
-	)
-	if err != nil {
-		return nil, err
-	}
-	commitment, err := lcptypes.ParseStateCommitment(res2.Commitment)
-	if err != nil {
-		return nil, err
-	}
-	return &chantypes.QueryPacketAcknowledgementResponse{
-		Acknowledgement: res.Acknowledgement,
-		Proof:           lcptypes.NewStateCommitmentProof(res2.Commitment, res2.Signer, res2.Signature).ToRLPBytes(),
-		ProofHeight:     commitment.Height,
-	}, err
+	return lcptypes.NewStateCommitmentProof(res.Commitment, res.Signer, res.Signature).ToRLPBytes(), commitment.Height, nil
 }
