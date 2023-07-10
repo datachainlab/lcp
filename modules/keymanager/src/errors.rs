@@ -6,10 +6,25 @@ define_error! {
         HomeDirNotFound
         |_| { "Home directory not found" },
 
+        UnattestedEnclaveKey
+        {
+            descr: String
+        }
+        |e| {
+            format_args!("Unattested enclave key: descr={}", e.descr)
+        },
+
         Crypto
-        {}
         [crypto::Error]
         |_| { "Crypto error" },
+
+        AttestationReport
+        [attestation_report::Error]
+        |_| { "Attestation Report error" },
+
+        Time
+        [lcp_types::TimeError]
+        |_| { "Time error" },
 
         Io
         [TraceError<std::io::Error>]
@@ -28,6 +43,18 @@ define_error! {
 impl From<crypto::Error> for Error {
     fn from(value: crypto::Error) -> Self {
         Self::crypto(value)
+    }
+}
+
+impl From<attestation_report::Error> for Error {
+    fn from(value: attestation_report::Error) -> Self {
+        Self::attestation_report(value)
+    }
+}
+
+impl From<lcp_types::TimeError> for Error {
+    fn from(value: lcp_types::TimeError) -> Self {
+        Self::time(value)
     }
 }
 

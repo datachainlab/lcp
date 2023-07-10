@@ -156,6 +156,12 @@ impl Display for Address {
     }
 }
 
+impl From<Address> for Vec<u8> {
+    fn from(value: Address) -> Self {
+        value.0.to_vec()
+    }
+}
+
 impl TryFrom<&[u8]> for Address {
     type Error = Error;
     fn try_from(value: &[u8]) -> Result<Self, Self::Error> {

@@ -1,19 +1,44 @@
 #[derive(::serde::Serialize, ::serde::Deserialize)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
-pub struct QueryAttestedVerificationReportRequest {}
+pub struct QueryAvailableEnclaveKeysRequest {}
 #[derive(::serde::Serialize, ::serde::Deserialize)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
-pub struct QueryAttestedVerificationReportResponse {
+pub struct QueryAvailableEnclaveKeysResponse {
+    #[prost(message, repeated, tag = "1")]
+    pub keys: ::prost::alloc::vec::Vec<EnclaveKeyInfo>,
+}
+#[derive(::serde::Serialize, ::serde::Deserialize)]
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct EnclaveKeyInfo {
     #[prost(bytes = "vec", tag = "1")]
-    pub enclave_address: ::prost::alloc::vec::Vec<u8>,
-    #[prost(string, tag = "2")]
+    pub enclave_key_address: ::prost::alloc::vec::Vec<u8>,
+    #[prost(uint64, tag = "2")]
+    pub attestation_time: u64,
+    #[prost(string, tag = "3")]
     pub report: ::prost::alloc::string::String,
-    #[prost(bytes = "vec", tag = "3")]
-    pub signature: ::prost::alloc::vec::Vec<u8>,
     #[prost(bytes = "vec", tag = "4")]
+    pub signature: ::prost::alloc::vec::Vec<u8>,
+    #[prost(bytes = "vec", tag = "5")]
     pub signing_cert: ::prost::alloc::vec::Vec<u8>,
+    #[prost(bytes = "vec", tag = "6")]
+    pub extension: ::prost::alloc::vec::Vec<u8>,
+}
+#[derive(::serde::Serialize, ::serde::Deserialize)]
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct QueryEnclaveKeyRequest {
+    #[prost(bytes = "vec", tag = "1")]
+    pub enclave_key_address: ::prost::alloc::vec::Vec<u8>,
+}
+#[derive(::serde::Serialize, ::serde::Deserialize)]
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct QueryEnclaveKeyResponse {
+    #[prost(message, optional, tag = "1")]
+    pub key: ::core::option::Option<EnclaveKeyInfo>,
 }
 /// Generated client implementations.
 #[cfg(feature = "client")]
@@ -85,13 +110,11 @@ pub mod query_client {
             self.inner = self.inner.accept_compressed(encoding);
             self
         }
-        pub async fn attested_verification_report(
+        pub async fn available_enclave_keys(
             &mut self,
-            request: impl tonic::IntoRequest<
-                super::QueryAttestedVerificationReportRequest,
-            >,
+            request: impl tonic::IntoRequest<super::QueryAvailableEnclaveKeysRequest>,
         ) -> Result<
-            tonic::Response<super::QueryAttestedVerificationReportResponse>,
+            tonic::Response<super::QueryAvailableEnclaveKeysResponse>,
             tonic::Status,
         > {
             self.inner
@@ -105,7 +128,26 @@ pub mod query_client {
                 })?;
             let codec = tonic::codec::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
-                "/lcp.service.enclave.v1.Query/AttestedVerificationReport",
+                "/lcp.service.enclave.v1.Query/AvailableEnclaveKeys",
+            );
+            self.inner.unary(request.into_request(), path, codec).await
+        }
+        pub async fn enclave_key(
+            &mut self,
+            request: impl tonic::IntoRequest<super::QueryEnclaveKeyRequest>,
+        ) -> Result<tonic::Response<super::QueryEnclaveKeyResponse>, tonic::Status> {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::new(
+                        tonic::Code::Unknown,
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/lcp.service.enclave.v1.Query/EnclaveKey",
             );
             self.inner.unary(request.into_request(), path, codec).await
         }
@@ -119,13 +161,17 @@ pub mod query_server {
     /// Generated trait containing gRPC methods that should be implemented for use with QueryServer.
     #[async_trait]
     pub trait Query: Send + Sync + 'static {
-        async fn attested_verification_report(
+        async fn available_enclave_keys(
             &self,
-            request: tonic::Request<super::QueryAttestedVerificationReportRequest>,
+            request: tonic::Request<super::QueryAvailableEnclaveKeysRequest>,
         ) -> Result<
-            tonic::Response<super::QueryAttestedVerificationReportResponse>,
+            tonic::Response<super::QueryAvailableEnclaveKeysResponse>,
             tonic::Status,
         >;
+        async fn enclave_key(
+            &self,
+            request: tonic::Request<super::QueryEnclaveKeyRequest>,
+        ) -> Result<tonic::Response<super::QueryEnclaveKeyResponse>, tonic::Status>;
     }
     #[derive(Debug)]
     pub struct QueryServer<T: Query> {
@@ -186,15 +232,15 @@ pub mod query_server {
         fn call(&mut self, req: http::Request<B>) -> Self::Future {
             let inner = self.inner.clone();
             match req.uri().path() {
-                "/lcp.service.enclave.v1.Query/AttestedVerificationReport" => {
+                "/lcp.service.enclave.v1.Query/AvailableEnclaveKeys" => {
                     #[allow(non_camel_case_types)]
-                    struct AttestedVerificationReportSvc<T: Query>(pub Arc<T>);
+                    struct AvailableEnclaveKeysSvc<T: Query>(pub Arc<T>);
                     impl<
                         T: Query,
                     > tonic::server::UnaryService<
-                        super::QueryAttestedVerificationReportRequest,
-                    > for AttestedVerificationReportSvc<T> {
-                        type Response = super::QueryAttestedVerificationReportResponse;
+                        super::QueryAvailableEnclaveKeysRequest,
+                    > for AvailableEnclaveKeysSvc<T> {
+                        type Response = super::QueryAvailableEnclaveKeysResponse;
                         type Future = BoxFuture<
                             tonic::Response<Self::Response>,
                             tonic::Status,
@@ -202,12 +248,12 @@ pub mod query_server {
                         fn call(
                             &mut self,
                             request: tonic::Request<
-                                super::QueryAttestedVerificationReportRequest,
+                                super::QueryAvailableEnclaveKeysRequest,
                             >,
                         ) -> Self::Future {
                             let inner = self.0.clone();
                             let fut = async move {
-                                (*inner).attested_verification_report(request).await
+                                (*inner).available_enclave_keys(request).await
                             };
                             Box::pin(fut)
                         }
@@ -217,7 +263,45 @@ pub mod query_server {
                     let inner = self.inner.clone();
                     let fut = async move {
                         let inner = inner.0;
-                        let method = AttestedVerificationReportSvc(inner);
+                        let method = AvailableEnclaveKeysSvc(inner);
+                        let codec = tonic::codec::ProstCodec::default();
+                        let mut grpc = tonic::server::Grpc::new(codec)
+                            .apply_compression_config(
+                                accept_compression_encodings,
+                                send_compression_encodings,
+                            );
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
+                "/lcp.service.enclave.v1.Query/EnclaveKey" => {
+                    #[allow(non_camel_case_types)]
+                    struct EnclaveKeySvc<T: Query>(pub Arc<T>);
+                    impl<
+                        T: Query,
+                    > tonic::server::UnaryService<super::QueryEnclaveKeyRequest>
+                    for EnclaveKeySvc<T> {
+                        type Response = super::QueryEnclaveKeyResponse;
+                        type Future = BoxFuture<
+                            tonic::Response<Self::Response>,
+                            tonic::Status,
+                        >;
+                        fn call(
+                            &mut self,
+                            request: tonic::Request<super::QueryEnclaveKeyRequest>,
+                        ) -> Self::Future {
+                            let inner = self.0.clone();
+                            let fut = async move { (*inner).enclave_key(request).await };
+                            Box::pin(fut)
+                        }
+                    }
+                    let accept_compression_encodings = self.accept_compression_encodings;
+                    let send_compression_encodings = self.send_compression_encodings;
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let inner = inner.0;
+                        let method = EnclaveKeySvc(inner);
                         let codec = tonic::codec::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(

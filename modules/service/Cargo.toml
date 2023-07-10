@@ -10,6 +10,7 @@ tokio = { version = "1.0", features = ["full"] }
 anyhow = { version = "1.0.56" }
 serde_json = { version = "1.0", default-features = false, features = ["alloc"] }
 
+crypto = { path = "../crypto" }
 enclave-api = { path = "../enclave-api" }
 lcp-proto = { path = "../../proto", default-features = false }
 attestation-report = { path = "../attestation-report" }

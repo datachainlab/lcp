@@ -13,3 +13,5 @@ tempfile = "3"
 
 crypto = { path = "../crypto", default-features = false }
 attestation-report = { path = "../attestation-report" }
+lcp-proto = { path = "../../proto", default-features = false }
+lcp-types = { path = "../types" }

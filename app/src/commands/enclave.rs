@@ -69,7 +69,7 @@ pub struct ListKeys {
 }
 
 fn run_list_keys<E: EnclaveCommandAPI<S>, S: CommitStore>(enclave: E, _: &ListKeys) -> Result<()> {
-    let list = enclave.get_key_manager().list()?;
+    let list = enclave.get_key_manager().all_keys()?;
     for addr in list {
         println!("{}", addr);
     }

@@ -2469,6 +2469,8 @@ dependencies = [
  "crypto",
  "flex-error",
  "fslock",
+ "lcp-proto",
+ "lcp-types",
  "log 0.4.17",
  "serde",
  "serde_json",
@@ -4356,6 +4358,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "attestation-report",
+ "crypto",
  "enclave-api",
  "lcp-proto",
  "serde_json",
