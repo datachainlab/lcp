@@ -14,6 +14,7 @@ import (
 	ibcexported "github.com/cosmos/ibc-go/v7/modules/core/exported"
 	lcptypes "github.com/datachainlab/lcp/go/light-clients/lcp/types"
 	"github.com/datachainlab/lcp/go/relay/elc"
+	"github.com/datachainlab/lcp/go/relay/enclave"
 	"github.com/datachainlab/lcp/go/relay/ibc"
 	"github.com/hyperledger-labs/yui-relayer/core"
 	"google.golang.org/grpc"
@@ -25,9 +26,12 @@ type Prover struct {
 	originChain  core.Chain
 	originProver core.Prover
 
-	codec            codec.ProtoCodecMarshaler
-	path             *core.PathEnd
+	homePath string
+	codec    codec.ProtoCodecMarshaler
+	path     *core.PathEnd
+
 	lcpServiceClient LCPServiceClient
+	activeEnclaveKey *enclave.EnclaveKeyInfo
 }
 
 var (
@@ -63,6 +67,7 @@ func (pr *Prover) Init(homePath string, timeout time.Duration, codec codec.Proto
 	if err := pr.originProver.Init(homePath, timeout, codec, debug); err != nil {
 		return err
 	}
+	pr.homePath = homePath
 	pr.codec = codec
 	return nil
 }
@@ -85,7 +90,7 @@ func (pr *Prover) GetChainID() string {
 
 // CreateMsgCreateClient creates a CreateClientMsg to this chain
 func (pr *Prover) CreateMsgCreateClient(clientID string, dstHeader core.Header, signer sdk.AccAddress) (*clienttypes.MsgCreateClient, error) {
-	if err := pr.initServiceClient(); err != nil {
+	if err := pr.ensureAvailableEnclaveKeyExists(context.TODO()); err != nil {
 		return nil, err
 	}
 	msg, err := pr.originProver.CreateMsgCreateClient(clientID, dstHeader, signer)
@@ -95,7 +100,7 @@ func (pr *Prover) CreateMsgCreateClient(clientID string, dstHeader core.Header, 
 	res, err := pr.lcpServiceClient.CreateClient(context.TODO(), &elc.MsgCreateClient{
 		ClientState:    msg.ClientState,
 		ConsensusState: msg.ConsensusState,
-		Signer:         "", // TODO remove this field from the proto def
+		Signer:         pr.activeEnclaveKey.EnclaveKeyAddress,
 	})
 	if err != nil {
 		return nil, err
@@ -109,7 +114,7 @@ func (pr *Prover) CreateMsgCreateClient(clientID string, dstHeader core.Header, 
 	clientState := &lcptypes.ClientState{
 		LatestHeight:         clienttypes.Height{},
 		Mrenclave:            pr.config.GetMrenclave(),
-		KeyExpiration:        60 * 60 * 24 * 7, // 7 days
+		KeyExpiration:        defaultEnclaveKeyExpiration, // TODO configurable
 		Keys:                 [][]byte{},
 		AttestationTimes:     []uint64{},
 		AllowedQuoteStatuses: pr.config.AllowedQuoteStatuses,
@@ -144,9 +149,10 @@ func (pr *Prover) GetLatestFinalizedHeader() (latestFinalizedHeader core.Header,
 // The order of the returned header slice should be as: [<intermediate headers>..., <update header>]
 // if the header slice's length == nil and err == nil, the relayer should skips the update-client
 func (pr *Prover) SetupHeadersForUpdate(dstChain core.ChainInfoICS02Querier, latestFinalizedHeader core.Header) ([]core.Header, error) {
-	if err := pr.initServiceClient(); err != nil {
+	if err := pr.ensureAvailableEnclaveKeyExists(context.TODO()); err != nil {
 		return nil, err
 	}
+
 	headers, err := pr.originProver.SetupHeadersForUpdate(dstChain, latestFinalizedHeader)
 	if err != nil {
 		return nil, err
@@ -178,6 +184,8 @@ func (pr *Prover) SetupHeadersForUpdate(dstChain core.ChainInfoICS02Querier, lat
 	}
 	return updates, nil
 }
+
+// ######## State verification ########
 
 // QueryClientConsensusState returns the ClientConsensusState and its proof
 func (pr *Prover) QueryClientConsensusStateWithProof(ctx core.QueryContext, dstClientConsHeight ibcexported.Height) (*clienttypes.QueryConsensusStateResponse, error) {

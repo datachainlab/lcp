@@ -2,7 +2,12 @@ package relay
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
 	"log"
+	"os"
+	"path/filepath"
 	"time"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -14,6 +19,130 @@ import (
 	"github.com/datachainlab/lcp/go/sgx/ias"
 	"github.com/hyperledger-labs/yui-relayer/core"
 )
+
+const lastEnclaveKeyInfoFilePath = "last_eki"
+
+const defaultEnclaveKeyExpiration = 60 * 60 * 24 * 7 // 7 days
+
+var ErrLastEnclaveKeyInfoNotFound = errors.New("last enclave key info not found")
+
+func (pr *Prover) loadLastEnclaveKey(ctx context.Context) (*enclave.EnclaveKeyInfo, error) {
+	path, err := pr.lastEnclaveKeyInfoFilePath()
+	if err != nil {
+		return nil, err
+	}
+	bz, err := os.ReadFile(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, fmt.Errorf("%v not found: %w", path, ErrLastEnclaveKeyInfoNotFound)
+		}
+		return nil, err
+	}
+	var eki enclave.EnclaveKeyInfo
+	if err := json.Unmarshal(bz, &eki); err != nil {
+		return nil, err
+	}
+	return &eki, nil
+}
+
+func (pr *Prover) saveLastEnclaveKey(ctx context.Context, eki *enclave.EnclaveKeyInfo) error {
+	path, err := pr.lastEnclaveKeyInfoFilePath()
+	if err != nil {
+		return err
+	}
+	f, err := os.CreateTemp(os.TempDir(), lastEnclaveKeyInfoFilePath)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	bz, err := json.Marshal(eki)
+	if err != nil {
+		return err
+	}
+	if _, err := f.Write(bz); err != nil {
+		return err
+	}
+	if err := os.Rename(f.Name(), path); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (pr *Prover) lastEnclaveKeyInfoFilePath() (string, error) {
+	path := filepath.Join(pr.homePath, "lcp", pr.originChain.ChainID())
+	if err := os.MkdirAll(path, os.ModePerm); err != nil {
+		return "", err
+	}
+	return path, nil
+}
+
+func (pr *Prover) checkUpdateNeeded(eki *enclave.EnclaveKeyInfo) bool {
+	attestationTime := time.Unix(int64(eki.AttestationTime), 0)
+
+	now := time.Now()
+	// TODO consider appropriate buffer time
+	// now < attestation_time + expiration / 2
+	if now.Before(attestationTime.Add(defaultEnclaveKeyExpiration / 2)) {
+		return false
+	}
+	return true
+}
+
+func (pr *Prover) ensureAvailableEnclaveKeyExists(ctx context.Context) error {
+	updated, err := pr.updateActiveEnclaveKeyIfNeeded(ctx)
+	if err != nil {
+		return err
+	}
+	log.Printf("updateActiveEnclaveKeyIfNeeded: updated=%v", updated)
+	return nil
+}
+
+// updateActiveEnclaveKeyIfNeeded updates a key if key is missing or expired
+func (pr *Prover) updateActiveEnclaveKeyIfNeeded(ctx context.Context) (bool, error) {
+	if err := pr.initServiceClient(); err != nil {
+		return false, err
+	}
+
+	var updateNeeded bool
+	if pr.activeEnclaveKey == nil {
+		// load last key if exists
+		lastEnclaveKey, err := pr.loadLastEnclaveKey(ctx)
+		if err == nil {
+			if pr.checkUpdateNeeded(lastEnclaveKey) {
+				updateNeeded = true
+			} else {
+				pr.activeEnclaveKey = lastEnclaveKey
+				updateNeeded = false
+			}
+		} else if errors.Is(err, ErrLastEnclaveKeyInfoNotFound) {
+			updateNeeded = true
+		} else {
+			return false, err
+		}
+	} else {
+		updateNeeded = pr.checkUpdateNeeded(pr.activeEnclaveKey)
+	}
+
+	if updateNeeded {
+		// if active key is not found or expired, get available latest one and register it on the chain
+		res, err := pr.lcpServiceClient.AvailableEnclaveKeys(ctx, &enclave.QueryAvailableEnclaveKeysRequest{})
+		if err != nil {
+			return false, err
+		} else if len(res.Keys) == 0 {
+			return false, fmt.Errorf("no available enclave keys")
+		}
+		eki := res.Keys[0]
+		if err := pr.registerEnclaveKey(eki, true); err != nil {
+			return false, err
+		}
+		if err := pr.saveLastEnclaveKey(ctx, eki); err != nil {
+			return false, err
+		}
+		pr.activeEnclaveKey = eki
+	}
+	return updateNeeded, nil
+}
 
 func (pr *Prover) syncUpstreamHeader(includeState bool) ([]*elc.MsgUpdateClientResponse, error) {
 
@@ -69,35 +198,32 @@ func (pr *Prover) syncUpstreamHeader(includeState bool) ([]*elc.MsgUpdateClientR
 	return responses, nil
 }
 
-func registerEnclaveKey(pathEnd *core.PathEnd, prover *Prover, debug bool) error {
+func (pr *Prover) registerEnclaveKey(eki *enclave.EnclaveKeyInfo, debug bool) error {
 	if debug {
 		ias.SetAllowDebugEnclaves()
 		defer ias.UnsetAllowDebugEnclaves()
 	}
-	res, err := prover.lcpServiceClient.AttestedVerificationReport(context.TODO(), &enclave.QueryAttestedVerificationReportRequest{})
-	if err != nil {
+
+	if err := ias.VerifyReport(eki.Report, eki.Signature, eki.SigningCert, time.Now()); err != nil {
 		return err
 	}
-	if err := ias.VerifyReport(res.Report, res.Signature, res.SigningCert, time.Now()); err != nil {
-		return err
-	}
-	if _, err := ias.ParseAndValidateAVR(res.Report); err != nil {
+	if _, err := ias.ParseAndValidateAVR(eki.Report); err != nil {
 		return err
 	}
 	header := &lcptypes.RegisterEnclaveKeyHeader{
-		Report:      res.Report,
-		Signature:   res.Signature,
-		SigningCert: res.SigningCert,
+		Report:      eki.Report,
+		Signature:   eki.Signature,
+		SigningCert: eki.SigningCert,
 	}
-	signer, err := prover.originChain.GetAddress()
+	signer, err := pr.originChain.GetAddress()
 	if err != nil {
 		return err
 	}
-	msg, err := clienttypes.NewMsgUpdateClient(pathEnd.ClientID, header, signer.String())
+	msg, err := clienttypes.NewMsgUpdateClient(pr.path.ClientID, header, signer.String())
 	if err != nil {
 		return err
 	}
-	if _, err := prover.originChain.SendMsgs([]sdk.Msg{msg}); err != nil {
+	if _, err := pr.originChain.SendMsgs([]sdk.Msg{msg}); err != nil {
 		return err
 	}
 	return nil
@@ -105,7 +231,7 @@ func registerEnclaveKey(pathEnd *core.PathEnd, prover *Prover, debug bool) error
 
 func activateClient(pathEnd *core.PathEnd, src, dst *core.ProvableChain) error {
 	srcProver := src.Prover.(*Prover)
-	if err := srcProver.initServiceClient(); err != nil {
+	if err := srcProver.ensureAvailableEnclaveKeyExists(context.TODO()); err != nil {
 		return err
 	}
 
