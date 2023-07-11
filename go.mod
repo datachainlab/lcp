@@ -10,7 +10,7 @@ require (
 	github.com/ethereum/go-ethereum v1.12.0
 	github.com/gorilla/mux v1.8.0
 	github.com/grpc-ecosystem/grpc-gateway v1.16.0
-	github.com/hyperledger-labs/yui-relayer v0.4.1
+	github.com/hyperledger-labs/yui-relayer v0.4.2
 	github.com/oasisprotocol/oasis-core/go v0.2201.11
 	github.com/spf13/cobra v1.7.0
 	github.com/spf13/viper v1.16.0
