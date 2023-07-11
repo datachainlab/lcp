@@ -27,6 +27,7 @@ pub enum CliCmd {
 
 impl CliCmd {
     pub fn run(self, opts: &Opts) -> Result<()> {
+        Self::setup_logger(opts)?;
         match self {
             CliCmd::Enclave(cmd) => {
                 Self::setup_read_only_env(opts);
@@ -45,6 +46,15 @@ impl CliCmd {
                 cmd.run(opts, build_enclave_loader::<RocksDBStore>())
             }
         }
+    }
+
+    fn setup_logger(opts: &Opts) -> Result<()> {
+        if let Some(level_filter) = opts.get_log_level_filter()? {
+            env_logger::builder().filter_level(level_filter).init();
+        } else {
+            env_logger::init_from_env(env_logger::Env::default().default_filter_or("info"));
+        }
+        Ok(())
     }
 
     fn setup_env(opts: &Opts) {
