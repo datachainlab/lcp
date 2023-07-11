@@ -117,23 +117,15 @@ impl EnclavePublicKey {
 
     pub fn as_report_data(&self) -> sgx_report_data_t {
         let mut report_data = sgx_report_data_t::default();
-        report_data.d[..20].copy_from_slice(&Address::from(self).0);
+        report_data.d[..20].copy_from_slice(&self.as_address().0);
         report_data
     }
-}
 
-impl AsRef<EnclavePublicKey> for EnclavePublicKey {
-    fn as_ref(&self) -> &EnclavePublicKey {
-        self
-    }
-}
-
-impl<T: AsRef<EnclavePublicKey>> From<T> for Address {
-    fn from(v: T) -> Self {
-        let pubkey = &v.as_ref().0.serialize()[1..];
-        let mut res: Address = Default::default();
-        res.0.copy_from_slice(&keccak256(pubkey)[12..]);
-        res
+    pub fn as_address(&self) -> Address {
+        let pubkey = &self.0.serialize()[1..];
+        let mut addr: Address = Default::default();
+        addr.0.copy_from_slice(&keccak256(pubkey)[12..]);
+        addr
     }
 }
 
@@ -215,8 +207,7 @@ pub fn verify_signature(sign_bytes: &[u8], signature: &[u8]) -> Result<EnclavePu
 }
 
 pub fn verify_signature_address(sign_bytes: &[u8], signature: &[u8]) -> Result<Address, Error> {
-    let pub_key = verify_signature(sign_bytes, signature)?;
-    Ok((&pub_key).into())
+    Ok(verify_signature(sign_bytes, signature)?.as_address())
 }
 
 fn keccak256(bz: &[u8]) -> [u8; 32] {

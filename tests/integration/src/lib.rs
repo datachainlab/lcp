@@ -4,7 +4,6 @@ mod relayer;
 mod tests {
     use super::*;
     use anyhow::{anyhow, bail};
-    use crypto::Address;
     use ecall_commands::{
         CommitmentProofPair, GenerateEnclaveKeyInput, InitClientInput, UpdateClientInput,
         VerifyMembershipInput,
@@ -99,7 +98,7 @@ mod tests {
         }
 
         let signer = match enclave.generate_enclave_key(GenerateEnclaveKeyInput::default()) {
-            Ok(res) => Address::from(res.pub_key),
+            Ok(res) => res.pub_key.as_address(),
             Err(e) => {
                 bail!("Init Enclave Failed {:?}!", e);
             }
@@ -107,16 +106,17 @@ mod tests {
 
         #[cfg(not(feature = "sgx-sw"))]
         {
-            let _ = match enclave.ias_remote_attestation(IASRemoteAttestationInput {
-                target_enclave_key: signer,
-                spid: std::env::var("SPID")?.as_bytes().to_vec(),
-                ias_key: std::env::var("IAS_KEY")?.as_bytes().to_vec(),
-            }) {
-                Ok(res) => res.report,
-                Err(e) => {
-                    bail!("IAS Remote Attestation Failed {:?}!", e);
-                }
-            };
+            let _ =
+                match enclave.ias_remote_attestation(ecall_commands::IASRemoteAttestationInput {
+                    target_enclave_key: signer,
+                    spid: std::env::var("SPID")?.as_bytes().to_vec(),
+                    ias_key: std::env::var("IAS_KEY")?.as_bytes().to_vec(),
+                }) {
+                    Ok(res) => res.report,
+                    Err(e) => {
+                        bail!("IAS Remote Attestation Failed {:?}!", e);
+                    }
+                };
         }
         #[cfg(feature = "sgx-sw")]
         {

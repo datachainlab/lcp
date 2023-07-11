@@ -22,7 +22,7 @@ pub trait EnclaveCommandAPI<S: CommitStore>: EnclavePrimitiveAPI<S> {
             _ => unreachable!(),
         };
         self.get_key_manager()
-            .save((&res.pub_key).into(), res.sealed_ek.clone())?;
+            .save(res.pub_key.as_address(), res.sealed_ek.clone())?;
         Ok(res)
     }
 

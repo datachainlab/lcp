@@ -11,7 +11,7 @@ use context::Context;
 use core::cell::RefCell;
 use core::str::FromStr;
 use core::time::Duration;
-use crypto::{Address, EnclaveKey};
+use crypto::EnclaveKey;
 use ibc::{
     mock::{
         client_state::MockClientState, consensus_state::MockConsensusState, header::MockHeader,
@@ -51,7 +51,7 @@ fn test_ibc_client() {
             latest_height: Height::zero(),
             mr_enclave: Default::default(),
             key_expiration: Duration::from_secs(60),
-            keys: vec![(Address::from(&ek.get_pubkey()), expired_at)],
+            keys: vec![(ek.get_pubkey().as_address(), expired_at)],
         };
         let initial_consensus_state = ConsensusState {
             state_id: Default::default(),
@@ -134,7 +134,7 @@ fn test_ibc_client() {
 
         let res = prove_update_client_commitment(
             ctx.get_enclave_key(),
-            ctx.get_enclave_key().pubkey().unwrap().into(),
+            ctx.get_enclave_key().pubkey().unwrap().as_address(),
             res.commitment,
         );
         assert!(res.is_ok(), "res={:?}", res);

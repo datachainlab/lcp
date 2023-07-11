@@ -2368,7 +2368,6 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "attestation-report",
- "crypto",
  "ecall-commands",
  "enclave-api",
  "env_logger",
