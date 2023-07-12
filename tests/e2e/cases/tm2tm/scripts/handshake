@@ -39,8 +39,8 @@ $RLY paths add $CHAINID_ONE $CHAINID_TWO $PATH_NAME --file=./configs/path.json
 
 retry 5 $RLY tx clients $PATH_NAME
 sleep 3
-retry 5 $RLY lcp register-key $PATH_NAME --src=true
-retry 5 $RLY lcp register-key $PATH_NAME --src=false
+retry 5 $RLY lcp update-enclave-key $PATH_NAME --src=true
+retry 5 $RLY lcp update-enclave-key $PATH_NAME --src=false
 sleep 3
 retry 5 $RLY lcp activate-client $PATH_NAME --src=true
 retry 5 $RLY lcp activate-client $PATH_NAME --src=false
