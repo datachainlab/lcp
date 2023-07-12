@@ -46,8 +46,8 @@ impl RocksDBStore {
 
     pub fn open_read_only<P: AsRef<Path>>(path: P) -> Self {
         if !path.as_ref().exists() {
-            info!("initialize a database: {:?}", path.as_ref());
-            let _store = Self::open(path.as_ref());
+            let store = Self::open(path.as_ref());
+            drop(store);
         }
         let db = DB::open_for_read_only(&Default::default(), path, false).unwrap();
         RocksDBStoreBuilder {
