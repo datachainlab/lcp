@@ -5,15 +5,15 @@ use light_client::{ClientKeeper, ClientReader, HostClientKeeper, HostClientReade
 use light_client_registry::LightClientResolver;
 use store::KVStore;
 
-pub struct Context<'k, R: LightClientResolver, S: KVStore> {
+pub struct Context<'k, R: LightClientResolver, S: KVStore, K: Signer> {
     lc_registry: R,
     store: S,
-    ek: &'k dyn Signer,
+    ek: &'k K,
     current_timestamp: Option<Time>,
 }
 
-impl<'k, R: LightClientResolver, S: KVStore> Context<'k, R, S> {
-    pub fn new(lc_registry: R, store: S, ek: &'k dyn Signer) -> Self {
+impl<'k, R: LightClientResolver, S: KVStore, K: Signer> Context<'k, R, S, K> {
+    pub fn new(lc_registry: R, store: S, ek: &'k K) -> Self {
         Self {
             lc_registry,
             store,
@@ -31,7 +31,7 @@ impl<'k, R: LightClientResolver, S: KVStore> Context<'k, R, S> {
     }
 }
 
-impl<'k, R: LightClientResolver, S: KVStore> KVStore for Context<'k, R, S> {
+impl<'k, R: LightClientResolver, S: KVStore, K: Signer> KVStore for Context<'k, R, S, K> {
     fn set(&mut self, key: Vec<u8>, value: Vec<u8>) {
         self.store.set(key, value)
     }
@@ -45,21 +45,23 @@ impl<'k, R: LightClientResolver, S: KVStore> KVStore for Context<'k, R, S> {
     }
 }
 
-impl<'k, R: LightClientResolver, S: KVStore> HostContext for Context<'k, R, S> {
+impl<'k, R: LightClientResolver, S: KVStore, K: Signer> HostContext for Context<'k, R, S, K> {
     fn host_timestamp(&self) -> Time {
         self.current_timestamp.unwrap()
     }
 }
 
-impl<'k, R: LightClientResolver, S: KVStore> ClientReader for Context<'k, R, S> {}
+impl<'k, R: LightClientResolver, S: KVStore, K: Signer> ClientReader for Context<'k, R, S, K> {}
 
-impl<'k, R: LightClientResolver, S: KVStore> ClientKeeper for Context<'k, R, S> {}
+impl<'k, R: LightClientResolver, S: KVStore, K: Signer> ClientKeeper for Context<'k, R, S, K> {}
 
-impl<'k, R: LightClientResolver, S: KVStore> HostClientReader for Context<'k, R, S> {}
+impl<'k, R: LightClientResolver, S: KVStore, K: Signer> HostClientReader for Context<'k, R, S, K> {}
 
-impl<'k, R: LightClientResolver, S: KVStore> HostClientKeeper for Context<'k, R, S> {}
+impl<'k, R: LightClientResolver, S: KVStore, K: Signer> HostClientKeeper for Context<'k, R, S, K> {}
 
-impl<'k, R: LightClientResolver, S: KVStore> LightClientResolver for Context<'k, R, S> {
+impl<'k, R: LightClientResolver, S: KVStore, K: Signer> LightClientResolver
+    for Context<'k, R, S, K>
+{
     fn get_light_client(
         &self,
         type_url: &str,

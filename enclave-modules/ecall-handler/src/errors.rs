@@ -15,9 +15,6 @@ define_error! {
             format_args!("SGX error: {:?}", e.status)
         },
 
-        SealedEnclaveKeyNotFound
-        |_| { "Sealed EnclaveKey not found" },
-
         Store
         [store::Error]
         |_| { "Store error" },

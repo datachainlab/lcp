@@ -56,14 +56,6 @@ define_error! {
             format_args!("dramatic read from {} ended prematurely (n = {} < SECRET_KEY_SIZE = {})", e.path, e.actual, e.expected)
         },
 
-        Secp256k1
-        [TraceError<libsecp256k1::Error>]
-        |_| { "secp256k1 error" },
-
-        HexParseError
-        [TraceError<hex::FromHexError>]
-        |_| { "hex parse error" },
-
         UnexpectedSigner
         {
             expected: EnclavePublicKey,
@@ -71,7 +63,18 @@ define_error! {
         }
         |e| {
             format_args!("unexpected signer: expected={:?} actual={:?}", e.expected, e.actual)
-        }
+        },
+
+        NopSigner
+        |_| { "nop signer doesn't support any operations" },
+
+        Secp256k1
+        [TraceError<libsecp256k1::Error>]
+        |_| { "secp256k1 error" },
+
+        HexParseError
+        [TraceError<hex::FromHexError>]
+        |_| { "hex parse error" },
     }
 }
 

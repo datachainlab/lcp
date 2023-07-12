@@ -2,9 +2,10 @@ use crate::{EnclavePrimitiveAPI, Result};
 use ecall_commands::{
     Command, CommandResult, EnclaveManageCommand, EnclaveManageResult, GenerateEnclaveKeyInput,
     GenerateEnclaveKeyResult, IASRemoteAttestationInput, IASRemoteAttestationResult,
-    InitClientInput, InitClientResult, LightClientCommand, LightClientResult, QueryClientInput,
-    QueryClientResult, UpdateClientInput, UpdateClientResult, VerifyMembershipInput,
-    VerifyMembershipResult, VerifyNonMembershipInput, VerifyNonMembershipResult,
+    InitClientInput, InitClientResult, LightClientCommand, LightClientExecuteCommand,
+    LightClientQueryCommand, LightClientResult, QueryClientInput, QueryClientResult,
+    UpdateClientInput, UpdateClientResult, VerifyMembershipInput, VerifyMembershipResult,
+    VerifyNonMembershipInput, VerifyNonMembershipResult,
 };
 use store::transaction::CommitStore;
 
@@ -80,7 +81,9 @@ pub trait EnclaveCommandAPI<S: CommitStore>: EnclavePrimitiveAPI<S> {
     fn init_client(&self, input: InitClientInput) -> Result<InitClientResult> {
         let update_key = Some(input.any_client_state.type_url.clone());
         match self.execute_command(
-            Command::LightClient(LightClientCommand::InitClient(input)),
+            Command::LightClient(LightClientCommand::Execute(
+                LightClientExecuteCommand::InitClient(input),
+            )),
             update_key,
         )? {
             CommandResult::LightClient(LightClientResult::InitClient(res)) => Ok(res),
@@ -92,7 +95,9 @@ pub trait EnclaveCommandAPI<S: CommitStore>: EnclavePrimitiveAPI<S> {
     fn update_client(&self, input: UpdateClientInput) -> Result<UpdateClientResult> {
         let update_key = Some(input.client_id.to_string());
         match self.execute_command(
-            Command::LightClient(LightClientCommand::UpdateClient(input)),
+            Command::LightClient(LightClientCommand::Execute(
+                LightClientExecuteCommand::UpdateClient(input),
+            )),
             update_key,
         )? {
             CommandResult::LightClient(LightClientResult::UpdateClient(res)) => Ok(res),
@@ -103,7 +108,9 @@ pub trait EnclaveCommandAPI<S: CommitStore>: EnclavePrimitiveAPI<S> {
     /// verify_membership verifies the existence of the state in the upstream chain and generates the state commitment of its result
     fn verify_membership(&self, input: VerifyMembershipInput) -> Result<VerifyMembershipResult> {
         match self.execute_command(
-            Command::LightClient(LightClientCommand::VerifyMembership(input)),
+            Command::LightClient(LightClientCommand::Execute(
+                LightClientExecuteCommand::VerifyMembership(input),
+            )),
             None,
         )? {
             CommandResult::LightClient(LightClientResult::VerifyMembership(res)) => Ok(res),
@@ -117,7 +124,9 @@ pub trait EnclaveCommandAPI<S: CommitStore>: EnclavePrimitiveAPI<S> {
         input: VerifyNonMembershipInput,
     ) -> Result<VerifyNonMembershipResult> {
         match self.execute_command(
-            Command::LightClient(LightClientCommand::VerifyNonMembership(input)),
+            Command::LightClient(LightClientCommand::Execute(
+                LightClientExecuteCommand::VerifyNonMembership(input),
+            )),
             None,
         )? {
             CommandResult::LightClient(LightClientResult::VerifyNonMembership(res)) => Ok(res),
@@ -128,7 +137,9 @@ pub trait EnclaveCommandAPI<S: CommitStore>: EnclavePrimitiveAPI<S> {
     /// query_client queries the client state and consensus state
     fn query_client(&self, input: QueryClientInput) -> Result<QueryClientResult> {
         match self.execute_command(
-            Command::LightClient(LightClientCommand::QueryClient(input)),
+            Command::LightClient(LightClientCommand::Query(
+                LightClientQueryCommand::QueryClient(input),
+            )),
             None,
         )? {
             CommandResult::LightClient(LightClientResult::QueryClient(res)) => Ok(res),

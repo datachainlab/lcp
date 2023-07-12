@@ -1,13 +1,14 @@
 use crate::light_client::Error;
 use crate::prelude::*;
 use context::Context;
+use crypto::Signer;
 use lcp_types::ClientId;
 use light_client::{ClientReader, LightClient};
 use light_client_registry::{Error as LightClientRegistryError, LightClientResolver};
 use store::KVStore;
 
-pub fn get_light_client_by_client_id<'a, R: LightClientResolver, S: KVStore>(
-    ctx: &'a Context<R, S>,
+pub fn get_light_client_by_client_id<'a, R: LightClientResolver, S: KVStore, K: Signer>(
+    ctx: &'a Context<R, S, K>,
     client_id: &ClientId,
 ) -> Result<&'a Box<dyn LightClient>, Error> {
     let any_client_state = ctx.client_state(client_id)?.to_proto();

@@ -4,14 +4,15 @@ use commitments::prover::prove_update_client_commitment;
 use commitments::UpdateClientCommitmentProof;
 use context::Context;
 use core::str::FromStr;
+use crypto::Signer;
 use ecall_commands::{InitClientInput, InitClientResult, LightClientResult};
 use lcp_types::{Any, ClientId};
 use light_client::{ClientKeeper, ClientReader};
 use light_client_registry::LightClientResolver;
 use store::KVStore;
 
-pub fn init_client<R: LightClientResolver, S: KVStore>(
-    ctx: &mut Context<R, S>,
+pub fn init_client<R: LightClientResolver, S: KVStore, K: Signer>(
+    ctx: &mut Context<R, S, K>,
     input: InitClientInput,
 ) -> Result<LightClientResult, Error> {
     ctx.set_timestamp(input.current_timestamp);

@@ -2,22 +2,41 @@ use crate::light_client::{
     init_client, query_client, update_client, verify_membership, verify_non_membership, Error,
 };
 use context::Context;
-use ecall_commands::{CommandResult, LightClientCommand};
-use light_client_registry::LightClientResolver;
-use store::KVStore;
+use crypto::NopSigner;
+use ecall_commands::{
+    CommandContext, CommandResult, LightClientCommand, LightClientExecuteCommand,
+    LightClientQueryCommand,
+};
+use enclave_environment::Env;
 
-pub fn dispatch<R: LightClientResolver, S: KVStore>(
-    ctx: &mut Context<R, S>,
+pub fn dispatch<E: Env>(
+    env: E,
+    cctx: CommandContext,
     command: LightClientCommand,
 ) -> Result<CommandResult, Error> {
-    use LightClientCommand::*;
     let res = match command {
-        InitClient(input) => init_client(ctx, input)?,
-        UpdateClient(input) => update_client(ctx, input)?,
-        VerifyMembership(input) => verify_membership(ctx, input)?,
-        VerifyNonMembership(input) => verify_non_membership(ctx, input)?,
-
-        QueryClient(input) => query_client(ctx, input)?,
+        LightClientCommand::Execute(cmd) => {
+            use LightClientExecuteCommand::*;
+            let sealed_ek = cctx
+                .sealed_ek
+                .ok_or(Error::sealed_enclave_key_not_found())?;
+            let mut ctx =
+                Context::new(env.get_lc_registry(), env.new_store(cctx.tx_id), &sealed_ek);
+            match cmd {
+                InitClient(input) => init_client(&mut ctx, input)?,
+                UpdateClient(input) => update_client(&mut ctx, input)?,
+                VerifyMembership(input) => verify_membership(&mut ctx, input)?,
+                VerifyNonMembership(input) => verify_non_membership(&mut ctx, input)?,
+            }
+        }
+        LightClientCommand::Query(cmd) => {
+            use LightClientQueryCommand::*;
+            let mut ctx =
+                Context::new(env.get_lc_registry(), env.new_store(cctx.tx_id), &NopSigner);
+            match cmd {
+                QueryClient(input) => query_client(&mut ctx, input)?,
+            }
+        }
     };
     Ok(CommandResult::LightClient(res))
 }

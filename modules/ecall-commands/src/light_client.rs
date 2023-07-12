@@ -6,23 +6,33 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub enum LightClientCommand {
+    Execute(LightClientExecuteCommand),
+    Query(LightClientQueryCommand),
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub enum LightClientExecuteCommand {
     InitClient(InitClientInput),
     UpdateClient(UpdateClientInput),
-
     VerifyMembership(VerifyMembershipInput),
     VerifyNonMembership(VerifyNonMembershipInput),
+}
 
+#[derive(Serialize, Deserialize, Debug)]
+pub enum LightClientQueryCommand {
     QueryClient(QueryClientInput),
 }
 
 impl EnclaveKeySelector for LightClientCommand {
     fn get_enclave_key(&self) -> Option<Address> {
         match self {
-            Self::InitClient(input) => Some(input.signer),
-            Self::UpdateClient(input) => Some(input.signer),
-            Self::VerifyMembership(input) => Some(input.signer),
-            Self::VerifyNonMembership(input) => Some(input.signer),
-            _ => None,
+            Self::Execute(cmd) => match cmd {
+                LightClientExecuteCommand::InitClient(input) => Some(input.signer),
+                LightClientExecuteCommand::UpdateClient(input) => Some(input.signer),
+                LightClientExecuteCommand::VerifyMembership(input) => Some(input.signer),
+                LightClientExecuteCommand::VerifyNonMembership(input) => Some(input.signer),
+            },
+            Self::Query(_) => None,
         }
     }
 }

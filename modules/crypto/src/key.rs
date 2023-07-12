@@ -259,3 +259,14 @@ const fn safe_u32_to_usize(v: u32) -> usize {
     assert!(usize::BITS >= 32);
     v as usize
 }
+
+pub struct NopSigner;
+
+impl Signer for NopSigner {
+    fn pubkey(&self) -> Result<EnclavePublicKey, Error> {
+        Err(Error::nop_signer())
+    }
+    fn sign(&self, _: &[u8]) -> Result<Vec<u8>, Error> {
+        Err(Error::nop_signer())
+    }
+}

@@ -30,10 +30,10 @@ pub use enclave_manage::{
 pub use enclave_manage::{SimulateRemoteAttestationInput, SimulateRemoteAttestationResult};
 pub use errors::Error;
 pub use light_client::{
-    CommitmentProofPair, InitClientInput, InitClientResult, LightClientCommand, LightClientResult,
-    QueryClientInput, QueryClientResult, UpdateClientInput, UpdateClientResult,
-    VerifyMembershipInput, VerifyMembershipResult, VerifyNonMembershipInput,
-    VerifyNonMembershipResult,
+    CommitmentProofPair, InitClientInput, InitClientResult, LightClientCommand,
+    LightClientExecuteCommand, LightClientQueryCommand, LightClientResult, QueryClientInput,
+    QueryClientResult, UpdateClientInput, UpdateClientResult, VerifyMembershipInput,
+    VerifyMembershipResult, VerifyNonMembershipInput, VerifyNonMembershipResult,
 };
 
 mod commands;

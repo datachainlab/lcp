@@ -2,13 +2,14 @@ use super::registry::get_light_client_by_client_id;
 use crate::light_client::Error;
 use commitments::{prover::prove_update_client_commitment, UpdateClientCommitmentProof};
 use context::Context;
+use crypto::Signer;
 use ecall_commands::{LightClientResult, UpdateClientInput, UpdateClientResult};
 use light_client::ClientKeeper;
 use light_client_registry::LightClientResolver;
 use store::KVStore;
 
-pub fn update_client<R: LightClientResolver, S: KVStore>(
-    ctx: &mut Context<R, S>,
+pub fn update_client<R: LightClientResolver, S: KVStore, K: Signer>(
+    ctx: &mut Context<R, S, K>,
     input: UpdateClientInput,
 ) -> Result<LightClientResult, Error> {
     ctx.set_timestamp(input.current_timestamp);
