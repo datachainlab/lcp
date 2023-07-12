@@ -189,6 +189,7 @@ func (pr *Prover) syncUpstreamHeader(includeState bool) ([]*elc.MsgUpdateClientR
 			ClientId:     pr.config.ElcClientId,
 			Header:       anyHeader,
 			IncludeState: includeState,
+			Signer:       pr.activeEnclaveKey.EnclaveKeyAddress,
 		})
 		if err != nil {
 			return nil, err

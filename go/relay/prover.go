@@ -170,8 +170,10 @@ func (pr *Prover) SetupHeadersForUpdate(dstChain core.ChainInfoICS02Querier, lat
 			return nil, err
 		}
 		res, err := pr.lcpServiceClient.UpdateClient(context.TODO(), &elc.MsgUpdateClient{
-			ClientId: pr.config.ElcClientId,
-			Header:   anyHeader,
+			ClientId:     pr.config.ElcClientId,
+			Header:       anyHeader,
+			IncludeState: false,
+			Signer:       pr.activeEnclaveKey.EnclaveKeyAddress,
 		})
 		if err != nil {
 			return nil, err
@@ -200,6 +202,7 @@ func (pr *Prover) ProveState(ctx core.QueryContext, path string, value []byte) (
 		Value:       value,
 		ProofHeight: proofHeight,
 		Proof:       proof,
+		Signer:      pr.activeEnclaveKey.EnclaveKeyAddress,
 	})
 	if err != nil {
 		return nil, clienttypes.Height{}, err
