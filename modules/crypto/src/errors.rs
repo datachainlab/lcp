@@ -60,6 +60,10 @@ define_error! {
         [TraceError<libsecp256k1::Error>]
         |_| { "secp256k1 error" },
 
+        HexParseError
+        [TraceError<hex::FromHexError>]
+        |_| { "hex parse error" },
+
         UnexpectedSigner
         {
             expected: EnclavePublicKey,
@@ -80,5 +84,11 @@ impl From<sgx_status_t> for Error {
 impl From<libsecp256k1::Error> for Error {
     fn from(value: libsecp256k1::Error) -> Self {
         Self::secp256k1(value)
+    }
+}
+
+impl From<hex::FromHexError> for Error {
+    fn from(value: hex::FromHexError) -> Self {
+        Self::hex_parse_error(value)
     }
 }

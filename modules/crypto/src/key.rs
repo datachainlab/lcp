@@ -137,7 +137,7 @@ impl Address {
         hex::encode(self.0)
     }
     pub fn from_hex_string(s: &str) -> Result<Self, Error> {
-        let bz = hex::decode(s).unwrap();
+        let bz = hex::decode(s.strip_prefix("0x").unwrap_or(s))?;
         Address::try_from(bz.as_slice())
     }
 }
