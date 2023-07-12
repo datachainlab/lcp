@@ -10,7 +10,7 @@ use store::transaction::{CommitStore, Tx};
 pub trait EnclavePrimitiveAPI<S: CommitStore>: EnclaveInfo + HostStoreTxManager<S> {
     /// execute_command runs a given command in the enclave
     fn execute_command(&self, cmd: Command, update_key: Option<String>) -> Result<CommandResult> {
-        debug!("execute_command: cmd={:?} update_key={:?}", cmd, update_key);
+        debug!("prepare command: inner={:?} update_key={:?}", cmd, update_key);
         let tx = self.begin_tx(update_key)?;
 
         let cctx = match cmd.get_enclave_key() {
@@ -22,6 +22,7 @@ pub trait EnclavePrimitiveAPI<S: CommitStore>: EnclaveInfo + HostStoreTxManager<
         };
 
         let ecmd = ECallCommand::new(cctx, cmd);
+        debug!("try to execute command: {:?}", ecmd);
         match raw_execute_command(self.get_eid(), ecmd) {
             Ok(res) => {
                 self.commit_tx(tx)?;
