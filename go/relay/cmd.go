@@ -30,7 +30,7 @@ func LCPCmd(ctx *config.Context) *cobra.Command {
 
 func updateEnclaveKeyCmd(ctx *config.Context) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "update_enclave_key [path]",
+		Use:   "update-enclave-key [path]",
 		Short: "Register an enclave key into the LCP client",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {

@@ -86,8 +86,15 @@ func (pr *Prover) GetChainID() string {
 
 // CreateMsgCreateClient creates a CreateClientMsg to this chain
 func (pr *Prover) CreateMsgCreateClient(clientID string, dstHeader core.Header, signer sdk.AccAddress) (*clienttypes.MsgCreateClient, error) {
-	if err := pr.ensureAvailableEnclaveKeyExists(context.TODO()); err != nil {
+	if err := pr.initServiceClient(); err != nil {
 		return nil, err
+	}
+	// NOTE: Query the LCP for available keys, but no need to register it into on-chain here
+	keysRes, err := pr.lcpServiceClient.AvailableEnclaveKeys(context.TODO(), &enclave.QueryAvailableEnclaveKeysRequest{})
+	if err != nil {
+		return nil, err
+	} else if len(keysRes.Keys) == 0 {
+		return nil, fmt.Errorf("no available enclave keys")
 	}
 	msg, err := pr.originProver.CreateMsgCreateClient(clientID, dstHeader, signer)
 	if err != nil {
@@ -96,7 +103,7 @@ func (pr *Prover) CreateMsgCreateClient(clientID string, dstHeader core.Header, 
 	res, err := pr.lcpServiceClient.CreateClient(context.TODO(), &elc.MsgCreateClient{
 		ClientState:    msg.ClientState,
 		ConsensusState: msg.ConsensusState,
-		Signer:         pr.activeEnclaveKey.EnclaveKeyAddress,
+		Signer:         keysRes.Keys[0].EnclaveKeyAddress,
 	})
 	if err != nil {
 		return nil, err

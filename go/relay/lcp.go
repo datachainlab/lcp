@@ -20,7 +20,7 @@ import (
 	"github.com/hyperledger-labs/yui-relayer/core"
 )
 
-const lastEnclaveKeyInfoFilePath = "last_eki"
+const lastEnclaveKeyInfoFile = "last_eki"
 
 const defaultEnclaveKeyExpiration = 60 * 60 * 24 * 7 // 7 days
 
@@ -50,7 +50,7 @@ func (pr *Prover) saveLastEnclaveKey(ctx context.Context, eki *enclave.EnclaveKe
 	if err != nil {
 		return err
 	}
-	f, err := os.CreateTemp(os.TempDir(), lastEnclaveKeyInfoFilePath)
+	f, err := os.CreateTemp(os.TempDir(), lastEnclaveKeyInfoFile)
 	if err != nil {
 		return err
 	}
@@ -74,7 +74,7 @@ func (pr *Prover) lastEnclaveKeyInfoFilePath() (string, error) {
 	if err := os.MkdirAll(path, os.ModePerm); err != nil {
 		return "", err
 	}
-	return path, nil
+	return filepath.Join(path, lastEnclaveKeyInfoFile), nil
 }
 
 func (pr *Prover) checkUpdateNeeded(eki *enclave.EnclaveKeyInfo) bool {
@@ -83,7 +83,7 @@ func (pr *Prover) checkUpdateNeeded(eki *enclave.EnclaveKeyInfo) bool {
 	now := time.Now()
 	// TODO consider appropriate buffer time
 	// now < attestation_time + expiration / 2
-	if now.Before(attestationTime.Add(defaultEnclaveKeyExpiration / 2)) {
+	if now.Before(attestationTime.Add(time.Second * defaultEnclaveKeyExpiration / 2)) {
 		return false
 	}
 	return true
@@ -104,44 +104,45 @@ func (pr *Prover) updateActiveEnclaveKeyIfNeeded(ctx context.Context) (bool, err
 		return false, err
 	}
 
-	var updateNeeded bool
 	if pr.activeEnclaveKey == nil {
 		// load last key if exists
 		lastEnclaveKey, err := pr.loadLastEnclaveKey(ctx)
 		if err == nil {
-			if pr.checkUpdateNeeded(lastEnclaveKey) {
-				updateNeeded = true
-			} else {
+			if !pr.checkUpdateNeeded(lastEnclaveKey) {
 				pr.activeEnclaveKey = lastEnclaveKey
-				updateNeeded = false
+				return false, nil
+			} else {
+				log.Printf("last enclave key '0x%x' is found, but needs to be updated", lastEnclaveKey.EnclaveKeyAddress)
 			}
 		} else if errors.Is(err, ErrLastEnclaveKeyInfoNotFound) {
-			updateNeeded = true
+			log.Printf("last enclave key not found: error=%v", err)
 		} else {
 			return false, err
 		}
-	} else {
-		updateNeeded = pr.checkUpdateNeeded(pr.activeEnclaveKey)
+	} else if !pr.checkUpdateNeeded(pr.activeEnclaveKey) {
+		return false, nil
 	}
 
-	if updateNeeded {
-		// if active key is not found or expired, get available latest one and register it on the chain
-		res, err := pr.lcpServiceClient.AvailableEnclaveKeys(ctx, &enclave.QueryAvailableEnclaveKeysRequest{})
-		if err != nil {
-			return false, err
-		} else if len(res.Keys) == 0 {
-			return false, fmt.Errorf("no available enclave keys")
-		}
-		eki := res.Keys[0]
-		if err := pr.registerEnclaveKey(eki, true); err != nil {
-			return false, err
-		}
-		if err := pr.saveLastEnclaveKey(ctx, eki); err != nil {
-			return false, err
-		}
-		pr.activeEnclaveKey = eki
+	log.Println("need to get a new enclave key")
+
+	// if active key is not found or expired, get available latest one and register it on the chain
+	res, err := pr.lcpServiceClient.AvailableEnclaveKeys(ctx, &enclave.QueryAvailableEnclaveKeysRequest{})
+	if err != nil {
+		return false, err
+	} else if len(res.Keys) == 0 {
+		return false, fmt.Errorf("no available enclave keys")
 	}
-	return updateNeeded, nil
+	eki := res.Keys[0]
+	log.Printf("selected available enclave key: %#v", eki)
+	if err := pr.registerEnclaveKey(eki, true); err != nil {
+		return false, err
+	}
+	log.Printf("enclave key successfully registered: %#v", eki)
+	if err := pr.saveLastEnclaveKey(ctx, eki); err != nil {
+		return false, err
+	}
+	pr.activeEnclaveKey = eki
+	return true, nil
 }
 
 func (pr *Prover) syncUpstreamHeader(includeState bool) ([]*elc.MsgUpdateClientResponse, error) {
