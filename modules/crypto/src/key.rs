@@ -144,7 +144,7 @@ impl Address {
 
 impl Display for Address {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        f.write_str(&self.to_hex_string())
+        f.write_str(&format!("0x{}", self.to_hex_string()))
     }
 }
 

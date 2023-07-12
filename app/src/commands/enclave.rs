@@ -55,9 +55,10 @@ fn run_generate_key<E: EnclaveCommandAPI<S>, S: CommitStore>(
     enclave: E,
     _: &GenerateKey,
 ) -> Result<()> {
-    let _ = enclave
+    let res = enclave
         .generate_enclave_key(GenerateEnclaveKeyInput::default())
-        .map_err(|e| anyhow!("Init Enclave Failed {:?}!", e))?;
+        .map_err(|e| anyhow!("failed to generate an enclave key: {:?}", e))?;
+    println!("{}", res.pub_key.as_address());
     Ok(())
 }
 

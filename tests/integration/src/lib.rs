@@ -100,7 +100,7 @@ mod tests {
         let signer = match enclave.generate_enclave_key(GenerateEnclaveKeyInput::default()) {
             Ok(res) => res.pub_key.as_address(),
             Err(e) => {
-                bail!("Init Enclave Failed {:?}!", e);
+                bail!("failed to generate an enclave key: {:?}!", e);
             }
         };
 
