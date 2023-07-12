@@ -261,7 +261,6 @@ dependencies = [
  "sgx_rand",
  "sgx_trts",
  "sgx_tseal",
- "sgx_tstd",
  "sgx_types",
  "tiny-keccak",
 ]

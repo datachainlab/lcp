@@ -23,7 +23,6 @@ host-environment = { path = "../modules/host-environment" }
 service = { path = "../modules/service" }
 enclave-api = { path = "../modules/enclave-api" }
 ecall-commands = { path = "../modules/ecall-commands" }
-attestation-report = { path = "../modules/attestation-report" }
 crypto = { path = "../modules/crypto" }
 store = { path = "../modules/store", features = ["rocksdbstore"] }
 keymanager = { path = "../modules/keymanager" }

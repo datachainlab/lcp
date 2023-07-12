@@ -889,7 +889,6 @@ dependencies = [
  "sgx_rand",
  "sgx_trts",
  "sgx_tseal",
- "sgx_tstd",
  "sgx_types",
  "tiny-keccak 1.5.0",
 ]
@@ -2496,7 +2495,6 @@ name = "lcp"
 version = "0.0.1"
 dependencies = [
  "anyhow",
- "attestation-report",
  "clap",
  "crypto",
  "dirs",
@@ -4356,11 +4354,9 @@ name = "service"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "attestation-report",
  "crypto",
  "enclave-api",
  "lcp-proto",
- "serde_json",
  "store",
  "tokio",
  "tonic",

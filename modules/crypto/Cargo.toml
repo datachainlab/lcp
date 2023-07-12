@@ -5,7 +5,6 @@ edition = "2021"
 
 [dependencies]
 sgx_types = { rev = "v1.1.6", git = "https://github.com/apache/incubator-teaclave-sgx-sdk" }
-sgx_tstd = { rev = "v1.1.6", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", optional = true }
 sgx_trts = { rev = "v1.1.6", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", optional = true }
 sgx_rand = { rev = "v1.1.6", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", optional = true }
 sgx_tseal = { rev = "v1.1.6", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", optional = true }
@@ -24,7 +23,6 @@ std = [
     "rand/default"
 ]
 sgx = [
-    "sgx_tstd",
     "sgx_trts",
     "sgx_rand",
     "sgx_tseal"
