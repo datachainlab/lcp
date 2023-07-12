@@ -1,4 +1,4 @@
-use crate::{prelude::*, EnclaveKeySelector, Error};
+use crate::{prelude::*, EnclaveKeySelector, InputValidationError as Error};
 use attestation_report::EndorsedAttestationVerificationReport;
 use crypto::{Address, EnclavePublicKey, SealedEnclaveKey};
 use serde::{Deserialize, Serialize};

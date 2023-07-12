@@ -28,7 +28,7 @@ pub use enclave_manage::{
 };
 #[cfg(feature = "sgx-sw")]
 pub use enclave_manage::{SimulateRemoteAttestationInput, SimulateRemoteAttestationResult};
-pub use errors::Error;
+pub use errors::InputValidationError;
 pub use light_client::{
     CommitmentProofPair, InitClientInput, InitClientResult, LightClientCommand,
     LightClientExecuteCommand, LightClientQueryCommand, LightClientResult, QueryClientInput,

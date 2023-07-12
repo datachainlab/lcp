@@ -38,8 +38,8 @@ define_error! {
         },
 
         EcallCommand
-        [ecall_commands::Error]
-        |_| { "ECallCommand error" },
+        [ecall_commands::InputValidationError]
+        |_| { "ECallCommand input validation error" },
 
         Store
         [store::Error]
@@ -55,8 +55,8 @@ define_error! {
     }
 }
 
-impl From<ecall_commands::Error> for Error {
-    fn from(err: ecall_commands::Error) -> Self {
+impl From<ecall_commands::InputValidationError> for Error {
+    fn from(err: ecall_commands::InputValidationError) -> Self {
         Error::ecall_command(err)
     }
 }

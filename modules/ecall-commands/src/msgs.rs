@@ -1,4 +1,4 @@
-use crate::errors::Error;
+use crate::errors::InputValidationError as Error;
 use crate::light_client::*;
 use crate::prelude::*;
 use core::str::FromStr;
