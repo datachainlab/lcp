@@ -47,7 +47,7 @@ pub fn ecall_execute_command(
             res
         }
         Err(e) => {
-            error!("failed to bincode::serialize: {:?}", e);
+            error!("failed to serialize: result={:?} error={:?}", result, e);
             return sgx_status_t::SGX_ERROR_UNEXPECTED;
         }
     };
