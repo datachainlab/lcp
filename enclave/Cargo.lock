@@ -846,12 +846,14 @@ name = "lcp-types"
 version = "0.1.0"
 dependencies = [
  "flex-error",
+ "hex",
  "ibc",
  "ibc-proto",
  "prost-types",
  "serde",
  "serde_json",
  "sgx_tstd",
+ "sgx_types",
  "tendermint",
 ]
 

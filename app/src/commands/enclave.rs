@@ -11,11 +11,13 @@ use store::transaction::CommitStore;
 // `enclave` subcommand
 #[derive(Debug, Parser)]
 pub enum EnclaveCmd {
-    #[clap(about = "Generate an Enclave Key")]
+    #[clap(about = "Generate an Enclave Key", display_order = 1)]
     GenerateKey(GenerateKey),
-    #[clap(about = "Show list of Enclave Keys")]
+    #[clap(about = "Show list of Enclave Keys", display_order = 2)]
     ListKeys(ListKeys),
-    #[clap(about = "Print metadata of the enclave")]
+    #[clap(about = "Prune Enclave Keys", display_order = 3)]
+    PruneKeys(PruneKeys),
+    #[clap(about = "Print metadata of the enclave", display_order = 4)]
     Metadata(Metadata),
 }
 
@@ -39,6 +41,9 @@ impl EnclaveCmd {
                 run_generate_key(enclave_loader(opts, cmd.enclave.as_ref())?, cmd)
             }
             Self::ListKeys(cmd) => run_list_keys(enclave_loader(opts, cmd.enclave.as_ref())?, cmd),
+            Self::PruneKeys(cmd) => {
+                run_prune_keys(enclave_loader(opts, cmd.enclave.as_ref())?, cmd)
+            }
             Self::Metadata(cmd) => run_print_metadata(opts, cmd),
         }
     }
@@ -67,13 +72,70 @@ pub struct ListKeys {
     /// Path to the enclave binary
     #[clap(long = "enclave", help = "Path to the enclave binary")]
     pub enclave: Option<PathBuf>,
+    #[clap(
+        long = "available_only",
+        short = 'a',
+        help = "Show only available keys"
+    )]
+    pub available_only: bool,
 }
 
-fn run_list_keys<E: EnclaveCommandAPI<S>, S: CommitStore>(enclave: E, _: &ListKeys) -> Result<()> {
-    let list = enclave.get_key_manager().all_keys()?;
-    for addr in list {
-        println!("{}", addr);
+fn run_list_keys<E: EnclaveCommandAPI<S>, S: CommitStore>(
+    enclave: E,
+    input: &ListKeys,
+) -> Result<()> {
+    let km = enclave.get_key_manager();
+    let list = if input.available_only {
+        km.available_keys(enclave.metadata()?.enclave_css.body.enclave_hash.m.into())?
+    } else {
+        km.all_keys()?
+    };
+    if list.is_empty() {
+        return Err(anyhow!("no enclave keys found"));
     }
+
+    let mut list_json = Vec::new();
+    for eki in list {
+        match eki.avr {
+            Some(eavr) => {
+                let avr = eavr.get_avr()?;
+                list_json.push(json! {{
+                    "address": eki.address.to_hex_string(),
+                    "attested": true,
+                    "isv_enclave_quote_status": avr.isv_enclave_quote_status,
+                    "advisory_ids": avr.advisory_ids,
+                    "attested_at": avr.timestamp
+                }});
+            }
+            None => {
+                list_json.push(json! {{
+                    "address": eki.address.to_hex_string(),
+                    "attested": false,
+                }});
+            }
+        }
+    }
+    println!("{}", serde_json::to_string(&list_json).unwrap());
+    Ok(())
+}
+
+#[derive(Clone, Debug, Parser, PartialEq)]
+pub struct PruneKeys {
+    /// Path to the enclave binary
+    #[clap(long = "enclave", help = "Path to the enclave binary")]
+    pub enclave: Option<PathBuf>,
+    /// expiration in seconds from attested_at
+    #[clap(long = "expiration", help = "expiration in seconds from attested_at")]
+    pub expiration: u64,
+}
+
+fn run_prune_keys<E: EnclaveCommandAPI<S>, S: CommitStore>(
+    enclave: E,
+    input: &PruneKeys,
+) -> Result<()> {
+    let km = enclave.get_key_manager();
+    let count = km.prune(input.expiration)?;
+    info!("pruned {} expired enclave keys", count);
     Ok(())
 }
 

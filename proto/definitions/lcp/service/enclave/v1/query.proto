@@ -11,7 +11,9 @@ service Query {
   rpc EnclaveKey(QueryEnclaveKeyRequest) returns (QueryEnclaveKeyResponse);
 }
 
-message QueryAvailableEnclaveKeysRequest {}
+message QueryAvailableEnclaveKeysRequest {
+  bytes mrenclave = 1;
+}
 
 message QueryAvailableEnclaveKeysResponse {
   repeated EnclaveKeyInfo keys = 1;

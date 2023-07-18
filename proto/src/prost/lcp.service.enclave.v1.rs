@@ -1,7 +1,10 @@
 #[derive(::serde::Serialize, ::serde::Deserialize)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
-pub struct QueryAvailableEnclaveKeysRequest {}
+pub struct QueryAvailableEnclaveKeysRequest {
+    #[prost(bytes = "vec", tag = "1")]
+    pub mrenclave: ::prost::alloc::vec::Vec<u8>,
+}
 #[derive(::serde::Serialize, ::serde::Deserialize)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]

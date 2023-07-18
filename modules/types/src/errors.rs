@@ -18,7 +18,17 @@ define_error! {
             }
             |e| {
                 format_args!("invalid clientId format: got={:?} reason={:?}", e.client_id_str, e.reason)
+            },
+        MrenclaveBytesConversion
+            {
+                bz: Vec<u8>,
             }
+            |e| {
+                format_args!("mrenclave: bytes length must be 32, but got {:?}", e.bz)
+            },
+        HexParseError
+            [TraceError<hex::FromHexError>]
+            |_| { "hex parse error" },
     }
 }
 
@@ -30,5 +40,11 @@ define_error! {
             |_| {
                 "tendermint error"
             }
+    }
+}
+
+impl From<hex::FromHexError> for TypeError {
+    fn from(value: hex::FromHexError) -> Self {
+        Self::hex_parse_error(value)
     }
 }

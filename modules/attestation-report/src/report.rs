@@ -59,6 +59,18 @@ pub struct AttestationVerificationReport {
 }
 
 impl AttestationVerificationReport {
+    pub fn attestation_time(&self) -> Result<Time, Error> {
+        let time_fixed = self.timestamp.clone() + "+0000";
+        let dt = DateTime::parse_from_str(&time_fixed, "%Y-%m-%dT%H:%M:%S%.f%z").unwrap();
+
+        Ok(
+            TmTime::from_unix_timestamp(dt.timestamp(), dt.timestamp_subsec_nanos())
+                .map_err(lcp_types::TimeError::tendermint)
+                .map_err(Error::time_error)?
+                .into(),
+        )
+    }
+
     pub fn parse_quote(&self) -> Result<Quote, Error> {
         if self.version != 4 {
             return Err(Error::unexpected_attestation_report_version(
@@ -67,21 +79,12 @@ impl AttestationVerificationReport {
             ));
         }
 
-        let time_fixed = self.timestamp.clone() + "+0000";
-        let dt = DateTime::parse_from_str(&time_fixed, "%Y-%m-%dT%H:%M:%S%.f%z").unwrap();
-
-        let attestation_time =
-            TmTime::from_unix_timestamp(dt.timestamp(), dt.timestamp_subsec_nanos())
-                .map_err(lcp_types::TimeError::tendermint)
-                .map_err(Error::time_error)?
-                .into();
-
         let quote = base64::decode(&self.isv_enclave_quote_body).map_err(Error::base64)?;
         let sgx_quote: sgx_quote_t = unsafe { core::ptr::read(quote.as_ptr() as *const _) };
         Ok(Quote {
             raw: sgx_quote,
             status: self.isv_enclave_quote_status.clone(),
-            attestation_time,
+            attestation_time: self.attestation_time()?,
         })
     }
 

@@ -55,6 +55,12 @@ define_error! {
     }
 }
 
+impl From<sgx_status_t> for Error {
+    fn from(value: sgx_status_t) -> Self {
+        Self::sgx_error(value)
+    }
+}
+
 impl From<ecall_commands::InputValidationError> for Error {
     fn from(err: ecall_commands::InputValidationError) -> Self {
         Error::ecall_command(err)

@@ -5,12 +5,14 @@ pub use any::Any;
 pub use errors::{TimeError, TypeError};
 pub use height::Height;
 pub use host::ClientId;
+pub use sgx::Mrenclave;
 pub use time::Time;
 
 mod any;
 mod errors;
 mod height;
 mod host;
+mod sgx;
 mod time;
 
 mod prelude {

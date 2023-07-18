@@ -22,8 +22,12 @@ pub trait EnclaveCommandAPI<S: CommitStore>: EnclavePrimitiveAPI<S> {
             CommandResult::EnclaveManage(EnclaveManageResult::GenerateEnclaveKey(res)) => res,
             _ => unreachable!(),
         };
-        self.get_key_manager()
-            .save(res.pub_key.as_address(), res.sealed_ek.clone())?;
+        let metadata = self.metadata()?;
+        self.get_key_manager().save(
+            res.pub_key.as_address(),
+            res.sealed_ek.clone(),
+            metadata.enclave_css.body.enclave_hash.m.into(),
+        )?;
         Ok(res)
     }
 

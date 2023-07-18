@@ -134,7 +134,7 @@ pub struct Address(pub [u8; 20]);
 
 impl Address {
     pub fn to_hex_string(&self) -> String {
-        hex::encode(self.0)
+        format!("0x{}", hex::encode(self.0))
     }
     pub fn from_hex_string(s: &str) -> Result<Self, Error> {
         let bz = hex::decode(s.strip_prefix("0x").unwrap_or(s))?;
@@ -144,7 +144,7 @@ impl Address {
 
 impl Display for Address {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        f.write_str(&format!("0x{}", self.to_hex_string()))
+        f.write_str(self.to_hex_string().as_str())
     }
 }
 
@@ -231,11 +231,15 @@ impl SealedEnclaveKey {
 
     pub fn new_from_bytes(bz: &[u8]) -> Result<Self, Error> {
         if bz.len() != SEALED_DATA_32_USIZE {
-            return Err(Error::failed_unseal("".to_owned()));
+            return Err(Error::invalid_sealed_enclave_key("".to_owned()));
         }
         let mut data = [0; SEALED_DATA_32_USIZE];
         data.copy_from_slice(bz);
         Ok(Self::new(data))
+    }
+
+    pub fn to_vec(&self) -> Vec<u8> {
+        self.0.to_vec()
     }
 }
 
