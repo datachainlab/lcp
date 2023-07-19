@@ -39,7 +39,6 @@ dependencies = [
  "chrono",
  "crypto",
  "flex-error",
- "hex",
  "lcp-types",
  "pem",
  "rustls",

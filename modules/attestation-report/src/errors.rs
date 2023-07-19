@@ -1,5 +1,6 @@
 use crate::prelude::*;
 use flex_error::*;
+use lcp_types::Mrenclave;
 
 define_error! {
     #[derive(Debug, Clone, PartialEq, Eq)]
@@ -23,11 +24,11 @@ define_error! {
 
         MrenclaveMismatch
         {
-            expected: [u8; 32],
-            actual: [u8; 32]
+            expected: Mrenclave,
+            actual: Mrenclave
         }
         |e| {
-            format_args!("Mrenclave mismatch error: expected=0x{} actual=0x{}", hex::encode(e.expected), hex::encode(e.actual))
+            format_args!("Mrenclave mismatch error: expected={} actual={}", e.expected, e.actual)
         },
 
         WebPki

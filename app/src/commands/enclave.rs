@@ -3,6 +3,7 @@ use anyhow::{anyhow, Result};
 use clap::Parser;
 use ecall_commands::GenerateEnclaveKeyInput;
 use enclave_api::{Enclave, EnclaveCommandAPI, EnclaveProtoAPI};
+use lcp_types::Mrenclave;
 use log::*;
 use serde_json::json;
 use std::path::PathBuf;
@@ -155,7 +156,7 @@ fn run_print_metadata(opts: &Opts, cmd: &Metadata) -> Result<()> {
     println!(
         "{}",
         json! {{
-            "mrenclave": format!("0x{}", hex::encode(metadata.enclave_css.body.enclave_hash.m))
+            "mrenclave": format!("{}", Mrenclave::from(metadata.enclave_css.body.enclave_hash.m)),
         }}
     );
     Ok(())

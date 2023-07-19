@@ -135,8 +135,8 @@ impl Quote {
     pub fn match_metadata(&self, metadata: &metadata_t) -> Result<(), Error> {
         if self.raw.report_body.mr_enclave.m != metadata.enclave_css.body.enclave_hash.m {
             Err(Error::mrenclave_mismatch(
-                self.raw.report_body.mr_enclave.m,
-                metadata.enclave_css.body.enclave_hash.m,
+                self.raw.report_body.mr_enclave.m.into(),
+                metadata.enclave_css.body.enclave_hash.m.into(),
             ))
         } else {
             Ok(())

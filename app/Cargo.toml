@@ -18,6 +18,7 @@ dirs = "4.0"
 serde = { version = "1.0", default-features = false, features = ["alloc"] }
 serde_json = { version = "1.0", default-features = false, features = ["alloc", "preserve_order"] }
 
+lcp-types = { path = "../modules/types" }
 host = { path = "../modules/host" }
 host-environment = { path = "../modules/host-environment" }
 service = { path = "../modules/service" }

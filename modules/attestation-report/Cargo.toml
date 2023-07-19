@@ -13,7 +13,6 @@ crypto = { path = "../crypto", default-features = false }
 lcp-types = { path = "../types", default-features = false }
 flex-error = { version = "0.4.4", default-features = false }
 base64 = { git = "https://github.com/marshallpierce/rust-base64", default-features = false, features = ["alloc"] }
-hex = { version = "0.4", default-features = false, features = ["alloc"] }
 
 pem = { version = "2.0", default-features = false }
 rustls_sgx = { package = "rustls", git = "https://github.com/mesalock-linux/rustls", branch = "mesalock_sgx", optional = true }
