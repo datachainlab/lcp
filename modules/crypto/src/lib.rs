@@ -20,16 +20,15 @@ mod prelude {
 }
 
 pub use crate::key::{
-    verify_signature, verify_signature_address, Address, EnclaveKey, EnclavePublicKey,
+    verify_signature, verify_signature_address, Address, EnclaveKey, EnclavePublicKey, NopSigner,
+    SealedEnclaveKey,
 };
 pub use errors::Error;
-pub use traits::{Keccak256, SealedKey, Signer, Verifier};
+pub use traits::{Keccak256, SealingKey, Signer, Verifier};
 
 mod errors;
 mod key;
 mod traits;
 
-#[cfg(feature = "sgx")]
-pub use crate::sgx::key_manager::KeyManager;
 #[cfg(feature = "sgx")]
 pub mod sgx;

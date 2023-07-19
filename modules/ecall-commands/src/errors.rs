@@ -3,7 +3,7 @@ use flex_error::*;
 
 define_error! {
     #[derive(Debug, Clone, PartialEq, Eq)]
-    Error {
+    InputValidationError {
         InvalidArgument {
             descr: String
         }
@@ -13,12 +13,22 @@ define_error! {
         LcpType
         {}
         [lcp_types::TypeError]
-        |_| { "Type error" }
+        |_| { "Type error" },
+        Crypto
+        {}
+        [crypto::Error]
+        |_| { "Crypto error" }
     }
 }
 
-impl From<lcp_types::TypeError> for Error {
+impl From<lcp_types::TypeError> for InputValidationError {
     fn from(err: lcp_types::TypeError) -> Self {
-        Error::lcp_type(err)
+        InputValidationError::lcp_type(err)
+    }
+}
+
+impl From<crypto::Error> for InputValidationError {
+    fn from(value: crypto::Error) -> Self {
+        InputValidationError::crypto(value)
     }
 }

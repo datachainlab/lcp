@@ -28,23 +28,22 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.GoGoProtoPackageIsVersion3 // please upgrade the proto package
 
-type QueryAttestedVerificationReportRequest struct {
+type QueryAvailableEnclaveKeysRequest struct {
+	Mrenclave []byte `protobuf:"bytes,1,opt,name=mrenclave,proto3" json:"mrenclave,omitempty"`
 }
 
-func (m *QueryAttestedVerificationReportRequest) Reset() {
-	*m = QueryAttestedVerificationReportRequest{}
-}
-func (m *QueryAttestedVerificationReportRequest) String() string { return proto.CompactTextString(m) }
-func (*QueryAttestedVerificationReportRequest) ProtoMessage()    {}
-func (*QueryAttestedVerificationReportRequest) Descriptor() ([]byte, []int) {
+func (m *QueryAvailableEnclaveKeysRequest) Reset()         { *m = QueryAvailableEnclaveKeysRequest{} }
+func (m *QueryAvailableEnclaveKeysRequest) String() string { return proto.CompactTextString(m) }
+func (*QueryAvailableEnclaveKeysRequest) ProtoMessage()    {}
+func (*QueryAvailableEnclaveKeysRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_17b0894e959bbc62, []int{0}
 }
-func (m *QueryAttestedVerificationReportRequest) XXX_Unmarshal(b []byte) error {
+func (m *QueryAvailableEnclaveKeysRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *QueryAttestedVerificationReportRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *QueryAvailableEnclaveKeysRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_QueryAttestedVerificationReportRequest.Marshal(b, m, deterministic)
+		return xxx_messageInfo_QueryAvailableEnclaveKeysRequest.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalToSizedBuffer(b)
@@ -54,39 +53,34 @@ func (m *QueryAttestedVerificationReportRequest) XXX_Marshal(b []byte, determini
 		return b[:n], nil
 	}
 }
-func (m *QueryAttestedVerificationReportRequest) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_QueryAttestedVerificationReportRequest.Merge(m, src)
+func (m *QueryAvailableEnclaveKeysRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_QueryAvailableEnclaveKeysRequest.Merge(m, src)
 }
-func (m *QueryAttestedVerificationReportRequest) XXX_Size() int {
+func (m *QueryAvailableEnclaveKeysRequest) XXX_Size() int {
 	return m.Size()
 }
-func (m *QueryAttestedVerificationReportRequest) XXX_DiscardUnknown() {
-	xxx_messageInfo_QueryAttestedVerificationReportRequest.DiscardUnknown(m)
+func (m *QueryAvailableEnclaveKeysRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_QueryAvailableEnclaveKeysRequest.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_QueryAttestedVerificationReportRequest proto.InternalMessageInfo
+var xxx_messageInfo_QueryAvailableEnclaveKeysRequest proto.InternalMessageInfo
 
-type QueryAttestedVerificationReportResponse struct {
-	EnclaveAddress []byte `protobuf:"bytes,1,opt,name=enclave_address,json=enclaveAddress,proto3" json:"enclave_address,omitempty"`
-	Report         string `protobuf:"bytes,2,opt,name=report,proto3" json:"report,omitempty"`
-	Signature      []byte `protobuf:"bytes,3,opt,name=signature,proto3" json:"signature,omitempty"`
-	SigningCert    []byte `protobuf:"bytes,4,opt,name=signing_cert,json=signingCert,proto3" json:"signing_cert,omitempty"`
+type QueryAvailableEnclaveKeysResponse struct {
+	Keys []*EnclaveKeyInfo `protobuf:"bytes,1,rep,name=keys,proto3" json:"keys,omitempty"`
 }
 
-func (m *QueryAttestedVerificationReportResponse) Reset() {
-	*m = QueryAttestedVerificationReportResponse{}
-}
-func (m *QueryAttestedVerificationReportResponse) String() string { return proto.CompactTextString(m) }
-func (*QueryAttestedVerificationReportResponse) ProtoMessage()    {}
-func (*QueryAttestedVerificationReportResponse) Descriptor() ([]byte, []int) {
+func (m *QueryAvailableEnclaveKeysResponse) Reset()         { *m = QueryAvailableEnclaveKeysResponse{} }
+func (m *QueryAvailableEnclaveKeysResponse) String() string { return proto.CompactTextString(m) }
+func (*QueryAvailableEnclaveKeysResponse) ProtoMessage()    {}
+func (*QueryAvailableEnclaveKeysResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_17b0894e959bbc62, []int{1}
 }
-func (m *QueryAttestedVerificationReportResponse) XXX_Unmarshal(b []byte) error {
+func (m *QueryAvailableEnclaveKeysResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *QueryAttestedVerificationReportResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *QueryAvailableEnclaveKeysResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_QueryAttestedVerificationReportResponse.Marshal(b, m, deterministic)
+		return xxx_messageInfo_QueryAvailableEnclaveKeysResponse.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalToSizedBuffer(b)
@@ -96,21 +90,140 @@ func (m *QueryAttestedVerificationReportResponse) XXX_Marshal(b []byte, determin
 		return b[:n], nil
 	}
 }
-func (m *QueryAttestedVerificationReportResponse) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_QueryAttestedVerificationReportResponse.Merge(m, src)
+func (m *QueryAvailableEnclaveKeysResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_QueryAvailableEnclaveKeysResponse.Merge(m, src)
 }
-func (m *QueryAttestedVerificationReportResponse) XXX_Size() int {
+func (m *QueryAvailableEnclaveKeysResponse) XXX_Size() int {
 	return m.Size()
 }
-func (m *QueryAttestedVerificationReportResponse) XXX_DiscardUnknown() {
-	xxx_messageInfo_QueryAttestedVerificationReportResponse.DiscardUnknown(m)
+func (m *QueryAvailableEnclaveKeysResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_QueryAvailableEnclaveKeysResponse.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_QueryAttestedVerificationReportResponse proto.InternalMessageInfo
+var xxx_messageInfo_QueryAvailableEnclaveKeysResponse proto.InternalMessageInfo
+
+type EnclaveKeyInfo struct {
+	EnclaveKeyAddress []byte `protobuf:"bytes,1,opt,name=enclave_key_address,json=enclaveKeyAddress,proto3" json:"enclave_key_address,omitempty"`
+	AttestationTime   uint64 `protobuf:"varint,2,opt,name=attestation_time,json=attestationTime,proto3" json:"attestation_time,omitempty"`
+	Report            string `protobuf:"bytes,3,opt,name=report,proto3" json:"report,omitempty"`
+	Signature         []byte `protobuf:"bytes,4,opt,name=signature,proto3" json:"signature,omitempty"`
+	SigningCert       []byte `protobuf:"bytes,5,opt,name=signing_cert,json=signingCert,proto3" json:"signing_cert,omitempty"`
+	Extension         []byte `protobuf:"bytes,6,opt,name=extension,proto3" json:"extension,omitempty"`
+}
+
+func (m *EnclaveKeyInfo) Reset()         { *m = EnclaveKeyInfo{} }
+func (m *EnclaveKeyInfo) String() string { return proto.CompactTextString(m) }
+func (*EnclaveKeyInfo) ProtoMessage()    {}
+func (*EnclaveKeyInfo) Descriptor() ([]byte, []int) {
+	return fileDescriptor_17b0894e959bbc62, []int{2}
+}
+func (m *EnclaveKeyInfo) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *EnclaveKeyInfo) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_EnclaveKeyInfo.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *EnclaveKeyInfo) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_EnclaveKeyInfo.Merge(m, src)
+}
+func (m *EnclaveKeyInfo) XXX_Size() int {
+	return m.Size()
+}
+func (m *EnclaveKeyInfo) XXX_DiscardUnknown() {
+	xxx_messageInfo_EnclaveKeyInfo.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_EnclaveKeyInfo proto.InternalMessageInfo
+
+type QueryEnclaveKeyRequest struct {
+	EnclaveKeyAddress []byte `protobuf:"bytes,1,opt,name=enclave_key_address,json=enclaveKeyAddress,proto3" json:"enclave_key_address,omitempty"`
+}
+
+func (m *QueryEnclaveKeyRequest) Reset()         { *m = QueryEnclaveKeyRequest{} }
+func (m *QueryEnclaveKeyRequest) String() string { return proto.CompactTextString(m) }
+func (*QueryEnclaveKeyRequest) ProtoMessage()    {}
+func (*QueryEnclaveKeyRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_17b0894e959bbc62, []int{3}
+}
+func (m *QueryEnclaveKeyRequest) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *QueryEnclaveKeyRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_QueryEnclaveKeyRequest.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *QueryEnclaveKeyRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_QueryEnclaveKeyRequest.Merge(m, src)
+}
+func (m *QueryEnclaveKeyRequest) XXX_Size() int {
+	return m.Size()
+}
+func (m *QueryEnclaveKeyRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_QueryEnclaveKeyRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_QueryEnclaveKeyRequest proto.InternalMessageInfo
+
+type QueryEnclaveKeyResponse struct {
+	Key *EnclaveKeyInfo `protobuf:"bytes,1,opt,name=key,proto3" json:"key,omitempty"`
+}
+
+func (m *QueryEnclaveKeyResponse) Reset()         { *m = QueryEnclaveKeyResponse{} }
+func (m *QueryEnclaveKeyResponse) String() string { return proto.CompactTextString(m) }
+func (*QueryEnclaveKeyResponse) ProtoMessage()    {}
+func (*QueryEnclaveKeyResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_17b0894e959bbc62, []int{4}
+}
+func (m *QueryEnclaveKeyResponse) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *QueryEnclaveKeyResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_QueryEnclaveKeyResponse.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *QueryEnclaveKeyResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_QueryEnclaveKeyResponse.Merge(m, src)
+}
+func (m *QueryEnclaveKeyResponse) XXX_Size() int {
+	return m.Size()
+}
+func (m *QueryEnclaveKeyResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_QueryEnclaveKeyResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_QueryEnclaveKeyResponse proto.InternalMessageInfo
 
 func init() {
-	proto.RegisterType((*QueryAttestedVerificationReportRequest)(nil), "lcp.service.enclave.v1.QueryAttestedVerificationReportRequest")
-	proto.RegisterType((*QueryAttestedVerificationReportResponse)(nil), "lcp.service.enclave.v1.QueryAttestedVerificationReportResponse")
+	proto.RegisterType((*QueryAvailableEnclaveKeysRequest)(nil), "lcp.service.enclave.v1.QueryAvailableEnclaveKeysRequest")
+	proto.RegisterType((*QueryAvailableEnclaveKeysResponse)(nil), "lcp.service.enclave.v1.QueryAvailableEnclaveKeysResponse")
+	proto.RegisterType((*EnclaveKeyInfo)(nil), "lcp.service.enclave.v1.EnclaveKeyInfo")
+	proto.RegisterType((*QueryEnclaveKeyRequest)(nil), "lcp.service.enclave.v1.QueryEnclaveKeyRequest")
+	proto.RegisterType((*QueryEnclaveKeyResponse)(nil), "lcp.service.enclave.v1.QueryEnclaveKeyResponse")
 }
 
 func init() {
@@ -118,28 +231,36 @@ func init() {
 }
 
 var fileDescriptor_17b0894e959bbc62 = []byte{
-	// 326 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x9c, 0x92, 0x31, 0x4b, 0x3b, 0x31,
-	0x18, 0xc6, 0x2f, 0xff, 0xbf, 0x16, 0x1a, 0x8b, 0x42, 0x90, 0x72, 0x14, 0x09, 0xb5, 0x83, 0xed,
-	0x20, 0x09, 0xd5, 0x5d, 0xa9, 0x6e, 0x6e, 0xde, 0xe0, 0xe0, 0x52, 0xd2, 0xdc, 0xeb, 0x35, 0x70,
-	0x5e, 0xae, 0x49, 0xee, 0xa0, 0xdf, 0xc2, 0x2f, 0xe0, 0xec, 0xe0, 0x17, 0xe9, 0xd8, 0xd1, 0x51,
-	0xdb, 0x2f, 0x22, 0x77, 0x8d, 0xb8, 0x28, 0x8a, 0x5b, 0xde, 0x87, 0xdf, 0x43, 0x5e, 0x9e, 0xf7,
-	0xc1, 0xbd, 0x54, 0xe6, 0xdc, 0x82, 0x29, 0x95, 0x04, 0x0e, 0x99, 0x4c, 0x45, 0x09, 0xbc, 0x1c,
-	0xf2, 0x59, 0x01, 0x66, 0xce, 0x72, 0xa3, 0x9d, 0x26, 0xed, 0x54, 0xe6, 0xcc, 0x33, 0xcc, 0x33,
-	0xac, 0x1c, 0x76, 0xf6, 0x13, 0x9d, 0xe8, 0x1a, 0xe1, 0xd5, 0x6b, 0x43, 0xf7, 0x06, 0xf8, 0xe8,
-	0xba, 0x32, 0x8f, 0x9c, 0x03, 0xeb, 0x20, 0xbe, 0x01, 0xa3, 0xee, 0x94, 0x14, 0x4e, 0xe9, 0x2c,
-	0x82, 0x5c, 0x1b, 0x17, 0xc1, 0xac, 0x00, 0xeb, 0x7a, 0xcf, 0x08, 0xf7, 0x7f, 0x44, 0x6d, 0xae,
-	0x33, 0x0b, 0xa4, 0x8f, 0xf7, 0xfc, 0xcf, 0x63, 0x11, 0xc7, 0x06, 0xac, 0x0d, 0x51, 0x17, 0x0d,
-	0x5a, 0xd1, 0xae, 0x97, 0x47, 0x1b, 0x95, 0xb4, 0x71, 0xc3, 0xd4, 0xd6, 0xf0, 0x5f, 0x17, 0x0d,
-	0x9a, 0x91, 0x9f, 0xc8, 0x01, 0x6e, 0x5a, 0x95, 0x64, 0xc2, 0x15, 0x06, 0xc2, 0xff, 0xb5, 0xf5,
-	0x53, 0x20, 0x87, 0xb8, 0x55, 0x0d, 0x2a, 0x4b, 0xc6, 0x12, 0x8c, 0x0b, 0xb7, 0x6a, 0x60, 0xc7,
-	0x6b, 0x97, 0x60, 0xdc, 0xc9, 0x13, 0xc2, 0xdb, 0xf5, 0xb6, 0xe4, 0x11, 0xe1, 0xce, 0xf7, 0x2b,
-	0x93, 0x33, 0xf6, 0x75, 0x5e, 0xec, 0x77, 0xb1, 0x74, 0xce, 0xff, 0xec, 0xdf, 0x64, 0x75, 0x71,
-	0xb5, 0x78, 0xa3, 0xc1, 0x62, 0x45, 0xd1, 0x72, 0x45, 0xd1, 0xeb, 0x8a, 0xa2, 0x87, 0x35, 0x0d,
-	0x96, 0x6b, 0x1a, 0xbc, 0xac, 0x69, 0x70, 0x7b, 0x9c, 0x28, 0x37, 0x2d, 0x26, 0x4c, 0xea, 0x7b,
-	0x1e, 0x0b, 0x27, 0xe4, 0x54, 0xa8, 0x2c, 0x15, 0x13, 0x5e, 0x35, 0x21, 0xd1, 0xdc, 0x40, 0x2a,
-	0xe6, 0x1f, 0x55, 0x98, 0x34, 0xea, 0xa3, 0x9e, 0xbe, 0x07, 0x00, 0x00, 0xff, 0xff, 0x11, 0xf2,
-	0xd5, 0x68, 0x28, 0x02, 0x00, 0x00,
+	// 456 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x9c, 0x53, 0xcf, 0x6f, 0xd3, 0x30,
+	0x14, 0xae, 0xd7, 0xae, 0xd2, 0xbc, 0x89, 0x1f, 0x66, 0x2a, 0x51, 0x85, 0xa2, 0x2c, 0x07, 0x54,
+	0x24, 0x64, 0x6b, 0xe3, 0x32, 0x38, 0x31, 0x10, 0x12, 0x3f, 0x4e, 0x04, 0x4e, 0x5c, 0x22, 0x37,
+	0x7d, 0x64, 0x56, 0x13, 0x3b, 0xb3, 0xdd, 0x88, 0xdc, 0xb9, 0x71, 0xe1, 0xcf, 0xda, 0x71, 0x47,
+	0x8e, 0xd0, 0xfe, 0x23, 0x28, 0x89, 0xd7, 0x80, 0x36, 0xc6, 0xe0, 0x16, 0x7f, 0xfe, 0xbe, 0x2f,
+	0xef, 0x7d, 0xcf, 0x0f, 0x87, 0x59, 0x52, 0x30, 0x03, 0xba, 0x14, 0x09, 0x30, 0x90, 0x49, 0xc6,
+	0x4b, 0x60, 0xe5, 0x3e, 0x3b, 0x59, 0x80, 0xae, 0x68, 0xa1, 0x95, 0x55, 0x64, 0x94, 0x25, 0x05,
+	0x75, 0x1c, 0xea, 0x38, 0xb4, 0xdc, 0x1f, 0xef, 0xa6, 0x2a, 0x55, 0x0d, 0x85, 0xd5, 0x5f, 0x2d,
+	0x3b, 0x7c, 0x8a, 0x83, 0xb7, 0xb5, 0xf8, 0xa8, 0xe4, 0x22, 0xe3, 0xd3, 0x0c, 0x5e, 0xb4, 0x8a,
+	0x37, 0x50, 0x99, 0x08, 0x4e, 0x16, 0x60, 0x2c, 0xb9, 0x87, 0xb7, 0x72, 0xed, 0x9c, 0x3c, 0x14,
+	0xa0, 0xc9, 0x4e, 0xd4, 0x01, 0x61, 0x8c, 0xf7, 0xae, 0x70, 0x30, 0x85, 0x92, 0x06, 0xc8, 0x13,
+	0x3c, 0x98, 0x43, 0x65, 0x3c, 0x14, 0xf4, 0x27, 0xdb, 0x07, 0xf7, 0xe9, 0xe5, 0x35, 0xd2, 0x4e,
+	0xfa, 0x4a, 0x7e, 0x54, 0x51, 0xa3, 0x09, 0x97, 0x08, 0xdf, 0xf8, 0xfd, 0x82, 0x50, 0x7c, 0xc7,
+	0xa9, 0xe2, 0x39, 0x54, 0x31, 0x9f, 0xcd, 0x34, 0x18, 0xe3, 0x6a, 0xbb, 0x0d, 0x6b, 0xf2, 0x51,
+	0x7b, 0x41, 0x1e, 0xe0, 0x5b, 0xdc, 0x5a, 0x30, 0x96, 0x5b, 0xa1, 0x64, 0x6c, 0x45, 0x0e, 0xde,
+	0x46, 0x80, 0x26, 0x83, 0xe8, 0xe6, 0x2f, 0xf8, 0x7b, 0x91, 0x03, 0x19, 0xe1, 0xa1, 0x86, 0x42,
+	0x69, 0xeb, 0xf5, 0x03, 0x34, 0xd9, 0x8a, 0xdc, 0xa9, 0x0e, 0xc1, 0x88, 0x54, 0x72, 0xbb, 0xd0,
+	0xe0, 0x0d, 0xda, 0x10, 0xd6, 0x00, 0xd9, 0xc3, 0x3b, 0xf5, 0x41, 0xc8, 0x34, 0x4e, 0x40, 0x5b,
+	0x6f, 0xb3, 0x21, 0x6c, 0x3b, 0xec, 0x39, 0xb4, 0x06, 0xf0, 0xc9, 0x82, 0x34, 0x42, 0x49, 0x6f,
+	0xd8, 0x1a, 0xac, 0x81, 0xf0, 0x25, 0x1e, 0x35, 0x29, 0x76, 0x8d, 0x9e, 0xa7, 0xff, 0x8f, 0xbd,
+	0x86, 0xef, 0xf0, 0xdd, 0x0b, 0x4e, 0x6e, 0x0a, 0x87, 0xb8, 0x3f, 0x87, 0xaa, 0x91, 0x5e, 0x7f,
+	0x08, 0xb5, 0xe4, 0xe0, 0xf3, 0x06, 0xde, 0x6c, 0x5c, 0xc9, 0x17, 0x84, 0x77, 0x2f, 0x1b, 0x35,
+	0x39, 0xfc, 0x93, 0xdf, 0xdf, 0xde, 0xd7, 0xf8, 0xf1, 0x7f, 0x28, 0x5d, 0x47, 0x39, 0xc6, 0x1d,
+	0x4c, 0xe8, 0x95, 0x46, 0x17, 0xa2, 0x1d, 0xb3, 0x6b, 0xf3, 0xdb, 0xdf, 0x3d, 0x7b, 0x7d, 0xfa,
+	0xc3, 0xef, 0x9d, 0x2e, 0x7d, 0x74, 0xb6, 0xf4, 0xd1, 0xf7, 0xa5, 0x8f, 0xbe, 0xae, 0xfc, 0xde,
+	0xd9, 0xca, 0xef, 0x7d, 0x5b, 0xf9, 0xbd, 0x0f, 0x0f, 0x53, 0x61, 0x8f, 0x17, 0x53, 0x9a, 0xa8,
+	0x9c, 0xcd, 0xb8, 0xe5, 0xc9, 0x31, 0x17, 0x32, 0xe3, 0x53, 0x56, 0x6f, 0x6d, 0xaa, 0x98, 0x86,
+	0x8c, 0x57, 0xe7, 0x6b, 0x3b, 0x1d, 0x36, 0x0b, 0xf8, 0xe8, 0x67, 0x00, 0x00, 0x00, 0xff, 0xff,
+	0x84, 0x3f, 0x44, 0x3a, 0xd4, 0x03, 0x00, 0x00,
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -154,7 +275,8 @@ const _ = grpc.SupportPackageIsVersion4
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
 type QueryClient interface {
-	AttestedVerificationReport(ctx context.Context, in *QueryAttestedVerificationReportRequest, opts ...grpc.CallOption) (*QueryAttestedVerificationReportResponse, error)
+	AvailableEnclaveKeys(ctx context.Context, in *QueryAvailableEnclaveKeysRequest, opts ...grpc.CallOption) (*QueryAvailableEnclaveKeysResponse, error)
+	EnclaveKey(ctx context.Context, in *QueryEnclaveKeyRequest, opts ...grpc.CallOption) (*QueryEnclaveKeyResponse, error)
 }
 
 type queryClient struct {
@@ -165,9 +287,18 @@ func NewQueryClient(cc grpc1.ClientConn) QueryClient {
 	return &queryClient{cc}
 }
 
-func (c *queryClient) AttestedVerificationReport(ctx context.Context, in *QueryAttestedVerificationReportRequest, opts ...grpc.CallOption) (*QueryAttestedVerificationReportResponse, error) {
-	out := new(QueryAttestedVerificationReportResponse)
-	err := c.cc.Invoke(ctx, "/lcp.service.enclave.v1.Query/AttestedVerificationReport", in, out, opts...)
+func (c *queryClient) AvailableEnclaveKeys(ctx context.Context, in *QueryAvailableEnclaveKeysRequest, opts ...grpc.CallOption) (*QueryAvailableEnclaveKeysResponse, error) {
+	out := new(QueryAvailableEnclaveKeysResponse)
+	err := c.cc.Invoke(ctx, "/lcp.service.enclave.v1.Query/AvailableEnclaveKeys", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *queryClient) EnclaveKey(ctx context.Context, in *QueryEnclaveKeyRequest, opts ...grpc.CallOption) (*QueryEnclaveKeyResponse, error) {
+	out := new(QueryEnclaveKeyResponse)
+	err := c.cc.Invoke(ctx, "/lcp.service.enclave.v1.Query/EnclaveKey", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -176,35 +307,57 @@ func (c *queryClient) AttestedVerificationReport(ctx context.Context, in *QueryA
 
 // QueryServer is the server API for Query service.
 type QueryServer interface {
-	AttestedVerificationReport(context.Context, *QueryAttestedVerificationReportRequest) (*QueryAttestedVerificationReportResponse, error)
+	AvailableEnclaveKeys(context.Context, *QueryAvailableEnclaveKeysRequest) (*QueryAvailableEnclaveKeysResponse, error)
+	EnclaveKey(context.Context, *QueryEnclaveKeyRequest) (*QueryEnclaveKeyResponse, error)
 }
 
 // UnimplementedQueryServer can be embedded to have forward compatible implementations.
 type UnimplementedQueryServer struct {
 }
 
-func (*UnimplementedQueryServer) AttestedVerificationReport(ctx context.Context, req *QueryAttestedVerificationReportRequest) (*QueryAttestedVerificationReportResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method AttestedVerificationReport not implemented")
+func (*UnimplementedQueryServer) AvailableEnclaveKeys(ctx context.Context, req *QueryAvailableEnclaveKeysRequest) (*QueryAvailableEnclaveKeysResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AvailableEnclaveKeys not implemented")
+}
+func (*UnimplementedQueryServer) EnclaveKey(ctx context.Context, req *QueryEnclaveKeyRequest) (*QueryEnclaveKeyResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method EnclaveKey not implemented")
 }
 
 func RegisterQueryServer(s grpc1.Server, srv QueryServer) {
 	s.RegisterService(&_Query_serviceDesc, srv)
 }
 
-func _Query_AttestedVerificationReport_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(QueryAttestedVerificationReportRequest)
+func _Query_AvailableEnclaveKeys_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryAvailableEnclaveKeysRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(QueryServer).AttestedVerificationReport(ctx, in)
+		return srv.(QueryServer).AvailableEnclaveKeys(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/lcp.service.enclave.v1.Query/AttestedVerificationReport",
+		FullMethod: "/lcp.service.enclave.v1.Query/AvailableEnclaveKeys",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(QueryServer).AttestedVerificationReport(ctx, req.(*QueryAttestedVerificationReportRequest))
+		return srv.(QueryServer).AvailableEnclaveKeys(ctx, req.(*QueryAvailableEnclaveKeysRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Query_EnclaveKey_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryEnclaveKeyRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(QueryServer).EnclaveKey(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/lcp.service.enclave.v1.Query/EnclaveKey",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(QueryServer).EnclaveKey(ctx, req.(*QueryEnclaveKeyRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -214,15 +367,19 @@ var _Query_serviceDesc = grpc.ServiceDesc{
 	HandlerType: (*QueryServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "AttestedVerificationReport",
-			Handler:    _Query_AttestedVerificationReport_Handler,
+			MethodName: "AvailableEnclaveKeys",
+			Handler:    _Query_AvailableEnclaveKeys_Handler,
+		},
+		{
+			MethodName: "EnclaveKey",
+			Handler:    _Query_EnclaveKey_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
 	Metadata: "lcp/service/enclave/v1/query.proto",
 }
 
-func (m *QueryAttestedVerificationReportRequest) Marshal() (dAtA []byte, err error) {
+func (m *QueryAvailableEnclaveKeysRequest) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalToSizedBuffer(dAtA[:size])
@@ -232,20 +389,27 @@ func (m *QueryAttestedVerificationReportRequest) Marshal() (dAtA []byte, err err
 	return dAtA[:n], nil
 }
 
-func (m *QueryAttestedVerificationReportRequest) MarshalTo(dAtA []byte) (int, error) {
+func (m *QueryAvailableEnclaveKeysRequest) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *QueryAttestedVerificationReportRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *QueryAvailableEnclaveKeysRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	_ = i
 	var l int
 	_ = l
+	if len(m.Mrenclave) > 0 {
+		i -= len(m.Mrenclave)
+		copy(dAtA[i:], m.Mrenclave)
+		i = encodeVarintQuery(dAtA, i, uint64(len(m.Mrenclave)))
+		i--
+		dAtA[i] = 0xa
+	}
 	return len(dAtA) - i, nil
 }
 
-func (m *QueryAttestedVerificationReportResponse) Marshal() (dAtA []byte, err error) {
+func (m *QueryAvailableEnclaveKeysResponse) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalToSizedBuffer(dAtA[:size])
@@ -255,41 +419,155 @@ func (m *QueryAttestedVerificationReportResponse) Marshal() (dAtA []byte, err er
 	return dAtA[:n], nil
 }
 
-func (m *QueryAttestedVerificationReportResponse) MarshalTo(dAtA []byte) (int, error) {
+func (m *QueryAvailableEnclaveKeysResponse) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *QueryAttestedVerificationReportResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *QueryAvailableEnclaveKeysResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	_ = i
 	var l int
 	_ = l
+	if len(m.Keys) > 0 {
+		for iNdEx := len(m.Keys) - 1; iNdEx >= 0; iNdEx-- {
+			{
+				size, err := m.Keys[iNdEx].MarshalToSizedBuffer(dAtA[:i])
+				if err != nil {
+					return 0, err
+				}
+				i -= size
+				i = encodeVarintQuery(dAtA, i, uint64(size))
+			}
+			i--
+			dAtA[i] = 0xa
+		}
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *EnclaveKeyInfo) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *EnclaveKeyInfo) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *EnclaveKeyInfo) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if len(m.Extension) > 0 {
+		i -= len(m.Extension)
+		copy(dAtA[i:], m.Extension)
+		i = encodeVarintQuery(dAtA, i, uint64(len(m.Extension)))
+		i--
+		dAtA[i] = 0x32
+	}
 	if len(m.SigningCert) > 0 {
 		i -= len(m.SigningCert)
 		copy(dAtA[i:], m.SigningCert)
 		i = encodeVarintQuery(dAtA, i, uint64(len(m.SigningCert)))
 		i--
-		dAtA[i] = 0x22
+		dAtA[i] = 0x2a
 	}
 	if len(m.Signature) > 0 {
 		i -= len(m.Signature)
 		copy(dAtA[i:], m.Signature)
 		i = encodeVarintQuery(dAtA, i, uint64(len(m.Signature)))
 		i--
-		dAtA[i] = 0x1a
+		dAtA[i] = 0x22
 	}
 	if len(m.Report) > 0 {
 		i -= len(m.Report)
 		copy(dAtA[i:], m.Report)
 		i = encodeVarintQuery(dAtA, i, uint64(len(m.Report)))
 		i--
-		dAtA[i] = 0x12
+		dAtA[i] = 0x1a
 	}
-	if len(m.EnclaveAddress) > 0 {
-		i -= len(m.EnclaveAddress)
-		copy(dAtA[i:], m.EnclaveAddress)
-		i = encodeVarintQuery(dAtA, i, uint64(len(m.EnclaveAddress)))
+	if m.AttestationTime != 0 {
+		i = encodeVarintQuery(dAtA, i, uint64(m.AttestationTime))
+		i--
+		dAtA[i] = 0x10
+	}
+	if len(m.EnclaveKeyAddress) > 0 {
+		i -= len(m.EnclaveKeyAddress)
+		copy(dAtA[i:], m.EnclaveKeyAddress)
+		i = encodeVarintQuery(dAtA, i, uint64(len(m.EnclaveKeyAddress)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *QueryEnclaveKeyRequest) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *QueryEnclaveKeyRequest) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *QueryEnclaveKeyRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if len(m.EnclaveKeyAddress) > 0 {
+		i -= len(m.EnclaveKeyAddress)
+		copy(dAtA[i:], m.EnclaveKeyAddress)
+		i = encodeVarintQuery(dAtA, i, uint64(len(m.EnclaveKeyAddress)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *QueryEnclaveKeyResponse) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *QueryEnclaveKeyResponse) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *QueryEnclaveKeyResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.Key != nil {
+		{
+			size, err := m.Key.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintQuery(dAtA, i, uint64(size))
+		}
 		i--
 		dAtA[i] = 0xa
 	}
@@ -307,24 +585,46 @@ func encodeVarintQuery(dAtA []byte, offset int, v uint64) int {
 	dAtA[offset] = uint8(v)
 	return base
 }
-func (m *QueryAttestedVerificationReportRequest) Size() (n int) {
+func (m *QueryAvailableEnclaveKeysRequest) Size() (n int) {
 	if m == nil {
 		return 0
 	}
 	var l int
 	_ = l
+	l = len(m.Mrenclave)
+	if l > 0 {
+		n += 1 + l + sovQuery(uint64(l))
+	}
 	return n
 }
 
-func (m *QueryAttestedVerificationReportResponse) Size() (n int) {
+func (m *QueryAvailableEnclaveKeysResponse) Size() (n int) {
 	if m == nil {
 		return 0
 	}
 	var l int
 	_ = l
-	l = len(m.EnclaveAddress)
+	if len(m.Keys) > 0 {
+		for _, e := range m.Keys {
+			l = e.Size()
+			n += 1 + l + sovQuery(uint64(l))
+		}
+	}
+	return n
+}
+
+func (m *EnclaveKeyInfo) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.EnclaveKeyAddress)
 	if l > 0 {
 		n += 1 + l + sovQuery(uint64(l))
+	}
+	if m.AttestationTime != 0 {
+		n += 1 + sovQuery(uint64(m.AttestationTime))
 	}
 	l = len(m.Report)
 	if l > 0 {
@@ -338,6 +638,36 @@ func (m *QueryAttestedVerificationReportResponse) Size() (n int) {
 	if l > 0 {
 		n += 1 + l + sovQuery(uint64(l))
 	}
+	l = len(m.Extension)
+	if l > 0 {
+		n += 1 + l + sovQuery(uint64(l))
+	}
+	return n
+}
+
+func (m *QueryEnclaveKeyRequest) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.EnclaveKeyAddress)
+	if l > 0 {
+		n += 1 + l + sovQuery(uint64(l))
+	}
+	return n
+}
+
+func (m *QueryEnclaveKeyResponse) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.Key != nil {
+		l = m.Key.Size()
+		n += 1 + l + sovQuery(uint64(l))
+	}
 	return n
 }
 
@@ -347,7 +677,7 @@ func sovQuery(x uint64) (n int) {
 func sozQuery(x uint64) (n int) {
 	return sovQuery(uint64((x << 1) ^ uint64((int64(x) >> 63))))
 }
-func (m *QueryAttestedVerificationReportRequest) Unmarshal(dAtA []byte) error {
+func (m *QueryAvailableEnclaveKeysRequest) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -370,65 +700,15 @@ func (m *QueryAttestedVerificationReportRequest) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: QueryAttestedVerificationReportRequest: wiretype end group for non-group")
+			return fmt.Errorf("proto: QueryAvailableEnclaveKeysRequest: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: QueryAttestedVerificationReportRequest: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		default:
-			iNdEx = preIndex
-			skippy, err := skipQuery(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if (skippy < 0) || (iNdEx+skippy) < 0 {
-				return ErrInvalidLengthQuery
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *QueryAttestedVerificationReportResponse) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowQuery
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: QueryAttestedVerificationReportResponse: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: QueryAttestedVerificationReportResponse: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: QueryAvailableEnclaveKeysRequest: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field EnclaveAddress", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field Mrenclave", wireType)
 			}
 			var byteLen int
 			for shift := uint(0); ; shift += 7 {
@@ -455,12 +735,199 @@ func (m *QueryAttestedVerificationReportResponse) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.EnclaveAddress = append(m.EnclaveAddress[:0], dAtA[iNdEx:postIndex]...)
-			if m.EnclaveAddress == nil {
-				m.EnclaveAddress = []byte{}
+			m.Mrenclave = append(m.Mrenclave[:0], dAtA[iNdEx:postIndex]...)
+			if m.Mrenclave == nil {
+				m.Mrenclave = []byte{}
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipQuery(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthQuery
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *QueryAvailableEnclaveKeysResponse) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowQuery
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: QueryAvailableEnclaveKeysResponse: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: QueryAvailableEnclaveKeysResponse: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Keys", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowQuery
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthQuery
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthQuery
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Keys = append(m.Keys, &EnclaveKeyInfo{})
+			if err := m.Keys[len(m.Keys)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipQuery(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthQuery
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *EnclaveKeyInfo) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowQuery
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: EnclaveKeyInfo: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: EnclaveKeyInfo: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field EnclaveKeyAddress", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowQuery
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthQuery
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthQuery
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.EnclaveKeyAddress = append(m.EnclaveKeyAddress[:0], dAtA[iNdEx:postIndex]...)
+			if m.EnclaveKeyAddress == nil {
+				m.EnclaveKeyAddress = []byte{}
 			}
 			iNdEx = postIndex
 		case 2:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field AttestationTime", wireType)
+			}
+			m.AttestationTime = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowQuery
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.AttestationTime |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 3:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Report", wireType)
 			}
@@ -492,7 +959,7 @@ func (m *QueryAttestedVerificationReportResponse) Unmarshal(dAtA []byte) error {
 			}
 			m.Report = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
-		case 3:
+		case 4:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Signature", wireType)
 			}
@@ -526,7 +993,7 @@ func (m *QueryAttestedVerificationReportResponse) Unmarshal(dAtA []byte) error {
 				m.Signature = []byte{}
 			}
 			iNdEx = postIndex
-		case 4:
+		case 5:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field SigningCert", wireType)
 			}
@@ -558,6 +1025,210 @@ func (m *QueryAttestedVerificationReportResponse) Unmarshal(dAtA []byte) error {
 			m.SigningCert = append(m.SigningCert[:0], dAtA[iNdEx:postIndex]...)
 			if m.SigningCert == nil {
 				m.SigningCert = []byte{}
+			}
+			iNdEx = postIndex
+		case 6:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Extension", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowQuery
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthQuery
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthQuery
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Extension = append(m.Extension[:0], dAtA[iNdEx:postIndex]...)
+			if m.Extension == nil {
+				m.Extension = []byte{}
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipQuery(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthQuery
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *QueryEnclaveKeyRequest) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowQuery
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: QueryEnclaveKeyRequest: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: QueryEnclaveKeyRequest: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field EnclaveKeyAddress", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowQuery
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthQuery
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthQuery
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.EnclaveKeyAddress = append(m.EnclaveKeyAddress[:0], dAtA[iNdEx:postIndex]...)
+			if m.EnclaveKeyAddress == nil {
+				m.EnclaveKeyAddress = []byte{}
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipQuery(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthQuery
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *QueryEnclaveKeyResponse) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowQuery
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: QueryEnclaveKeyResponse: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: QueryEnclaveKeyResponse: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Key", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowQuery
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthQuery
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthQuery
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.Key == nil {
+				m.Key = &EnclaveKeyInfo{}
+			}
+			if err := m.Key.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
 			}
 			iNdEx = postIndex
 		default:

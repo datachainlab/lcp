@@ -3,42 +3,36 @@ use crate::prelude::*;
 use crate::{
     StateCommitment, StateCommitmentProof, UpdateClientCommitment, UpdateClientCommitmentProof,
 };
-use crypto::{Signer, Verifier};
+use crypto::{Address, Signer};
 
 pub fn prove_update_client_commitment(
     signer: &dyn Signer,
+    signer_address: Address,
     commitment: UpdateClientCommitment,
 ) -> Result<UpdateClientCommitmentProof, ProverError> {
     let commitment_bytes = commitment.to_vec();
     let signature = signer
         .sign(&commitment_bytes)
         .map_err(ProverError::crypto)?;
-    let mut signer_address = Default::default();
-    signer.use_verifier(&mut |verifier: &dyn Verifier| {
-        signer_address = verifier.get_address();
-    });
     Ok(UpdateClientCommitmentProof::new(
         commitment_bytes,
-        signer_address,
+        signer_address.0.to_vec(),
         signature,
     ))
 }
 
 pub fn prove_state_commitment(
     signer: &dyn Signer,
+    signer_address: Address,
     commitment: StateCommitment,
 ) -> Result<StateCommitmentProof, ProverError> {
     let commitment_bytes = commitment.to_vec();
     let signature = signer
         .sign(&commitment_bytes)
         .map_err(ProverError::crypto)?;
-    let mut signer_address = Default::default();
-    signer.use_verifier(&mut |verifier: &dyn Verifier| {
-        signer_address = verifier.get_address();
-    });
-    Ok(StateCommitmentProof {
+    Ok(StateCommitmentProof::new(
         commitment_bytes,
-        signer: signer_address,
+        signer_address.0.to_vec(),
         signature,
-    })
+    ))
 }

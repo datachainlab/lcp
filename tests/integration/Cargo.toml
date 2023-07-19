@@ -29,6 +29,7 @@ ocall-handler = { path = "../../modules/ocall-handler" }
 enclave-api = { path = "../../modules/enclave-api" }
 ecall-commands = { path = "../../modules/ecall-commands" }
 attestation-report = { path = "../../modules/attestation-report" }
+keymanager = { path = "../../modules/keymanager" }
 relay-tendermint = { path = "../../modules/relay/tendermint" }
 
 [features]

@@ -1,26 +1,26 @@
 use crate::enclave_manage::{
-    attestation::ias_remote_attestation, init_enclave::init_enclave, Error,
+    attestation::ias_remote_attestation, enclave::generate_enclave_key, Error,
 };
 use crate::prelude::*;
-use ecall_commands::{CommandParams, CommandResult, EnclaveManageCommand, EnclaveManageResult};
+use ecall_commands::{CommandContext, CommandResult, EnclaveManageCommand, EnclaveManageResult};
 
 pub fn dispatch(
+    cctx: CommandContext,
     command: EnclaveManageCommand,
-    params: CommandParams,
 ) -> Result<CommandResult, Error> {
     use EnclaveManageCommand::*;
 
     let res = match command {
-        InitEnclave(input) => CommandResult::EnclaveManage(EnclaveManageResult::InitEnclave(
-            init_enclave(input, params)?,
-        )),
+        GenerateEnclaveKey(input) => CommandResult::EnclaveManage(
+            EnclaveManageResult::GenerateEnclaveKey(generate_enclave_key(input)?),
+        ),
         IASRemoteAttestation(input) => CommandResult::EnclaveManage(
-            EnclaveManageResult::IASRemoteAttestation(ias_remote_attestation(input, params)?),
+            EnclaveManageResult::IASRemoteAttestation(ias_remote_attestation(cctx, input)?),
         ),
         #[cfg(feature = "sgx-sw")]
         SimulateRemoteAttestation(input) => {
             CommandResult::EnclaveManage(EnclaveManageResult::SimulateRemoteAttestation(
-                crate::enclave_manage::attestation::simulate_remote_attestation(input, params)?,
+                crate::enclave_manage::attestation::simulate_remote_attestation(cctx, input)?,
             ))
         }
     };

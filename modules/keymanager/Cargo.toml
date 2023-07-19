@@ -1,0 +1,20 @@
+[package]
+name = "keymanager"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+log = "0.4.8"
+flex-error = { version = "0.4.4" }
+serde = { version = "1.0", default-features = false, features = ["alloc"] }
+serde_json = { version = "1.0", default-features = false, features = ["alloc"] }
+rusqlite = { version = "0.29.0", features = ["bundled"] }
+
+crypto = { path = "../crypto", default-features = false }
+attestation-report = { path = "../attestation-report" }
+lcp-proto = { path = "../../proto", default-features = false }
+lcp-types = { path = "../types" }
+
+[dev-dependencies]
+chrono = { version = "0.4", default-features = false, features = ["alloc", "clock"]}
+rand = "0.8"

@@ -51,6 +51,9 @@ func (pc ProverConfig) Validate() error {
 	if l := len(mrenclave); l != lcptypes.MrenclaveSize {
 		return fmt.Errorf("MRENCLAVE length must be %v, but got %v", lcptypes.MrenclaveSize, l)
 	}
+	if pc.KeyExpiration == 0 {
+		return fmt.Errorf("KeyExpiration must be greater than 0")
+	}
 	return nil
 }
 

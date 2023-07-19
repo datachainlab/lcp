@@ -2,7 +2,12 @@ package relay
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
 	"log"
+	"os"
+	"path/filepath"
 	"time"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -12,8 +17,179 @@ import (
 	"github.com/datachainlab/lcp/go/relay/elc"
 	"github.com/datachainlab/lcp/go/relay/enclave"
 	"github.com/datachainlab/lcp/go/sgx/ias"
+	mapset "github.com/deckarep/golang-set/v2"
 	"github.com/hyperledger-labs/yui-relayer/core"
+	oias "github.com/oasisprotocol/oasis-core/go/common/sgx/ias"
 )
+
+const lastEnclaveKeyInfoFile = "last_eki"
+
+var ErrLastEnclaveKeyInfoNotFound = errors.New("last enclave key info not found")
+
+func (pr *Prover) loadLastEnclaveKey(ctx context.Context) (*enclave.EnclaveKeyInfo, error) {
+	path, err := pr.lastEnclaveKeyInfoFilePath()
+	if err != nil {
+		return nil, err
+	}
+	bz, err := os.ReadFile(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, fmt.Errorf("%v not found: %w", path, ErrLastEnclaveKeyInfoNotFound)
+		}
+		return nil, err
+	}
+	var eki enclave.EnclaveKeyInfo
+	if err := json.Unmarshal(bz, &eki); err != nil {
+		return nil, err
+	}
+	return &eki, nil
+}
+
+func (pr *Prover) saveLastEnclaveKey(ctx context.Context, eki *enclave.EnclaveKeyInfo) error {
+	path, err := pr.lastEnclaveKeyInfoFilePath()
+	if err != nil {
+		return err
+	}
+	f, err := os.CreateTemp(os.TempDir(), lastEnclaveKeyInfoFile)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	bz, err := json.Marshal(eki)
+	if err != nil {
+		return err
+	}
+	if _, err := f.Write(bz); err != nil {
+		return err
+	}
+	if err := os.Rename(f.Name(), path); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (pr *Prover) lastEnclaveKeyInfoFilePath() (string, error) {
+	path := filepath.Join(pr.homePath, "lcp", pr.originChain.ChainID())
+	if err := os.MkdirAll(path, os.ModePerm); err != nil {
+		return "", err
+	}
+	return filepath.Join(path, lastEnclaveKeyInfoFile), nil
+}
+
+func (pr *Prover) checkUpdateNeeded(eki *enclave.EnclaveKeyInfo) bool {
+	attestationTime := time.Unix(int64(eki.AttestationTime), 0)
+
+	now := time.Now()
+	// TODO consider appropriate buffer time
+	// now < attestation_time + expiration / 2
+	if now.Before(attestationTime.Add(time.Duration(pr.config.KeyExpiration) * time.Second / 2)) {
+		return false
+	}
+	return true
+}
+
+func (pr *Prover) ensureAvailableEnclaveKeyExists(ctx context.Context) error {
+	updated, err := pr.updateActiveEnclaveKeyIfNeeded(ctx)
+	if err != nil {
+		return err
+	}
+	log.Printf("updateActiveEnclaveKeyIfNeeded: updated=%v", updated)
+	return nil
+}
+
+// updateActiveEnclaveKeyIfNeeded updates a key if key is missing or expired
+func (pr *Prover) updateActiveEnclaveKeyIfNeeded(ctx context.Context) (bool, error) {
+	if err := pr.initServiceClient(); err != nil {
+		return false, err
+	}
+
+	if pr.activeEnclaveKey == nil {
+		// load last key if exists
+		lastEnclaveKey, err := pr.loadLastEnclaveKey(ctx)
+		if err == nil {
+			if !pr.checkUpdateNeeded(lastEnclaveKey) {
+				pr.activeEnclaveKey = lastEnclaveKey
+				return false, nil
+			} else {
+				log.Printf("last enclave key '0x%x' is found, but needs to be updated", lastEnclaveKey.EnclaveKeyAddress)
+			}
+		} else if errors.Is(err, ErrLastEnclaveKeyInfoNotFound) {
+			log.Printf("last enclave key not found: error=%v", err)
+		} else {
+			return false, err
+		}
+	} else if !pr.checkUpdateNeeded(pr.activeEnclaveKey) {
+		return false, nil
+	}
+
+	log.Println("need to get a new enclave key")
+
+	eki, err := pr.selectNewEnclaveKey(ctx)
+	if err != nil {
+		return false, err
+	}
+	log.Printf("selected available enclave key: %#v", eki)
+	if err := pr.registerEnclaveKey(eki); err != nil {
+		return false, err
+	}
+	log.Printf("enclave key successfully registered: %#v", eki)
+	if err := pr.saveLastEnclaveKey(ctx, eki); err != nil {
+		return false, err
+	}
+	pr.activeEnclaveKey = eki
+	return true, nil
+}
+
+func (pr *Prover) selectNewEnclaveKey(ctx context.Context) (*enclave.EnclaveKeyInfo, error) {
+	res, err := pr.lcpServiceClient.AvailableEnclaveKeys(ctx, &enclave.QueryAvailableEnclaveKeysRequest{Mrenclave: pr.config.GetMrenclave()})
+	if err != nil {
+		return nil, err
+	} else if len(res.Keys) == 0 {
+		return nil, fmt.Errorf("no available enclave keys")
+	}
+
+	for _, eki := range res.Keys {
+		if err := ias.VerifyReport(eki.Report, eki.Signature, eki.SigningCert, time.Now()); err != nil {
+			return nil, err
+		}
+		avr, err := ias.ParseAndValidateAVR(eki.Report)
+		if err != nil {
+			return nil, err
+		}
+		if !pr.validateISVEnclaveQuoteStatus(avr.ISVEnclaveQuoteStatus) {
+			log.Printf("key '%x' is not allowed to use because of ISVEnclaveQuoteStatus: %v", eki.EnclaveKeyAddress, avr.ISVEnclaveQuoteStatus)
+			continue
+		}
+		if !pr.validateAdvisoryIDs(avr.AdvisoryIDs) {
+			log.Printf("key '%x' is not allowed to use because of advisory IDs: %v", eki.EnclaveKeyAddress, avr.AdvisoryIDs)
+			continue
+		}
+		return eki, nil
+	}
+	return nil, fmt.Errorf("no available enclave keys: all keys are not allowed to use")
+}
+
+func (pr *Prover) validateISVEnclaveQuoteStatus(s oias.ISVEnclaveQuoteStatus) bool {
+	if s == oias.QuoteOK {
+		return true
+	}
+	for _, status := range pr.config.AllowedQuoteStatuses {
+		if s.String() == status {
+			return true
+		}
+	}
+	return false
+}
+
+func (pr *Prover) validateAdvisoryIDs(ids []string) bool {
+	if len(ids) == 0 {
+		return true
+	}
+	allowedSet := mapset.NewSet(&pr.config.AllowedAdvisoryIds)
+	targetSet := mapset.NewSet(&ids)
+	return targetSet.Difference(allowedSet).Cardinality() == 0
+}
 
 func (pr *Prover) syncUpstreamHeader(includeState bool) ([]*elc.MsgUpdateClientResponse, error) {
 
@@ -59,6 +235,7 @@ func (pr *Prover) syncUpstreamHeader(includeState bool) ([]*elc.MsgUpdateClientR
 			ClientId:     pr.config.ElcClientId,
 			Header:       anyHeader,
 			IncludeState: includeState,
+			Signer:       pr.activeEnclaveKey.EnclaveKeyAddress,
 		})
 		if err != nil {
 			return nil, err
@@ -69,35 +246,27 @@ func (pr *Prover) syncUpstreamHeader(includeState bool) ([]*elc.MsgUpdateClientR
 	return responses, nil
 }
 
-func registerEnclaveKey(pathEnd *core.PathEnd, prover *Prover, debug bool) error {
-	if debug {
-		ias.SetAllowDebugEnclaves()
-		defer ias.UnsetAllowDebugEnclaves()
-	}
-	res, err := prover.lcpServiceClient.AttestedVerificationReport(context.TODO(), &enclave.QueryAttestedVerificationReportRequest{})
-	if err != nil {
+func (pr *Prover) registerEnclaveKey(eki *enclave.EnclaveKeyInfo) error {
+	if err := ias.VerifyReport(eki.Report, eki.Signature, eki.SigningCert, time.Now()); err != nil {
 		return err
 	}
-	if err := ias.VerifyReport(res.Report, res.Signature, res.SigningCert, time.Now()); err != nil {
-		return err
-	}
-	if _, err := ias.ParseAndValidateAVR(res.Report); err != nil {
+	if _, err := ias.ParseAndValidateAVR(eki.Report); err != nil {
 		return err
 	}
 	header := &lcptypes.RegisterEnclaveKeyHeader{
-		Report:      res.Report,
-		Signature:   res.Signature,
-		SigningCert: res.SigningCert,
+		Report:      eki.Report,
+		Signature:   eki.Signature,
+		SigningCert: eki.SigningCert,
 	}
-	signer, err := prover.originChain.GetAddress()
+	signer, err := pr.originChain.GetAddress()
 	if err != nil {
 		return err
 	}
-	msg, err := clienttypes.NewMsgUpdateClient(pathEnd.ClientID, header, signer.String())
+	msg, err := clienttypes.NewMsgUpdateClient(pr.path.ClientID, header, signer.String())
 	if err != nil {
 		return err
 	}
-	if _, err := prover.originChain.SendMsgs([]sdk.Msg{msg}); err != nil {
+	if _, err := pr.originChain.SendMsgs([]sdk.Msg{msg}); err != nil {
 		return err
 	}
 	return nil
@@ -105,7 +274,7 @@ func registerEnclaveKey(pathEnd *core.PathEnd, prover *Prover, debug bool) error
 
 func activateClient(pathEnd *core.PathEnd, src, dst *core.ProvableChain) error {
 	srcProver := src.Prover.(*Prover)
-	if err := srcProver.initServiceClient(); err != nil {
+	if err := srcProver.ensureAvailableEnclaveKeyExists(context.TODO()); err != nil {
 		return err
 	}
 

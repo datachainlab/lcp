@@ -1,17 +1,40 @@
-use crate::prelude::*;
+use crate::{prelude::*, EnclaveKeySelector};
 use commitments::{StateCommitmentProof, UpdateClientCommitmentProof};
+use crypto::Address;
 use lcp_types::{Any, ClientId, Height, Time};
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub enum LightClientCommand {
+    Execute(LightClientExecuteCommand),
+    Query(LightClientQueryCommand),
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub enum LightClientExecuteCommand {
     InitClient(InitClientInput),
     UpdateClient(UpdateClientInput),
-
     VerifyMembership(VerifyMembershipInput),
     VerifyNonMembership(VerifyNonMembershipInput),
+}
 
+#[derive(Serialize, Deserialize, Debug)]
+pub enum LightClientQueryCommand {
     QueryClient(QueryClientInput),
+}
+
+impl EnclaveKeySelector for LightClientCommand {
+    fn get_enclave_key(&self) -> Option<Address> {
+        match self {
+            Self::Execute(cmd) => match cmd {
+                LightClientExecuteCommand::InitClient(input) => Some(input.signer),
+                LightClientExecuteCommand::UpdateClient(input) => Some(input.signer),
+                LightClientExecuteCommand::VerifyMembership(input) => Some(input.signer),
+                LightClientExecuteCommand::VerifyNonMembership(input) => Some(input.signer),
+            },
+            Self::Query(_) => None,
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -19,6 +42,7 @@ pub struct InitClientInput {
     pub any_client_state: Any,
     pub any_consensus_state: Any,
     pub current_timestamp: Time,
+    pub signer: Address,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -27,6 +51,7 @@ pub struct UpdateClientInput {
     pub any_header: Any,
     pub include_state: bool,
     pub current_timestamp: Time,
+    pub signer: Address,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -36,6 +61,7 @@ pub struct VerifyMembershipInput {
     pub path: String,
     pub value: Vec<u8>,
     pub proof: CommitmentProofPair,
+    pub signer: Address,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -44,6 +70,7 @@ pub struct VerifyNonMembershipInput {
     pub prefix: Vec<u8>,
     pub path: String,
     pub proof: CommitmentProofPair,
+    pub signer: Address,
 }
 
 #[derive(Serialize, Deserialize, Debug)]

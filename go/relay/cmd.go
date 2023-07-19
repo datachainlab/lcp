@@ -1,6 +1,9 @@
 package relay
 
 import (
+	"context"
+	"log"
+
 	"github.com/hyperledger-labs/yui-relayer/config"
 	"github.com/hyperledger-labs/yui-relayer/core"
 	"github.com/spf13/cobra"
@@ -18,16 +21,16 @@ func LCPCmd(ctx *config.Context) *cobra.Command {
 	}
 
 	cmd.AddCommand(
-		registerEnclaveKeyCmd(ctx),
+		updateEnclaveKeyCmd(ctx),
 		activateClientCmd(ctx),
 	)
 
 	return cmd
 }
 
-func registerEnclaveKeyCmd(ctx *config.Context) *cobra.Command {
+func updateEnclaveKeyCmd(ctx *config.Context) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "register-key [path]",
+		Use:   "update-enclave-key [path]",
 		Short: "Register an enclave key into the LCP client",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -35,27 +38,25 @@ func registerEnclaveKeyCmd(ctx *config.Context) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			path, err := ctx.Config.Paths.Get(args[0])
-			if err != nil {
-				return err
-			}
 			var (
-				pathEnd *core.PathEnd
-				target  *core.ProvableChain
+				target *core.ProvableChain
 			)
 			if viper.GetBool(flagSrc) {
-				pathEnd = path.Src
 				target = c[src]
 			} else {
-				pathEnd = path.Dst
 				target = c[dst]
 			}
 			prover := target.Prover.(*Prover)
-			if err := prover.initServiceClient(); err != nil {
+			updated, err := prover.updateActiveEnclaveKeyIfNeeded(context.TODO())
+			if err != nil {
 				return err
 			}
-			// TODO add debug option
-			return registerEnclaveKey(pathEnd, prover, true)
+			if updated {
+				log.Println("Active enclave key is updated")
+			} else {
+				log.Println("No need to update the active enclave key")
+			}
+			return nil
 		},
 	}
 	return srcFlag(cmd)

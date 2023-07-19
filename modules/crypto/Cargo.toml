@@ -5,17 +5,17 @@ edition = "2021"
 
 [dependencies]
 sgx_types = { rev = "v1.1.6", git = "https://github.com/apache/incubator-teaclave-sgx-sdk" }
-sgx_tstd = { rev = "v1.1.6", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", optional = true }
 sgx_trts = { rev = "v1.1.6", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", optional = true }
 sgx_rand = { rev = "v1.1.6", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", optional = true }
+sgx_tseal = { rev = "v1.1.6", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", optional = true }
+
 rand = { version = "0.8", default-features = false, optional = true }
 tiny-keccak = "1.4"
 serde = { version = "1.0", default-features = false, features = ["alloc", "derive"] }
+serde-big-array = "0.5.1"
 hex = { version = "0.4", default-features = false, features = ["alloc"] }
 flex-error = { version = "0.4.4", default-features = false }
 libsecp256k1 = { version = "0.7.1", default-features = false, features = ["static-context", "hmac"] }
-
-settings = { path = "../settings", optional = true }
 
 [features]
 default = ["std"]
@@ -23,8 +23,7 @@ std = [
     "rand/default"
 ]
 sgx = [
-    "sgx_tstd",
     "sgx_trts",
     "sgx_rand",
-    "settings"
+    "sgx_tseal"
 ]

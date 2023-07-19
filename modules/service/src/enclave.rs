@@ -1,13 +1,11 @@
 use crate::service::AppService;
-use attestation_report::EndorsedAttestationVerificationReport;
+use crypto::Address;
 use enclave_api::EnclaveProtoAPI;
 use lcp_proto::lcp::service::enclave::v1::{
-    query_server::Query, QueryAttestedVerificationReportRequest,
-    QueryAttestedVerificationReportResponse,
+    query_server::Query, EnclaveKeyInfo, QueryAvailableEnclaveKeysRequest,
+    QueryAvailableEnclaveKeysResponse, QueryEnclaveKeyRequest, QueryEnclaveKeyResponse,
 };
-use settings::AVR_KEY_PATH;
-use std::fs::File;
-use std::io::Read;
+use lcp_types::Mrenclave;
 use store::transaction::CommitStore;
 use tonic::{Request, Response, Status};
 
@@ -17,38 +15,38 @@ where
     S: CommitStore + 'static,
     E: EnclaveProtoAPI<S> + 'static,
 {
-    async fn attested_verification_report(
+    async fn available_enclave_keys(
         &self,
-        _: Request<QueryAttestedVerificationReportRequest>,
-    ) -> Result<Response<QueryAttestedVerificationReportResponse>, Status> {
-        let path = self.home.join(AVR_KEY_PATH);
-        let mut json = String::new();
-        File::open(path)?.read_to_string(&mut json)?;
-
-        let ereport: EndorsedAttestationVerificationReport =
-            serde_json::from_str(&json).map_err(|e| Status::internal(e.to_string()))?;
-
-        let quote = ereport
-            .get_avr()
-            .map_err(|e| Status::internal(e.to_string()))?
-            .parse_quote()
-            .map_err(|e| Status::internal(e.to_string()))?;
-        let metadata = self
+        req: Request<QueryAvailableEnclaveKeysRequest>,
+    ) -> Result<Response<QueryAvailableEnclaveKeysResponse>, Status> {
+        let mut res = QueryAvailableEnclaveKeysResponse::default();
+        let keys = self
             .enclave
-            .metadata()
-            .map_err(|e| Status::internal(e.to_string()))?;
-        quote
-            .match_metadata(&metadata)
-            .map_err(|e| Status::internal(e.to_string()))?;
-        let address = quote
-            .get_enclave_key_address()
-            .map_err(|e| Status::internal(e.to_string()))?;
+            .get_key_manager()
+            .available_keys(
+                Mrenclave::try_from(req.into_inner().mrenclave)
+                    .map_err(|e| Status::aborted(e.to_string()))?,
+            )
+            .map_err(|e| Status::aborted(e.to_string()))?;
+        for key in keys {
+            res.keys
+                .push(EnclaveKeyInfo::try_from(key).map_err(|e| Status::aborted(e.to_string()))?);
+        }
+        Ok(Response::new(res))
+    }
 
-        Ok(Response::new(QueryAttestedVerificationReportResponse {
-            enclave_address: address.into(),
-            report: ereport.avr,
-            signature: ereport.signature,
-            signing_cert: ereport.signing_cert,
-        }))
+    async fn enclave_key(
+        &self,
+        req: Request<QueryEnclaveKeyRequest>,
+    ) -> Result<Response<QueryEnclaveKeyResponse>, Status> {
+        let addr = Address::try_from(req.into_inner().enclave_key_address.as_slice())
+            .map_err(|e| Status::aborted(e.to_string()))?;
+        let key = self
+            .enclave
+            .get_key_manager()
+            .load(addr)
+            .map_err(|e| Status::aborted(e.to_string()))?;
+        let key = EnclaveKeyInfo::try_from(key).map_err(|e| Status::aborted(e.to_string()))?;
+        Ok(Response::new(QueryEnclaveKeyResponse { key: Some(key) }))
     }
 }

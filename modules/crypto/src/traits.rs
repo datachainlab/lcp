@@ -1,24 +1,24 @@
 use crate::prelude::*;
+use crate::EnclavePublicKey;
 use crate::Error;
+use crate::SealedEnclaveKey;
 use tiny_keccak::Keccak;
 
 pub trait Verifier {
-    fn get_pubkey(&self) -> Vec<u8>;
-    fn get_address(&self) -> Vec<u8>;
     fn verify(&self, msg: &[u8], signature: &[u8]) -> Result<(), Error>;
 }
 
 pub trait Signer {
     fn sign(&self, msg: &[u8]) -> Result<Vec<u8>, Error>;
-    fn use_verifier(&self, f: &mut dyn FnMut(&dyn Verifier));
+    fn pubkey(&self) -> Result<EnclavePublicKey, Error>;
 }
 
-pub trait SealedKey
+pub trait SealingKey
 where
     Self: core::marker::Sized,
 {
-    fn seal(&self, filepath: &str) -> Result<(), Error>;
-    fn unseal(filepath: &str) -> Result<Self, Error>;
+    fn seal(&self) -> Result<SealedEnclaveKey, Error>;
+    fn unseal(sek: &SealedEnclaveKey) -> Result<Self, Error>;
 }
 
 pub trait Keccak256 {

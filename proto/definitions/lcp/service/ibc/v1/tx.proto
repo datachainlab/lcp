@@ -58,6 +58,8 @@ message MsgVerifyClient {
   .google.protobuf.Any expected_any_client_state = 4;
   .ibc.core.client.v1.Height proof_height = 5 [(gogoproto.nullable) = false];
   bytes proof = 6;
+  // enclave key for signing
+  bytes signer = 7;
 }
 
 message MsgVerifyClientConsensus {
@@ -71,6 +73,8 @@ message MsgVerifyClientConsensus {
   .google.protobuf.Any expected_any_client_consensus_state = 5;
   .ibc.core.client.v1.Height proof_height = 6 [(gogoproto.nullable) = false];
   bytes proof = 7;
+  // enclave key for signing
+  bytes signer = 8;
 }
 
 message MsgVerifyConnection {
@@ -83,6 +87,8 @@ message MsgVerifyConnection {
   .ibc.core.connection.v1.ConnectionEnd expected_connection = 4 [(gogoproto.nullable) = false];
   .ibc.core.client.v1.Height proof_height = 5 [(gogoproto.nullable) = false];
   bytes proof = 6;
+  // enclave key for signing
+  bytes signer = 7;
 }
 
 message MsgVerifyChannel {
@@ -96,6 +102,8 @@ message MsgVerifyChannel {
   .ibc.core.channel.v1.Channel expected_channel = 5 [(gogoproto.nullable) = false];
   .ibc.core.client.v1.Height proof_height = 6 [(gogoproto.nullable) = false];
   bytes proof = 7;
+  // enclave key for signing
+  bytes signer = 8;
 }
 
 message MsgVerifyPacket {
@@ -110,6 +118,8 @@ message MsgVerifyPacket {
   bytes commitment = 6;
   .ibc.core.client.v1.Height proof_height = 7 [(gogoproto.nullable) = false];
   bytes proof = 8;
+  // enclave key for signing
+  bytes signer = 9;
 }
 
 message MsgVerifyPacketAcknowledgement {
@@ -124,6 +134,8 @@ message MsgVerifyPacketAcknowledgement {
   bytes commitment = 6;
   .ibc.core.client.v1.Height proof_height = 7 [(gogoproto.nullable) = false];
   bytes proof = 8;
+  // enclave key for signing
+  bytes signer = 9;
 }
 
 message MsgVerifyPacketReceiptAbsense {
@@ -137,6 +149,8 @@ message MsgVerifyPacketReceiptAbsense {
   uint64 sequence = 5;
   .ibc.core.client.v1.Height proof_height = 6 [(gogoproto.nullable) = false];
   bytes proof = 7;
+  // enclave key for signing
+  bytes signer = 8;
 }
 
 message MsgVerifyNextSequenceRecv {
@@ -150,4 +164,6 @@ message MsgVerifyNextSequenceRecv {
   uint64 next_sequence_recv = 5;
   .ibc.core.client.v1.Height proof_height = 6 [(gogoproto.nullable) = false];
   bytes proof = 7;
+  // enclave key for signing
+  bytes signer = 8;
 }

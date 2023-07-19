@@ -11,6 +11,8 @@ import (
 	"github.com/cosmos/ibc-go/v7/modules/core/exported"
 	lcptypes "github.com/datachainlab/lcp/go/light-clients/lcp/types"
 	"github.com/datachainlab/lcp/go/relay/elc"
+	"github.com/datachainlab/lcp/go/relay/enclave"
+	"github.com/datachainlab/lcp/go/sgx/ias"
 	"github.com/hyperledger-labs/yui-relayer/core"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -21,9 +23,12 @@ type Prover struct {
 	originChain  core.Chain
 	originProver core.Prover
 
-	codec            codec.ProtoCodecMarshaler
-	path             *core.PathEnd
+	homePath string
+	codec    codec.ProtoCodecMarshaler
+	path     *core.PathEnd
+
 	lcpServiceClient LCPServiceClient
+	activeEnclaveKey *enclave.EnclaveKeyInfo
 }
 
 var (
@@ -53,12 +58,16 @@ func (pr *Prover) initServiceClient() error {
 
 // Init initializes the chain
 func (pr *Prover) Init(homePath string, timeout time.Duration, codec codec.ProtoCodecMarshaler, debug bool) error {
+	if debug {
+		ias.SetAllowDebugEnclaves()
+	}
 	if err := pr.originChain.Init(homePath, timeout, codec, debug); err != nil {
 		return err
 	}
 	if err := pr.originProver.Init(homePath, timeout, codec, debug); err != nil {
 		return err
 	}
+	pr.homePath = homePath
 	pr.codec = codec
 	return nil
 }
@@ -84,6 +93,11 @@ func (pr *Prover) CreateMsgCreateClient(clientID string, dstHeader core.Header, 
 	if err := pr.initServiceClient(); err != nil {
 		return nil, err
 	}
+	// NOTE: Query the LCP for available keys, but no need to register it into on-chain here
+	eki, err := pr.selectNewEnclaveKey(context.TODO())
+	if err != nil {
+		return nil, err
+	}
 	msg, err := pr.originProver.CreateMsgCreateClient(clientID, dstHeader, signer)
 	if err != nil {
 		return nil, err
@@ -91,7 +105,7 @@ func (pr *Prover) CreateMsgCreateClient(clientID string, dstHeader core.Header, 
 	res, err := pr.lcpServiceClient.CreateClient(context.TODO(), &elc.MsgCreateClient{
 		ClientState:    msg.ClientState,
 		ConsensusState: msg.ConsensusState,
-		Signer:         "", // TODO remove this field from the proto def
+		Signer:         eki.EnclaveKeyAddress,
 	})
 	if err != nil {
 		return nil, err
@@ -105,7 +119,7 @@ func (pr *Prover) CreateMsgCreateClient(clientID string, dstHeader core.Header, 
 	clientState := &lcptypes.ClientState{
 		LatestHeight:         clienttypes.Height{},
 		Mrenclave:            pr.config.GetMrenclave(),
-		KeyExpiration:        60 * 60 * 24 * 7, // 7 days
+		KeyExpiration:        pr.config.KeyExpiration,
 		Keys:                 [][]byte{},
 		AttestationTimes:     []uint64{},
 		AllowedQuoteStatuses: pr.config.AllowedQuoteStatuses,
@@ -140,9 +154,10 @@ func (pr *Prover) GetLatestFinalizedHeader() (latestFinalizedHeader core.Header,
 // The order of the returned header slice should be as: [<intermediate headers>..., <update header>]
 // if the header slice's length == nil and err == nil, the relayer should skips the update-client
 func (pr *Prover) SetupHeadersForUpdate(dstChain core.ChainInfoICS02Querier, latestFinalizedHeader core.Header) ([]core.Header, error) {
-	if err := pr.initServiceClient(); err != nil {
+	if err := pr.ensureAvailableEnclaveKeyExists(context.TODO()); err != nil {
 		return nil, err
 	}
+
 	headers, err := pr.originProver.SetupHeadersForUpdate(dstChain, latestFinalizedHeader)
 	if err != nil {
 		return nil, err
@@ -157,8 +172,10 @@ func (pr *Prover) SetupHeadersForUpdate(dstChain core.ChainInfoICS02Querier, lat
 			return nil, err
 		}
 		res, err := pr.lcpServiceClient.UpdateClient(context.TODO(), &elc.MsgUpdateClient{
-			ClientId: pr.config.ElcClientId,
-			Header:   anyHeader,
+			ClientId:     pr.config.ElcClientId,
+			Header:       anyHeader,
+			IncludeState: false,
+			Signer:       pr.activeEnclaveKey.EnclaveKeyAddress,
 		})
 		if err != nil {
 			return nil, err
@@ -187,6 +204,7 @@ func (pr *Prover) ProveState(ctx core.QueryContext, path string, value []byte) (
 		Value:       value,
 		ProofHeight: proofHeight,
 		Proof:       proof,
+		Signer:      pr.activeEnclaveKey.EnclaveKeyAddress,
 	})
 	if err != nil {
 		return nil, clienttypes.Height{}, err

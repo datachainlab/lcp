@@ -111,22 +111,6 @@ pub struct PacketState {
     #[prost(bytes = "vec", tag = "4")]
     pub data: ::prost::alloc::vec::Vec<u8>,
 }
-/// PacketId is an identifer for a unique Packet
-/// Source chains refer to packets by source port/channel
-/// Destination chains refer to packets by destination port/channel
-#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct PacketId {
-    /// channel port identifier
-    #[prost(string, tag = "1")]
-    pub port_id: ::prost::alloc::string::String,
-    /// channel unique identifier
-    #[prost(string, tag = "2")]
-    pub channel_id: ::prost::alloc::string::String,
-    /// packet sequence
-    #[prost(uint64, tag = "3")]
-    pub sequence: u64,
-}
 /// Acknowledgement is the recommended acknowledgement format to be used by
 /// app-specific protocols.
 /// NOTE: The field numbers 21 and 22 were explicitly chosen to avoid accidental

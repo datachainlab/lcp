@@ -14,6 +14,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "android-tzdata"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e999941b234f3131b00bc13c22d06e8c5ff726d1b6318ac7eb276997bbb4fef0"
+
+[[package]]
 name = "anyhow"
 version = "1.0.66"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -39,7 +45,6 @@ dependencies = [
  "chrono",
  "crypto",
  "flex-error",
- "hex",
  "lcp-types",
  "pem",
  "rustls",
@@ -199,11 +204,11 @@ checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
 
 [[package]]
 name = "chrono"
-version = "0.4.23"
+version = "0.4.26"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "16b0a3d9ed01224b22057780a37bb8c5dbfe1be8ba48678e7bf57ec4b385411f"
+checksum = "ec837a71355b28f6556dbd569b37b3f363091c0bd4b2e735674521b4c5fd9bc5"
 dependencies = [
- "num-integer",
+ "android-tzdata",
  "num-traits",
  "serde",
 ]
@@ -257,10 +262,10 @@ dependencies = [
  "hex",
  "libsecp256k1",
  "serde",
- "settings",
+ "serde-big-array",
  "sgx_rand",
  "sgx_trts",
- "sgx_tstd",
+ "sgx_tseal",
  "sgx_types",
  "tiny-keccak",
 ]
@@ -386,6 +391,7 @@ version = "0.1.0"
 dependencies = [
  "attestation-report",
  "commitments",
+ "crypto",
  "flex-error",
  "lcp-proto",
  "lcp-types",
@@ -493,7 +499,6 @@ name = "enclave-runtime"
 version = "0.1.0"
 dependencies = [
  "bincode",
- "crypto",
  "ecall-commands",
  "ecall-handler",
  "enclave-environment",
@@ -846,12 +851,14 @@ name = "lcp-types"
 version = "0.1.0"
 dependencies = [
  "flex-error",
+ "hex",
  "ibc",
  "ibc-proto",
  "prost-types",
  "serde",
  "serde_json",
  "sgx_tstd",
+ "sgx_types",
  "tendermint",
 ]
 
@@ -975,16 +982,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
-]
-
-[[package]]
-name = "num-integer"
-version = "0.1.45"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "225d3389fb3509a24c93f5c29eb6bde2586b98d9f016636dff58d7c6f7569cd9"
-dependencies = [
- "autocfg",
- "num-traits",
 ]
 
 [[package]]
@@ -1311,6 +1308,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "serde-big-array"
+version = "0.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "11fc7cc2c76d73e0f27ee52abbd64eec84d46f370c88371120433196934e4b7f"
+dependencies = [
+ "serde",
+]
+
+[[package]]
 name = "serde_bytes"
 version = "0.11.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1378,10 +1384,6 @@ dependencies = [
  "quote",
  "syn",
 ]
-
-[[package]]
-name = "settings"
-version = "0.1.0"
 
 [[package]]
 name = "sgx_alloc"
@@ -1457,6 +1459,17 @@ name = "sgx_tse"
 version = "1.1.6"
 source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?rev=v1.1.6#c3d82372dff81e5bafb07f71bc8ad532d06b504e"
 dependencies = [
+ "sgx_types",
+]
+
+[[package]]
+name = "sgx_tseal"
+version = "1.1.6"
+source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?rev=v1.1.6#c3d82372dff81e5bafb07f71bc8ad532d06b504e"
+dependencies = [
+ "sgx_tcrypto",
+ "sgx_trts",
+ "sgx_tse",
  "sgx_types",
 ]
 

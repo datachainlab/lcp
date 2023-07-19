@@ -1,6 +1,7 @@
 use crate::opts::Opts;
 use anyhow::{bail, Result};
 use enclave_api::{Enclave, EnclaveProtoAPI};
+use keymanager::EnclaveKeyManager;
 use std::path::PathBuf;
 use store::transaction::CommitStore;
 
@@ -16,7 +17,8 @@ where
             opts.default_enclave()
         };
         let env = host::get_environment().unwrap();
-        match Enclave::create(&path, &env.home, env.store.clone()) {
+        let km = EnclaveKeyManager::new(&env.home)?;
+        match Enclave::create(&path, km, env.store.clone()) {
             Ok(enclave) => Ok(enclave),
             Err(x) => {
                 bail!(

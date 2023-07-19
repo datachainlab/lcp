@@ -42,6 +42,7 @@ sgx_tcrypto = { rev = "v1.1.6", git = "https://github.com/apache/incubator-teacl
 sgx_tcrypto_helper = { rev = "v1.1.6", git = "https://github.com/apache/incubator-teaclave-sgx-sdk" }
 sgx_crypto_helper = { rev = "v1.1.6", git = "https://github.com/apache/incubator-teaclave-sgx-sdk" }
 sgx_rand = { rev = "v1.1.6", git = "https://github.com/apache/incubator-teaclave-sgx-sdk" }
+sgx_tseal = { rev = "v1.1.6", git = "https://github.com/apache/incubator-teaclave-sgx-sdk" }
 
 [patch."crates-io"]
 # TODO these patches would be better as optional

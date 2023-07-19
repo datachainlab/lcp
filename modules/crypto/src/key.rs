@@ -1,14 +1,16 @@
 use crate::prelude::*;
-use crate::{Error, Verifier};
-#[cfg(any(feature = "std", feature = "sgx"))]
-use crate::{Keccak256, Signer};
+use crate::{Error, Keccak256, Signer, Verifier};
+use alloc::fmt;
+use core::fmt::Display;
+use libsecp256k1::PublicKeyFormat;
 use libsecp256k1::{
     curve::Scalar,
     util::{COMPRESSED_PUBLIC_KEY_SIZE, SECRET_KEY_SIZE},
     Message, PublicKey, RecoveryId, SecretKey, Signature,
 };
 use serde::{Deserialize, Serialize};
-use sgx_types::sgx_report_data_t;
+use serde_big_array::BigArray;
+use sgx_types::{sgx_report_data_t, sgx_sealed_data_t};
 use tiny_keccak::Keccak;
 
 #[derive(Default)]
@@ -52,68 +54,119 @@ impl EnclaveKey {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct EnclavePublicKey(PublicKey);
 
+impl Serialize for EnclavePublicKey {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        Vec::<u8>::serialize(self.as_array().to_vec().as_ref(), serializer)
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for EnclavePublicKey {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        use serde::de::Visitor;
+
+        struct BytesVisitor;
+
+        impl<'de> Visitor<'de> for BytesVisitor {
+            type Value = EnclavePublicKey;
+
+            #[inline]
+            fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                f.write_str("compressed public key")
+            }
+
+            fn visit_bytes<E>(self, v: &[u8]) -> Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                EnclavePublicKey::try_from(v).map_err(serde::de::Error::custom)
+            }
+        }
+
+        deserializer.deserialize_bytes(BytesVisitor)
+    }
+}
+
 impl TryFrom<&[u8]> for EnclavePublicKey {
     type Error = Error;
 
     fn try_from(v: &[u8]) -> Result<Self, Self::Error> {
         Ok(Self(
-            PublicKey::parse_slice(v, None).map_err(Error::secp256k1)?,
+            PublicKey::parse_slice(v, Some(PublicKeyFormat::Compressed))
+                .map_err(Error::secp256k1)?,
         ))
     }
 }
 
+impl TryFrom<EnclavePublicKey> for Vec<u8> {
+    type Error = Error;
+    fn try_from(value: EnclavePublicKey) -> Result<Self, Self::Error> {
+        Ok(value.as_array().to_vec())
+    }
+}
+
 impl EnclavePublicKey {
-    pub fn as_bytes(&self) -> [u8; COMPRESSED_PUBLIC_KEY_SIZE] {
+    pub fn as_array(&self) -> [u8; COMPRESSED_PUBLIC_KEY_SIZE] {
         self.0.serialize_compressed()
     }
 
     pub fn as_report_data(&self) -> sgx_report_data_t {
         let mut report_data = sgx_report_data_t::default();
-        report_data.d[..20].copy_from_slice(Address::from(self).as_ref());
+        report_data.d[..20].copy_from_slice(&self.as_address().0);
         report_data
     }
-}
 
-impl From<&EnclavePublicKey> for Address {
-    fn from(v: &EnclavePublicKey) -> Self {
-        let pubkey = &v.0.serialize()[1..];
-        let mut res: Address = Default::default();
-        res.0.copy_from_slice(&keccak256(pubkey)[12..]);
-        res
-    }
-}
-
-#[derive(Clone, Default, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub struct Address(pub [u8; 20]);
-
-impl Address {
-    pub fn to_hex_string(&self) -> String {
-        hex::encode(self)
-    }
-}
-
-impl From<&[u8]> for Address {
-    fn from(v: &[u8]) -> Self {
-        assert!(v.len() == 20);
-        let mut addr = Address::default();
-        addr.0.copy_from_slice(v);
+    pub fn as_address(&self) -> Address {
+        let pubkey = &self.0.serialize()[1..];
+        let mut addr: Address = Default::default();
+        addr.0.copy_from_slice(&keccak256(pubkey)[12..]);
         addr
     }
 }
 
-impl AsRef<[u8]> for Address {
-    fn as_ref(&self) -> &[u8] {
-        &self.0
+#[derive(Copy, Clone, Default, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Address(pub [u8; 20]);
+
+impl Address {
+    pub fn to_hex_string(&self) -> String {
+        format!("0x{}", hex::encode(self.0))
+    }
+    pub fn from_hex_string(s: &str) -> Result<Self, Error> {
+        let bz = hex::decode(s.strip_prefix("0x").unwrap_or(s))?;
+        Address::try_from(bz.as_slice())
+    }
+}
+
+impl Display for Address {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.write_str(self.to_hex_string().as_str())
     }
 }
 
 impl From<Address> for Vec<u8> {
-    fn from(v: Address) -> Self {
-        v.as_ref().to_vec()
+    fn from(value: Address) -> Self {
+        value.0.to_vec()
     }
 }
 
-#[cfg(any(feature = "std", feature = "sgx"))]
+impl TryFrom<&[u8]> for Address {
+    type Error = Error;
+    fn try_from(value: &[u8]) -> Result<Self, Self::Error> {
+        if value.len() != 20 {
+            Err(Error::invalid_address_length(value.len()))
+        } else {
+            let mut addr = Address::default();
+            addr.0.copy_from_slice(value);
+            Ok(addr)
+        }
+    }
+}
+
 impl Signer for EnclaveKey {
     fn sign(&self, bz: &[u8]) -> Result<Vec<u8>, Error> {
         let mut s = Scalar::default();
@@ -124,21 +177,12 @@ impl Signer for EnclaveKey {
         ret[64] = rid.serialize();
         Ok(ret)
     }
-
-    fn use_verifier(&self, f: &mut dyn FnMut(&dyn Verifier)) {
-        f(&self.get_pubkey());
+    fn pubkey(&self) -> Result<EnclavePublicKey, Error> {
+        Ok(self.get_pubkey())
     }
 }
 
 impl Verifier for EnclavePublicKey {
-    fn get_pubkey(&self) -> Vec<u8> {
-        self.as_bytes().to_vec()
-    }
-
-    fn get_address(&self) -> Vec<u8> {
-        Address::from(self).into()
-    }
-
     fn verify(&self, msg: &[u8], signature: &[u8]) -> Result<(), Error> {
         let signer = verify_signature(msg, signature)?;
         if self.eq(&signer) {
@@ -163,8 +207,7 @@ pub fn verify_signature(sign_bytes: &[u8], signature: &[u8]) -> Result<EnclavePu
 }
 
 pub fn verify_signature_address(sign_bytes: &[u8], signature: &[u8]) -> Result<Address, Error> {
-    let pub_key = verify_signature(sign_bytes, signature)?;
-    Ok((&pub_key).into())
+    Ok(verify_signature(sign_bytes, signature)?.as_address())
 }
 
 fn keccak256(bz: &[u8]) -> [u8; 32] {
@@ -173,4 +216,61 @@ fn keccak256(bz: &[u8]) -> [u8; 32] {
     keccak.update(bz);
     keccak.finalize(result.as_mut());
     result
+}
+
+pub const SEALED_DATA_32_SIZE: u32 = calc_raw_sealed_data_size(0, 32);
+pub const SEALED_DATA_32_USIZE: usize = safe_u32_to_usize(SEALED_DATA_32_SIZE);
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct SealedEnclaveKey(#[serde(with = "BigArray")] pub(crate) [u8; SEALED_DATA_32_USIZE]);
+
+impl SealedEnclaveKey {
+    pub fn new(sealed_ek: [u8; SEALED_DATA_32_USIZE]) -> Self {
+        Self(sealed_ek)
+    }
+
+    pub fn new_from_bytes(bz: &[u8]) -> Result<Self, Error> {
+        if bz.len() != SEALED_DATA_32_USIZE {
+            return Err(Error::invalid_sealed_enclave_key("".to_owned()));
+        }
+        let mut data = [0; SEALED_DATA_32_USIZE];
+        data.copy_from_slice(bz);
+        Ok(Self::new(data))
+    }
+
+    pub fn to_vec(&self) -> Vec<u8> {
+        self.0.to_vec()
+    }
+}
+
+// modified copy from sgx_tseal/src/internal.rs
+const fn calc_raw_sealed_data_size(add_mac_txt_size: u32, encrypt_txt_size: u32) -> u32 {
+    let max = u32::MAX;
+    let sealed_data_size = core::mem::size_of::<sgx_sealed_data_t>() as u32;
+
+    if add_mac_txt_size > max - encrypt_txt_size {
+        return max;
+    }
+    let payload_size: u32 = add_mac_txt_size + encrypt_txt_size;
+    if payload_size > max - sealed_data_size {
+        return max;
+    }
+    sealed_data_size + payload_size
+}
+
+#[allow(clippy::assertions_on_constants)]
+const fn safe_u32_to_usize(v: u32) -> usize {
+    assert!(usize::BITS >= 32);
+    v as usize
+}
+
+pub struct NopSigner;
+
+impl Signer for NopSigner {
+    fn pubkey(&self) -> Result<EnclavePublicKey, Error> {
+        Err(Error::nop_signer())
+    }
+    fn sign(&self, _: &[u8]) -> Result<Vec<u8>, Error> {
+        Err(Error::nop_signer())
+    }
 }

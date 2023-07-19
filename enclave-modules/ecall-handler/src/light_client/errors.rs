@@ -4,6 +4,9 @@ use flex_error::*;
 define_error! {
     #[derive(Debug, PartialEq, Eq)]
     Error {
+        SealedEnclaveKeyNotFound
+        |_| { "Sealed EnclaveKey not found" },
+
         LightClient
         [light_client::Error]
         |_| { "LightClient error" },

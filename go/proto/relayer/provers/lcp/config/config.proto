@@ -9,9 +9,13 @@ option (gogoproto.goproto_getters_all) = false;
 
 message ProverConfig {
     google.protobuf.Any origin_prover = 1;
+    // hex string
     string lcp_service_address = 2;
+    // hex string
     string mrenclave = 3;
     repeated string allowed_quote_statuses = 4;
     repeated string allowed_advisory_ids = 5;
-    string elc_client_id = 6;
+    // unit: seconds
+    uint64 key_expiration = 6;
+    string elc_client_id = 7;
 }

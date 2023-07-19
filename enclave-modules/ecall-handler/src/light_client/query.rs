@@ -1,13 +1,14 @@
 use super::registry::get_light_client_by_client_id;
 use crate::light_client::Error;
 use context::Context;
+use crypto::Signer;
 use ecall_commands::{LightClientResult, QueryClientInput, QueryClientResult};
 use light_client::ClientReader;
 use light_client_registry::LightClientResolver;
 use store::KVStore;
 
-pub fn query_client<R: LightClientResolver, S: KVStore>(
-    ctx: &mut Context<R, S>,
+pub fn query_client<R: LightClientResolver, S: KVStore, K: Signer>(
+    ctx: &mut Context<R, S, K>,
     input: QueryClientInput,
 ) -> Result<LightClientResult, Error> {
     let lc = get_light_client_by_client_id(ctx, &input.client_id)?;

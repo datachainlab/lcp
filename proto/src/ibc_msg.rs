@@ -38,6 +38,7 @@ impl TryFrom<MsgVerifyClient> for MsgVerifyMembership {
             value,
             proof_height: msg.proof_height,
             proof: msg.proof,
+            signer: msg.signer,
         })
     }
 }
@@ -72,6 +73,7 @@ impl TryFrom<MsgVerifyClientConsensus> for MsgVerifyMembership {
             value,
             proof_height: msg.proof_height,
             proof: msg.proof,
+            signer: msg.signer,
         })
     }
 }
@@ -96,6 +98,7 @@ impl TryFrom<MsgVerifyConnection> for MsgVerifyMembership {
             value,
             proof_height: msg.proof_height,
             proof: msg.proof,
+            signer: msg.signer,
         })
     }
 }
@@ -121,6 +124,7 @@ impl TryFrom<MsgVerifyChannel> for MsgVerifyMembership {
             value,
             proof_height: msg.proof_height,
             proof: msg.proof,
+            signer: msg.signer,
         })
     }
 }
@@ -146,6 +150,7 @@ impl TryFrom<MsgVerifyPacket> for MsgVerifyMembership {
             value: msg.commitment,
             proof_height: msg.proof_height,
             proof: msg.proof,
+            signer: msg.signer,
         })
     }
 }
@@ -173,6 +178,7 @@ impl TryFrom<MsgVerifyPacketAcknowledgement> for MsgVerifyMembership {
             value: msg.commitment,
             proof_height: msg.proof_height,
             proof: msg.proof,
+            signer: msg.signer,
         })
     }
 }
@@ -198,6 +204,7 @@ impl TryFrom<MsgVerifyPacketReceiptAbsense> for MsgVerifyNonMembership {
             path,
             proof_height: msg.proof_height,
             proof: msg.proof,
+            signer: msg.signer,
         })
     }
 }
@@ -220,6 +227,7 @@ impl TryFrom<MsgVerifyNextSequenceRecv> for MsgVerifyMembership {
             value,
             proof_height: msg.proof_height,
             proof: msg.proof,
+            signer: msg.signer,
         })
     }
 }

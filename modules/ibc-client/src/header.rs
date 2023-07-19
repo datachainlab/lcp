@@ -128,7 +128,7 @@ impl From<UpdateClientHeader> for RawUpdateClientHeader {
 
 impl Commitment for UpdateClientHeader {
     fn signer(&self) -> Address {
-        self.signer.as_slice().into()
+        self.signer.as_slice().try_into().unwrap()
     }
 
     fn commitment(&self) -> &UpdateClientCommitment {

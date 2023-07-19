@@ -29,8 +29,8 @@ define_error! {
         |_| { "RemoteAttestation error" },
 
         EcallCommand
-        [ecall_commands::Error]
-        |_| { "EcallCommand error" },
+        [ecall_commands::InputValidationError]
+        |_| { "EcallCommand input validation error" },
 
         Time
         [lcp_types::TimeError]
@@ -56,8 +56,8 @@ impl From<crypto::Error> for Error {
     }
 }
 
-impl From<ecall_commands::Error> for Error {
-    fn from(err: ecall_commands::Error) -> Self {
+impl From<ecall_commands::InputValidationError> for Error {
+    fn from(err: ecall_commands::InputValidationError) -> Self {
         Error::ecall_command(err)
     }
 }
