@@ -28,6 +28,9 @@ crypto = { path = "../modules/crypto" }
 store = { path = "../modules/store", features = ["rocksdbstore"] }
 keymanager = { path = "../modules/keymanager" }
 
+[build-dependencies]
+git2 = "0.17"
+
 [features]
 default = []
 sgx-sw = [
