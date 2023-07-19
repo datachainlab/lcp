@@ -126,7 +126,7 @@ func (pr *Prover) updateActiveEnclaveKeyIfNeeded(ctx context.Context) (bool, err
 	log.Println("need to get a new enclave key")
 
 	// if active key is not found or expired, get available latest one and register it on the chain
-	res, err := pr.lcpServiceClient.AvailableEnclaveKeys(ctx, &enclave.QueryAvailableEnclaveKeysRequest{})
+	res, err := pr.lcpServiceClient.AvailableEnclaveKeys(ctx, &enclave.QueryAvailableEnclaveKeysRequest{Mrenclave: pr.config.GetMrenclave()})
 	if err != nil {
 		return false, err
 	} else if len(res.Keys) == 0 {

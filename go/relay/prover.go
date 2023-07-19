@@ -90,7 +90,7 @@ func (pr *Prover) CreateMsgCreateClient(clientID string, dstHeader core.Header, 
 		return nil, err
 	}
 	// NOTE: Query the LCP for available keys, but no need to register it into on-chain here
-	keysRes, err := pr.lcpServiceClient.AvailableEnclaveKeys(context.TODO(), &enclave.QueryAvailableEnclaveKeysRequest{})
+	keysRes, err := pr.lcpServiceClient.AvailableEnclaveKeys(context.TODO(), &enclave.QueryAvailableEnclaveKeysRequest{Mrenclave: pr.config.GetMrenclave()})
 	if err != nil {
 		return nil, err
 	} else if len(keysRes.Keys) == 0 {
