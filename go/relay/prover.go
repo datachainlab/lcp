@@ -119,7 +119,7 @@ func (pr *Prover) CreateMsgCreateClient(clientID string, dstHeader core.Header, 
 	clientState := &lcptypes.ClientState{
 		LatestHeight:         clienttypes.Height{},
 		Mrenclave:            pr.config.GetMrenclave(),
-		KeyExpiration:        defaultEnclaveKeyExpiration, // TODO configurable
+		KeyExpiration:        pr.config.KeyExpiration,
 		Keys:                 [][]byte{},
 		AttestationTimes:     []uint64{},
 		AllowedQuoteStatuses: pr.config.AllowedQuoteStatuses,

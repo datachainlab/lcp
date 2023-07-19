@@ -24,8 +24,6 @@ import (
 
 const lastEnclaveKeyInfoFile = "last_eki"
 
-const defaultEnclaveKeyExpiration = 60 * 60 * 24 * 7 // 7 days
-
 var ErrLastEnclaveKeyInfoNotFound = errors.New("last enclave key info not found")
 
 func (pr *Prover) loadLastEnclaveKey(ctx context.Context) (*enclave.EnclaveKeyInfo, error) {
@@ -85,7 +83,7 @@ func (pr *Prover) checkUpdateNeeded(eki *enclave.EnclaveKeyInfo) bool {
 	now := time.Now()
 	// TODO consider appropriate buffer time
 	// now < attestation_time + expiration / 2
-	if now.Before(attestationTime.Add(time.Second * defaultEnclaveKeyExpiration / 2)) {
+	if now.Before(attestationTime.Add(time.Duration(pr.config.KeyExpiration) * time.Second / 2)) {
 		return false
 	}
 	return true
