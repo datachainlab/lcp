@@ -14,3 +14,7 @@ crypto = { path = "../crypto", default-features = false }
 attestation-report = { path = "../attestation-report" }
 lcp-proto = { path = "../../proto", default-features = false }
 lcp-types = { path = "../types" }
+
+[dev-dependencies]
+chrono = { version = "0.4", default-features = false, features = ["alloc", "clock"]}
+rand = "0.8"
