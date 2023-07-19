@@ -17,7 +17,9 @@ import (
 	"github.com/datachainlab/lcp/go/relay/elc"
 	"github.com/datachainlab/lcp/go/relay/enclave"
 	"github.com/datachainlab/lcp/go/sgx/ias"
+	mapset "github.com/deckarep/golang-set/v2"
 	"github.com/hyperledger-labs/yui-relayer/core"
+	oias "github.com/oasisprotocol/oasis-core/go/common/sgx/ias"
 )
 
 const lastEnclaveKeyInfoFile = "last_eki"
@@ -125,16 +127,12 @@ func (pr *Prover) updateActiveEnclaveKeyIfNeeded(ctx context.Context) (bool, err
 
 	log.Println("need to get a new enclave key")
 
-	// if active key is not found or expired, get available latest one and register it on the chain
-	res, err := pr.lcpServiceClient.AvailableEnclaveKeys(ctx, &enclave.QueryAvailableEnclaveKeysRequest{Mrenclave: pr.config.GetMrenclave()})
+	eki, err := pr.selectNewEnclaveKey(ctx)
 	if err != nil {
 		return false, err
-	} else if len(res.Keys) == 0 {
-		return false, fmt.Errorf("no available enclave keys")
 	}
-	eki := res.Keys[0]
 	log.Printf("selected available enclave key: %#v", eki)
-	if err := pr.registerEnclaveKey(eki, true); err != nil {
+	if err := pr.registerEnclaveKey(eki); err != nil {
 		return false, err
 	}
 	log.Printf("enclave key successfully registered: %#v", eki)
@@ -143,6 +141,56 @@ func (pr *Prover) updateActiveEnclaveKeyIfNeeded(ctx context.Context) (bool, err
 	}
 	pr.activeEnclaveKey = eki
 	return true, nil
+}
+
+func (pr *Prover) selectNewEnclaveKey(ctx context.Context) (*enclave.EnclaveKeyInfo, error) {
+	res, err := pr.lcpServiceClient.AvailableEnclaveKeys(ctx, &enclave.QueryAvailableEnclaveKeysRequest{Mrenclave: pr.config.GetMrenclave()})
+	if err != nil {
+		return nil, err
+	} else if len(res.Keys) == 0 {
+		return nil, fmt.Errorf("no available enclave keys")
+	}
+
+	for _, eki := range res.Keys {
+		if err := ias.VerifyReport(eki.Report, eki.Signature, eki.SigningCert, time.Now()); err != nil {
+			return nil, err
+		}
+		avr, err := ias.ParseAndValidateAVR(eki.Report)
+		if err != nil {
+			return nil, err
+		}
+		if !pr.validateISVEnclaveQuoteStatus(avr.ISVEnclaveQuoteStatus) {
+			log.Printf("key '%x' is not allowed to use because of ISVEnclaveQuoteStatus: %v", eki.EnclaveKeyAddress, avr.ISVEnclaveQuoteStatus)
+			continue
+		}
+		if !pr.validateAdvisoryIDs(avr.AdvisoryIDs) {
+			log.Printf("key '%x' is not allowed to use because of advisory IDs: %v", eki.EnclaveKeyAddress, avr.AdvisoryIDs)
+			continue
+		}
+		return eki, nil
+	}
+	return nil, fmt.Errorf("no available enclave keys: all keys are not allowed to use")
+}
+
+func (pr *Prover) validateISVEnclaveQuoteStatus(s oias.ISVEnclaveQuoteStatus) bool {
+	if s == oias.QuoteOK {
+		return true
+	}
+	for _, status := range pr.config.AllowedQuoteStatuses {
+		if s.String() == status {
+			return true
+		}
+	}
+	return false
+}
+
+func (pr *Prover) validateAdvisoryIDs(ids []string) bool {
+	if len(ids) == 0 {
+		return true
+	}
+	allowedSet := mapset.NewSet(&pr.config.AllowedAdvisoryIds)
+	targetSet := mapset.NewSet(&ids)
+	return targetSet.Difference(allowedSet).Cardinality() == 0
 }
 
 func (pr *Prover) syncUpstreamHeader(includeState bool) ([]*elc.MsgUpdateClientResponse, error) {
@@ -200,12 +248,7 @@ func (pr *Prover) syncUpstreamHeader(includeState bool) ([]*elc.MsgUpdateClientR
 	return responses, nil
 }
 
-func (pr *Prover) registerEnclaveKey(eki *enclave.EnclaveKeyInfo, debug bool) error {
-	if debug {
-		ias.SetAllowDebugEnclaves()
-		defer ias.UnsetAllowDebugEnclaves()
-	}
-
+func (pr *Prover) registerEnclaveKey(eki *enclave.EnclaveKeyInfo) error {
 	if err := ias.VerifyReport(eki.Report, eki.Signature, eki.SigningCert, time.Now()); err != nil {
 		return err
 	}

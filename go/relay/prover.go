@@ -12,6 +12,7 @@ import (
 	lcptypes "github.com/datachainlab/lcp/go/light-clients/lcp/types"
 	"github.com/datachainlab/lcp/go/relay/elc"
 	"github.com/datachainlab/lcp/go/relay/enclave"
+	"github.com/datachainlab/lcp/go/sgx/ias"
 	"github.com/hyperledger-labs/yui-relayer/core"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -57,6 +58,9 @@ func (pr *Prover) initServiceClient() error {
 
 // Init initializes the chain
 func (pr *Prover) Init(homePath string, timeout time.Duration, codec codec.ProtoCodecMarshaler, debug bool) error {
+	if debug {
+		ias.SetAllowDebugEnclaves()
+	}
 	if err := pr.originChain.Init(homePath, timeout, codec, debug); err != nil {
 		return err
 	}
@@ -90,11 +94,9 @@ func (pr *Prover) CreateMsgCreateClient(clientID string, dstHeader core.Header, 
 		return nil, err
 	}
 	// NOTE: Query the LCP for available keys, but no need to register it into on-chain here
-	keysRes, err := pr.lcpServiceClient.AvailableEnclaveKeys(context.TODO(), &enclave.QueryAvailableEnclaveKeysRequest{Mrenclave: pr.config.GetMrenclave()})
+	eki, err := pr.selectNewEnclaveKey(context.TODO())
 	if err != nil {
 		return nil, err
-	} else if len(keysRes.Keys) == 0 {
-		return nil, fmt.Errorf("no available enclave keys")
 	}
 	msg, err := pr.originProver.CreateMsgCreateClient(clientID, dstHeader, signer)
 	if err != nil {
@@ -103,7 +105,7 @@ func (pr *Prover) CreateMsgCreateClient(clientID string, dstHeader core.Header, 
 	res, err := pr.lcpServiceClient.CreateClient(context.TODO(), &elc.MsgCreateClient{
 		ClientState:    msg.ClientState,
 		ConsensusState: msg.ConsensusState,
-		Signer:         keysRes.Keys[0].EnclaveKeyAddress,
+		Signer:         eki.EnclaveKeyAddress,
 	})
 	if err != nil {
 		return nil, err
