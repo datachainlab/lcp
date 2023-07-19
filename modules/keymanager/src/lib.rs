@@ -23,7 +23,7 @@ impl EnclaveKeyManager {
         let this = Self { conn };
         if !db_exists {
             this.setup()?;
-            info!("initialized DB: {:?}", km_db);
+            info!("initialized Key Manager: {:?}", km_db);
         }
         Ok(this)
     }
@@ -198,13 +198,13 @@ impl EnclaveKeyManager {
         Ok(key_infos)
     }
 
-    /// Prune keys after the expiration time from the attestation time.
-    pub fn prune(&self, expiration: u64) -> Result<usize, Error> {
-        let expiration = (Time::now() - Duration::from_secs(expiration))?;
+    /// Prune keys after the expiration time(secs) from the attestation time.
+    pub fn prune(&self, expiration_time: u64) -> Result<usize, Error> {
+        let expired = (Time::now() - Duration::from_secs(expiration_time))?;
         let mut stmt = self
             .conn
-            .prepare("DELETE FROM enclave_keys WHERE attested_at < ?1")?;
-        let count = stmt.execute(params![expiration.as_unix_timestamp_secs()])?;
+            .prepare("DELETE FROM enclave_keys WHERE attested_at <= ?1")?;
+        let count = stmt.execute(params![expired.as_unix_timestamp_secs()])?;
         Ok(count)
     }
 }
@@ -239,34 +239,87 @@ impl TryFrom<SealedEnclaveKeyInfo> for ProtoEnclaveKeyInfo {
 mod tests {
     use super::*;
     use attestation_report::AttestationVerificationReport;
+    use chrono::{DateTime, Duration, Utc};
+    use rand::RngCore;
 
     #[test]
-    fn test_km() {
+    fn test_keys() {
         let km = EnclaveKeyManager::new_in_memory().unwrap();
-        let sealed_ek = SealedEnclaveKey::new_from_bytes(&[0u8; 592]).unwrap();
-        let address = Address::from_hex_string("aabbccddeeff0011223344556677889900112233").unwrap();
-        let mrenclave = Mrenclave([0u8; 32]);
-        km.save(address, sealed_ek, mrenclave).unwrap();
+        let mrenclave = create_mrenclave();
+        let address_0 = {
+            let address = create_address();
+            let sealed_ek = create_sealed_sk();
+            km.save(address, sealed_ek, mrenclave).unwrap();
+            assert_eq!(km.all_keys().unwrap().len(), 1);
+            assert_eq!(km.available_keys(mrenclave).unwrap().len(), 0);
+            let avr = create_eavr(get_time(Duration::zero()));
+            km.save_avr(address, avr).unwrap();
+            assert_eq!(km.all_keys().unwrap().len(), 1);
+            assert_eq!(km.available_keys(mrenclave).unwrap().len(), 1);
+            address
+        };
+        {
+            let address = create_address();
+            let sealed_ek = create_sealed_sk();
+            km.save(address, sealed_ek, mrenclave).unwrap();
+            assert_eq!(km.all_keys().unwrap().len(), 2);
+            assert_eq!(km.available_keys(mrenclave).unwrap().len(), 1);
+            let avr = create_eavr(get_time(Duration::minutes(1)));
+            km.save_avr(address, avr).unwrap();
+            assert_eq!(km.all_keys().unwrap().len(), 2);
+            assert_eq!(km.available_keys(mrenclave).unwrap().len(), 2);
+        }
+        // there are no keys available for the mrenclave
+        assert_eq!(km.available_keys(create_mrenclave()).unwrap().len(), 0);
+        assert_eq!(km.prune(30).unwrap(), 1);
+        assert_eq!(km.all_keys().unwrap().len(), 1);
+        assert_eq!(
+            km.available_keys(mrenclave)
+                .unwrap()
+                .get(0)
+                .unwrap()
+                .address,
+            address_0
+        );
+    }
 
-        assert_eq!(km.available_keys(mrenclave).unwrap().len(), 0);
+    fn get_time(d: Duration) -> DateTime<Utc> {
+        Utc::now().checked_sub_signed(d).unwrap()
+    }
 
-        // generate avr and call save_avr
-        let avr = EndorsedAttestationVerificationReport {
+    fn create_mrenclave() -> Mrenclave {
+        Mrenclave(rand::random())
+    }
+
+    fn create_sealed_sk() -> SealedEnclaveKey {
+        let mut sealed_sk = [0u8; 592];
+        rand::thread_rng().fill_bytes(&mut sealed_sk);
+        SealedEnclaveKey::new_from_bytes(&sealed_sk).unwrap()
+    }
+
+    fn create_address() -> Address {
+        let bz: [u8; 20] = rand::random();
+        let addr = Address::try_from(bz.as_slice()).unwrap();
+        addr
+    }
+
+    fn create_eavr(timestamp: DateTime<Utc>) -> EndorsedAttestationVerificationReport {
+        EndorsedAttestationVerificationReport {
             avr: AttestationVerificationReport {
                 version: 4,
-                timestamp: "2023-07-13T02:37:33.881000".to_owned(),
+                timestamp: format!(
+                    "{}000",
+                    timestamp
+                        .format("%Y-%m-%dT%H:%M:%S%.f%z")
+                        .to_string()
+                        .strip_suffix("+0000")
+                        .unwrap()
+                ),
                 ..Default::default()
             }
             .to_canonical_json()
             .unwrap(),
             ..Default::default()
-        };
-        km.save_avr(address, avr).unwrap();
-
-        assert_eq!(km.available_keys(mrenclave).unwrap().len(), 1);
-        assert_eq!(km.prune(0).unwrap(), 1);
-        assert_eq!(km.available_keys(mrenclave).unwrap().len(), 0);
-
-        println!("{}", Time::now().to_rfc3339());
+        }
     }
 }
