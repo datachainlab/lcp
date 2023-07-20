@@ -49,7 +49,7 @@ func (cs ClientState) verifyUpdateClient(ctx sdk.Context, cdc codec.BinaryCodec,
 	}
 
 	signer := common.BytesToAddress(header.Signer)
-	if !cs.IsActiveKey(ctx.BlockTime(), signer) {
+	if !cs.IsActiveKey(ctx.BlockTime(), store, signer) {
 		return sdkerrors.Wrapf(clienttypes.ErrInvalidHeader, "signer '%v' not found", signer)
 	}
 
@@ -94,7 +94,7 @@ func (cs ClientState) verifyRegisterEnclaveKey(ctx sdk.Context, cdc codec.Binary
 	if err != nil {
 		return err
 	}
-	if cs.Contains(addr[:]) {
+	if cs.Contains(store, addr) {
 		return sdkerrors.Wrapf(clienttypes.ErrInvalidHeader, "signer '%v' already exists", addr.String())
 	}
 	return nil
@@ -139,35 +139,24 @@ func (cs ClientState) registerEnclaveKey(ctx sdk.Context, cdc codec.BinaryCodec,
 	if err != nil {
 		panic(err)
 	}
-	newClientState := cs.WithNewKey(addr, avr.GetTimestamp())
-	setClientState(clientStore, cdc, &newClientState)
+	cs.AddEnclaveKey(clientStore, addr, avr.GetTimestamp().Add(cs.getKeyExpiration()))
 	return nil
 }
 
-func (cs ClientState) Contains(signer []byte) bool {
-	for _, key := range cs.Keys {
-		if bytes.Equal(signer, key) {
-			return true
-		}
-	}
-	return false
+func (cs ClientState) Contains(clientStore sdk.KVStore, key common.Address) bool {
+	return clientStore.Has(enclaveKeyPath(key))
 }
 
-func (cs ClientState) IsActiveKey(currentTime time.Time, signer common.Address) bool {
-	expiredTime := uint64(currentTime.Add(-cs.getKeyExpiration()).Unix())
-	for i, key := range cs.Keys {
-		if bytes.Equal(signer[:], key) {
-			// TODO remove key if it's expired
-			return cs.AttestationTimes[i] > expiredTime
-		}
+func (cs ClientState) IsActiveKey(blockTime time.Time, clientStore sdk.KVStore, key common.Address) bool {
+	if !cs.Contains(clientStore, key) {
+		return false
 	}
-	return false
+	expiredAt := sdk.BigEndianToUint64(clientStore.Get(enclaveKeyPath(key)))
+	return time.Unix(int64(expiredAt), 0).After(blockTime)
 }
 
-func (cs ClientState) WithNewKey(signer common.Address, attestationTime time.Time) ClientState {
-	cs.Keys = append(cs.Keys, signer[:])
-	cs.AttestationTimes = append(cs.AttestationTimes, uint64(attestationTime.Unix()))
-	return cs
+func (cs ClientState) AddEnclaveKey(clientStore sdk.KVStore, key common.Address, expiredAt time.Time) {
+	clientStore.Set(enclaveKeyPath(key), sdk.Uint64ToBigEndian(uint64(expiredAt.Unix())))
 }
 
 func (cs ClientState) getKeyExpiration() time.Duration {
@@ -192,4 +181,8 @@ func (cs ClientState) isAllowedAdvisoryIDs(advIDs []string) bool {
 	}
 	set := mapset.NewThreadUnsafeSet(cs.AllowedAdvisoryIds...)
 	return set.Contains(advIDs...)
+}
+
+func enclaveKeyPath(key common.Address) []byte {
+	return []byte("aux/enclave_keys/" + key.Hex())
 }
