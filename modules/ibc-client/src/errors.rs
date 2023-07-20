@@ -1,10 +1,9 @@
 use crate::prelude::*;
 use core::time::Duration;
 use flex_error::*;
-use light_client::LightClientSpecificError;
 
 define_error! {
-    #[derive(Debug, Clone, PartialEq, Eq)]
+    #[derive(Debug, PartialEq, Eq)]
     Error {
         UnexpectedClientType {
             type_url: String
@@ -49,6 +48,10 @@ define_error! {
         [crypto::Error]
         |_| { "Crypto error" },
 
+        LightClientError
+        [light_client::Error]
+        |_| { "Light Client error" },
+
         IbcProto
         [TraceError<ibc_proto::protobuf::Error>]
         |_| { "IBCProto error" }
@@ -73,4 +76,8 @@ impl From<crypto::Error> for Error {
     }
 }
 
-impl LightClientSpecificError for Error {}
+impl From<light_client::Error> for Error {
+    fn from(value: light_client::Error) -> Self {
+        Self::light_client_error(value)
+    }
+}

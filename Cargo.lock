@@ -2579,6 +2579,8 @@ name = "lcp-ibc-client"
 version = "0.1.0"
 dependencies = [
  "attestation-report",
+ "base64 0.20.0-alpha.1",
+ "chrono",
  "commitments",
  "context",
  "crypto",
@@ -2593,6 +2595,7 @@ dependencies = [
  "prost",
  "prost-types",
  "serde",
+ "sgx_types",
  "store",
  "validation-context",
 ]
