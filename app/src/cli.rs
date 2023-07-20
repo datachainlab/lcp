@@ -6,14 +6,14 @@ use clap::Parser;
 #[derive(Debug, Parser)]
 #[cfg_attr(feature = "sgx-sw", clap(
     name = env!("CARGO_PKG_NAME"),
-    version = concat!(env!("CARGO_PKG_VERSION"), "-sw"),
+    version = concat!(env!("LCP_VERSION"), "-sw"),
     author = env!("CARGO_PKG_AUTHORS"),
     about = env!("CARGO_PKG_DESCRIPTION"),
     arg_required_else_help = true,
 ))]
 #[cfg_attr(not(feature = "sgx-sw"), clap(
     name = env!("CARGO_PKG_NAME"),
-    version = env!("CARGO_PKG_VERSION"),
+    version = env!("LCP_VERSION"),
     author = env!("CARGO_PKG_AUTHORS"),
     about = env!("CARGO_PKG_DESCRIPTION"),
     arg_required_else_help = true,

@@ -11,9 +11,11 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
       - uses: actions-rs/toolchain@v1
         with:
-            toolchain: nightly
+          toolchain: nightly
       - uses: datachainlab/rust-cache@allow_registry_src_caching
         with:
           workspaces: |
@@ -39,6 +41,8 @@ jobs:
       SGX_MODE: SW
     steps:
       - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
       - uses: actions-rs/toolchain@v1
         with:
             toolchain: nightly
