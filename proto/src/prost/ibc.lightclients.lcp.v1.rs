@@ -29,16 +29,11 @@ pub struct ClientState {
     pub mrenclave: ::prost::alloc::vec::Vec<u8>,
     #[prost(uint64, tag = "3")]
     pub key_expiration: u64,
-    #[prost(bytes = "vec", repeated, tag = "4")]
-    pub keys: ::prost::alloc::vec::Vec<::prost::alloc::vec::Vec<u8>>,
-    /// unix timestamp in seconds
-    #[prost(uint64, repeated, tag = "5")]
-    pub attestation_times: ::prost::alloc::vec::Vec<u64>,
     /// e.g. SW_HARDENING_NEEDED, CONFIGURATION_AND_SW_HARDENING_NEEDED (except "OK")
-    #[prost(string, repeated, tag = "6")]
+    #[prost(string, repeated, tag = "4")]
     pub allowed_quote_statuses: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
     /// e.g. INTEL-SA-XXXXX
-    #[prost(string, repeated, tag = "7")]
+    #[prost(string, repeated, tag = "5")]
     pub allowed_advisory_ids: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
 }
 #[allow(clippy::derive_partial_eq_without_eq)]
