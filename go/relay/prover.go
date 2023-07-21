@@ -181,7 +181,7 @@ func (pr *Prover) SetupHeadersForUpdate(dstChain core.ChainInfoICS02Querier, lat
 		if _, err := lcptypes.ParseUpdateClientCommitment(res.Commitment); err != nil {
 			return nil, err
 		}
-		updates = append(updates, &lcptypes.UpdateClientHeader{
+		updates = append(updates, &lcptypes.UpdateClientMessage{
 			Commitment: res.Commitment,
 			Signer:     res.Signer,
 			Signature:  res.Signature,

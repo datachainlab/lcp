@@ -5,43 +5,43 @@ import (
 	"github.com/cosmos/ibc-go/v7/modules/core/exported"
 )
 
-var _ exported.ClientMessage = (*UpdateClientHeader)(nil)
+var _ exported.ClientMessage = (*UpdateClientMessage)(nil)
 
-func (h UpdateClientHeader) ClientType() string {
+func (UpdateClientMessage) ClientType() string {
 	return ClientTypeLCP
 }
 
-func (h UpdateClientHeader) GetHeight() exported.Height {
-	c, err := h.GetCommitment()
+func (m UpdateClientMessage) GetHeight() exported.Height {
+	c, err := m.GetCommitment()
 	if err != nil {
 		panic(err)
 	}
 	return c.NewHeight
 }
 
-func (h UpdateClientHeader) ValidateBasic() error {
-	if _, err := h.GetCommitment(); err != nil {
+func (m UpdateClientMessage) ValidateBasic() error {
+	if _, err := m.GetCommitment(); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (h UpdateClientHeader) GetCommitment() (*UpdateClientCommitment, error) {
+func (h UpdateClientMessage) GetCommitment() (*UpdateClientCommitment, error) {
 	return ParseUpdateClientCommitment(h.Commitment)
 }
 
-var _ exported.ClientMessage = (*RegisterEnclaveKeyHeader)(nil)
+var _ exported.ClientMessage = (*RegisterEnclaveKeyMessage)(nil)
 
-func (h RegisterEnclaveKeyHeader) ClientType() string {
+func (RegisterEnclaveKeyMessage) ClientType() string {
 	return ClientTypeLCP
 }
 
-func (h RegisterEnclaveKeyHeader) GetHeight() exported.Height {
+func (RegisterEnclaveKeyMessage) GetHeight() exported.Height {
 	// XXX: the header doesn't have height info, so return zero
 	// this is just workaround until this function removed
 	return clienttypes.ZeroHeight()
 }
 
-func (h RegisterEnclaveKeyHeader) ValidateBasic() error {
+func (RegisterEnclaveKeyMessage) ValidateBasic() error {
 	return nil
 }
