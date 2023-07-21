@@ -186,8 +186,8 @@ func (pr *Prover) validateAdvisoryIDs(ids []string) bool {
 	if len(ids) == 0 {
 		return true
 	}
-	allowedSet := mapset.NewSet(&pr.config.AllowedAdvisoryIds)
-	targetSet := mapset.NewSet(&ids)
+	allowedSet := mapset.NewSet(pr.config.AllowedAdvisoryIds...)
+	targetSet := mapset.NewSet(ids...)
 	return targetSet.Difference(allowedSet).Cardinality() == 0
 }
 
