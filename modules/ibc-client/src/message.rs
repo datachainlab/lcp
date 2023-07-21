@@ -5,8 +5,8 @@ use commitments::{StateID, UpdateClientCommitment};
 use crypto::Address;
 use ibc_proto::protobuf::Protobuf;
 use lcp_proto::ibc::lightclients::lcp::v1::{
-    RegisterEnclaveKeyHeader as RawRegisterEnclaveKeyHeader,
-    UpdateClientHeader as RawUpdateClientHeader,
+    RegisterEnclaveKeyMessage as RawRegisterEnclaveKeyMessage,
+    UpdateClientMessage as RawUpdateClientMessage,
 };
 use lcp_types::{Any, Height, Time};
 use prost_types::Any as ProtoAny;
@@ -20,30 +20,30 @@ pub const LCP_HEADER_UPDATE_CLIENT_TYPE_URL: &str = "/ibc.lightclients.lcp.v1.He
 
 #[allow(clippy::large_enum_variant)]
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
-pub enum Header {
-    RegisterEnclaveKey(RegisterEnclaveKeyHeader),
-    UpdateClient(UpdateClientHeader),
+pub enum ClientMessage {
+    RegisterEnclaveKey(RegisterEnclaveKeyMessage),
+    UpdateClient(UpdateClientMessage),
 }
 
-impl Protobuf<ProtoAny> for Header {}
+impl Protobuf<ProtoAny> for ClientMessage {}
 
-impl TryFrom<ProtoAny> for Header {
+impl TryFrom<ProtoAny> for ClientMessage {
     type Error = Error;
 
     fn try_from(raw: ProtoAny) -> Result<Self, Self::Error> {
         match raw.type_url.as_str() {
-            LCP_HEADER_UPDATE_CLIENT_TYPE_URL => Ok(Header::UpdateClient(
-                UpdateClientHeader::decode_vec(&raw.value).map_err(Error::ibc_proto)?,
+            LCP_HEADER_UPDATE_CLIENT_TYPE_URL => Ok(ClientMessage::UpdateClient(
+                UpdateClientMessage::decode_vec(&raw.value).map_err(Error::ibc_proto)?,
             )),
             _ => Err(Error::unexpected_header_type(raw.type_url)),
         }
     }
 }
 
-impl From<Header> for ProtoAny {
-    fn from(value: Header) -> Self {
+impl From<ClientMessage> for ProtoAny {
+    fn from(value: ClientMessage) -> Self {
         match value {
-            Header::UpdateClient(h) => ProtoAny {
+            ClientMessage::UpdateClient(h) => ProtoAny {
                 type_url: LCP_HEADER_UPDATE_CLIENT_TYPE_URL.to_string(),
                 value: h.encode_vec().unwrap(),
             },
@@ -52,7 +52,7 @@ impl From<Header> for ProtoAny {
     }
 }
 
-impl TryFrom<Any> for Header {
+impl TryFrom<Any> for ClientMessage {
     type Error = Error;
 
     fn try_from(any: Any) -> Result<Self, Self::Error> {
@@ -60,21 +60,21 @@ impl TryFrom<Any> for Header {
     }
 }
 
-impl From<Header> for Any {
-    fn from(value: Header) -> Self {
+impl From<ClientMessage> for Any {
+    fn from(value: ClientMessage) -> Self {
         ProtoAny::from(value).try_into().unwrap()
     }
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
-pub struct RegisterEnclaveKeyHeader(pub EndorsedAttestationVerificationReport);
+pub struct RegisterEnclaveKeyMessage(pub EndorsedAttestationVerificationReport);
 
-impl Protobuf<RawRegisterEnclaveKeyHeader> for RegisterEnclaveKeyHeader {}
+impl Protobuf<RawRegisterEnclaveKeyMessage> for RegisterEnclaveKeyMessage {}
 
-impl TryFrom<RawRegisterEnclaveKeyHeader> for RegisterEnclaveKeyHeader {
+impl TryFrom<RawRegisterEnclaveKeyMessage> for RegisterEnclaveKeyMessage {
     type Error = Error;
-    fn try_from(value: RawRegisterEnclaveKeyHeader) -> Result<Self, Self::Error> {
-        Ok(RegisterEnclaveKeyHeader(
+    fn try_from(value: RawRegisterEnclaveKeyMessage) -> Result<Self, Self::Error> {
+        Ok(RegisterEnclaveKeyMessage(
             EndorsedAttestationVerificationReport {
                 avr: value.report,
                 signature: value.signature,
@@ -84,9 +84,9 @@ impl TryFrom<RawRegisterEnclaveKeyHeader> for RegisterEnclaveKeyHeader {
     }
 }
 
-impl From<RegisterEnclaveKeyHeader> for RawRegisterEnclaveKeyHeader {
-    fn from(value: RegisterEnclaveKeyHeader) -> Self {
-        RawRegisterEnclaveKeyHeader {
+impl From<RegisterEnclaveKeyMessage> for RawRegisterEnclaveKeyMessage {
+    fn from(value: RegisterEnclaveKeyMessage) -> Self {
+        RawRegisterEnclaveKeyMessage {
             report: (&value.0.avr).try_into().unwrap(),
             signature: value.0.signature,
             signing_cert: value.0.signing_cert,
@@ -95,19 +95,19 @@ impl From<RegisterEnclaveKeyHeader> for RawRegisterEnclaveKeyHeader {
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
-pub struct UpdateClientHeader {
+pub struct UpdateClientMessage {
     pub commitment_bytes: Vec<u8>,
     pub signer: Vec<u8>,
     pub signature: Vec<u8>,
     pub commitment: UpdateClientCommitment,
 }
 
-impl Protobuf<RawUpdateClientHeader> for UpdateClientHeader {}
+impl Protobuf<RawUpdateClientMessage> for UpdateClientMessage {}
 
-impl TryFrom<RawUpdateClientHeader> for UpdateClientHeader {
+impl TryFrom<RawUpdateClientMessage> for UpdateClientMessage {
     type Error = Error;
-    fn try_from(value: RawUpdateClientHeader) -> Result<Self, Self::Error> {
-        Ok(UpdateClientHeader {
+    fn try_from(value: RawUpdateClientMessage) -> Result<Self, Self::Error> {
+        Ok(UpdateClientMessage {
             signer: value.signer,
             signature: value.signature,
             commitment: UpdateClientCommitment::from_bytes(&value.commitment).unwrap(),
@@ -116,9 +116,9 @@ impl TryFrom<RawUpdateClientHeader> for UpdateClientHeader {
     }
 }
 
-impl From<UpdateClientHeader> for RawUpdateClientHeader {
-    fn from(value: UpdateClientHeader) -> Self {
-        RawUpdateClientHeader {
+impl From<UpdateClientMessage> for RawUpdateClientMessage {
+    fn from(value: UpdateClientMessage) -> Self {
+        RawUpdateClientMessage {
             commitment: value.commitment.to_vec(),
             signer: value.signer,
             signature: value.signature,
@@ -126,7 +126,7 @@ impl From<UpdateClientHeader> for RawUpdateClientHeader {
     }
 }
 
-impl Commitment for UpdateClientHeader {
+impl Commitment for UpdateClientMessage {
     fn signer(&self) -> Address {
         self.signer.as_slice().try_into().unwrap()
     }
@@ -166,17 +166,17 @@ pub trait Commitment {
     }
 }
 
-impl Header {
+impl ClientMessage {
     pub fn get_height(&self) -> Option<Height> {
         match self {
-            Header::UpdateClient(h) => Some(h.height()),
+            ClientMessage::UpdateClient(h) => Some(h.height()),
             _ => None,
         }
     }
 
     pub fn get_timestamp(&self) -> Option<Time> {
         match self {
-            Header::UpdateClient(h) => Some(h.timestamp()),
+            ClientMessage::UpdateClient(h) => Some(h.timestamp()),
             _ => None,
         }
     }

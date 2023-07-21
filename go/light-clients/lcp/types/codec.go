@@ -18,7 +18,7 @@ func RegisterInterfaces(registry codectypes.InterfaceRegistry) {
 	)
 	registry.RegisterImplementations(
 		(*exported.ClientMessage)(nil),
-		&UpdateClientHeader{},
-		&RegisterEnclaveKeyHeader{},
+		&UpdateClientMessage{},
+		&RegisterEnclaveKeyMessage{},
 	)
 }

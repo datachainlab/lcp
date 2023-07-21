@@ -253,7 +253,7 @@ func (pr *Prover) registerEnclaveKey(eki *enclave.EnclaveKeyInfo) error {
 	if _, err := ias.ParseAndValidateAVR(eki.Report); err != nil {
 		return err
 	}
-	header := &lcptypes.RegisterEnclaveKeyHeader{
+	message := &lcptypes.RegisterEnclaveKeyMessage{
 		Report:      eki.Report,
 		Signature:   eki.Signature,
 		SigningCert: eki.SigningCert,
@@ -262,7 +262,7 @@ func (pr *Prover) registerEnclaveKey(eki *enclave.EnclaveKeyInfo) error {
 	if err != nil {
 		return err
 	}
-	msg, err := clienttypes.NewMsgUpdateClient(pr.path.ClientID, header, signer.String())
+	msg, err := clienttypes.NewMsgUpdateClient(pr.path.ClientID, message, signer.String())
 	if err != nil {
 		return err
 	}
@@ -292,15 +292,15 @@ func activateClient(pathEnd *core.PathEnd, src, dst *core.ProvableChain) error {
 	// 2. Create a `MsgUpdateClient`s to apply to the LCP Client with the results of 1.
 	var msgs []sdk.Msg
 	for _, update := range updates {
-		updateClientHeader := &lcptypes.UpdateClientHeader{
+		message := &lcptypes.UpdateClientMessage{
 			Commitment: update.Commitment,
 			Signer:     update.Signer,
 			Signature:  update.Signature,
 		}
-		if err := updateClientHeader.ValidateBasic(); err != nil {
+		if err := message.ValidateBasic(); err != nil {
 			return err
 		}
-		msg, err := clienttypes.NewMsgUpdateClient(pathEnd.ClientID, updateClientHeader, signer.String())
+		msg, err := clienttypes.NewMsgUpdateClient(pathEnd.ClientID, message, signer.String())
 		if err != nil {
 			return err
 		}

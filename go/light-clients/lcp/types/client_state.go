@@ -62,9 +62,6 @@ func (cs ClientState) Initialize(_ sdk.Context, cdc codec.BinaryCodec, clientSto
 	if err := cs.Validate(); err != nil {
 		return nil
 	}
-	if len(cs.Keys) != 0 || len(cs.AttestationTimes) != 0 {
-		return sdkerrors.Wrapf(clienttypes.ErrInvalidClient, "both `Keys` and `AttestationTimes` length must be zero")
-	}
 	if !cs.LatestHeight.IsZero() {
 		return sdkerrors.Wrapf(clienttypes.ErrInvalidClient, "`LatestHeight` must be zero height")
 	}
@@ -186,7 +183,7 @@ func (cs ClientState) VerifyMembership(
 		return sdkerrors.Wrapf(ErrInvalidStateCommitmentProof, "failed to verify state commitment proof: %v", err)
 	}
 	signer := common.BytesToAddress(commitmentProof.Signer)
-	if !cs.IsActiveKey(ctx.BlockTime(), signer) {
+	if !cs.IsActiveKey(ctx.BlockTime(), clientStore, signer) {
 		return sdkerrors.Wrapf(ErrExpiredEnclaveKey, "key '%v' has expired", signer.Hex())
 	}
 	return nil

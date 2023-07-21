@@ -120,8 +120,6 @@ func (pr *Prover) CreateMsgCreateClient(clientID string, dstHeader core.Header, 
 		LatestHeight:         clienttypes.Height{},
 		Mrenclave:            pr.config.GetMrenclave(),
 		KeyExpiration:        pr.config.KeyExpiration,
-		Keys:                 [][]byte{},
-		AttestationTimes:     []uint64{},
 		AllowedQuoteStatuses: pr.config.AllowedQuoteStatuses,
 		AllowedAdvisoryIds:   pr.config.AllowedAdvisoryIds,
 	}
@@ -183,7 +181,7 @@ func (pr *Prover) SetupHeadersForUpdate(dstChain core.ChainInfoICS02Querier, lat
 		if _, err := lcptypes.ParseUpdateClientCommitment(res.Commitment); err != nil {
 			return nil, err
 		}
-		updates = append(updates, &lcptypes.UpdateClientHeader{
+		updates = append(updates, &lcptypes.UpdateClientMessage{
 			Commitment: res.Commitment,
 			Signer:     res.Signer,
 			Signature:  res.Signature,

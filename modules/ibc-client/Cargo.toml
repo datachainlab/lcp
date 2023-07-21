@@ -4,8 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-ibc = { version = "0.29.0", default-features = false, features = ["serde"] }
-ibc-proto = { version = "0.26.0", default-features = false, features = ["parity-scale-codec", "borsh"] }
+ibc-proto = { version = "0.26.0", default-features = false }
 prost = { version = "0.11", default-features = false }
 prost-types = { version = "0.11", default-features = false }
 serde = { version = "1.0", default-features = false, features = ["alloc", "derive"] }
@@ -20,7 +19,11 @@ lcp-proto = { path = "../../proto", default-features = false }
 crypto = { path = "../crypto", default-features = false }
 
 [dev-dependencies]
+sgx_types = { rev = "v1.1.6", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", features = ["extra_traits"] }
 ibc = { version = "0.29.0", default-features = false, features = ["serde", "std"] }
+chrono = { version = "0.4", default-features = false, features = ["alloc", "clock"]}
+base64 = { git = "https://github.com/marshallpierce/rust-base64", default-features = false, features = ["alloc"] }
+
 commitments = { path = "../commitments", default-features = false, features = ["prover"] }
 mock-lc = { path = "../mock-lc" }
 store = { path = "../store" }
