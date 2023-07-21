@@ -1,5 +1,5 @@
 use crate::errors::Error;
-use crate::header::Commitment;
+use crate::message::Commitment;
 use crate::prelude::*;
 use core::time::Duration;
 use ibc_proto::protobuf::Protobuf;

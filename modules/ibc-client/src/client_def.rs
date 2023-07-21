@@ -1,7 +1,7 @@
 use crate::client_state::ClientState;
 use crate::consensus_state::ConsensusState;
 use crate::errors::Error;
-use crate::header::{Commitment, Header, RegisterEnclaveKeyHeader, UpdateClientHeader};
+use crate::message::{ClientMessage, Commitment, RegisterEnclaveKeyMessage, UpdateClientMessage};
 use attestation_report::EndorsedAttestationVerificationReport;
 use commitments::{CommitmentPrefix, StateCommitmentProof};
 use crypto::{verify_signature_address, Address, Keccak256};
@@ -49,14 +49,14 @@ impl LCPClient {
         &self,
         ctx: &mut dyn HostClientKeeper,
         client_id: ClientId,
-        header: Header,
+        message: ClientMessage,
     ) -> Result<(), Error> {
         let client_state = ctx.client_state(&client_id)?.try_into()?;
-        match header {
-            Header::UpdateClient(header) => {
+        match message {
+            ClientMessage::UpdateClient(header) => {
                 self.update_client(ctx, client_id, client_state, header)
             }
-            Header::RegisterEnclaveKey(header) => {
+            ClientMessage::RegisterEnclaveKey(header) => {
                 self.register_enclave_key(ctx, client_id, client_state, header)
             }
         }
@@ -67,43 +67,44 @@ impl LCPClient {
         ctx: &mut dyn HostClientKeeper,
         client_id: ClientId,
         client_state: ClientState,
-        header: UpdateClientHeader,
+        message: UpdateClientMessage,
     ) -> Result<(), Error> {
         // TODO return an error instead of assertion
 
         if client_state.latest_height.is_zero() {
             // if the client state's latest height is zero, the commitment's new_state must be non-nil
-            assert!(header.commitment.new_state.is_some());
+            assert!(message.commitment.new_state.is_some());
         } else {
             // if the client state's latest height is non-zero, the commitment's prev_* must be non-nil
-            assert!(header.prev_height().is_some() && header.prev_state_id().is_some());
+            assert!(message.prev_height().is_some() && message.prev_state_id().is_some());
             // check if the previous consensus state exists in the store
             let prev_consensus_state: ConsensusState = ctx
-                .consensus_state(&client_id, &header.prev_height().unwrap())?
+                .consensus_state(&client_id, &message.prev_height().unwrap())?
                 .try_into()?;
-            assert!(prev_consensus_state.state_id == header.prev_state_id().unwrap());
+            assert!(prev_consensus_state.state_id == message.prev_state_id().unwrap());
         }
 
         // check if the specified signer exists in the client state
-        assert!(self.contains_enclave_key(ctx, &client_id, header.signer()));
+        assert!(self.contains_enclave_key(ctx, &client_id, message.signer()));
 
         // check if the `header.signer` matches the commitment prover
-        let signer = verify_signature_address(&header.commitment_bytes, &header.signature).unwrap();
-        assert!(header.signer() == signer);
+        let signer =
+            verify_signature_address(&message.commitment_bytes, &message.signature).unwrap();
+        assert!(message.signer() == signer);
 
         // check if proxy's validation context matches our's context
         let vctx = ValidationContext::new(ctx.host_timestamp());
-        assert!(validation_predicate(&vctx, header.validation_params()).unwrap());
+        assert!(validation_predicate(&vctx, message.validation_params()).unwrap());
 
         // create a new state
-        let new_client_state = client_state.with_header(&header);
+        let new_client_state = client_state.with_header(&message);
         let new_consensus_state = ConsensusState {
-            state_id: header.state_id(),
-            timestamp: header.timestamp(),
+            state_id: message.state_id(),
+            timestamp: message.timestamp(),
         };
 
         ctx.store_any_client_state(client_id.clone(), new_client_state.into())?;
-        ctx.store_any_consensus_state(client_id, header.height(), new_consensus_state.into())?;
+        ctx.store_any_consensus_state(client_id, message.height(), new_consensus_state.into())?;
         Ok(())
     }
 
@@ -112,12 +113,12 @@ impl LCPClient {
         ctx: &mut dyn HostClientKeeper,
         client_id: ClientId,
         client_state: ClientState,
-        header: RegisterEnclaveKeyHeader,
+        message: RegisterEnclaveKeyMessage,
     ) -> Result<(), Error> {
         // TODO return an error instead of assertion
 
         let vctx = ValidationContext::new(ctx.host_timestamp());
-        let eavr = header.0;
+        let eavr = message.0;
         let (key, attestation_time) = verify_report(&vctx, &client_state, &eavr)?;
 
         self.add_enclave_key(
@@ -328,9 +329,9 @@ mod tests {
         {
             let mut ctx = Context::new(registry.clone(), ibc_store.clone(), &ek);
             ctx.set_timestamp(Time::now());
-            let header = Header::RegisterEnclaveKey(RegisterEnclaveKeyHeader(generate_dummy_eavr(
-                &ek.get_pubkey(),
-            )));
+            let header = ClientMessage::RegisterEnclaveKey(RegisterEnclaveKeyMessage(
+                generate_dummy_eavr(&ek.get_pubkey()),
+            ));
             let res = lcp_client.update_state(&mut ctx, lcp_client_id.clone(), header);
             assert!(res.is_ok(), "res={:?}", res);
         }
@@ -402,7 +403,7 @@ mod tests {
 
         // 5. on the downstream side, updates LCP Light Client's state with the commitment from the LCP
         {
-            let header = Header::UpdateClient(UpdateClientHeader {
+            let header = ClientMessage::UpdateClient(UpdateClientMessage {
                 commitment: proof1.commitment(),
                 commitment_bytes: proof1.commitment_bytes,
                 signer: proof1.signer,
