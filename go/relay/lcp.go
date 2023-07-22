@@ -77,18 +77,27 @@ func (pr *Prover) lastEnclaveKeyInfoFilePath() (string, error) {
 	return filepath.Join(path, lastEnclaveKeyInfoFile), nil
 }
 
-func (pr *Prover) checkUpdateNeeded(eki *enclave.EnclaveKeyInfo) bool {
+// checkUpdateNeeded checks if the enclave key needs to be updated
+// if the enclave key is missing or expired, it returns true
+func (pr *Prover) checkUpdateNeeded(ctx context.Context, timestamp time.Time, eki *enclave.EnclaveKeyInfo) bool {
 	attestationTime := time.Unix(int64(eki.AttestationTime), 0)
 
-	now := time.Now()
 	// TODO consider appropriate buffer time
-	// now < attestation_time + expiration / 2
-	if now.Before(attestationTime.Add(time.Duration(pr.config.KeyExpiration) * time.Second / 2)) {
-		return false
+	// For now, a half of expiration is used as a buffer time
+	if timestamp.After(attestationTime.Add(time.Duration(pr.config.KeyExpiration) * time.Second / 2)) {
+		return true
 	}
-	return true
+	// check if the enclave key is still available in the LCP service
+	_, err := pr.lcpServiceClient.EnclaveKey(ctx, &enclave.QueryEnclaveKeyRequest{EnclaveKeyAddress: eki.EnclaveKeyAddress})
+	if err != nil {
+		log.Printf("checkUpdateNeeded: enclave key '%x' not found: error=%v", eki.EnclaveKeyAddress, err)
+		return true
+	}
+	return false
 }
 
+// ensureAvailableEnclaveKeyExists ensures that the active enclave key exists
+// otherwise it tries to get a new enclave key
 func (pr *Prover) ensureAvailableEnclaveKeyExists(ctx context.Context) error {
 	updated, err := pr.updateActiveEnclaveKeyIfNeeded(ctx)
 	if err != nil {
@@ -104,11 +113,15 @@ func (pr *Prover) updateActiveEnclaveKeyIfNeeded(ctx context.Context) (bool, err
 		return false, err
 	}
 
+	now := time.Now()
+
+	// 1. check if the active enclave key is missing or expired
+
 	if pr.activeEnclaveKey == nil {
 		// load last key if exists
 		lastEnclaveKey, err := pr.loadLastEnclaveKey(ctx)
 		if err == nil {
-			if !pr.checkUpdateNeeded(lastEnclaveKey) {
+			if !pr.checkUpdateNeeded(ctx, now, lastEnclaveKey) {
 				pr.activeEnclaveKey = lastEnclaveKey
 				return false, nil
 			} else {
@@ -119,9 +132,11 @@ func (pr *Prover) updateActiveEnclaveKeyIfNeeded(ctx context.Context) (bool, err
 		} else {
 			return false, err
 		}
-	} else if !pr.checkUpdateNeeded(pr.activeEnclaveKey) {
+	} else if !pr.checkUpdateNeeded(ctx, now, pr.activeEnclaveKey) {
 		return false, nil
 	}
+
+	// 2. query the active enclave key from the LCP service
 
 	log.Println("need to get a new enclave key")
 
@@ -133,6 +148,7 @@ func (pr *Prover) updateActiveEnclaveKeyIfNeeded(ctx context.Context) (bool, err
 	if err := pr.registerEnclaveKey(eki); err != nil {
 		return false, err
 	}
+	// TODO should we wait for the block that contains a tx to be finalized?
 	log.Printf("enclave key successfully registered: %#v", eki)
 	if err := pr.saveLastEnclaveKey(ctx, eki); err != nil {
 		return false, err
@@ -141,6 +157,7 @@ func (pr *Prover) updateActiveEnclaveKeyIfNeeded(ctx context.Context) (bool, err
 	return true, nil
 }
 
+// selectNewEnclaveKey selects a new enclave key from the LCP service
 func (pr *Prover) selectNewEnclaveKey(ctx context.Context) (*enclave.EnclaveKeyInfo, error) {
 	res, err := pr.lcpServiceClient.AvailableEnclaveKeys(ctx, &enclave.QueryAvailableEnclaveKeysRequest{Mrenclave: pr.config.GetMrenclave()})
 	if err != nil {
