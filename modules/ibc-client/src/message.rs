@@ -13,10 +13,9 @@ use prost_types::Any as ProtoAny;
 use serde::{Deserialize, Serialize};
 use validation_context::ValidationParams;
 
-pub const LCP_HEADER_ACTIVATE_TYPE_URL: &str = "/ibc.lightclients.lcp.v1.Header.Activate";
-pub const LCP_HEADER_REGISTER_ENCLAVE_KEY_TYPE_URL: &str =
-    "/ibc.lightclients.lcp.v1.Header.RegisterEnclaveKey";
-pub const LCP_HEADER_UPDATE_CLIENT_TYPE_URL: &str = "/ibc.lightclients.lcp.v1.Header.UpdateClient";
+pub const LCP_REGISTER_ENCLAVE_KEY_MESSAGE_TYPE_URL: &str =
+    "/ibc.lightclients.lcp.v1.RegisterEnclaveKeyMessage";
+pub const LCP_UPDATE_CLIENT_MESSAGE_TYPE_URL: &str = "/ibc.lightclients.lcp.v1.UpdateClientMessage";
 
 #[allow(clippy::large_enum_variant)]
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
@@ -32,7 +31,10 @@ impl TryFrom<ProtoAny> for ClientMessage {
 
     fn try_from(raw: ProtoAny) -> Result<Self, Self::Error> {
         match raw.type_url.as_str() {
-            LCP_HEADER_UPDATE_CLIENT_TYPE_URL => Ok(ClientMessage::UpdateClient(
+            LCP_REGISTER_ENCLAVE_KEY_MESSAGE_TYPE_URL => Ok(ClientMessage::RegisterEnclaveKey(
+                RegisterEnclaveKeyMessage::decode_vec(&raw.value).map_err(Error::ibc_proto)?,
+            )),
+            LCP_UPDATE_CLIENT_MESSAGE_TYPE_URL => Ok(ClientMessage::UpdateClient(
                 UpdateClientMessage::decode_vec(&raw.value).map_err(Error::ibc_proto)?,
             )),
             _ => Err(Error::unexpected_header_type(raw.type_url)),
@@ -43,11 +45,14 @@ impl TryFrom<ProtoAny> for ClientMessage {
 impl From<ClientMessage> for ProtoAny {
     fn from(value: ClientMessage) -> Self {
         match value {
-            ClientMessage::UpdateClient(h) => ProtoAny {
-                type_url: LCP_HEADER_UPDATE_CLIENT_TYPE_URL.to_string(),
+            ClientMessage::RegisterEnclaveKey(h) => ProtoAny {
+                type_url: LCP_REGISTER_ENCLAVE_KEY_MESSAGE_TYPE_URL.to_string(),
                 value: h.encode_vec().unwrap(),
             },
-            _ => unimplemented!(),
+            ClientMessage::UpdateClient(h) => ProtoAny {
+                type_url: LCP_UPDATE_CLIENT_MESSAGE_TYPE_URL.to_string(),
+                value: h.encode_vec().unwrap(),
+            },
         }
     }
 }
