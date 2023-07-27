@@ -3,7 +3,6 @@ use enclave_api::EnclaveProtoAPI;
 use lcp_proto::lcp::service::{
     elc::v1::{msg_server::MsgServer as ELCMsgServer, query_server::QueryServer as ELCQueryServer},
     enclave::v1::query_server::QueryServer as EnclaveQueryServer,
-    ibc::v1::msg_server::MsgServer as IBCMsgServer,
 };
 use std::{marker::PhantomData, net::SocketAddr, path::PathBuf, sync::Arc};
 use store::transaction::CommitStore;
@@ -68,8 +67,7 @@ where
 {
     let elc_msg_srv = ELCMsgServer::new(srv.clone());
     let elc_query_srv = ELCQueryServer::new(srv.clone());
-    let enclave_srv = EnclaveQueryServer::new(srv.clone());
-    let ibc_srv = IBCMsgServer::new(srv);
+    let enclave_srv = EnclaveQueryServer::new(srv);
     let reflection = tonic_reflection::server::Builder::configure()
         .register_encoded_file_descriptor_set(lcp_proto::FILE_DESCRIPTOR_SET)
         .build()
@@ -79,7 +77,6 @@ where
             .add_service(elc_msg_srv)
             .add_service(elc_query_srv)
             .add_service(enclave_srv)
-            .add_service(ibc_srv)
             .add_service(reflection)
             .serve(addr)
             .await
