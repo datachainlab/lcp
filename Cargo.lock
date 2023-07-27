@@ -2604,7 +2604,6 @@ dependencies = [
 name = "lcp-proto"
 version = "0.1.0"
 dependencies = [
- "ibc",
  "ibc-proto 0.26.0",
  "prost",
  "schemars",
