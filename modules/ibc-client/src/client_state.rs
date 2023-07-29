@@ -1,5 +1,5 @@
 use crate::errors::Error;
-use crate::message::Commitment;
+use crate::message::CommitmentReader;
 use crate::prelude::*;
 use core::time::Duration;
 use ibc_proto::protobuf::Protobuf;
@@ -20,7 +20,7 @@ pub struct ClientState {
 }
 
 impl ClientState {
-    pub fn with_header(mut self, header: &dyn Commitment) -> Self {
+    pub fn with_header<C: CommitmentReader>(mut self, header: &C) -> Self {
         if self.latest_height < header.height() {
             self.latest_height = header.height();
         }

@@ -69,6 +69,7 @@ impl LightClient for TendermintLightClient {
         let height = client_state.latest_height().into();
         let timestamp: Time = consensus_state.timestamp.into();
         let state_id = gen_state_id(canonical_client_state, consensus_state)?;
+
         Ok(CreateClientResult {
             height,
             commitment: UpdateClientCommitment {
@@ -79,7 +80,8 @@ impl LightClient for TendermintLightClient {
                 new_height: height,
                 timestamp,
                 validation_params: ValidationParams::Empty,
-            },
+            }
+            .into(),
             prove: false,
         })
     }
@@ -203,7 +205,8 @@ impl LightClient for TendermintLightClient {
                     untrusted_header_timestamp: header_timestamp,
                     trusted_consensus_state_timestamp,
                 }),
-            },
+            }
+            .into(),
             prove: true,
         })
     }
@@ -247,7 +250,8 @@ impl LightClient for TendermintLightClient {
                 Some(value.keccak256()),
                 proof_height,
                 gen_state_id(canonicalize_state(&client_state), consensus_state)?,
-            ),
+            )
+            .into(),
         })
     }
 
@@ -288,7 +292,8 @@ impl LightClient for TendermintLightClient {
                 None,
                 proof_height,
                 gen_state_id(canonicalize_state(&client_state), consensus_state)?,
-            ),
+            )
+            .into(),
         })
     }
 }

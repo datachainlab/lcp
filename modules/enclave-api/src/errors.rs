@@ -51,7 +51,11 @@ define_error! {
 
         AttestationReport
         [attestation_report::Error]
-        |_| { "AttestationReport error" }
+        |_| { "AttestationReport error" },
+
+        Commitments
+        [commitments::Error]
+        |_| { "Commitments error" },
     }
 }
 
@@ -82,5 +86,11 @@ impl From<keymanager::Error> for Error {
 impl From<attestation_report::Error> for Error {
     fn from(err: attestation_report::Error) -> Self {
         Error::attestation_report(err)
+    }
+}
+
+impl From<commitments::Error> for Error {
+    fn from(err: commitments::Error) -> Self {
+        Error::commitments(err)
     }
 }

@@ -1,7 +1,7 @@
 use crate::context::HostClientReader;
 use crate::errors::Error;
 use crate::prelude::*;
-use commitments::{CommitmentPrefix, StateCommitment, UpdateClientCommitment};
+use commitments::{Commitment, CommitmentPrefix};
 use lcp_types::{Any, ClientId, Height};
 
 #[allow(clippy::too_many_arguments)]
@@ -61,7 +61,7 @@ pub struct CreateClientResult {
     /// height corresponding to the updated state
     pub height: Height,
     /// commitment represents a state transition of the client
-    pub commitment: UpdateClientCommitment,
+    pub commitment: Commitment,
     /// if true, sign the commitment with Enclave Key
     pub prove: bool,
 }
@@ -75,7 +75,7 @@ pub struct UpdateClientResult {
     /// height corresponding to the updated state
     pub height: Height,
     /// commitment represents a state transition of the client
-    pub commitment: UpdateClientCommitment,
+    pub commitment: Commitment,
     /// if true, sign the commitment with Enclave Key
     pub prove: bool,
 }
@@ -83,5 +83,5 @@ pub struct UpdateClientResult {
 #[derive(Clone, Debug, PartialEq)]
 pub struct StateVerificationResult {
     /// state commitment represents a result of the state verification
-    pub state_commitment: StateCommitment,
+    pub state_commitment: Commitment,
 }

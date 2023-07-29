@@ -102,7 +102,7 @@ impl From<RegisterEnclaveKeyMessage> for RawRegisterEnclaveKeyMessage {
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub struct UpdateClientMessage {
     pub commitment_bytes: Vec<u8>,
-    pub signer: Vec<u8>,
+    pub signer: Address,
     pub signature: Vec<u8>,
     pub commitment: UpdateClientCommitment,
 }
@@ -113,7 +113,7 @@ impl TryFrom<RawUpdateClientMessage> for UpdateClientMessage {
     type Error = Error;
     fn try_from(value: RawUpdateClientMessage) -> Result<Self, Self::Error> {
         Ok(UpdateClientMessage {
-            signer: value.signer,
+            signer: Address::try_from(value.signer.as_slice())?,
             signature: value.signature,
             commitment: UpdateClientCommitment::from_bytes(&value.commitment).unwrap(),
             commitment_bytes: value.commitment,
@@ -125,15 +125,15 @@ impl From<UpdateClientMessage> for RawUpdateClientMessage {
     fn from(value: UpdateClientMessage) -> Self {
         RawUpdateClientMessage {
             commitment: value.commitment.to_vec(),
-            signer: value.signer,
+            signer: value.signer.into(),
             signature: value.signature,
         }
     }
 }
 
-impl Commitment for UpdateClientMessage {
+impl CommitmentReader for UpdateClientMessage {
     fn signer(&self) -> Address {
-        self.signer.as_slice().try_into().unwrap()
+        self.signer
     }
 
     fn commitment(&self) -> &UpdateClientCommitment {
@@ -141,7 +141,7 @@ impl Commitment for UpdateClientMessage {
     }
 }
 
-pub trait Commitment {
+pub trait CommitmentReader {
     fn signer(&self) -> Address;
 
     fn commitment(&self) -> &UpdateClientCommitment;

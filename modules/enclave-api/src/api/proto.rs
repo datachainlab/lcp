@@ -11,26 +11,22 @@ use store::transaction::CommitStore;
 pub trait EnclaveProtoAPI<S: CommitStore>: EnclaveCommandAPI<S> {
     fn proto_create_client(&self, msg: MsgCreateClient) -> Result<MsgCreateClientResponse> {
         let res = self.init_client(msg.try_into()?)?;
-        if log_enabled!(log::Level::Info) {
-            info!(
-                "create_client: client_id={} commitment={{{}}}",
-                res.client_id,
-                res.proof.commitment()
-            );
-        }
+        info!(
+            "create_client: client_id={} commitment={{{}}}",
+            res.client_id,
+            res.proof.commitment()?
+        );
         Ok(res.into())
     }
 
     fn proto_update_client(&self, msg: MsgUpdateClient) -> Result<MsgUpdateClientResponse> {
         let client_id = msg.client_id.clone();
         let res = self.update_client(msg.try_into()?)?;
-        if log_enabled!(log::Level::Info) {
-            info!(
-                "update_client: client_id={} commitment={{{}}}",
-                client_id,
-                res.0.commitment()
-            );
-        }
+        info!(
+            "update_client: client_id={} commitment={{{}}}",
+            client_id,
+            res.0.commitment()?
+        );
         Ok(res.into())
     }
 
@@ -40,13 +36,11 @@ pub trait EnclaveProtoAPI<S: CommitStore>: EnclaveCommandAPI<S> {
     ) -> Result<MsgVerifyMembershipResponse> {
         let client_id = msg.client_id.clone();
         let res = self.verify_membership(msg.try_into()?)?;
-        if log_enabled!(log::Level::Info) {
-            info!(
-                "verify_membership: client_id={} commitment={{{}}}",
-                client_id,
-                res.0.commitment()
-            );
-        }
+        info!(
+            "verify_membership: client_id={} commitment={{{}}}",
+            client_id,
+            res.0.commitment()?
+        );
         Ok(res.into())
     }
 
@@ -56,13 +50,11 @@ pub trait EnclaveProtoAPI<S: CommitStore>: EnclaveCommandAPI<S> {
     ) -> Result<MsgVerifyNonMembershipResponse> {
         let client_id = msg.client_id.clone();
         let res = self.verify_non_membership(msg.try_into()?)?;
-        if log_enabled!(log::Level::Info) {
-            info!(
-                "verify_non_membership: client_id={} commitment={{{}}}",
-                client_id,
-                res.0.commitment()
-            );
-        }
+        info!(
+            "verify_non_membership: client_id={} commitment={{{}}}",
+            client_id,
+            res.0.commitment()?
+        );
         Ok(res.into())
     }
 

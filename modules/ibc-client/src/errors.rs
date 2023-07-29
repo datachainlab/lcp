@@ -52,6 +52,10 @@ define_error! {
         [light_client::Error]
         |_| { "Light Client error" },
 
+        CommitmentProof
+        [commitments::Error]
+        |_| { "Commitment proof error" },
+
         IbcProto
         [TraceError<ibc_proto::protobuf::Error>]
         |_| { "IBCProto error" }
@@ -79,5 +83,11 @@ impl From<crypto::Error> for Error {
 impl From<light_client::Error> for Error {
     fn from(value: light_client::Error) -> Self {
         Self::light_client_error(value)
+    }
+}
+
+impl From<commitments::Error> for Error {
+    fn from(value: commitments::Error) -> Self {
+        Self::commitment_proof(value)
     }
 }
