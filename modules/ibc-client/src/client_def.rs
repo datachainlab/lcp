@@ -268,7 +268,7 @@ mod tests {
     use alloc::rc::Rc;
     use alloc::sync::Arc;
     use attestation_report::AttestationVerificationReport;
-    use commitments::prover::prove_commitment;
+    use commitments::prove_commitment;
     use context::Context;
     use core::cell::RefCell;
     use core::str::FromStr;

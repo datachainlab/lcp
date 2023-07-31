@@ -59,7 +59,11 @@ define_error! {
 
         LcpTime
         [lcp_types::TimeError]
-        |_| {"Time"}
+        |_| {"Time"},
+
+        Crypto
+        [crypto::Error]
+        |_| {"crypto error"},
     }
 }
 
@@ -87,12 +91,8 @@ impl From<ethabi::Error> for Error {
     }
 }
 
-#[cfg(feature = "prover")]
-define_error! {
-    #[derive(Debug, Clone, PartialEq, Eq)]
-    ProverError {
-        Crypto
-        [crypto::Error]
-        |_| {"crypto error"},
+impl From<crypto::Error> for Error {
+    fn from(value: crypto::Error) -> Self {
+        Error::crypto(value)
     }
 }

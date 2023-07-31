@@ -22,7 +22,4 @@ rand = { version = "0.8" }
 lcp-types = { path = "../types", default-features = false, features = ["std"] }
 
 [features]
-default = [
-    "prover"
-]
-prover = []
+default = []

@@ -24,7 +24,7 @@ ibc = { version = "0.29.0", default-features = false, features = ["serde", "std"
 chrono = { version = "0.4", default-features = false, features = ["alloc", "clock"]}
 base64 = { git = "https://github.com/marshallpierce/rust-base64", default-features = false, features = ["alloc"] }
 
-commitments = { path = "../commitments", default-features = false, features = ["prover"] }
+commitments = { path = "../commitments", default-features = false }
 mock-lc = { path = "../mock-lc" }
 store = { path = "../store" }
 context = { path = "../context" }

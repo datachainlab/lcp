@@ -190,8 +190,8 @@ impl Display for UpdateClientCommitment {
 }
 
 pub(crate) struct EthABIUpdateClientCommitment {
-    prev_state_id: ethabi::FixedBytes, // u256
-    new_state_id: ethabi::FixedBytes,  // u256
+    prev_state_id: ethabi::FixedBytes, // bytes32
+    new_state_id: ethabi::FixedBytes,  // bytes32
     new_state: ethabi::Bytes,          // bytes
     prev_height: EthABIHeight,         // (u64, u64)
     new_height: EthABIHeight,          // (u64, u64)

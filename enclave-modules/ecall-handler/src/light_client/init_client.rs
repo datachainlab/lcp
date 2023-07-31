@@ -1,7 +1,6 @@
 use crate::light_client::Error;
 use crate::prelude::*;
-use commitments::prover::prove_update_client_commitment;
-use commitments::UpdateClientCommitmentProof;
+use commitments::{prove_commitment, CommitmentProof};
 use context::Context;
 use core::str::FromStr;
 use crypto::Signer;
@@ -31,9 +30,9 @@ pub fn init_client<R: LightClientResolver, S: KVStore, K: Signer>(
     ctx.increase_client_counter();
 
     let proof = if res.prove {
-        prove_update_client_commitment(ek, input.signer, res.commitment)?
+        prove_commitment(ek, input.signer, res.commitment)?
     } else {
-        UpdateClientCommitmentProof::new_with_no_signature(res.commitment.to_vec())
+        CommitmentProof::new_with_no_signature(res.commitment.to_commitment_bytes())
     };
     Ok(LightClientResult::InitClient(InitClientResult {
         client_id,
