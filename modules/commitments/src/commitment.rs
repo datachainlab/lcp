@@ -324,7 +324,7 @@ impl From<UpdateClientCommitment> for EthABIUpdateClientCommitment {
             prev_height: value.prev_height.into(),
             new_height: value.new_height.into(),
             timestamp: Uint::from(value.timestamp.as_unix_timestamp_nanos()),
-            validation_params: Bytes::from(value.validation_params.to_vec()),
+            validation_params: value.validation_params.to_vec(),
         }
     }
 }
@@ -333,8 +333,7 @@ impl TryFrom<EthABIUpdateClientCommitment> for UpdateClientCommitment {
     type Error = Error;
     fn try_from(value: EthABIUpdateClientCommitment) -> Result<Self, Self::Error> {
         Ok(Self {
-            prev_state_id: bytes_to_bytes32(value.prev_state_id)?
-                .map(|b| StateID::from_bytes_array(b)),
+            prev_state_id: bytes_to_bytes32(value.prev_state_id)?.map(StateID::from_bytes_array),
             new_state_id: value.new_state_id.as_slice().try_into()?,
             new_state: if value.new_state.is_empty() {
                 None
@@ -442,11 +441,11 @@ impl From<StateCommitment> for EthABIStateCommitment {
     fn from(value: StateCommitment) -> Self {
         use ethabi::*;
         Self {
-            prefix: Bytes::from(value.prefix),
+            prefix: value.prefix,
             path: Bytes::from(value.path),
             value: FixedBytes::from(value.value.unwrap_or_default()),
             height: EthABIHeight::from(value.height),
-            state_id: FixedBytes::from(value.state_id.to_vec()),
+            state_id: value.state_id.to_vec(),
         }
     }
 }

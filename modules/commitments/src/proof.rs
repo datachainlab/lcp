@@ -97,9 +97,9 @@ impl From<CommitmentProof> for EthABICommitmentProof {
     fn from(value: CommitmentProof) -> Self {
         use ethabi::*;
         Self {
-            commitment_bytes: Bytes::from(value.commitment_bytes),
+            commitment_bytes: value.commitment_bytes,
             signer: Address::from(value.signer.0),
-            signature: Bytes::from(value.signature),
+            signature: value.signature,
         }
     }
 }
