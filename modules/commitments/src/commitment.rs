@@ -527,12 +527,11 @@ mod tests {
     use super::*;
     use crate::CommitmentProof;
     use crypto::Address;
-    use ibc::{
-        clients::ics07_tendermint::client_type,
-        core::ics24_host::{identifier::ClientId, path::Path},
-    };
+    use lcp_types::ClientId;
     use prost_types::Any as ProtoAny;
     use rand::{distributions::Uniform, thread_rng, Rng};
+
+    const TENDERMINT_CLIENT_TYPE: &str = "07-tendermint";
 
     #[test]
     fn test_update_client_commitment_converter() {
@@ -594,10 +593,10 @@ mod tests {
     fn gen_rand_state_commitment() -> StateCommitment {
         StateCommitment {
             prefix: gen_rand_ascii_str().as_bytes().to_vec(),
-            path: Path::ClientType(ibc::core::ics24_host::path::ClientTypePath(
-                ClientId::new(client_type(), thread_rng().gen()).unwrap(),
-            ))
-            .to_string(),
+            path: format!(
+                "clients/{}/clientType",
+                ClientId::new(TENDERMINT_CLIENT_TYPE, thread_rng().gen()).unwrap()
+            ),
             value: rand_or_none(|| gen_rand_vec(32).as_slice().try_into().unwrap()),
             height: gen_rand_height(),
             state_id: gen_rand_state_id(),
