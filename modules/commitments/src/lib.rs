@@ -19,9 +19,11 @@ mod prelude {
     pub use core::iter::FromIterator;
 }
 
-pub use commitment::{Commitment, CommitmentPrefix, StateCommitment, UpdateClientCommitment};
+pub use commitment::{
+    Commitment, CommitmentPrefix, EthABIEncoder, StateCommitment, UpdateClientCommitment,
+};
 pub use errors::Error;
-pub use proof::{CommitmentProof, EthABICommitmentProof};
+pub use proof::CommitmentProof;
 pub use prover::prove_commitment;
 pub use state::{gen_state_id_from_any, gen_state_id_from_bytes, StateID, STATE_ID_SIZE};
 

@@ -1,4 +1,4 @@
-use crate::{prelude::*, Commitment, Error};
+use crate::{commitment::EthABIEncoder, prelude::*, Commitment, Error};
 use crypto::Address;
 use serde::{Deserialize, Serialize};
 
@@ -32,17 +32,19 @@ impl CommitmentProof {
     pub fn is_proven(&self) -> bool {
         !self.signature.is_empty()
     }
+}
 
-    pub fn to_ethabi(self) -> Vec<u8> {
+impl EthABIEncoder for CommitmentProof {
+    fn ethabi_encode(self) -> Vec<u8> {
         Into::<EthABICommitmentProof>::into(self).encode()
     }
 
-    pub fn from_ethabi(bytes: &[u8]) -> Result<Self, Error> {
-        EthABICommitmentProof::decode(bytes).map(Into::into)
+    fn ethabi_decode(bz: &[u8]) -> Result<Self, Error> {
+        EthABICommitmentProof::decode(bz).map(Into::into)
     }
 }
 
-pub struct EthABICommitmentProof {
+pub(crate) struct EthABICommitmentProof {
     pub commitment_bytes: ethabi::Bytes,
     pub signer: ethabi::Address,
     pub signature: ethabi::Bytes,

@@ -5,7 +5,7 @@ use crate::message::{
     ClientMessage, CommitmentReader, RegisterEnclaveKeyMessage, UpdateClientMessage,
 };
 use attestation_report::EndorsedAttestationVerificationReport;
-use commitments::{CommitmentPrefix, CommitmentProof, StateCommitment};
+use commitments::{CommitmentPrefix, CommitmentProof, EthABIEncoder, StateCommitment};
 use crypto::{verify_signature_address, Address, Keccak256};
 use lcp_types::{ClientId, Height, Time};
 use light_client::{ClientKeeper, ClientReader, HostClientKeeper, HostClientReader};
@@ -146,7 +146,7 @@ impl LCPClient {
         // TODO return an error instead of assertion
 
         // convert `proof` to CommitmentProof
-        let commitment_proof = CommitmentProof::from_ethabi(proof.as_slice()).unwrap();
+        let commitment_proof = CommitmentProof::ethabi_decode(proof.as_slice()).unwrap();
         let commitment: StateCommitment = commitment_proof.commitment()?.try_into()?;
 
         // check if `.prefix` matches the counterparty connection's prefix

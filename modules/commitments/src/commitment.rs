@@ -16,6 +16,13 @@ pub enum Commitment {
     State(StateCommitment),
 }
 
+pub trait EthABIEncoder {
+    fn ethabi_encode(self) -> Vec<u8>;
+    fn ethabi_decode(bz: &[u8]) -> Result<Self, Error>
+    where
+        Self: Sized;
+}
+
 impl Display for Commitment {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
@@ -53,47 +60,17 @@ impl TryFrom<Commitment> for StateCommitment {
 
 impl Commitment {
     pub fn to_commitment_bytes(self) -> Vec<u8> {
-        EthABIHeaderedCommitment {
-            header: self.header().as_ref().try_into().unwrap(),
-            commitment: match self {
-                Commitment::UpdateClient(c) => c.to_vec(),
-                Commitment::State(c) => c.to_vec(),
-            },
-        }
-        .encode()
+        self.ethabi_encode()
     }
 
     pub fn from_commitment_bytes(bz: &[u8]) -> Result<Self, Error> {
-        let eth_abi_commitment = EthABIHeaderedCommitment::decode(bz)?;
-        let (version, commitment_type) = {
-            let header = eth_abi_commitment.header;
-            let mut version = [0u8; 8];
-            version.copy_from_slice(&header[0..8]);
-            let mut commitment_type = [0u8; 8];
-            commitment_type.copy_from_slice(&header[8..16]);
-            (
-                u64::from_be_bytes(version),
-                u64::from_be_bytes(commitment_type),
-            )
-        };
-        assert!(version == COMMITMENT_SCHEMA_VERSION);
-        let commitment = eth_abi_commitment.commitment;
-        match commitment_type {
-            COMMITMENT_TYPE_UPDATE_CLIENT => Ok(Commitment::UpdateClient(
-                EthABIUpdateClientCommitment::decode(&commitment)?.try_into()?,
-            )),
-            COMMITMENT_TYPE_STATE => Ok(Commitment::State(
-                EthABIStateCommitment::decode(&commitment)?.try_into()?,
-            )),
-            _ => Err(Error::invalid_abi(format!(
-                "invalid commitment type: {}",
-                commitment_type
-            ))),
-        }
+        Self::ethabi_decode(bz)
     }
 
-    // msb 8 bytes: version
-    // next 8 bytes: commitment type
+    // MSB first
+    // 0-7:   version
+    // 8-15:  commitment type
+    // 16-31: reserved
     pub fn header(&self) -> [u8; 32] {
         let mut header = [0u8; 32];
         header[0..8].copy_from_slice(&COMMITMENT_SCHEMA_VERSION.to_be_bytes());
@@ -109,6 +86,48 @@ impl Commitment {
     }
 }
 
+impl EthABIEncoder for Commitment {
+    fn ethabi_encode(self) -> Vec<u8> {
+        EthABIHeaderedCommitment {
+            header: self.header().as_ref().try_into().unwrap(),
+            commitment: match self {
+                Commitment::UpdateClient(c) => c.ethabi_encode(),
+                Commitment::State(c) => c.ethabi_encode(),
+            },
+        }
+        .encode()
+    }
+
+    fn ethabi_decode(bz: &[u8]) -> Result<Self, Error> {
+        let eth_abi_commitment = EthABIHeaderedCommitment::decode(bz)?;
+        let (version, commitment_type) = {
+            let header = eth_abi_commitment.header;
+            let mut version = [0u8; 8];
+            version.copy_from_slice(&header[0..8]);
+            let mut commitment_type = [0u8; 8];
+            commitment_type.copy_from_slice(&header[8..16]);
+            (
+                u64::from_be_bytes(version),
+                u64::from_be_bytes(commitment_type),
+            )
+        };
+        assert!(version == COMMITMENT_SCHEMA_VERSION);
+        let commitment = eth_abi_commitment.commitment;
+
+        match commitment_type {
+            COMMITMENT_TYPE_UPDATE_CLIENT => {
+                Ok(UpdateClientCommitment::ethabi_decode(&commitment)?.into())
+            }
+            COMMITMENT_TYPE_STATE => Ok(StateCommitment::ethabi_decode(&commitment)?.into()),
+            _ => Err(Error::invalid_abi(format!(
+                "invalid commitment type: {}",
+                commitment_type
+            ))),
+        }
+    }
+}
+
+// the struct is encoded as a tuple of 2 elements
 pub(crate) struct EthABIHeaderedCommitment {
     header: ethabi::FixedBytes, // bytes32
     commitment: ethabi::Bytes,  // bytes
@@ -189,6 +208,7 @@ impl Display for UpdateClientCommitment {
     }
 }
 
+// the struct is encoded as a tuple of 7 elements
 pub(crate) struct EthABIUpdateClientCommitment {
     prev_state_id: ethabi::FixedBytes, // bytes32
     new_state_id: ethabi::FixedBytes,  // bytes32
@@ -199,6 +219,7 @@ pub(crate) struct EthABIUpdateClientCommitment {
     validation_params: ethabi::Bytes,  // bytes
 }
 
+// the height is encoded as a tuple of 2 elements: (u64, u64)
 pub(crate) struct EthABIHeight(ethabi::Uint, ethabi::Uint);
 
 impl EthABIHeight {
@@ -359,12 +380,12 @@ fn bytes_to_bytes32(bytes: Vec<u8>) -> Result<Option<[u8; 32]>, Error> {
     }
 }
 
-impl UpdateClientCommitment {
-    pub fn to_vec(self) -> Vec<u8> {
+impl EthABIEncoder for UpdateClientCommitment {
+    fn ethabi_encode(self) -> Vec<u8> {
         Into::<EthABIUpdateClientCommitment>::into(self).encode()
     }
 
-    pub fn from_bytes(bz: &[u8]) -> Result<Self, Error> {
+    fn ethabi_decode(bz: &[u8]) -> Result<Self, Error> {
         EthABIUpdateClientCommitment::decode(bz).and_then(|v| v.try_into())
     }
 }
@@ -489,12 +510,14 @@ impl StateCommitment {
             state_id,
         }
     }
+}
 
-    pub fn to_vec(self) -> Vec<u8> {
+impl EthABIEncoder for StateCommitment {
+    fn ethabi_encode(self) -> Vec<u8> {
         Into::<EthABIStateCommitment>::into(self).encode()
     }
 
-    pub fn from_bytes(bz: &[u8]) -> Result<Self, Error> {
+    fn ethabi_decode(bz: &[u8]) -> Result<Self, Error> {
         EthABIStateCommitment::decode(bz).and_then(|v| v.try_into())
     }
 }
@@ -502,6 +525,8 @@ impl StateCommitment {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::CommitmentProof;
+    use crypto::Address;
     use ibc::{
         clients::ics07_tendermint::client_type,
         core::ics24_host::{identifier::ClientId, path::Path},
@@ -511,14 +536,14 @@ mod tests {
 
     #[test]
     fn test_update_client_commitment_converter() {
-        for _ in 0..1024 {
+        for _ in 0..2_i32.pow(10) {
             let c1 = UpdateClientCommitment {
                 prev_state_id: rand_or_none(gen_rand_state_id),
                 new_state_id: gen_rand_state_id(),
                 new_state: rand_or_none(|| -> Any {
                     ProtoAny {
                         type_url: "/".to_owned(),
-                        value: gen_rand_vec(64),
+                        value: gen_rand_vec(thread_rng().gen::<usize>() % 2_i32.pow(16) as usize),
                     }
                     .try_into()
                     .unwrap()
@@ -528,17 +553,17 @@ mod tests {
                 timestamp: Time::now(),
                 validation_params: Default::default(),
             };
-            let v = c1.clone().to_vec();
-            let c2 = UpdateClientCommitment::from_bytes(&v).unwrap();
+            let v = c1.clone().ethabi_encode();
+            let c2 = UpdateClientCommitment::ethabi_decode(&v).unwrap();
             assert_eq!(c1, c2);
         }
     }
 
     #[test]
     fn test_state_commitment_converter() {
-        for _ in 0..256 {
+        for _ in 0..2_i32.pow(10) {
             let c1 = StateCommitment {
-                prefix: "ibc".as_bytes().to_vec(),
+                prefix: gen_rand_ascii_str().as_bytes().to_vec(),
                 path: Path::ClientType(ibc::core::ics24_host::path::ClientTypePath(
                     ClientId::new(client_type(), thread_rng().gen()).unwrap(),
                 ))
@@ -547,15 +572,29 @@ mod tests {
                 height: gen_rand_height(),
                 state_id: gen_rand_state_id(),
             };
-            let v = c1.clone().to_vec();
-            let c2 = StateCommitment::from_bytes(&v).unwrap();
+            let v = c1.clone().ethabi_encode();
+            let c2 = StateCommitment::ethabi_decode(&v).unwrap();
+            assert_eq!(c1, c2);
+        }
+    }
+
+    #[test]
+    fn test_commitment_proof_converter() {
+        for _ in 0..2_i32.pow(10) {
+            let c1 = CommitmentProof {
+                commitment_bytes: gen_rand_vec(64),
+                signer: Address::try_from(gen_rand_vec(20).as_slice()).unwrap(),
+                signature: gen_rand_vec(64),
+            };
+            let v = c1.clone().ethabi_encode();
+            let c2 = CommitmentProof::ethabi_decode(&v).unwrap();
             assert_eq!(c1, c2);
         }
     }
 
     fn gen_rand_vec(size: usize) -> Vec<u8> {
         let mut rng = thread_rng();
-        let range = Uniform::new(0, u8::MAX);
+        let range = Uniform::new_inclusive(0, u8::MAX);
         let vals: Vec<u8> = (0..size).map(|_| rng.sample(range)).collect();
         vals
     }
@@ -566,6 +605,13 @@ mod tests {
 
     fn gen_rand_height() -> Height {
         Height::new(thread_rng().gen(), thread_rng().gen())
+    }
+
+    fn gen_rand_ascii_str() -> String {
+        let mut rng = thread_rng();
+        let range = Uniform::new_inclusive(0x20u8, 0x7Eu8);
+        let vals = (0..rng.gen::<u8>()).map(|_| rng.sample(range)).collect();
+        String::from_utf8(vals).unwrap()
     }
 
     fn rand_or_none<T, F: Fn() -> T>(func: F) -> Option<T> {

@@ -1,7 +1,7 @@
 use crate::errors::Error;
 use crate::prelude::*;
 use attestation_report::EndorsedAttestationVerificationReport;
-use commitments::{StateID, UpdateClientCommitment};
+use commitments::{Commitment, StateID, UpdateClientCommitment};
 use crypto::Address;
 use ibc_proto::protobuf::Protobuf;
 use lcp_proto::ibc::lightclients::lcp::v1::{
@@ -115,7 +115,7 @@ impl TryFrom<RawUpdateClientMessage> for UpdateClientMessage {
         Ok(UpdateClientMessage {
             signer: Address::try_from(value.signer.as_slice())?,
             signature: value.signature,
-            commitment: UpdateClientCommitment::from_bytes(&value.commitment).unwrap(),
+            commitment: Commitment::from_commitment_bytes(&value.commitment)?.try_into()?,
             commitment_bytes: value.commitment,
         })
     }
@@ -124,7 +124,7 @@ impl TryFrom<RawUpdateClientMessage> for UpdateClientMessage {
 impl From<UpdateClientMessage> for RawUpdateClientMessage {
     fn from(value: UpdateClientMessage) -> Self {
         RawUpdateClientMessage {
-            commitment: value.commitment.to_vec(),
+            commitment: Into::<Commitment>::into(value.commitment).to_commitment_bytes(),
             signer: value.signer.into(),
             signature: value.signature,
         }
