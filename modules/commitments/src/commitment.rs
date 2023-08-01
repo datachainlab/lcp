@@ -537,22 +537,7 @@ mod tests {
     #[test]
     fn test_update_client_commitment_converter() {
         for _ in 0..2_i32.pow(10) {
-            let c1 = UpdateClientCommitment {
-                prev_state_id: rand_or_none(gen_rand_state_id),
-                new_state_id: gen_rand_state_id(),
-                new_state: rand_or_none(|| -> Any {
-                    ProtoAny {
-                        type_url: "/".to_owned(),
-                        value: gen_rand_vec(thread_rng().gen::<usize>() % 2_i32.pow(16) as usize),
-                    }
-                    .try_into()
-                    .unwrap()
-                }),
-                prev_height: rand_or_none(gen_rand_height),
-                new_height: gen_rand_height(),
-                timestamp: Time::now(),
-                validation_params: Default::default(),
-            };
+            let c1 = gen_rand_update_client_commitment();
             let v = c1.clone().ethabi_encode();
             let c2 = UpdateClientCommitment::ethabi_decode(&v).unwrap();
             assert_eq!(c1, c2);
@@ -562,16 +547,7 @@ mod tests {
     #[test]
     fn test_state_commitment_converter() {
         for _ in 0..2_i32.pow(10) {
-            let c1 = StateCommitment {
-                prefix: gen_rand_ascii_str().as_bytes().to_vec(),
-                path: Path::ClientType(ibc::core::ics24_host::path::ClientTypePath(
-                    ClientId::new(client_type(), thread_rng().gen()).unwrap(),
-                ))
-                .to_string(),
-                value: rand_or_none(|| gen_rand_vec(32).as_slice().try_into().unwrap()),
-                height: gen_rand_height(),
-                state_id: gen_rand_state_id(),
-            };
+            let c1 = gen_rand_state_commitment();
             let v = c1.clone().ethabi_encode();
             let c2 = StateCommitment::ethabi_decode(&v).unwrap();
             assert_eq!(c1, c2);
@@ -582,13 +558,49 @@ mod tests {
     fn test_commitment_proof_converter() {
         for _ in 0..2_i32.pow(10) {
             let c1 = CommitmentProof {
-                commitment_bytes: gen_rand_vec(64),
+                commitment_bytes: if thread_rng().gen::<bool>() {
+                    gen_rand_update_client_commitment().ethabi_encode()
+                } else {
+                    gen_rand_state_commitment().ethabi_encode()
+                },
                 signer: Address::try_from(gen_rand_vec(20).as_slice()).unwrap(),
                 signature: gen_rand_vec(64),
             };
             let v = c1.clone().ethabi_encode();
             let c2 = CommitmentProof::ethabi_decode(&v).unwrap();
             assert_eq!(c1, c2);
+        }
+    }
+
+    fn gen_rand_update_client_commitment() -> UpdateClientCommitment {
+        UpdateClientCommitment {
+            prev_state_id: rand_or_none(gen_rand_state_id),
+            new_state_id: gen_rand_state_id(),
+            new_state: rand_or_none(|| -> Any {
+                ProtoAny {
+                    type_url: "/".to_owned(),
+                    value: gen_rand_vec(thread_rng().gen::<usize>() % 2_i32.pow(16) as usize),
+                }
+                .try_into()
+                .unwrap()
+            }),
+            prev_height: rand_or_none(gen_rand_height),
+            new_height: gen_rand_height(),
+            timestamp: Time::now(),
+            validation_params: Default::default(),
+        }
+    }
+
+    fn gen_rand_state_commitment() -> StateCommitment {
+        StateCommitment {
+            prefix: gen_rand_ascii_str().as_bytes().to_vec(),
+            path: Path::ClientType(ibc::core::ics24_host::path::ClientTypePath(
+                ClientId::new(client_type(), thread_rng().gen()).unwrap(),
+            ))
+            .to_string(),
+            value: rand_or_none(|| gen_rand_vec(32).as_slice().try_into().unwrap()),
+            height: gen_rand_height(),
+            state_id: gen_rand_state_id(),
         }
     }
 
