@@ -12,7 +12,6 @@ import (
 	commitmenttypes "github.com/cosmos/ibc-go/v7/modules/core/23-commitment/types"
 	host "github.com/cosmos/ibc-go/v7/modules/core/24-host"
 	"github.com/cosmos/ibc-go/v7/modules/core/exported"
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 )
 
@@ -154,11 +153,15 @@ func (cs ClientState) VerifyMembership(
 	if err != nil {
 		return sdkerrors.Wrapf(clienttypes.ErrConsensusStateNotFound, "please ensure the proof was constructed against a height that exists on the client: err=%v", err)
 	}
-	commitmentProof, err := ParseStateCommitmentProof(proof)
+	commitmentProof, err := EthABIDecodeCommitmentProof(proof)
 	if err != nil {
 		return err
 	}
-	commitment, err := commitmentProof.GetCommitment()
+	c, err := commitmentProof.GetCommitment()
+	if err != nil {
+		return err
+	}
+	commitment, err := c.GetStateCommitment()
 	if err != nil {
 		return err
 	}
@@ -179,12 +182,11 @@ func (cs ClientState) VerifyMembership(
 	if !commitment.StateID.EqualBytes(consensusState.StateId) {
 		return sdkerrors.Wrapf(ErrInvalidStateCommitment, "invalid state ID: expected=%v got=%v", consensusState.StateId, commitment.StateID)
 	}
-	if err := VerifySignatureWithSignBytes(commitmentProof.CommitmentBytes, commitmentProof.Signature, common.BytesToAddress(commitmentProof.Signer)); err != nil {
+	if err := VerifySignatureWithSignBytes(commitmentProof.CommitmentBytes, commitmentProof.Signature, commitmentProof.Signer); err != nil {
 		return sdkerrors.Wrapf(ErrInvalidStateCommitmentProof, "failed to verify state commitment proof: %v", err)
 	}
-	signer := common.BytesToAddress(commitmentProof.Signer)
-	if !cs.IsActiveKey(ctx.BlockTime(), clientStore, signer) {
-		return sdkerrors.Wrapf(ErrExpiredEnclaveKey, "key '%v' has expired", signer.Hex())
+	if !cs.IsActiveKey(ctx.BlockTime(), clientStore, commitmentProof.Signer) {
+		return sdkerrors.Wrapf(ErrExpiredEnclaveKey, "key '%v' has expired", commitmentProof.Signer.Hex())
 	}
 	return nil
 }
