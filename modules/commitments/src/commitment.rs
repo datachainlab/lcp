@@ -9,6 +9,7 @@ use validation_context::ValidationParams;
 pub const COMMITMENT_SCHEMA_VERSION: u16 = 1;
 pub const COMMITMENT_TYPE_UPDATE_CLIENT: u16 = 1;
 pub const COMMITMENT_TYPE_STATE: u16 = 2;
+pub const COMMITMENT_HEADER_SIZE: usize = 32;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum Commitment {
@@ -71,8 +72,8 @@ impl Commitment {
     // 0-1:  version
     // 2-3:  commitment type
     // 4-31: reserved
-    pub fn header(&self) -> [u8; 32] {
-        let mut header = [0u8; 32];
+    pub fn header(&self) -> [u8; COMMITMENT_HEADER_SIZE] {
+        let mut header = [0u8; COMMITMENT_HEADER_SIZE];
         header[0..=1].copy_from_slice(&COMMITMENT_SCHEMA_VERSION.to_be_bytes());
         header[2..=3].copy_from_slice(&self.commitment_type().to_be_bytes());
         header
@@ -101,19 +102,30 @@ impl EthABIEncoder for Commitment {
     fn ethabi_decode(bz: &[u8]) -> Result<Self, Error> {
         let eth_abi_commitment = EthABIHeaderedCommitment::decode(bz)?;
         let (version, commitment_type) = {
-            let header = eth_abi_commitment.header;
+            let header = &eth_abi_commitment.header;
+            if header.len() != COMMITMENT_HEADER_SIZE {
+                return Err(Error::invalid_commitment_header(format!(
+                    "invalid header length: expected={COMMITMENT_HEADER_SIZE} actual={} header={:?}",
+                    header.len(),
+                    eth_abi_commitment.header
+                )));
+            }
             let mut version = [0u8; 2];
-            version.copy_from_slice(&header[0..2]);
+            version.copy_from_slice(&header[0..=1]);
             let mut commitment_type = [0u8; 2];
-            commitment_type.copy_from_slice(&header[2..4]);
+            commitment_type.copy_from_slice(&header[2..=3]);
             (
                 u16::from_be_bytes(version),
                 u16::from_be_bytes(commitment_type),
             )
         };
-        assert!(version == COMMITMENT_SCHEMA_VERSION);
+        if version != COMMITMENT_SCHEMA_VERSION {
+            return Err(Error::invalid_commitment_header(format!(
+                "invalid version: expected={} actual={} header={:?}",
+                COMMITMENT_SCHEMA_VERSION, version, eth_abi_commitment.header
+            )));
+        }
         let commitment = eth_abi_commitment.commitment;
-
         match commitment_type {
             COMMITMENT_TYPE_UPDATE_CLIENT => {
                 Ok(UpdateClientCommitment::ethabi_decode(&commitment)?.into())

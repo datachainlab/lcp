@@ -52,6 +52,14 @@ define_error! {
             format_args!("unexpected commitment type: expected={} actual={}", e.expected, e.actual)
         },
 
+        InvalidCommitmentHeader
+        {
+            descr: String
+        }
+        |e| {
+            format_args!("invalid commitment header: descr={}", e.descr)
+        },
+
         LcpType
         {}
         [lcp_types::TypeError]
