@@ -556,18 +556,20 @@ mod tests {
     #[test]
     fn test_commitment_proof_converter() {
         for _ in 0..2_i32.pow(10) {
-            let c1 = CommitmentProof {
-                commitment_bytes: if thread_rng().gen::<bool>() {
-                    gen_rand_update_client_commitment().ethabi_encode()
-                } else {
-                    gen_rand_state_commitment().ethabi_encode()
-                },
+            let c: Commitment = if thread_rng().gen::<bool>() {
+                gen_rand_update_client_commitment().into()
+            } else {
+                gen_rand_state_commitment().into()
+            };
+            let p1 = CommitmentProof {
+                commitment_bytes: c.clone().to_commitment_bytes(),
                 signer: Address::try_from(gen_rand_vec(20).as_slice()).unwrap(),
                 signature: gen_rand_vec(64),
             };
-            let v = c1.clone().ethabi_encode();
-            let c2 = CommitmentProof::ethabi_decode(&v).unwrap();
-            assert_eq!(c1, c2);
+            let v = p1.clone().ethabi_encode();
+            let p2 = CommitmentProof::ethabi_decode(&v).unwrap();
+            assert_eq!(p1, p2);
+            assert_eq!(c, p2.commitment().unwrap());
         }
     }
 
