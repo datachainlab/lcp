@@ -564,7 +564,7 @@ mod tests {
             let p1 = CommitmentProof {
                 commitment_bytes: c.clone().to_commitment_bytes(),
                 signer: Address::try_from(gen_rand_vec(20).as_slice()).unwrap(),
-                signature: gen_rand_vec(64),
+                signature: gen_rand_vec(65),
             };
             let v = p1.clone().ethabi_encode();
             let p2 = CommitmentProof::ethabi_decode(&v).unwrap();
