@@ -6,9 +6,9 @@ use prost::Message;
 use serde::{Deserialize, Serialize};
 use validation_context::ValidationParams;
 
-pub const COMMITMENT_SCHEMA_VERSION: u64 = 1;
-pub const COMMITMENT_TYPE_UPDATE_CLIENT: u64 = 1;
-pub const COMMITMENT_TYPE_STATE: u64 = 2;
+pub const COMMITMENT_SCHEMA_VERSION: u16 = 1;
+pub const COMMITMENT_TYPE_UPDATE_CLIENT: u16 = 1;
+pub const COMMITMENT_TYPE_STATE: u16 = 2;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum Commitment {
@@ -68,17 +68,17 @@ impl Commitment {
     }
 
     // MSB first
-    // 0-7:   version
-    // 8-15:  commitment type
-    // 16-31: reserved
+    // 0-1:  version
+    // 2-3:  commitment type
+    // 4-31: reserved
     pub fn header(&self) -> [u8; 32] {
         let mut header = [0u8; 32];
-        header[0..8].copy_from_slice(&COMMITMENT_SCHEMA_VERSION.to_be_bytes());
-        header[8..16].copy_from_slice(&self.commitment_type().to_be_bytes());
+        header[0..=1].copy_from_slice(&COMMITMENT_SCHEMA_VERSION.to_be_bytes());
+        header[2..=3].copy_from_slice(&self.commitment_type().to_be_bytes());
         header
     }
 
-    pub fn commitment_type(&self) -> u64 {
+    pub fn commitment_type(&self) -> u16 {
         match self {
             Commitment::UpdateClient(_) => COMMITMENT_TYPE_UPDATE_CLIENT,
             Commitment::State(_) => COMMITMENT_TYPE_STATE,
@@ -102,13 +102,13 @@ impl EthABIEncoder for Commitment {
         let eth_abi_commitment = EthABIHeaderedCommitment::decode(bz)?;
         let (version, commitment_type) = {
             let header = eth_abi_commitment.header;
-            let mut version = [0u8; 8];
-            version.copy_from_slice(&header[0..8]);
-            let mut commitment_type = [0u8; 8];
-            commitment_type.copy_from_slice(&header[8..16]);
+            let mut version = [0u8; 2];
+            version.copy_from_slice(&header[0..2]);
+            let mut commitment_type = [0u8; 2];
+            commitment_type.copy_from_slice(&header[2..4]);
             (
-                u64::from_be_bytes(version),
-                u64::from_be_bytes(commitment_type),
+                u16::from_be_bytes(version),
+                u16::from_be_bytes(commitment_type),
             )
         };
         assert!(version == COMMITMENT_SCHEMA_VERSION);

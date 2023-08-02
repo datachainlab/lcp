@@ -45,8 +45,8 @@ define_error! {
 
         UnexpectedCommitmentType
         {
-            expected: u64,
-            actual: u64
+            expected: u16,
+            actual: u16
         }
         |e| {
             format_args!("unexpected commitment type: expected={} actual={}", e.expected, e.actual)

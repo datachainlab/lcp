@@ -92,8 +92,8 @@ func (p CommitmentProof) GetCommitment() (*HeaderedCommitment, error) {
 }
 
 type HeaderedCommitment struct {
-	Version    uint64
-	Type       uint64
+	Version    uint16
+	Type       uint16
 	Commitment []byte
 }
 
@@ -154,11 +154,11 @@ func EthABIDecodeHeaderedCommitment(bz []byte) (*HeaderedCommitment, error) {
 	})
 	// Header format:
 	// MSB first
-	// 0-7:   version
-	// 8-15:  commitment type
-	// 16-31: reserved
-	version := binary.BigEndian.Uint64(p.Header[:8])
-	commitmentType := binary.BigEndian.Uint64(p.Header[8:16])
+	// 0-1:  version
+	// 2-3:  commitment type
+	// 4-31: reserved
+	version := binary.BigEndian.Uint16(p.Header[:2])
+	commitmentType := binary.BigEndian.Uint16(p.Header[2:4])
 	return &HeaderedCommitment{
 		Version:    version,
 		Type:       commitmentType,
