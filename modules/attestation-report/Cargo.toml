@@ -24,7 +24,8 @@ webpki     = { version = "0.21", optional = true }
 default = ["std"]
 std = [
     "rustls",
-    "webpki"
+    "webpki",
+    "serde_json/preserve_order"
 ]
 sgx = [
     "rustls_sgx",
