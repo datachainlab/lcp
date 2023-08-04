@@ -1,9 +1,11 @@
 use crate::client_state::ClientState;
 use crate::consensus_state::ConsensusState;
 use crate::errors::Error;
-use crate::message::{ClientMessage, Commitment, RegisterEnclaveKeyMessage, UpdateClientMessage};
+use crate::message::{
+    ClientMessage, CommitmentReader, RegisterEnclaveKeyMessage, UpdateClientMessage,
+};
 use attestation_report::EndorsedAttestationVerificationReport;
-use commitments::{CommitmentPrefix, StateCommitmentProof};
+use commitments::{CommitmentPrefix, CommitmentProof, EthABIEncoder, StateCommitment};
 use crypto::{verify_signature_address, Address, Keccak256};
 use lcp_types::{ClientId, Height, Time};
 use light_client::{ClientKeeper, ClientReader, HostClientKeeper, HostClientReader};
@@ -143,9 +145,9 @@ impl LCPClient {
     ) -> Result<(), Error> {
         // TODO return an error instead of assertion
 
-        // convert `proof` to StateCommitmentProof
-        let commitment_proof = StateCommitmentProof::try_from(proof.as_slice()).unwrap();
-        let commitment = commitment_proof.commitment();
+        // convert `proof` to CommitmentProof
+        let commitment_proof = CommitmentProof::ethabi_decode(proof.as_slice()).unwrap();
+        let commitment: StateCommitment = commitment_proof.commitment()?.try_into()?;
 
         // check if `.prefix` matches the counterparty connection's prefix
         assert!(commitment.prefix == prefix);
@@ -167,7 +169,7 @@ impl LCPClient {
             &commitment_proof.commitment_bytes,
             &commitment_proof.signature,
         )?;
-        assert!(Address::try_from(&commitment_proof.signer as &[u8])? == signer);
+        assert!(commitment_proof.signer == signer);
 
         // check if the specified signer is not expired and exists in the client state
         let vctx = ValidationContext::new(ctx.host_timestamp());
@@ -266,7 +268,7 @@ mod tests {
     use alloc::rc::Rc;
     use alloc::sync::Arc;
     use attestation_report::AttestationVerificationReport;
-    use commitments::prover::prove_update_client_commitment;
+    use commitments::prove_commitment;
     use context::Context;
     use core::cell::RefCell;
     use core::str::FromStr;
@@ -387,7 +389,7 @@ mod tests {
                 )
             };
 
-            let res = prove_update_client_commitment(
+            let res = prove_commitment(
                 ctx.get_enclave_key(),
                 ctx.get_enclave_key().pubkey().unwrap().as_address(),
                 res.commitment,
@@ -404,7 +406,7 @@ mod tests {
         // 5. on the downstream side, updates LCP Light Client's state with the commitment from the LCP
         {
             let header = ClientMessage::UpdateClient(UpdateClientMessage {
-                commitment: proof1.commitment(),
+                commitment: proof1.commitment().unwrap().try_into().unwrap(),
                 commitment_bytes: proof1.commitment_bytes,
                 signer: proof1.signer,
                 signature: proof1.signature,

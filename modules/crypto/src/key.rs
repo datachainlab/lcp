@@ -133,6 +133,9 @@ impl EnclavePublicKey {
 pub struct Address(pub [u8; 20]);
 
 impl Address {
+    pub fn to_vec(&self) -> Vec<u8> {
+        self.0.to_vec()
+    }
     pub fn to_hex_string(&self) -> String {
         format!("0x{}", hex::encode(self.0))
     }

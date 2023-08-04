@@ -5,7 +5,6 @@ use core::fmt::Debug;
 use crypto::Address;
 use lcp_types::Time;
 use serde::{Deserialize, Serialize};
-use serde_json::json;
 use sgx_types::{metadata::metadata_t, sgx_measurement_t, sgx_quote_t};
 use tendermint::Time as TmTime;
 
@@ -88,6 +87,7 @@ impl AttestationVerificationReport {
         })
     }
 
+    #[cfg(feature = "std")]
     pub fn to_canonical_json(&self) -> Result<String, Error> {
         if self.version != 4 {
             return Err(Error::unexpected_attestation_report_version(
@@ -97,7 +97,7 @@ impl AttestationVerificationReport {
         }
         Ok(format!(
             "{}",
-            json!({
+            serde_json::json!({
                 "id": self.id,
                 "timestamp": self.timestamp,
                 "version": self.version,

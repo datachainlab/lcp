@@ -13,6 +13,7 @@ import (
 	"github.com/datachainlab/lcp/go/relay/elc"
 	"github.com/datachainlab/lcp/go/relay/enclave"
 	"github.com/datachainlab/lcp/go/sgx/ias"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/hyperledger-labs/yui-relayer/core"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -178,7 +179,8 @@ func (pr *Prover) SetupHeadersForUpdate(dstChain core.ChainInfoICS02Querier, lat
 		if err != nil {
 			return nil, err
 		}
-		if _, err := lcptypes.ParseUpdateClientCommitment(res.Commitment); err != nil {
+		// ensure the commitment is valid
+		if _, err := lcptypes.EthABIDecodeHeaderedCommitment(res.Commitment); err != nil {
 			return nil, err
 		}
 		updates = append(updates, &lcptypes.UpdateClientMessage{
@@ -207,9 +209,21 @@ func (pr *Prover) ProveState(ctx core.QueryContext, path string, value []byte) (
 	if err != nil {
 		return nil, clienttypes.Height{}, err
 	}
-	commitment, err := lcptypes.ParseStateCommitment(res.Commitment)
+	commitment, err := lcptypes.EthABIDecodeHeaderedCommitment(res.Commitment)
 	if err != nil {
 		return nil, clienttypes.Height{}, err
 	}
-	return lcptypes.NewStateCommitmentProof(res.Commitment, res.Signer, res.Signature).ToRLPBytes(), commitment.Height, nil
+	sc, err := commitment.GetStateCommitment()
+	if err != nil {
+		return nil, clienttypes.Height{}, err
+	}
+	cp, err := lcptypes.EthABIEncodeCommitmentProof(&lcptypes.CommitmentProof{
+		CommitmentBytes: res.Commitment,
+		Signer:          common.BytesToAddress(res.Signer),
+		Signature:       res.Signature,
+	})
+	if err != nil {
+		return nil, clienttypes.Height{}, err
+	}
+	return cp, sc.Height, nil
 }

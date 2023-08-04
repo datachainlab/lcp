@@ -60,7 +60,8 @@ impl LightClient for MockLightClient {
                 new_height: height,
                 timestamp,
                 validation_params: ValidationParams::Empty,
-            },
+            }
+            .into(),
             prove: false,
         })
     }
@@ -142,7 +143,8 @@ impl LightClient for MockLightClient {
                 new_height: height,
                 timestamp: header_timestamp,
                 validation_params: ValidationParams::Empty,
-            },
+            }
+            .into(),
             prove: true,
         })
     }

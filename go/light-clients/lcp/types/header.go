@@ -27,7 +27,11 @@ func (m UpdateClientMessage) ValidateBasic() error {
 }
 
 func (h UpdateClientMessage) GetCommitment() (*UpdateClientCommitment, error) {
-	return ParseUpdateClientCommitment(h.Commitment)
+	c, err := EthABIDecodeHeaderedCommitment(h.Commitment)
+	if err != nil {
+		return nil, err
+	}
+	return c.GetUpdateClientCommitment()
 }
 
 var _ exported.ClientMessage = (*RegisterEnclaveKeyMessage)(nil)

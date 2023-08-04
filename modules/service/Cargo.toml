@@ -13,7 +13,7 @@ lcp-types = { path = "../types" }
 crypto = { path = "../crypto" }
 enclave-api = { path = "../enclave-api" }
 lcp-proto = { path = "../../proto", default-features = false }
-store = { path = "../store", features = ["rocksdbstore"] }
+store = { path = "../store", default-features = false }
 
 [features]
 sgx-sw = [

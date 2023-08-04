@@ -1,6 +1,6 @@
 use super::registry::get_light_client_by_client_id;
 use crate::light_client::Error;
-use commitments::prover::prove_state_commitment;
+use commitments::prove_commitment;
 use context::Context;
 use crypto::Signer;
 use ecall_commands::{
@@ -28,7 +28,7 @@ pub fn verify_membership<R: LightClientResolver, S: KVStore, K: Signer>(
     )?;
 
     Ok(LightClientResult::VerifyMembership(VerifyMembershipResult(
-        prove_state_commitment(ek, input.signer, res.state_commitment)?,
+        prove_commitment(ek, input.signer, res.state_commitment)?,
     )))
 }
 
@@ -49,10 +49,6 @@ pub fn verify_non_membership<R: LightClientResolver, S: KVStore, K: Signer>(
     )?;
 
     Ok(LightClientResult::VerifyNonMembership(
-        VerifyNonMembershipResult(prove_state_commitment(
-            ek,
-            input.signer,
-            res.state_commitment,
-        )?),
+        VerifyNonMembershipResult(prove_commitment(ek, input.signer, res.state_commitment)?),
     ))
 }

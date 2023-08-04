@@ -1,4 +1,4 @@
-#![cfg_attr(not(feature = "std"), no_std)]
+#![cfg_attr(not(test), no_std)]
 extern crate alloc;
 
 mod prelude {
@@ -19,16 +19,16 @@ mod prelude {
     pub use core::iter::FromIterator;
 }
 
-pub use commitment::{CommitmentPrefix, StateCommitment, UpdateClientCommitment};
+pub use commitment::{
+    Commitment, CommitmentPrefix, EthABIEncoder, StateCommitment, UpdateClientCommitment,
+};
 pub use errors::Error;
-#[cfg(feature = "prover")]
-pub use errors::ProverError;
-pub use proof::{StateCommitmentProof, UpdateClientCommitmentProof};
+pub use proof::CommitmentProof;
+pub use prover::prove_commitment;
 pub use state::{gen_state_id_from_any, gen_state_id_from_bytes, StateID, STATE_ID_SIZE};
 
 mod commitment;
 mod errors;
 mod proof;
-#[cfg(feature = "prover")]
-pub mod prover;
+mod prover;
 mod state;

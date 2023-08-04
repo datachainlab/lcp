@@ -751,14 +751,13 @@ name = "commitments"
 version = "0.1.0"
 dependencies = [
  "crypto",
+ "ethabi",
  "flex-error",
  "hex",
- "ibc",
  "lcp-types",
  "prost",
  "prost-types",
  "rand 0.8.5",
- "rlp",
  "serde",
  "sha2 0.10.6",
  "validation-context",
@@ -1319,6 +1318,7 @@ version = "0.1.0"
 dependencies = [
  "attestation-report",
  "bincode",
+ "commitments",
  "ecall-commands",
  "flex-error",
  "host",
@@ -1417,6 +1417,28 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2d2f06b9cac1506ece98fe3231e3cc9c4410ec3d5b1f24ae1c8946f0742cdefc"
 dependencies = [
  "version_check",
+]
+
+[[package]]
+name = "ethabi"
+version = "18.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7413c5f74cc903ea37386a8965a936cbeb334bd270862fdece542c1b2dcbc898"
+dependencies = [
+ "ethereum-types",
+ "hex",
+ "sha3",
+]
+
+[[package]]
+name = "ethereum-types"
+version = "0.14.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "02d215cbf040552efcbe99a38372fe80ab9d00268e20012b79fcd0f073edd8ee"
+dependencies = [
+ "fixed-hash",
+ "primitive-types",
+ "uint",
 ]
 
 [[package]]
@@ -2425,6 +2447,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "attestation-report",
+ "commitments",
  "ecall-commands",
  "enclave-api",
  "env_logger",

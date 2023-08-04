@@ -4,6 +4,7 @@ mod relayer;
 mod tests {
     use super::*;
     use anyhow::{anyhow, bail};
+    use commitments::UpdateClientCommitment;
     use ecall_commands::{
         CommitmentProofPair, GenerateEnclaveKeyInput, InitClientInput, UpdateClientInput,
         VerifyMembershipInput,
@@ -173,7 +174,8 @@ mod tests {
         info!("update_client's result is {:?}", res);
         assert!(res.0.is_proven());
 
-        let height = res.0.commitment().new_height;
+        let commitment: UpdateClientCommitment = res.0.commitment().unwrap().try_into()?;
+        let height = commitment.new_height;
 
         info!("current height is {}", height);
 

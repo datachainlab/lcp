@@ -1,5 +1,5 @@
 use crate::{prelude::*, EnclaveKeySelector};
-use commitments::{StateCommitmentProof, UpdateClientCommitmentProof};
+use commitments::CommitmentProof;
 use crypto::Address;
 use lcp_types::{Any, ClientId, Height, Time};
 use serde::{Deserialize, Serialize};
@@ -95,18 +95,18 @@ pub enum LightClientResult {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct InitClientResult {
     pub client_id: ClientId,
-    pub proof: UpdateClientCommitmentProof,
+    pub proof: CommitmentProof,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(transparent)]
-pub struct UpdateClientResult(pub UpdateClientCommitmentProof);
+pub struct UpdateClientResult(pub CommitmentProof);
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct VerifyMembershipResult(pub StateCommitmentProof);
+pub struct VerifyMembershipResult(pub CommitmentProof);
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct VerifyNonMembershipResult(pub StateCommitmentProof);
+pub struct VerifyNonMembershipResult(pub CommitmentProof);
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct QueryClientResult {
