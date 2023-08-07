@@ -2601,7 +2601,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "lcp-ibc-client"
+name = "lcp-client"
 version = "0.1.0"
 dependencies = [
  "attestation-report",
