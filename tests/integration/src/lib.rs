@@ -1,8 +1,14 @@
 #[cfg(test)]
+mod config;
+#[cfg(test)]
 mod relayer;
+#[cfg(test)]
+mod types;
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::relayer::Relayer;
     use anyhow::{anyhow, bail};
     use commitments::UpdateClientCommitment;
     use ecall_commands::{
@@ -27,7 +33,6 @@ mod tests {
     use keymanager::EnclaveKeyManager;
     use lcp_types::Time;
     use log::*;
-    use relay_tendermint::Relayer;
     use std::str::FromStr;
     use std::sync::{Arc, RwLock};
     use store::{host::HostStore, memory::MemStore};
@@ -84,7 +89,7 @@ mod tests {
     fn run_test(enclave: &Enclave<store::memory::MemStore>) -> Result<(), anyhow::Error> {
         env_logger::init();
         let rt = Arc::new(TokioRuntime::new()?);
-        let rly = relayer::create_relayer(rt).unwrap();
+        let rly = config::create_relayer(rt).unwrap();
         verify(rly, enclave)
     }
 

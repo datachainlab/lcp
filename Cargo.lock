@@ -2457,8 +2457,10 @@ dependencies = [
  "host",
  "host-environment",
  "ibc",
+ "ibc-proto 0.24.1",
  "ibc-proto 0.26.0",
  "ibc-relayer",
+ "ibc-relayer-types",
  "ibc-test-framework",
  "keymanager",
  "lcp-types",
@@ -2466,7 +2468,6 @@ dependencies = [
  "ocall-handler",
  "once_cell",
  "prost-types",
- "relay-tendermint",
  "store",
  "tempfile",
  "tendermint-light-client-verifier 0.28.0",
@@ -3821,22 +3822,6 @@ name = "regex-syntax"
 version = "0.6.27"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a3f87b73ce11b1619a3c6332f45341e0047173771e8b8b73f87bfeefb7b56244"
-
-[[package]]
-name = "relay-tendermint"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "ibc",
- "ibc-proto 0.24.1",
- "ibc-proto 0.26.0",
- "ibc-relayer",
- "ibc-relayer-types",
- "lcp-types",
- "tendermint-light-client-verifier 0.28.0",
- "tendermint-rpc",
- "tokio",
-]
 
 [[package]]
 name = "reqwest"

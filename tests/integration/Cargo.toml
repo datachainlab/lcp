@@ -7,8 +7,10 @@ build = "build.rs"
 [dev-dependencies]
 prost-types = { version = "0.11", default-features = false }
 ibc = { version = "0.29.0", default-features = false, features = ["serde", "std"] }
-ibc-proto = { version = "0.26.0", default-features = false, features = ["parity-scale-codec", "borsh"] }
+ibc-proto = { version = "0.26.0", default-features = false }
+ibc-proto-relayer = { package = "ibc-proto", version = "0.24.1", default-features = false }
 ibc-relayer = { version = "0.22.0", default-features = false }
+ibc-relayer-types = "0.22.0"
 ibc-test-framework = { version = "0.22.0", default-features = false }
 tendermint-rpc = { version = "0.28", default-features = false }
 tendermint-light-client-verifier = { version = "0.28", default-features = false }
@@ -31,7 +33,6 @@ enclave-api = { path = "../../modules/enclave-api" }
 ecall-commands = { path = "../../modules/ecall-commands" }
 attestation-report = { path = "../../modules/attestation-report" }
 keymanager = { path = "../../modules/keymanager" }
-relay-tendermint = { path = "../../modules/relay/tendermint" }
 
 [features]
 default = []
