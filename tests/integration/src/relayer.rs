@@ -1,25 +1,21 @@
 use crate::types::{
-    relayer_header_to_any, to_ibc_channel, to_ibc_client_state, to_ibc_connection,
-    to_ibc_consensus_state, to_ibc_height, to_relayer_channel_id, to_relayer_client_state,
-    to_relayer_connection_id, to_relayer_height, to_relayer_port_id, to_relayer_sequence,
+    relayer_header_to_any, to_ibc_channel, to_ibc_client_state, to_ibc_consensus_state,
+    to_ibc_height, to_relayer_channel_id, to_relayer_client_state, to_relayer_height,
+    to_relayer_port_id,
 };
 use anyhow::Result;
 use ibc::clients::ics07_tendermint::client_state::ClientState;
 use ibc::clients::ics07_tendermint::consensus_state::ConsensusState;
-use ibc::core::ics03_connection::connection::ConnectionEnd;
 use ibc::core::ics04_channel::channel::ChannelEnd;
-use ibc::core::ics04_channel::commitment::PacketCommitment;
-use ibc::core::ics04_channel::packet::Sequence;
 use ibc::core::ics23_commitment::merkle::MerkleProof;
-use ibc::core::ics24_host::identifier::{ChannelId, ConnectionId, PortId};
+use ibc::core::ics24_host::identifier::{ChannelId, PortId};
 use ibc::Height;
 use ibc_proto::google::protobuf::Any as IBCAny;
-use ibc_relayer::chain::requests::QueryConnectionRequest;
 use ibc_relayer::chain::{
     client::ClientSettings,
     cosmos::{client::Settings, CosmosSdkChain},
     endpoint::ChainEndpoint,
-    requests::{IncludeProof, QueryChannelRequest, QueryHeight, QueryPacketCommitmentRequest},
+    requests::{IncludeProof, QueryChannelRequest, QueryHeight},
 };
 use ibc_relayer::client_state::AnyClientState;
 use ibc_relayer::config::ChainConfig;
@@ -98,29 +94,6 @@ impl Relayer {
         Ok(to_ibc_height(self.chain.query_chain_latest_height()?))
     }
 
-    pub fn query_connection_proof(
-        &self,
-        connection_id: ConnectionId,
-        height: Option<Height>, // height of consensus state
-    ) -> Result<(ConnectionEnd, MerkleProof, Height)> {
-        let height = match height {
-            Some(height) => height.decrement().unwrap(),
-            None => self.query_latest_height()?.decrement().unwrap(),
-        };
-        let req = QueryConnectionRequest {
-            connection_id: to_relayer_connection_id(connection_id),
-            height: QueryHeight::Specific(to_relayer_height(height)),
-        };
-        let res = self.chain.query_connection(req, IncludeProof::Yes)?;
-        Ok((
-            to_ibc_connection(res.0),
-            MerkleProof {
-                proofs: res.1.unwrap().proofs,
-            },
-            height.increment(),
-        ))
-    }
-
     pub fn query_channel_proof(
         &self,
         port_id: PortId,
@@ -139,35 +112,6 @@ impl Relayer {
         let res = self.chain.query_channel(req, IncludeProof::Yes)?;
         Ok((
             to_ibc_channel(res.0),
-            MerkleProof {
-                proofs: res.1.unwrap().proofs,
-            },
-            height.increment(),
-        ))
-    }
-
-    pub fn query_packet_proof(
-        &self,
-        port_id: PortId,
-        channel_id: ChannelId,
-        sequence: Sequence,
-        height: Option<Height>, // height of consensus state
-    ) -> Result<(PacketCommitment, MerkleProof, Height)> {
-        let height = match height {
-            Some(height) => height.decrement().unwrap(),
-            None => self.query_latest_height()?.decrement().unwrap(),
-        };
-        let res = self.chain.query_packet_commitment(
-            QueryPacketCommitmentRequest {
-                port_id: to_relayer_port_id(port_id),
-                channel_id: to_relayer_channel_id(channel_id),
-                sequence: to_relayer_sequence(sequence),
-                height: QueryHeight::Specific(to_relayer_height(height)),
-            },
-            IncludeProof::Yes,
-        )?;
-        Ok((
-            res.0.into(),
             MerkleProof {
                 proofs: res.1.unwrap().proofs,
             },
