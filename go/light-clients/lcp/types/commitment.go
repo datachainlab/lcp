@@ -42,7 +42,7 @@ var (
 			{Name: "revision_height", Type: "uint64"},
 		}},
 		{Name: "timestamp", Type: "uint128"},
-		{Name: "validation_params", Type: "bytes"},
+		{Name: "context", Type: "bytes"},
 	})
 
 	stateCommitmentABI, _ = abi.NewType("tuple", "struct StateCommitment", []abi.ArgumentMarshaling{
@@ -64,13 +64,13 @@ func (id StateID) EqualBytes(bz []byte) bool {
 }
 
 type UpdateClientCommitment struct {
-	PrevStateID      *StateID
-	NewStateID       StateID
-	NewState         []byte
-	PrevHeight       *clienttypes.Height
-	NewHeight        clienttypes.Height
-	Timestamp        *big.Int
-	ValidationParams []byte
+	PrevStateID *StateID
+	NewStateID  StateID
+	NewState    []byte
+	PrevHeight  *clienttypes.Height
+	NewHeight   clienttypes.Height
+	Timestamp   *big.Int
+	Context     []byte
 }
 
 type StateCommitment struct {
@@ -186,15 +186,15 @@ func EthABIDecodeUpdateClientCommitment(bz []byte) (*UpdateClientCommitment, err
 			RevisionNumber uint64 `json:"revision_number"`
 			RevisionHeight uint64 `json:"revision_height"`
 		} `json:"new_height"`
-		Timestamp        *big.Int `json:"timestamp"`
-		ValidationParams []byte   `json:"validation_params"`
+		Timestamp *big.Int `json:"timestamp"`
+		Context   []byte   `json:"context"`
 	})
 	c := &UpdateClientCommitment{
-		NewStateID:       p.NewStateId,
-		NewState:         p.NewState,
-		NewHeight:        clienttypes.Height{RevisionNumber: p.NewHeight.RevisionNumber, RevisionHeight: p.NewHeight.RevisionHeight},
-		Timestamp:        p.Timestamp,
-		ValidationParams: p.ValidationParams,
+		NewStateID: p.NewStateId,
+		NewState:   p.NewState,
+		NewHeight:  clienttypes.Height{RevisionNumber: p.NewHeight.RevisionNumber, RevisionHeight: p.NewHeight.RevisionHeight},
+		Timestamp:  p.Timestamp,
+		Context:    p.Context,
 	}
 	if p.PrevStateId != [32]byte{} {
 		prev := StateID(p.PrevStateId)

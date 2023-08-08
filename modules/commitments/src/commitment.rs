@@ -1,10 +1,10 @@
+use crate::context::CommitmentContext;
 use crate::prelude::*;
 use crate::{Error, StateID};
 use core::fmt::Display;
 use lcp_types::{Any, Height, Time};
 use prost::Message;
 use serde::{Deserialize, Serialize};
-use validation_context::ValidationParams;
 
 pub const COMMITMENT_SCHEMA_VERSION: u16 = 1;
 pub const COMMITMENT_TYPE_UPDATE_CLIENT: u16 = 1;
@@ -187,7 +187,7 @@ pub struct UpdateClientCommitment {
     pub prev_height: Option<Height>,
     pub new_height: Height,
     pub timestamp: Time,
-    pub validation_params: ValidationParams,
+    pub context: CommitmentContext,
 }
 
 impl From<UpdateClientCommitment> for Commitment {
@@ -205,7 +205,7 @@ impl Default for UpdateClientCommitment {
             new_state: Default::default(),
             prev_height: Default::default(),
             new_height: Default::default(),
-            validation_params: Default::default(),
+            context: Default::default(),
         }
     }
 }
@@ -214,8 +214,8 @@ impl Display for UpdateClientCommitment {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(
             f,
-            "prev_state_id={} new_state_id={} new_state_include={} prev_height={:?} new_height={:?} timestamp={} validation_params={{{}}}",
-            self.prev_state_id.map_or("".to_string(), |s| s.to_string()), self.new_state_id, self.new_state.is_some(), self.prev_height.map_or("".to_string(), |h| h.to_string()), self.new_height.to_string(), self.timestamp, self.validation_params
+            "prev_state_id={} new_state_id={} new_state_include={} prev_height={:?} new_height={:?} timestamp={} context={{{}}}",
+            self.prev_state_id.map_or("".to_string(), |s| s.to_string()), self.new_state_id, self.new_state.is_some(), self.prev_height.map_or("".to_string(), |h| h.to_string()), self.new_height.to_string(), self.timestamp, self.context
         )
     }
 }
@@ -228,7 +228,7 @@ pub(crate) struct EthABIUpdateClientCommitment {
     prev_height: EthABIHeight,         // (u64, u64)
     new_height: EthABIHeight,          // (u64, u64)
     timestamp: ethabi::Uint,           // u128
-    validation_params: ethabi::Bytes,  // bytes
+    context: ethabi::Bytes,            // bytes
 }
 
 // the height is encoded as a tuple of 2 elements: (u64, u64)
@@ -304,7 +304,7 @@ impl EthABIUpdateClientCommitment {
             Token::Tuple(self.prev_height.into()),
             Token::Tuple(self.new_height.into()),
             Token::Uint(self.timestamp),
-            Token::Bytes(self.validation_params),
+            Token::Bytes(self.context),
         ])])
     }
 
@@ -338,7 +338,7 @@ impl EthABIUpdateClientCommitment {
             prev_height: values.next().unwrap().into_tuple().unwrap().try_into()?,
             new_height: values.next().unwrap().into_tuple().unwrap().try_into()?,
             timestamp: values.next().unwrap().into_uint().unwrap(),
-            validation_params: values.next().unwrap().into_bytes().unwrap(),
+            context: values.next().unwrap().into_bytes().unwrap(),
         })
     }
 }
@@ -357,7 +357,7 @@ impl From<UpdateClientCommitment> for EthABIUpdateClientCommitment {
             prev_height: value.prev_height.into(),
             new_height: value.new_height.into(),
             timestamp: Uint::from(value.timestamp.as_unix_timestamp_nanos()),
-            validation_params: value.validation_params.to_vec(),
+            context: value.context.ethabi_encode(),
         }
     }
 }
@@ -376,7 +376,7 @@ impl TryFrom<EthABIUpdateClientCommitment> for UpdateClientCommitment {
             prev_height: value.prev_height.into(),
             new_height: value.new_height.into(),
             timestamp: Time::from_unix_timestamp_nanos(value.timestamp.as_u128())?,
-            validation_params: ValidationParams::from_bytes(value.validation_params.as_slice()),
+            context: CommitmentContext::ethabi_decode(value.context.as_slice())?,
         })
     }
 }
@@ -600,7 +600,7 @@ mod tests {
             prev_height: rand_or_none(gen_rand_height),
             new_height: gen_rand_height(),
             timestamp: Time::now(),
-            validation_params: Default::default(),
+            context: Default::default(),
         }
     }
 

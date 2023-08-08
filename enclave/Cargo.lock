@@ -225,7 +225,6 @@ dependencies = [
  "prost",
  "serde",
  "sha2 0.10.6",
- "validation-context",
 ]
 
 [[package]]
@@ -1207,16 +1206,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "rlp"
-version = "0.5.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bb919243f34364b6bd2fc10ef797edbfa75f33c252e7998527479c6d6b47e1ec"
-dependencies = [
- "bytes",
- "rustc-hex",
-]
-
-[[package]]
 name = "rustc-hex"
 version = "2.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1690,7 +1679,6 @@ dependencies = [
  "light-client-registry",
  "log 0.4.17",
  "serde",
- "validation-context",
 ]
 
 [[package]]
@@ -1837,15 +1825,6 @@ name = "untrusted"
 version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a156c684c91ea7d62626509bce3cb4e1d9ed5c4d978f7b4352658f96a4c26b4a"
-
-[[package]]
-name = "validation-context"
-version = "0.1.0"
-dependencies = [
- "lcp-types",
- "rlp",
- "serde",
-]
 
 [[package]]
 name = "version_check"

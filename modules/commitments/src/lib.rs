@@ -22,12 +22,14 @@ mod prelude {
 pub use commitment::{
     Commitment, CommitmentPrefix, EthABIEncoder, StateCommitment, UpdateClientCommitment,
 };
+pub use context::{CommitmentContext, WithinTrustingPeriodContext};
 pub use errors::Error;
 pub use proof::CommitmentProof;
 pub use prover::prove_commitment;
 pub use state::{gen_state_id_from_any, gen_state_id_from_bytes, StateID, STATE_ID_SIZE};
 
 mod commitment;
+mod context;
 mod errors;
 mod proof;
 mod prover;

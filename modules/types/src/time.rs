@@ -8,6 +8,9 @@ use ibc::timestamp::Timestamp;
 use serde::{Deserialize, Serialize};
 use tendermint::Time as TmTime;
 
+// 9999-12-31T23:59:59Z
+pub const MAX_UNIX_TIMESTAMP_SECS: u64 = 253402300799;
+
 #[derive(Copy, Clone, Debug, Eq, PartialEq, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(transparent)]
 pub struct Time(TmTime);
@@ -104,5 +107,16 @@ impl Sub<Duration> for Time {
 
     fn sub(self, rhs: Duration) -> Self::Output {
         Ok(Self((*self - rhs).map_err(TimeError::tendermint)?))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_max_time() {
+        assert!(Time::from_unix_timestamp_secs(MAX_UNIX_TIMESTAMP_SECS).is_ok());
+        assert!(Time::from_unix_timestamp_secs(MAX_UNIX_TIMESTAMP_SECS + 1).is_err());
     }
 }

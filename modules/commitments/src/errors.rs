@@ -60,6 +60,32 @@ define_error! {
             format_args!("invalid commitment header: descr={}", e.descr)
         },
 
+        InvalidCommitmentContextHeader
+        {
+            descr: String
+        }
+        |e| {
+            format_args!("invalid commitment context header: descr={}", e.descr)
+        },
+
+        OutOfTrustingPeriod
+        {
+            current_timestamp: u64,
+            trusting_period_end: u64
+        }
+        |e| {
+            format_args!("out of trusting period: current_timestamp={} trusting_period_end={}", e.current_timestamp, e.trusting_period_end)
+        },
+
+        HeaderFromFuture
+        {
+            current_timestamp: u64,
+            header_timestamp: u64
+        }
+        |e| {
+            format_args!("header is coming from future: current_timestamp={} header_timestamp={}", e.current_timestamp, e.header_timestamp)
+        },
+
         LcpType
         {}
         [lcp_types::TypeError]

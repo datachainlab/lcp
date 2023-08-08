@@ -2,7 +2,10 @@ use crate::errors::Error;
 use crate::header::Header;
 use crate::prelude::*;
 use crate::state::{canonicalize_state, gen_state_id, ClientState, ConsensusState};
-use commitments::{CommitmentPrefix, StateCommitment, UpdateClientCommitment};
+use commitments::{
+    CommitmentContext, CommitmentPrefix, StateCommitment, UpdateClientCommitment,
+    WithinTrustingPeriodContext,
+};
 use core::str::FromStr;
 use crypto::Keccak256;
 use ibc::clients::ics07_tendermint::client_state::{
@@ -33,8 +36,6 @@ use light_client::{
 };
 use light_client_registry::LightClientRegistry;
 use log::*;
-use validation_context::tendermint::{TendermintValidationOptions, TendermintValidationParams};
-use validation_context::ValidationParams;
 
 #[derive(Default)]
 pub struct TendermintLightClient;
@@ -79,7 +80,7 @@ impl LightClient for TendermintLightClient {
                 prev_height: None,
                 new_height: height,
                 timestamp,
-                validation_params: ValidationParams::Empty,
+                context: CommitmentContext::None,
             }
             .into(),
             prove: false,
@@ -177,7 +178,7 @@ impl LightClient for TendermintLightClient {
                 .clone(),
         );
 
-        let trusted_consensus_state_timestamp: Time = trusted_consensus_state.timestamp().into();
+        let trusted_state_timestamp: Time = trusted_consensus_state.timestamp().into();
         let lc_opts = client_state.as_light_client_options().unwrap();
 
         let prev_state_id =
@@ -197,14 +198,14 @@ impl LightClient for TendermintLightClient {
                 prev_height: Some(header.trusted_height.into()),
                 new_height: height,
                 timestamp: header_timestamp,
-                validation_params: ValidationParams::Tendermint(TendermintValidationParams {
-                    options: TendermintValidationOptions {
-                        trusting_period: lc_opts.trusting_period,
-                        clock_drift: lc_opts.clock_drift,
-                    },
-                    untrusted_header_timestamp: header_timestamp,
-                    trusted_consensus_state_timestamp,
-                }),
+                context: WithinTrustingPeriodContext::new(
+                    lc_opts.trusting_period,
+                    lc_opts.clock_drift,
+                    header_timestamp,
+                    trusted_state_timestamp,
+                )
+                .map_err(Error::commitment)?
+                .into(),
             }
             .into(),
             prove: true,
