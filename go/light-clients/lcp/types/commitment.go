@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"math/big"
+	"time"
 
 	clienttypes "github.com/cosmos/ibc-go/v7/modules/core/02-client/types"
 	"github.com/ethereum/go-ethereum/accounts/abi"
@@ -15,6 +16,11 @@ const (
 	LCPCommitmentVersion          = 1
 	LCPCommitmentTypeUpdateClient = 1
 	LCPCommitmentTypeState        = 2
+)
+
+const (
+	LCPCommitmentContextTypeNone                 = 0
+	LCPCommitmentContextTypeWithinTrustingPeriod = 1
 )
 
 var (
@@ -45,6 +51,13 @@ var (
 		{Name: "context", Type: "bytes"},
 	})
 
+	headeredCommitmentContextABI, _ = abi.NewType("tuple", "struct HeaderedCommitmentContext", []abi.ArgumentMarshaling{
+		{Name: "header", Type: "bytes32"},
+		{Name: "context_bytes", Type: "bytes"},
+	})
+
+	withinTrustingPeriodContextABI, _ = abi.NewType("bytes32", "", nil)
+
 	stateCommitmentABI, _ = abi.NewType("tuple", "struct StateCommitment", []abi.ArgumentMarshaling{
 		{Name: "prefix", Type: "bytes"},
 		{Name: "path", Type: "bytes"},
@@ -70,7 +83,63 @@ type UpdateClientCommitment struct {
 	PrevHeight  *clienttypes.Height
 	NewHeight   clienttypes.Height
 	Timestamp   *big.Int
-	Context     []byte
+	Context     CommitmentContext
+}
+
+// CommitmentContext is the interface for the context of a commitment.
+type CommitmentContext interface {
+	Validate(time.Time) error
+}
+
+// NoneCommitmentContext is the commitment context for a commitment that does not require any validation.
+type NoneCommitmentContext struct{}
+
+var _ CommitmentContext = NoneCommitmentContext{}
+
+func (NoneCommitmentContext) Validate(time.Time) error {
+	return nil
+}
+
+// WithinTrustingPeriodCommitmentContext is the commitment context for a commitment that requires the current time to be within the trusting period.
+type WithinTrustingPeriodCommitmentContext struct {
+	TrustingPeriod           time.Duration
+	ClockDrift               time.Duration
+	UntrustedHeaderTimestamp time.Time
+	TrustedStateTimestamp    time.Time
+}
+
+func DecodeWithinTrustingPeriodCommitmentContext(bz [32]byte) *WithinTrustingPeriodCommitmentContext {
+	// MSB first
+	// 0-7: trusting_period
+	// 8-15: clock_drift
+	// 16-23: untrusted_header_timestamp
+	// 24-31: trusted_state_timestamp
+	trustingPeriod := time.Duration(binary.BigEndian.Uint64(bz[:8])) * time.Second
+	clockDrift := time.Duration(binary.BigEndian.Uint64(bz[8:16])) * time.Second
+	untrustedHeaderTimestamp := time.Unix(int64(binary.BigEndian.Uint64(bz[16:24])), 0)
+	trustedStateTimestamp := time.Unix(int64(binary.BigEndian.Uint64(bz[24:32])), 0)
+	return &WithinTrustingPeriodCommitmentContext{
+		TrustingPeriod:           trustingPeriod,
+		ClockDrift:               clockDrift,
+		UntrustedHeaderTimestamp: untrustedHeaderTimestamp,
+		TrustedStateTimestamp:    trustedStateTimestamp,
+	}
+}
+
+var _ CommitmentContext = WithinTrustingPeriodCommitmentContext{}
+
+func (c WithinTrustingPeriodCommitmentContext) Validate(now time.Time) error {
+	// ensure current timestamp is within trusting period
+	trustingPeriodEnd := c.TrustedStateTimestamp.Add(c.TrustingPeriod)
+	if now.After(trustingPeriodEnd) {
+		return fmt.Errorf("current time is after trusting period end: trusting_period_end=%v current=%v", trustingPeriodEnd, now)
+	}
+	// ensure header's timestamp indicates past
+	current := now.Add(c.ClockDrift)
+	if c.UntrustedHeaderTimestamp.After(current) {
+		return fmt.Errorf("untrusted header timestamp is after current time: untrusted_header_timestamp=%v current=%v", c.UntrustedHeaderTimestamp, current)
+	}
+	return nil
 }
 
 type StateCommitment struct {
@@ -189,12 +258,16 @@ func EthABIDecodeUpdateClientCommitment(bz []byte) (*UpdateClientCommitment, err
 		Timestamp *big.Int `json:"timestamp"`
 		Context   []byte   `json:"context"`
 	})
+	cctx, err := EthABIDecodeCommitmentContext(p.Context)
+	if err != nil {
+		return nil, err
+	}
 	c := &UpdateClientCommitment{
 		NewStateID: p.NewStateId,
 		NewState:   p.NewState,
 		NewHeight:  clienttypes.Height{RevisionNumber: p.NewHeight.RevisionNumber, RevisionHeight: p.NewHeight.RevisionHeight},
 		Timestamp:  p.Timestamp,
-		Context:    p.Context,
+		Context:    cctx,
 	}
 	if p.PrevStateId != [32]byte{} {
 		prev := StateID(p.PrevStateId)
@@ -204,6 +277,50 @@ func EthABIDecodeUpdateClientCommitment(bz []byte) (*UpdateClientCommitment, err
 		c.PrevHeight = &clienttypes.Height{RevisionNumber: p.PrevHeight.RevisionNumber, RevisionHeight: p.PrevHeight.RevisionHeight}
 	}
 	return c, nil
+}
+
+func EthABIDecodeCommitmentContext(bz []byte) (CommitmentContext, error) {
+	unpacker := abi.Arguments{
+		{Type: headeredCommitmentContextABI},
+	}
+	v, err := unpacker.Unpack(bz)
+	if err != nil {
+		return nil, err
+	}
+	p := v[0].(struct {
+		Header       [32]byte `json:"header"`
+		ContextBytes []byte   `json:"context_bytes"`
+	})
+	// Header format:
+	// MSB first
+	// 0-1:  type
+	// 2-31: reserved
+	contextType := binary.BigEndian.Uint16(p.Header[:2])
+	switch contextType {
+	case LCPCommitmentContextTypeNone:
+		if len(p.ContextBytes) != 0 {
+			return nil, fmt.Errorf("unexpected context bytes for none commitment context: %X", p.ContextBytes)
+		}
+		return &NoneCommitmentContext{}, nil
+	case LCPCommitmentContextTypeWithinTrustingPeriod:
+		return EthABIDecodeWithinTrustingPeriodCommitmentContext(p.ContextBytes)
+	default:
+		return nil, fmt.Errorf("unexpected commitment context type: %v", contextType)
+	}
+}
+
+func EthABIDecodeWithinTrustingPeriodCommitmentContext(bz []byte) (*WithinTrustingPeriodCommitmentContext, error) {
+	if len(bz) != 32 {
+		return nil, fmt.Errorf("unexpected length of within trusting period commitment context: %d", len(bz))
+	}
+	unpacker := abi.Arguments{
+		{Type: withinTrustingPeriodContextABI},
+	}
+	v, err := unpacker.Unpack(bz)
+	if err != nil {
+		return nil, err
+	}
+	return DecodeWithinTrustingPeriodCommitmentContext(v[0].([32]byte)), nil
 }
 
 func EthABIDecodeStateCommitment(bz []byte) (*StateCommitment, error) {
