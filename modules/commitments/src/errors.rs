@@ -1,6 +1,7 @@
 use crate::prelude::*;
 use crate::STATE_ID_SIZE;
 use flex_error::*;
+use lcp_types::Time;
 
 define_error! {
     #[derive(Debug, Clone, PartialEq, Eq)]
@@ -70,8 +71,8 @@ define_error! {
 
         OutOfTrustingPeriod
         {
-            current_timestamp: u64,
-            trusting_period_end: u64
+            current_timestamp: Time,
+            trusting_period_end: Time
         }
         |e| {
             format_args!("out of trusting period: current_timestamp={} trusting_period_end={}", e.current_timestamp, e.trusting_period_end)
@@ -79,11 +80,19 @@ define_error! {
 
         HeaderFromFuture
         {
-            current_timestamp: u64,
-            header_timestamp: u64
+            current_timestamp: Time,
+            header_timestamp: Time
         }
         |e| {
             format_args!("header is coming from future: current_timestamp={} header_timestamp={}", e.current_timestamp, e.header_timestamp)
+        },
+
+        NotTruncatedTimestamp
+        {
+            timestamp_nanos: u128
+        }
+        |e| {
+            format_args!("not truncated timestamp: timestamp_nanos={}", e.timestamp_nanos)
         },
 
         LcpType
@@ -98,6 +107,10 @@ define_error! {
         Crypto
         [crypto::Error]
         |_| {"crypto error"},
+
+        TryFromIntError
+        [TraceError<core::num::TryFromIntError>]
+        |_| {"TryFromIntError"}
     }
 }
 
@@ -128,5 +141,11 @@ impl From<ethabi::Error> for Error {
 impl From<crypto::Error> for Error {
     fn from(value: crypto::Error) -> Self {
         Error::crypto(value)
+    }
+}
+
+impl From<core::num::TryFromIntError> for Error {
+    fn from(value: core::num::TryFromIntError) -> Self {
+        Error::try_from_int_error(value)
     }
 }

@@ -6,7 +6,7 @@ pub use errors::{TimeError, TypeError};
 pub use height::Height;
 pub use host::ClientId;
 pub use sgx::Mrenclave;
-pub use time::{Time, MAX_UNIX_TIMESTAMP_SECS};
+pub use time::{nanos_to_duration, Time, MAX_UNIX_TIMESTAMP_NANOS};
 
 mod any;
 mod errors;

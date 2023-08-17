@@ -39,12 +39,21 @@ define_error! {
             [tendermint::Error]
             |_| {
                 "tendermint error"
-            }
+            },
+        TryFromIntError
+            [TraceError<core::num::TryFromIntError>]
+            |_| {"TryFromIntError"}
     }
 }
 
 impl From<hex::FromHexError> for TypeError {
     fn from(value: hex::FromHexError) -> Self {
         Self::hex_parse_error(value)
+    }
+}
+
+impl From<core::num::TryFromIntError> for TimeError {
+    fn from(value: core::num::TryFromIntError) -> Self {
+        Self::try_from_int_error(value)
     }
 }

@@ -2659,6 +2659,7 @@ dependencies = [
  "hex",
  "ibc",
  "ibc-proto 0.26.0",
+ "proptest",
  "prost-types",
  "serde",
  "serde_json",

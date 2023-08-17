@@ -56,7 +56,10 @@ var (
 		{Name: "context_bytes", Type: "bytes"},
 	})
 
-	withinTrustingPeriodContextABI, _ = abi.NewType("bytes32", "", nil)
+	withinTrustingPeriodContextABI, _ = abi.NewType("tuple", "struct WithinTrustingPeriodCommitmentContext", []abi.ArgumentMarshaling{
+		{Name: "params", Type: "bytes32"},
+		{Name: "timestamps", Type: "bytes32"},
+	})
 
 	stateCommitmentABI, _ = abi.NewType("tuple", "struct StateCommitment", []abi.ArgumentMarshaling{
 		{Name: "prefix", Type: "bytes"},
@@ -102,42 +105,87 @@ func (NoneCommitmentContext) Validate(time.Time) error {
 
 // WithinTrustingPeriodCommitmentContext is the commitment context for a commitment that requires the current time to be within the trusting period.
 type WithinTrustingPeriodCommitmentContext struct {
-	TrustingPeriod           time.Duration
-	ClockDrift               time.Duration
+	TrustingPeriod           big.Int
+	ClockDrift               big.Int
 	UntrustedHeaderTimestamp time.Time
 	TrustedStateTimestamp    time.Time
 }
 
-func DecodeWithinTrustingPeriodCommitmentContext(bz [32]byte) *WithinTrustingPeriodCommitmentContext {
+func DecodeWithinTrustingPeriodCommitmentContext(params, timestamps [32]byte) *WithinTrustingPeriodCommitmentContext {
 	// MSB first
-	// 0-7: trusting_period
-	// 8-15: clock_drift
-	// 16-23: untrusted_header_timestamp
-	// 24-31: trusted_state_timestamp
-	trustingPeriod := time.Duration(binary.BigEndian.Uint64(bz[:8])) * time.Second
-	clockDrift := time.Duration(binary.BigEndian.Uint64(bz[8:16])) * time.Second
-	untrustedHeaderTimestamp := time.Unix(int64(binary.BigEndian.Uint64(bz[16:24])), 0)
-	trustedStateTimestamp := time.Unix(int64(binary.BigEndian.Uint64(bz[24:32])), 0)
+	// 0-15: trusting_period
+	// 16-31: clock_drift
+	trustingPeriod := uint128BytesToBigInt(params[:16])
+	clockDrift := uint128BytesToBigInt(params[16:32])
+
+	// 0-15: untrusted_header_timestamp
+	// 16-31: trusted_state_timestamp
 	return &WithinTrustingPeriodCommitmentContext{
 		TrustingPeriod:           trustingPeriod,
 		ClockDrift:               clockDrift,
-		UntrustedHeaderTimestamp: untrustedHeaderTimestamp,
-		TrustedStateTimestamp:    trustedStateTimestamp,
+		UntrustedHeaderTimestamp: timestampNanosBytesToTime(timestamps[:16]),
+		TrustedStateTimestamp:    timestampNanosBytesToTime(timestamps[16:32]),
 	}
+}
+
+func uint128BytesToBigInt(bz []byte) big.Int {
+	if len(bz) != 16 {
+		panic("invalid length")
+	}
+	var durationNanos big.Int
+	durationNanos.SetBytes(bz)
+	return durationNanos
+}
+
+func timestampNanosBytesToTime(bz []byte) time.Time {
+	if len(bz) != 16 {
+		panic("invalid length")
+	}
+	var (
+		timestampNanos big.Int
+		secs           big.Int
+		nanos          big.Int
+	)
+
+	timestampNanos.SetBytes(bz)
+	secs.Div(&timestampNanos, big.NewInt(1e9))
+	nanos.Mod(&timestampNanos, big.NewInt(1e9))
+	return time.Unix(secs.Int64(), nanos.Int64())
 }
 
 var _ CommitmentContext = WithinTrustingPeriodCommitmentContext{}
 
+func timeToBigInt(t time.Time) big.Int {
+	var (
+		secs  big.Int
+		nanos big.Int
+	)
+	secs.SetInt64(t.Unix())
+	secs.Mul(&secs, big.NewInt(1e9))
+	nanos.SetInt64(int64(t.Nanosecond()))
+	secs.Add(&secs, &nanos)
+	return secs
+}
+
 func (c WithinTrustingPeriodCommitmentContext) Validate(now time.Time) error {
+	currentTimestamp := timeToBigInt(now)
+	trustedStateTimestamp := timeToBigInt(c.TrustedStateTimestamp)
+	untrustedHeaderTimestamp := timeToBigInt(c.UntrustedHeaderTimestamp)
+
+	var (
+		trustingPeriodEnd       big.Int
+		driftedCurrentTimestamp big.Int
+	)
+	trustingPeriodEnd.Add(&trustedStateTimestamp, &c.TrustingPeriod)
+	driftedCurrentTimestamp.Add(&currentTimestamp, &c.ClockDrift)
+
 	// ensure current timestamp is within trusting period
-	trustingPeriodEnd := c.TrustedStateTimestamp.Add(c.TrustingPeriod)
-	if now.After(trustingPeriodEnd) {
-		return fmt.Errorf("current time is after trusting period end: trusting_period_end=%v current=%v", trustingPeriodEnd, now)
+	if currentTimestamp.Cmp(&trustingPeriodEnd) > 0 {
+		return fmt.Errorf("current time is after trusting period end: trusting_period_end=%v current=%v trusted_state_timestamp=%v trusting_period=%v", trustingPeriodEnd, now, c.TrustedStateTimestamp, c.TrustingPeriod)
 	}
 	// ensure header's timestamp indicates past
-	current := now.Add(c.ClockDrift)
-	if c.UntrustedHeaderTimestamp.After(current) {
-		return fmt.Errorf("untrusted header timestamp is after current time: untrusted_header_timestamp=%v current=%v", c.UntrustedHeaderTimestamp, current)
+	if untrustedHeaderTimestamp.Cmp(&driftedCurrentTimestamp) > 0 {
+		return fmt.Errorf("untrusted header timestamp is after current time: untrusted_header_timestamp=%v current=%v clock_drift=%v", c.UntrustedHeaderTimestamp, driftedCurrentTimestamp, c.ClockDrift)
 	}
 	return nil
 }
@@ -310,7 +358,7 @@ func EthABIDecodeCommitmentContext(bz []byte) (CommitmentContext, error) {
 }
 
 func EthABIDecodeWithinTrustingPeriodCommitmentContext(bz []byte) (*WithinTrustingPeriodCommitmentContext, error) {
-	if len(bz) != 32 {
+	if len(bz) != 64 {
 		return nil, fmt.Errorf("unexpected length of within trusting period commitment context: %d", len(bz))
 	}
 	unpacker := abi.Arguments{
@@ -320,7 +368,11 @@ func EthABIDecodeWithinTrustingPeriodCommitmentContext(bz []byte) (*WithinTrusti
 	if err != nil {
 		return nil, err
 	}
-	return DecodeWithinTrustingPeriodCommitmentContext(v[0].([32]byte)), nil
+	p := v[0].(struct {
+		Params     [32]byte `json:"params"`
+		Timestamps [32]byte `json:"timestamps"`
+	})
+	return DecodeWithinTrustingPeriodCommitmentContext(p.Params, p.Timestamps), nil
 }
 
 func EthABIDecodeStateCommitment(bz []byte) (*StateCommitment, error) {

@@ -204,7 +204,6 @@ impl LightClient for TendermintLightClient {
                     header_timestamp,
                     trusted_state_timestamp,
                 )
-                .map_err(Error::commitment)?
                 .into(),
             }
             .into(),

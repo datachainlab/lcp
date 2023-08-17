@@ -15,6 +15,9 @@ serde_json = { version = "1.0", default-features = false, features = ["alloc"] }
 flex-error = { version = "0.4.4", default-features = false }
 hex = { version = "0.4", default-features = false, features = ["alloc"] }
 
+[dev-dependencies]
+proptest = "1.2.0"
+
 [features]
 default = ["std"]
 std = []

@@ -196,20 +196,6 @@ impl From<UpdateClientCommitment> for Commitment {
     }
 }
 
-impl Default for UpdateClientCommitment {
-    fn default() -> Self {
-        UpdateClientCommitment {
-            timestamp: Time::unix_epoch(),
-            prev_state_id: Default::default(),
-            new_state_id: Default::default(),
-            new_state: Default::default(),
-            prev_height: Default::default(),
-            new_height: Default::default(),
-            context: Default::default(),
-        }
-    }
-}
-
 impl Display for UpdateClientCommitment {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(
