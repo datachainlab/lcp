@@ -161,7 +161,12 @@ pub struct WithinTrustingPeriodContext {
     /// blockchain.
     clock_drift: Duration,
 
+    /// The timestamp of the untrusted header
+    /// NOTE: The header is used to update the state of the light client.
     untrusted_header_timestamp: Time,
+
+    /// The timestamp of the trusted state
+    /// NOTE: The state is a previously verified state of the light client.
     trusted_state_timestamp: Time,
 }
 
