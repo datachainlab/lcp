@@ -3,8 +3,8 @@ use crate::header::Header;
 use crate::prelude::*;
 use crate::state::{canonicalize_state, gen_state_id, ClientState, ConsensusState};
 use commitments::{
-    CommitmentContext, CommitmentPrefix, StateCommitment, UpdateClientCommitment,
-    WithinTrustingPeriodContext,
+    CommitmentContext, CommitmentPrefix, StateCommitment, TrustingPeriodContext,
+    UpdateClientCommitment,
 };
 use core::str::FromStr;
 use crypto::Keccak256;
@@ -80,7 +80,7 @@ impl LightClient for TendermintLightClient {
                 prev_height: None,
                 new_height: height,
                 timestamp,
-                context: CommitmentContext::None,
+                context: CommitmentContext::Empty,
             }
             .into(),
             prove: false,
@@ -198,7 +198,7 @@ impl LightClient for TendermintLightClient {
                 prev_height: Some(header.trusted_height.into()),
                 new_height: height,
                 timestamp: header_timestamp,
-                context: WithinTrustingPeriodContext::new(
+                context: TrustingPeriodContext::new(
                     lc_opts.trusting_period,
                     lc_opts.clock_drift,
                     header_timestamp,

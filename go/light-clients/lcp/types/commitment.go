@@ -19,8 +19,8 @@ const (
 )
 
 const (
-	LCPCommitmentContextTypeNone                 = 0
-	LCPCommitmentContextTypeWithinTrustingPeriod = 1
+	LCPCommitmentContextTypeEmpty          = 0
+	LCPCommitmentContextTypeTrustingPeriod = 1
 )
 
 var (
@@ -56,7 +56,7 @@ var (
 		{Name: "context_bytes", Type: "bytes"},
 	})
 
-	withinTrustingPeriodContextABI, _ = abi.NewType("tuple", "struct WithinTrustingPeriodCommitmentContext", []abi.ArgumentMarshaling{
+	trustingPeriodContextABI, _ = abi.NewType("tuple", "struct TrustingPeriodCommitmentContext", []abi.ArgumentMarshaling{
 		{Name: "params", Type: "bytes32"},
 		{Name: "timestamps", Type: "bytes32"},
 	})
@@ -103,15 +103,15 @@ func (NoneCommitmentContext) Validate(time.Time) error {
 	return nil
 }
 
-// WithinTrustingPeriodCommitmentContext is the commitment context for a commitment that requires the current time to be within the trusting period.
-type WithinTrustingPeriodCommitmentContext struct {
+// TrustingPeriodCommitmentContext is the commitment context for a commitment that requires the current time to be within the trusting period.
+type TrustingPeriodCommitmentContext struct {
 	TrustingPeriod           big.Int
 	ClockDrift               big.Int
 	UntrustedHeaderTimestamp time.Time
 	TrustedStateTimestamp    time.Time
 }
 
-func DecodeWithinTrustingPeriodCommitmentContext(params, timestamps [32]byte) *WithinTrustingPeriodCommitmentContext {
+func DecodeTrustingPeriodCommitmentContext(params, timestamps [32]byte) *TrustingPeriodCommitmentContext {
 	// MSB first
 	// 0-15: trusting_period
 	// 16-31: clock_drift
@@ -120,7 +120,7 @@ func DecodeWithinTrustingPeriodCommitmentContext(params, timestamps [32]byte) *W
 
 	// 0-15: untrusted_header_timestamp
 	// 16-31: trusted_state_timestamp
-	return &WithinTrustingPeriodCommitmentContext{
+	return &TrustingPeriodCommitmentContext{
 		TrustingPeriod:           trustingPeriod,
 		ClockDrift:               clockDrift,
 		UntrustedHeaderTimestamp: timestampNanosBytesToTime(timestamps[:16]),
@@ -153,7 +153,7 @@ func timestampNanosBytesToTime(bz []byte) time.Time {
 	return time.Unix(secs.Int64(), nanos.Int64())
 }
 
-var _ CommitmentContext = WithinTrustingPeriodCommitmentContext{}
+var _ CommitmentContext = TrustingPeriodCommitmentContext{}
 
 func timeToBigInt(t time.Time) big.Int {
 	var (
@@ -167,7 +167,7 @@ func timeToBigInt(t time.Time) big.Int {
 	return secs
 }
 
-func (c WithinTrustingPeriodCommitmentContext) Validate(now time.Time) error {
+func (c TrustingPeriodCommitmentContext) Validate(now time.Time) error {
 	currentTimestamp := timeToBigInt(now)
 	trustedStateTimestamp := timeToBigInt(c.TrustedStateTimestamp)
 	untrustedHeaderTimestamp := timeToBigInt(c.UntrustedHeaderTimestamp)
@@ -345,24 +345,24 @@ func EthABIDecodeCommitmentContext(bz []byte) (CommitmentContext, error) {
 	// 2-31: reserved
 	contextType := binary.BigEndian.Uint16(p.Header[:2])
 	switch contextType {
-	case LCPCommitmentContextTypeNone:
+	case LCPCommitmentContextTypeEmpty:
 		if len(p.ContextBytes) != 0 {
-			return nil, fmt.Errorf("unexpected context bytes for none commitment context: %X", p.ContextBytes)
+			return nil, fmt.Errorf("unexpected context bytes for empty commitment context: %X", p.ContextBytes)
 		}
 		return &NoneCommitmentContext{}, nil
-	case LCPCommitmentContextTypeWithinTrustingPeriod:
-		return EthABIDecodeWithinTrustingPeriodCommitmentContext(p.ContextBytes)
+	case LCPCommitmentContextTypeTrustingPeriod:
+		return EthABIDecodeTrustingPeriodCommitmentContext(p.ContextBytes)
 	default:
 		return nil, fmt.Errorf("unexpected commitment context type: %v", contextType)
 	}
 }
 
-func EthABIDecodeWithinTrustingPeriodCommitmentContext(bz []byte) (*WithinTrustingPeriodCommitmentContext, error) {
+func EthABIDecodeTrustingPeriodCommitmentContext(bz []byte) (*TrustingPeriodCommitmentContext, error) {
 	if len(bz) != 64 {
-		return nil, fmt.Errorf("unexpected length of within trusting period commitment context: %d", len(bz))
+		return nil, fmt.Errorf("unexpected length of trusting period commitment context: %d", len(bz))
 	}
 	unpacker := abi.Arguments{
-		{Type: withinTrustingPeriodContextABI},
+		{Type: trustingPeriodContextABI},
 	}
 	v, err := unpacker.Unpack(bz)
 	if err != nil {
@@ -372,7 +372,7 @@ func EthABIDecodeWithinTrustingPeriodCommitmentContext(bz []byte) (*WithinTrusti
 		Params     [32]byte `json:"params"`
 		Timestamps [32]byte `json:"timestamps"`
 	})
-	return DecodeWithinTrustingPeriodCommitmentContext(p.Params, p.Timestamps), nil
+	return DecodeTrustingPeriodCommitmentContext(p.Params, p.Timestamps), nil
 }
 
 func EthABIDecodeStateCommitment(bz []byte) (*StateCommitment, error) {

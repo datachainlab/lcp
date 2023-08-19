@@ -22,7 +22,7 @@ mod prelude {
 pub use commitment::{
     Commitment, CommitmentPrefix, EthABIEncoder, StateCommitment, UpdateClientCommitment,
 };
-pub use context::{CommitmentContext, WithinTrustingPeriodContext};
+pub use context::{CommitmentContext, TrustingPeriodContext};
 pub use errors::Error;
 pub use proof::CommitmentProof;
 pub use prover::prove_commitment;

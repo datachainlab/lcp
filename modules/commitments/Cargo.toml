@@ -17,6 +17,7 @@ crypto = { path = "../crypto", default-features = false }
 [dev-dependencies]
 prost-types = { version = "0.11", default-features = false }
 lcp-types = { path = "../types", default-features = false, features = ["std"] }
+time = { version = "0.3", default-features = false, features = ["macros", "parsing"] }
 proptest = "1.2.0"
 
 [features]

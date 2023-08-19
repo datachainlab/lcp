@@ -4,21 +4,21 @@ use core::{fmt::Display, time::Duration};
 use lcp_types::{nanos_to_duration, Time};
 use serde::{Deserialize, Serialize};
 
-pub const COMMITMENT_CONTEXT_TYPE_NONE: u16 = 0;
+pub const COMMITMENT_CONTEXT_TYPE_EMPTY: u16 = 0;
 pub const COMMITMENT_CONTEXT_TYPE_WITHIN_TRUSTING_PERIOD: u16 = 1;
 pub const COMMITMENT_CONTEXT_HEADER_SIZE: usize = 32;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum CommitmentContext {
-    None,
-    WithinTrustingPeriod(WithinTrustingPeriodContext),
+    Empty,
+    TrustingPeriod(TrustingPeriodContext),
 }
 
 impl CommitmentContext {
     pub fn validate(&self, current_timestamp: Time) -> Result<(), Error> {
         match self {
-            CommitmentContext::None => Ok(()),
-            CommitmentContext::WithinTrustingPeriod(ctx) => ctx.validate(current_timestamp),
+            CommitmentContext::Empty => Ok(()),
+            CommitmentContext::TrustingPeriod(ctx) => ctx.validate(current_timestamp),
         }
     }
 
@@ -29,10 +29,10 @@ impl CommitmentContext {
         let mut header = [0u8; COMMITMENT_CONTEXT_HEADER_SIZE];
 
         match self {
-            CommitmentContext::None => {
-                header[0..=1].copy_from_slice(&COMMITMENT_CONTEXT_TYPE_NONE.to_be_bytes());
+            CommitmentContext::Empty => {
+                header[0..=1].copy_from_slice(&COMMITMENT_CONTEXT_TYPE_EMPTY.to_be_bytes());
             }
-            CommitmentContext::WithinTrustingPeriod(_) => {
+            CommitmentContext::TrustingPeriod(_) => {
                 header[0..=1]
                     .copy_from_slice(&COMMITMENT_CONTEXT_TYPE_WITHIN_TRUSTING_PERIOD.to_be_bytes());
             }
@@ -60,12 +60,12 @@ impl EthABIEncoder for CommitmentContext {
     fn ethabi_encode(self) -> Vec<u8> {
         let header = self.header().as_ref().try_into().unwrap();
         match self {
-            CommitmentContext::None => EthABICommitmentContext {
+            CommitmentContext::Empty => EthABICommitmentContext {
                 header,
                 context_bytes: vec![],
             }
             .encode(),
-            CommitmentContext::WithinTrustingPeriod(ctx) => EthABICommitmentContext {
+            CommitmentContext::TrustingPeriod(ctx) => EthABICommitmentContext {
                 header,
                 context_bytes: ctx.ethabi_encode(),
             }
@@ -79,13 +79,13 @@ impl EthABIEncoder for CommitmentContext {
         } = EthABICommitmentContext::decode(bz)?;
 
         match CommitmentContext::parse_context_type_from_header(&header)? {
-            COMMITMENT_CONTEXT_TYPE_NONE => {
+            COMMITMENT_CONTEXT_TYPE_EMPTY => {
                 assert!(context_bytes.is_empty());
-                Ok(CommitmentContext::None)
+                Ok(CommitmentContext::Empty)
             }
             COMMITMENT_CONTEXT_TYPE_WITHIN_TRUSTING_PERIOD => {
-                let ctx = WithinTrustingPeriodContext::ethabi_decode(&context_bytes)?;
-                Ok(CommitmentContext::WithinTrustingPeriod(ctx))
+                let ctx = TrustingPeriodContext::ethabi_decode(&context_bytes)?;
+                Ok(CommitmentContext::TrustingPeriod(ctx))
             }
             type_ => Err(Error::invalid_commitment_context_header(format!(
                 "unknown commitment context type: {}",
@@ -135,22 +135,22 @@ impl EthABICommitmentContext {
 
 impl Default for CommitmentContext {
     fn default() -> Self {
-        CommitmentContext::None
+        CommitmentContext::Empty
     }
 }
 
 impl Display for CommitmentContext {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
-            CommitmentContext::None => write!(f, "None"),
-            CommitmentContext::WithinTrustingPeriod(ctx) => write!(f, "TrustingPeriod {{{}}}", ctx),
+            CommitmentContext::Empty => write!(f, "Empty"),
+            CommitmentContext::TrustingPeriod(ctx) => write!(f, "TrustingPeriod {{{}}}", ctx),
         }
     }
 }
 
 /// NOTE: time precision is in seconds (i.e. nanoseconds are truncated)
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct WithinTrustingPeriodContext {
+pub struct TrustingPeriodContext {
     /// How long a validator set is trusted for (must be shorter than the chain's
     /// unbonding period)
     trusting_period: Duration,
@@ -170,7 +170,7 @@ pub struct WithinTrustingPeriodContext {
     trusted_state_timestamp: Time,
 }
 
-impl WithinTrustingPeriodContext {
+impl TrustingPeriodContext {
     pub fn new(
         trusting_period: Duration,
         clock_drift: Duration,
@@ -195,9 +195,9 @@ impl WithinTrustingPeriodContext {
 
         // ensure the header isn't from a future time
         Self::ensure_header_from_past(
+            current_timestamp,
             self.untrusted_header_timestamp,
             self.clock_drift,
-            current_timestamp,
         )?;
 
         Ok(())
@@ -217,9 +217,9 @@ impl WithinTrustingPeriodContext {
     }
 
     fn ensure_header_from_past(
+        now: Time,
         untrusted_header_time: Time,
         clock_drift: Duration,
-        now: Time,
     ) -> Result<(), Error> {
         let current = (now + clock_drift)?;
         if current > untrusted_header_time {
@@ -230,7 +230,7 @@ impl WithinTrustingPeriodContext {
     }
 }
 
-impl Display for WithinTrustingPeriodContext {
+impl Display for TrustingPeriodContext {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(
             f,
@@ -240,7 +240,7 @@ impl Display for WithinTrustingPeriodContext {
     }
 }
 
-impl EthABIEncoder for WithinTrustingPeriodContext {
+impl EthABIEncoder for TrustingPeriodContext {
     fn ethabi_encode(self) -> Vec<u8> {
         let mut params = [0u8; 32];
         params[0..=15].copy_from_slice(&self.trusting_period.as_nanos().to_be_bytes());
@@ -258,14 +258,14 @@ impl EthABIEncoder for WithinTrustingPeriodContext {
                 .as_unix_timestamp_nanos()
                 .to_be_bytes(),
         );
-        EthABIWithinTrustingPeriodContext {
+        EthABITrustingPeriodContext {
             params: params.to_vec(),
             timestamps: timestamps.to_vec(),
         }
         .encode()
     }
     fn ethabi_decode(bz: &[u8]) -> Result<Self, Error> {
-        let c = EthABIWithinTrustingPeriodContext::decode(bz)?;
+        let c = EthABITrustingPeriodContext::decode(bz)?;
         let trusting_period =
             nanos_to_duration(u128::from_be_bytes(c.params[0..=15].try_into().unwrap()))?;
         let clock_drift =
@@ -285,13 +285,13 @@ impl EthABIEncoder for WithinTrustingPeriodContext {
     }
 }
 
-impl From<WithinTrustingPeriodContext> for CommitmentContext {
-    fn from(ctx: WithinTrustingPeriodContext) -> Self {
-        CommitmentContext::WithinTrustingPeriod(ctx)
+impl From<TrustingPeriodContext> for CommitmentContext {
+    fn from(ctx: TrustingPeriodContext) -> Self {
+        CommitmentContext::TrustingPeriod(ctx)
     }
 }
 
-pub(crate) struct EthABIWithinTrustingPeriodContext {
+pub(crate) struct EthABITrustingPeriodContext {
     // bytes32 in solidity
     // MSB first
     // 0-15: trusting_period
@@ -302,7 +302,7 @@ pub(crate) struct EthABIWithinTrustingPeriodContext {
     pub timestamps: ethabi::FixedBytes,
 }
 
-impl EthABIWithinTrustingPeriodContext {
+impl EthABITrustingPeriodContext {
     fn encode(self) -> Vec<u8> {
         use ethabi::Token;
         ethabi::encode(&[Token::Tuple(vec![
@@ -336,8 +336,10 @@ impl EthABIWithinTrustingPeriodContext {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::errors::ErrorDetail;
     use lcp_types::MAX_UNIX_TIMESTAMP_NANOS;
     use proptest::prelude::*;
+    use time::{macros::datetime, OffsetDateTime};
 
     proptest! {
         #[test]
@@ -347,7 +349,7 @@ mod tests {
             untrusted_header_timestamp in ..=MAX_UNIX_TIMESTAMP_NANOS,
             trusted_state_timestamp in ..=MAX_UNIX_TIMESTAMP_NANOS
         ) {
-            let ctx: CommitmentContext = WithinTrustingPeriodContext::new(
+            let ctx: CommitmentContext = TrustingPeriodContext::new(
                 nanos_to_duration(trusting_period).unwrap(),
                 nanos_to_duration(clock_drift).unwrap(),
                 Time::from_unix_timestamp_nanos(untrusted_header_timestamp).unwrap(),
@@ -360,8 +362,8 @@ mod tests {
     }
 
     #[test]
-    fn test_none_context_serialization() {
-        let ctx = CommitmentContext::None;
+    fn test_empty_context_serialization() {
+        let ctx = CommitmentContext::Empty;
         let bz = ctx.clone().ethabi_encode();
         let ctx2 = CommitmentContext::ethabi_decode(&bz).unwrap();
         assert_eq!(ctx, ctx2);
@@ -369,7 +371,7 @@ mod tests {
 
     #[test]
     fn test_trusting_period_context_serialization() {
-        let ctx = CommitmentContext::WithinTrustingPeriod(WithinTrustingPeriodContext::new(
+        let ctx = CommitmentContext::TrustingPeriod(TrustingPeriodContext::new(
             Duration::new(60 * 60 * 24, 0),
             Duration::new(60 * 60, 0),
             Time::now(),
@@ -382,14 +384,14 @@ mod tests {
 
     #[test]
     fn test_context_header() {
-        let ctx = CommitmentContext::None;
+        let ctx = CommitmentContext::Empty;
         let header = ctx.header();
         assert_eq!(
-            COMMITMENT_CONTEXT_TYPE_NONE,
+            COMMITMENT_CONTEXT_TYPE_EMPTY,
             CommitmentContext::parse_context_type_from_header(&header).unwrap()
         );
 
-        let ctx = CommitmentContext::WithinTrustingPeriod(WithinTrustingPeriodContext::new(
+        let ctx = CommitmentContext::TrustingPeriod(TrustingPeriodContext::new(
             Duration::new(60 * 60 * 24, 0),
             Duration::new(60 * 60, 0),
             Time::now(),
@@ -400,5 +402,136 @@ mod tests {
             COMMITMENT_CONTEXT_TYPE_WITHIN_TRUSTING_PERIOD,
             CommitmentContext::parse_context_type_from_header(&header).unwrap()
         );
+    }
+
+    fn build_trusting_period_context(
+        trusting_period_nanos: u128,
+        clock_drift_nanos: u128,
+        untrusted_header_timestamp: OffsetDateTime,
+        trusted_state_timestamp: OffsetDateTime,
+    ) -> TrustingPeriodContext {
+        TrustingPeriodContext::new(
+            nanos_to_duration(trusting_period_nanos).unwrap(),
+            nanos_to_duration(clock_drift_nanos).unwrap(),
+            Time::from_unix_timestamp_nanos(
+                untrusted_header_timestamp.unix_timestamp_nanos() as u128
+            )
+            .unwrap(),
+            Time::from_unix_timestamp_nanos(trusted_state_timestamp.unix_timestamp_nanos() as u128)
+                .unwrap(),
+        )
+    }
+
+    fn validate_and_assert_no_error(ctx: TrustingPeriodContext, current_timestamp: OffsetDateTime) {
+        let res = ctx.validate(
+            Time::from_unix_timestamp_nanos(current_timestamp.unix_timestamp_nanos() as u128)
+                .unwrap(),
+        );
+        assert!(res.is_ok(), "{:?}", res);
+    }
+
+    fn validate_and_assert_trusting_period_error(
+        ctx: TrustingPeriodContext,
+        current_timestamp: OffsetDateTime,
+    ) {
+        let res = ctx.validate(
+            Time::from_unix_timestamp_nanos(current_timestamp.unix_timestamp_nanos() as u128)
+                .unwrap(),
+        );
+        assert!(res.is_err());
+        if let ErrorDetail::OutOfTrustingPeriod(_) = res.as_ref().err().unwrap().detail() {
+        } else {
+            assert!(false);
+        }
+    }
+
+    fn validate_and_assert_clock_drift_error(
+        ctx: TrustingPeriodContext,
+        current_timestamp: OffsetDateTime,
+    ) {
+        let res = ctx.validate(
+            Time::from_unix_timestamp_nanos(current_timestamp.unix_timestamp_nanos() as u128)
+                .unwrap(),
+        );
+        assert!(res.is_err());
+        if let ErrorDetail::HeaderFromFuture(_) = res.as_ref().err().unwrap().detail() {
+        } else {
+            assert!(false);
+        }
+    }
+
+    #[test]
+    fn test_trusting_period_context() {
+        {
+            let current_timestamp = datetime!(2023-08-20 0:00 UTC);
+            let untrusted_header_timestamp = datetime!(2023-08-20 0:00 UTC);
+            let trusted_state_timestamp = datetime!(2023-08-20 0:00 UTC);
+            let ctx = build_trusting_period_context(
+                1,
+                1,
+                untrusted_header_timestamp,
+                trusted_state_timestamp,
+            );
+            validate_and_assert_no_error(ctx, current_timestamp);
+        }
+
+        // trusting_period
+        {
+            let current_timestamp = datetime!(2023-08-20 0:00 UTC);
+            let untrusted_header_timestamp = current_timestamp - Duration::new(0, 1);
+            let trusted_state_timestamp = untrusted_header_timestamp - Duration::new(0, 1);
+
+            let ctx = build_trusting_period_context(
+                1,
+                0,
+                untrusted_header_timestamp,
+                trusted_state_timestamp,
+            );
+            validate_and_assert_trusting_period_error(ctx, current_timestamp);
+
+            let ctx = build_trusting_period_context(
+                2,
+                0,
+                untrusted_header_timestamp,
+                trusted_state_timestamp,
+            );
+            validate_and_assert_trusting_period_error(ctx, current_timestamp);
+
+            let ctx = build_trusting_period_context(
+                3,
+                0,
+                untrusted_header_timestamp,
+                trusted_state_timestamp,
+            );
+            validate_and_assert_no_error(ctx, current_timestamp);
+        }
+
+        // clock drift
+        {
+            let current_timestamp = datetime!(2023-08-20 0:00 UTC);
+            let untrusted_header_timestamp = current_timestamp + Duration::new(0, 1);
+            let trusted_state_timestamp = current_timestamp;
+            let ctx = build_trusting_period_context(
+                1,
+                0,
+                untrusted_header_timestamp,
+                trusted_state_timestamp,
+            );
+            validate_and_assert_clock_drift_error(ctx, current_timestamp);
+            let ctx = build_trusting_period_context(
+                1,
+                1,
+                untrusted_header_timestamp,
+                trusted_state_timestamp,
+            );
+            validate_and_assert_clock_drift_error(ctx, current_timestamp);
+            let ctx = build_trusting_period_context(
+                1,
+                2,
+                untrusted_header_timestamp,
+                trusted_state_timestamp,
+            );
+            validate_and_assert_no_error(ctx, current_timestamp);
+        }
     }
 }

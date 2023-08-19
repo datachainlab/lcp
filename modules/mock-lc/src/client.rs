@@ -57,7 +57,7 @@ impl LightClient for MockLightClient {
                 prev_height: None,
                 new_height: height,
                 timestamp,
-                context: CommitmentContext::None,
+                context: CommitmentContext::Empty,
             }
             .into(),
             prove: false,
@@ -140,7 +140,7 @@ impl LightClient for MockLightClient {
                 prev_height: Some(latest_height.into()),
                 new_height: height,
                 timestamp: header_timestamp,
-                context: CommitmentContext::None,
+                context: CommitmentContext::Empty,
             }
             .into(),
             prove: true,

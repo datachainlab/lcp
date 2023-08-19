@@ -523,9 +523,9 @@ impl EthABIEncoder for StateCommitment {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::CommitmentProof;
+    use crate::{CommitmentProof, TrustingPeriodContext};
     use crypto::Address;
-    use lcp_types::MAX_UNIX_TIMESTAMP_NANOS;
+    use lcp_types::{nanos_to_duration, MAX_UNIX_TIMESTAMP_NANOS};
     use proptest::prelude::*;
     use prost_types::Any as ProtoAny;
 
@@ -533,9 +533,29 @@ mod tests {
         Height::new(tuple.0, tuple.1)
     }
 
+    fn test_update_client_commitment(
+        c1: UpdateClientCommitment,
+        proof_signer: Address,
+        proof_signature: Vec<u8>,
+    ) {
+        let v = c1.clone().ethabi_encode();
+        let c2 = UpdateClientCommitment::ethabi_decode(&v).unwrap();
+        assert_eq!(c1, c2);
+
+        let p1 = CommitmentProof {
+            commitment_bytes: Commitment::from(c1).to_commitment_bytes(),
+            signer: proof_signer,
+            signature: proof_signature.to_vec(),
+        };
+        // TODO uncomment this line when we want to generate the test data
+        // println!("{{\"{}\"}},", hex::encode(p1.clone().ethabi_encode()));
+        let p2 = CommitmentProof::ethabi_decode(&p1.clone().ethabi_encode()).unwrap();
+        assert_eq!(p1, p2);
+    }
+
     proptest! {
         #[test]
-        fn pt_update_client_commitment(
+        fn pt_update_client_commitment_with_empty_context(
             prev_state_id in any::<Option<[u8; 32]>>().prop_map(|v| v.map(StateID::from)),
             new_state_id in any::<[u8; 32]>().prop_map(StateID::from),
             new_state in any::<Option<(String, Vec<u8>)>>().prop_filter("type_url length must be greater than 0", |t| t.is_none() || t.as_ref().unwrap().0.len() > 0),
@@ -560,17 +580,45 @@ mod tests {
                 timestamp: Time::from_unix_timestamp_nanos(timestamp).unwrap(),
                 context: Default::default(),
             };
-            let v = c1.clone().ethabi_encode();
-            let c2 = UpdateClientCommitment::ethabi_decode(&v).unwrap();
-            assert_eq!(c1, c2);
+            test_update_client_commitment(c1, Address(proof_signer), proof_signature.to_vec());
+        }
 
-            let p1 = CommitmentProof {
-                commitment_bytes: Commitment::from(c1).to_commitment_bytes(),
-                signer: Address(proof_signer),
-                signature: proof_signature.to_vec(),
+        #[test]
+        fn pt_update_client_commitment_with_trusting_period_context(
+            prev_state_id in any::<Option<[u8; 32]>>().prop_map(|v| v.map(StateID::from)),
+            new_state_id in any::<[u8; 32]>().prop_map(StateID::from),
+            new_state in any::<Option<(String, Vec<u8>)>>().prop_filter("type_url length must be greater than 0", |t| t.is_none() || t.as_ref().unwrap().0.len() > 0),
+            prev_height in any::<Option<(u64, u64)>>().prop_map(|v| v.map(height_from_tuple)),
+            new_height in any::<(u64, u64)>().prop_map(height_from_tuple),
+            timestamp in ..=MAX_UNIX_TIMESTAMP_NANOS,
+            proof_signer in any::<[u8; 20]>(),
+            proof_signature in any::<[u8; 65]>(),
+            trusting_period in ..=MAX_UNIX_TIMESTAMP_NANOS,
+            clock_drift in ..=MAX_UNIX_TIMESTAMP_NANOS,
+            untrusted_header_timestamp in ..=MAX_UNIX_TIMESTAMP_NANOS,
+            trusted_state_timestamp in ..=MAX_UNIX_TIMESTAMP_NANOS
+        ) {
+            let c1 = UpdateClientCommitment {
+                prev_state_id,
+                new_state_id,
+                new_state: new_state.map(|(type_url, value)| {
+                    ProtoAny {
+                        type_url,
+                        value,
+                    }.try_into()
+                    .unwrap()
+                }),
+                prev_height,
+                new_height,
+                timestamp: Time::from_unix_timestamp_nanos(timestamp).unwrap(),
+                context: TrustingPeriodContext::new(
+                    nanos_to_duration(trusting_period).unwrap(),
+                    nanos_to_duration(clock_drift).unwrap(),
+                    Time::from_unix_timestamp_nanos(untrusted_header_timestamp).unwrap(),
+                    Time::from_unix_timestamp_nanos(trusted_state_timestamp).unwrap(),
+                ).into(),
             };
-            let p2 = CommitmentProof::ethabi_decode(&p1.clone().ethabi_encode()).unwrap();
-            assert_eq!(p1, p2);
+            test_update_client_commitment(c1, Address(proof_signer), proof_signature.to_vec());
         }
 
         #[test]
