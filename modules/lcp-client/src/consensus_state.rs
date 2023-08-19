@@ -18,7 +18,7 @@ pub struct ConsensusState {
 
 impl ConsensusState {
     pub fn is_empty(&self) -> bool {
-        self.state_id.is_zero()
+        self.state_id == Default::default() && self.timestamp.as_unix_timestamp_nanos() == 0
     }
 }
 

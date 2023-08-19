@@ -13,22 +13,20 @@ pub const STATE_ID_SIZE: usize = 32;
 pub struct StateID([u8; STATE_ID_SIZE]);
 
 impl StateID {
-    pub fn from_bytes_array(bytes: [u8; STATE_ID_SIZE]) -> Self {
-        StateID(bytes)
-    }
-
     pub fn to_vec(&self) -> Vec<u8> {
         self.0.to_vec()
-    }
-
-    pub fn is_zero(&self) -> bool {
-        self == &StateID::default()
     }
 }
 
 impl Display for StateID {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         f.write_str(format!("0x{}", hex::encode(self.0)).as_str())
+    }
+}
+
+impl From<[u8; STATE_ID_SIZE]> for StateID {
+    fn from(value: [u8; STATE_ID_SIZE]) -> Self {
+        Self(value)
     }
 }
 
@@ -41,11 +39,9 @@ impl TryFrom<&[u8]> for StateID {
         }
         let mut bz: [u8; STATE_ID_SIZE] = Default::default();
         bz.copy_from_slice(value);
-        Ok(Self::from_bytes_array(bz))
+        Ok(Self(bz))
     }
 }
-
-// TODO define owned error types
 
 pub fn gen_state_id_from_any(
     any_client_state: &Any,
@@ -64,5 +60,5 @@ pub fn gen_state_id_from_bytes(bz: &[u8]) -> Result<StateID, Error> {
     let mut result: [u8; STATE_ID_SIZE] = Default::default();
     let h = sha2::Sha256::digest(bz).to_vec();
     result.copy_from_slice(&h);
-    Ok(StateID::from_bytes_array(result))
+    Ok(StateID(result))
 }

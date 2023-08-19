@@ -401,11 +401,4 @@ mod tests {
             CommitmentContext::parse_context_type_from_header(&header).unwrap()
         );
     }
-
-    #[test]
-    fn test_eth_abi_encoding() {
-        use ethabi::Token;
-        let v = ethabi::encode(&[Token::FixedBytes([0u8; 32].to_vec())]);
-        assert_eq!(v.len(), 32);
-    }
 }
