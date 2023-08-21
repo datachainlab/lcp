@@ -57,8 +57,8 @@ var (
 	})
 
 	trustingPeriodContextABI, _ = abi.NewType("tuple", "struct TrustingPeriodCommitmentContext", []abi.ArgumentMarshaling{
-		{Name: "params", Type: "bytes32"},
 		{Name: "timestamps", Type: "bytes32"},
+		{Name: "params", Type: "bytes32"},
 	})
 
 	stateCommitmentABI, _ = abi.NewType("tuple", "struct StateCommitment", []abi.ArgumentMarshaling{
@@ -105,26 +105,28 @@ func (NoneCommitmentContext) Validate(time.Time) error {
 
 // TrustingPeriodCommitmentContext is the commitment context for a commitment that requires the current time to be within the trusting period.
 type TrustingPeriodCommitmentContext struct {
-	TrustingPeriod           big.Int
-	ClockDrift               big.Int
 	UntrustedHeaderTimestamp time.Time
 	TrustedStateTimestamp    time.Time
+	TrustingPeriod           big.Int
+	ClockDrift               big.Int
 }
 
-func DecodeTrustingPeriodCommitmentContext(params, timestamps [32]byte) *TrustingPeriodCommitmentContext {
-	// MSB first
+func DecodeTrustingPeriodCommitmentContext(timestamps, params [32]byte) *TrustingPeriodCommitmentContext {
+	// 0-15: untrusted_header_timestamp
+	// 16-31: trusted_state_timestamp
+	untrustedHeaderTimestamp := timestampNanosBytesToTime(timestamps[:16])
+	trustedStateTimestamp := timestampNanosBytesToTime(timestamps[16:32])
+
 	// 0-15: trusting_period
 	// 16-31: clock_drift
 	trustingPeriod := uint128BytesToBigInt(params[:16])
 	clockDrift := uint128BytesToBigInt(params[16:32])
 
-	// 0-15: untrusted_header_timestamp
-	// 16-31: trusted_state_timestamp
 	return &TrustingPeriodCommitmentContext{
+		UntrustedHeaderTimestamp: untrustedHeaderTimestamp,
+		TrustedStateTimestamp:    trustedStateTimestamp,
 		TrustingPeriod:           trustingPeriod,
 		ClockDrift:               clockDrift,
-		UntrustedHeaderTimestamp: timestampNanosBytesToTime(timestamps[:16]),
-		TrustedStateTimestamp:    timestampNanosBytesToTime(timestamps[16:32]),
 	}
 }
 
@@ -369,10 +371,10 @@ func EthABIDecodeTrustingPeriodCommitmentContext(bz []byte) (*TrustingPeriodComm
 		return nil, err
 	}
 	p := v[0].(struct {
-		Params     [32]byte `json:"params"`
 		Timestamps [32]byte `json:"timestamps"`
+		Params     [32]byte `json:"params"`
 	})
-	return DecodeTrustingPeriodCommitmentContext(p.Params, p.Timestamps), nil
+	return DecodeTrustingPeriodCommitmentContext(p.Timestamps, p.Params), nil
 }
 
 func EthABIDecodeStateCommitment(bz []byte) (*StateCommitment, error) {

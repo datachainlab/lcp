@@ -242,9 +242,6 @@ impl Display for TrustingPeriodContext {
 
 impl EthABIEncoder for TrustingPeriodContext {
     fn ethabi_encode(self) -> Vec<u8> {
-        let mut params = [0u8; 32];
-        params[0..=15].copy_from_slice(&self.trusting_period.as_nanos().to_be_bytes());
-        params[16..=31].copy_from_slice(&self.clock_drift.as_nanos().to_be_bytes());
         let mut timestamps = [0u8; 32];
         timestamps[0..=15].copy_from_slice(
             &self
@@ -258,9 +255,12 @@ impl EthABIEncoder for TrustingPeriodContext {
                 .as_unix_timestamp_nanos()
                 .to_be_bytes(),
         );
+        let mut params = [0u8; 32];
+        params[0..=15].copy_from_slice(&self.trusting_period.as_nanos().to_be_bytes());
+        params[16..=31].copy_from_slice(&self.clock_drift.as_nanos().to_be_bytes());
         EthABITrustingPeriodContext {
-            params: params.to_vec(),
             timestamps: timestamps.to_vec(),
+            params: params.to_vec(),
         }
         .encode()
     }
@@ -292,22 +292,24 @@ impl From<TrustingPeriodContext> for CommitmentContext {
 }
 
 pub(crate) struct EthABITrustingPeriodContext {
-    // bytes32 in solidity
-    // MSB first
-    // 0-15: trusting_period
-    // 16-31: clock_drift
-    pub params: ethabi::FixedBytes,
-    // 0-15: untrusted_header_timestamp
-    // 16-31: trusted_state_timestamp
+    /// bytes32 in solidity
+    /// MSB first
+    /// 0-15: untrusted_header_timestamp
+    /// 16-31: trusted_state_timestamp
     pub timestamps: ethabi::FixedBytes,
+    /// bytes32 in solidity
+    /// MSB first
+    /// 0-15: trusting_period
+    /// 16-31: clock_drift
+    pub params: ethabi::FixedBytes,
 }
 
 impl EthABITrustingPeriodContext {
     fn encode(self) -> Vec<u8> {
         use ethabi::Token;
         ethabi::encode(&[Token::Tuple(vec![
-            Token::FixedBytes(self.params),
             Token::FixedBytes(self.timestamps),
+            Token::FixedBytes(self.params),
         ])])
     }
     fn decode(bytes: &[u8]) -> Result<Self, Error> {
@@ -327,8 +329,8 @@ impl EthABITrustingPeriodContext {
         assert!(tuple.len() == 2);
         let mut values = tuple.into_iter();
         Ok(Self {
-            params: values.next().unwrap().into_fixed_bytes().unwrap(),
             timestamps: values.next().unwrap().into_fixed_bytes().unwrap(),
+            params: values.next().unwrap().into_fixed_bytes().unwrap(),
         })
     }
 }
