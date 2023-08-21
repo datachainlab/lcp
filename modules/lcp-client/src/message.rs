@@ -1,7 +1,7 @@
 use crate::errors::Error;
 use crate::prelude::*;
 use attestation_report::EndorsedAttestationVerificationReport;
-use commitments::{Commitment, StateID, UpdateClientCommitment};
+use commitments::{Commitment, CommitmentContext, StateID, UpdateClientCommitment};
 use crypto::Address;
 use ibc_proto::protobuf::Protobuf;
 use lcp_proto::ibc::lightclients::lcp::v1::{
@@ -11,7 +11,6 @@ use lcp_proto::ibc::lightclients::lcp::v1::{
 use lcp_types::{Any, Height, Time};
 use prost_types::Any as ProtoAny;
 use serde::{Deserialize, Serialize};
-use validation_context::ValidationParams;
 
 pub const LCP_REGISTER_ENCLAVE_KEY_MESSAGE_TYPE_URL: &str =
     "/ibc.lightclients.lcp.v1.RegisterEnclaveKeyMessage";
@@ -166,8 +165,8 @@ pub trait CommitmentReader {
         self.commitment().timestamp
     }
 
-    fn validation_params(&self) -> &ValidationParams {
-        &self.commitment().validation_params
+    fn context(&self) -> &CommitmentContext {
+        &self.commitment().context
     }
 }
 

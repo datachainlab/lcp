@@ -1,10 +1,10 @@
+use crate::context::CommitmentContext;
 use crate::prelude::*;
 use crate::{Error, StateID};
 use core::fmt::Display;
 use lcp_types::{Any, Height, Time};
 use prost::Message;
 use serde::{Deserialize, Serialize};
-use validation_context::ValidationParams;
 
 pub const COMMITMENT_SCHEMA_VERSION: u16 = 1;
 pub const COMMITMENT_TYPE_UPDATE_CLIENT: u16 = 1;
@@ -187,7 +187,7 @@ pub struct UpdateClientCommitment {
     pub prev_height: Option<Height>,
     pub new_height: Height,
     pub timestamp: Time,
-    pub validation_params: ValidationParams,
+    pub context: CommitmentContext,
 }
 
 impl From<UpdateClientCommitment> for Commitment {
@@ -196,26 +196,12 @@ impl From<UpdateClientCommitment> for Commitment {
     }
 }
 
-impl Default for UpdateClientCommitment {
-    fn default() -> Self {
-        UpdateClientCommitment {
-            timestamp: Time::unix_epoch(),
-            prev_state_id: Default::default(),
-            new_state_id: Default::default(),
-            new_state: Default::default(),
-            prev_height: Default::default(),
-            new_height: Default::default(),
-            validation_params: Default::default(),
-        }
-    }
-}
-
 impl Display for UpdateClientCommitment {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(
             f,
-            "prev_state_id={} new_state_id={} new_state_include={} prev_height={:?} new_height={:?} timestamp={} validation_params={{{}}}",
-            self.prev_state_id.map_or("".to_string(), |s| s.to_string()), self.new_state_id, self.new_state.is_some(), self.prev_height.map_or("".to_string(), |h| h.to_string()), self.new_height.to_string(), self.timestamp, self.validation_params
+            "prev_state_id={} new_state_id={} new_state_include={} prev_height={:?} new_height={:?} timestamp={} context={{{}}}",
+            self.prev_state_id.map_or("".to_string(), |s| s.to_string()), self.new_state_id, self.new_state.is_some(), self.prev_height.map_or("".to_string(), |h| h.to_string()), self.new_height.to_string(), self.timestamp, self.context
         )
     }
 }
@@ -228,7 +214,7 @@ pub(crate) struct EthABIUpdateClientCommitment {
     prev_height: EthABIHeight,         // (u64, u64)
     new_height: EthABIHeight,          // (u64, u64)
     timestamp: ethabi::Uint,           // u128
-    validation_params: ethabi::Bytes,  // bytes
+    context: ethabi::Bytes,            // bytes
 }
 
 // the height is encoded as a tuple of 2 elements: (u64, u64)
@@ -304,7 +290,7 @@ impl EthABIUpdateClientCommitment {
             Token::Tuple(self.prev_height.into()),
             Token::Tuple(self.new_height.into()),
             Token::Uint(self.timestamp),
-            Token::Bytes(self.validation_params),
+            Token::Bytes(self.context),
         ])])
     }
 
@@ -338,7 +324,7 @@ impl EthABIUpdateClientCommitment {
             prev_height: values.next().unwrap().into_tuple().unwrap().try_into()?,
             new_height: values.next().unwrap().into_tuple().unwrap().try_into()?,
             timestamp: values.next().unwrap().into_uint().unwrap(),
-            validation_params: values.next().unwrap().into_bytes().unwrap(),
+            context: values.next().unwrap().into_bytes().unwrap(),
         })
     }
 }
@@ -357,7 +343,7 @@ impl From<UpdateClientCommitment> for EthABIUpdateClientCommitment {
             prev_height: value.prev_height.into(),
             new_height: value.new_height.into(),
             timestamp: Uint::from(value.timestamp.as_unix_timestamp_nanos()),
-            validation_params: value.validation_params.to_vec(),
+            context: value.context.ethabi_encode(),
         }
     }
 }
@@ -366,7 +352,7 @@ impl TryFrom<EthABIUpdateClientCommitment> for UpdateClientCommitment {
     type Error = Error;
     fn try_from(value: EthABIUpdateClientCommitment) -> Result<Self, Self::Error> {
         Ok(Self {
-            prev_state_id: bytes_to_bytes32(value.prev_state_id)?.map(StateID::from_bytes_array),
+            prev_state_id: bytes_to_bytes32(value.prev_state_id)?.map(StateID::from),
             new_state_id: value.new_state_id.as_slice().try_into()?,
             new_state: if value.new_state.is_empty() {
                 None
@@ -376,7 +362,7 @@ impl TryFrom<EthABIUpdateClientCommitment> for UpdateClientCommitment {
             prev_height: value.prev_height.into(),
             new_height: value.new_height.into(),
             timestamp: Time::from_unix_timestamp_nanos(value.timestamp.as_u128())?,
-            validation_params: ValidationParams::from_bytes(value.validation_params.as_slice()),
+            context: CommitmentContext::ethabi_decode(value.context.as_slice())?,
         })
     }
 }
@@ -537,113 +523,132 @@ impl EthABIEncoder for StateCommitment {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::CommitmentProof;
+    use crate::{CommitmentProof, TrustingPeriodContext};
     use crypto::Address;
-    use lcp_types::ClientId;
+    use lcp_types::{nanos_to_duration, MAX_UNIX_TIMESTAMP_NANOS};
+    use proptest::prelude::*;
     use prost_types::Any as ProtoAny;
-    use rand::{distributions::Uniform, thread_rng, Rng};
 
-    const TENDERMINT_CLIENT_TYPE: &str = "07-tendermint";
-
-    #[test]
-    fn test_update_client_commitment_converter() {
-        for _ in 0..2_i32.pow(10) {
-            let c1 = gen_rand_update_client_commitment();
-            let v = c1.clone().ethabi_encode();
-            let c2 = UpdateClientCommitment::ethabi_decode(&v).unwrap();
-            assert_eq!(c1, c2);
-        }
+    fn height_from_tuple(tuple: (u64, u64)) -> Height {
+        Height::new(tuple.0, tuple.1)
     }
 
-    #[test]
-    fn test_state_commitment_converter() {
-        for _ in 0..2_i32.pow(10) {
-            let c1 = gen_rand_state_commitment();
+    fn test_update_client_commitment(
+        c1: UpdateClientCommitment,
+        proof_signer: Address,
+        proof_signature: Vec<u8>,
+    ) {
+        let v = c1.clone().ethabi_encode();
+        let c2 = UpdateClientCommitment::ethabi_decode(&v).unwrap();
+        assert_eq!(c1, c2);
+
+        let p1 = CommitmentProof {
+            commitment_bytes: Commitment::from(c1).to_commitment_bytes(),
+            signer: proof_signer,
+            signature: proof_signature.to_vec(),
+        };
+        // TODO uncomment this line when we want to generate the test data
+        // println!("{{\"{}\"}},", hex::encode(p1.clone().ethabi_encode()));
+        let p2 = CommitmentProof::ethabi_decode(&p1.clone().ethabi_encode()).unwrap();
+        assert_eq!(p1, p2);
+    }
+
+    proptest! {
+        #[test]
+        fn pt_update_client_commitment_with_empty_context(
+            prev_state_id in any::<Option<[u8; 32]>>().prop_map(|v| v.map(StateID::from)),
+            new_state_id in any::<[u8; 32]>().prop_map(StateID::from),
+            new_state in any::<Option<(String, Vec<u8>)>>().prop_filter("type_url length must be greater than 0", |t| t.is_none() || !t.as_ref().unwrap().0.is_empty()),
+            prev_height in any::<Option<(u64, u64)>>().prop_map(|v| v.map(height_from_tuple)),
+            new_height in any::<(u64, u64)>().prop_map(height_from_tuple),
+            timestamp in ..=MAX_UNIX_TIMESTAMP_NANOS,
+            proof_signer in any::<[u8; 20]>(),
+            proof_signature in any::<[u8; 65]>()
+        ) {
+            let c1 = UpdateClientCommitment {
+                prev_state_id,
+                new_state_id,
+                new_state: new_state.map(|(type_url, value)| {
+                    ProtoAny {
+                        type_url,
+                        value,
+                    }.try_into()
+                    .unwrap()
+                }),
+                prev_height,
+                new_height,
+                timestamp: Time::from_unix_timestamp_nanos(timestamp).unwrap(),
+                context: Default::default(),
+            };
+            test_update_client_commitment(c1, Address(proof_signer), proof_signature.to_vec());
+        }
+
+        #[test]
+        fn pt_update_client_commitment_with_trusting_period_context(
+            prev_state_id in any::<Option<[u8; 32]>>().prop_map(|v| v.map(StateID::from)),
+            new_state_id in any::<[u8; 32]>().prop_map(StateID::from),
+            new_state in any::<Option<(String, Vec<u8>)>>().prop_filter("type_url length must be greater than 0", |t| t.is_none() || !t.as_ref().unwrap().0.is_empty()),
+            prev_height in any::<Option<(u64, u64)>>().prop_map(|v| v.map(height_from_tuple)),
+            new_height in any::<(u64, u64)>().prop_map(height_from_tuple),
+            timestamp in ..=MAX_UNIX_TIMESTAMP_NANOS,
+            proof_signer in any::<[u8; 20]>(),
+            proof_signature in any::<[u8; 65]>(),
+            trusting_period in ..=MAX_UNIX_TIMESTAMP_NANOS,
+            clock_drift in ..=MAX_UNIX_TIMESTAMP_NANOS,
+            untrusted_header_timestamp in ..=MAX_UNIX_TIMESTAMP_NANOS,
+            trusted_state_timestamp in ..=MAX_UNIX_TIMESTAMP_NANOS
+        ) {
+            let c1 = UpdateClientCommitment {
+                prev_state_id,
+                new_state_id,
+                new_state: new_state.map(|(type_url, value)| {
+                    ProtoAny {
+                        type_url,
+                        value,
+                    }.try_into()
+                    .unwrap()
+                }),
+                prev_height,
+                new_height,
+                timestamp: Time::from_unix_timestamp_nanos(timestamp).unwrap(),
+                context: TrustingPeriodContext::new(
+                    nanos_to_duration(trusting_period).unwrap(),
+                    nanos_to_duration(clock_drift).unwrap(),
+                    Time::from_unix_timestamp_nanos(untrusted_header_timestamp).unwrap(),
+                    Time::from_unix_timestamp_nanos(trusted_state_timestamp).unwrap(),
+                ).into(),
+            };
+            test_update_client_commitment(c1, Address(proof_signer), proof_signature.to_vec());
+        }
+
+        #[test]
+        fn pt_state_commitment(
+            prefix in any::<CommitmentPrefix>(),
+            path in any::<String>(),
+            value in any::<Option<[u8; 32]>>(),
+            height in any::<(u64, u64)>().prop_map(height_from_tuple),
+            state_id in any::<[u8; 32]>().prop_map(StateID::from),
+            proof_signer in any::<[u8; 20]>(),
+            proof_signature in any::<[u8; 65]>()
+        ) {
+            let c1 = StateCommitment {
+                prefix,
+                path,
+                value,
+                height,
+                state_id,
+            };
             let v = c1.clone().ethabi_encode();
             let c2 = StateCommitment::ethabi_decode(&v).unwrap();
             assert_eq!(c1, c2);
-        }
-    }
 
-    #[test]
-    fn test_commitment_proof_converter() {
-        for _ in 0..2_i32.pow(10) {
-            let c: Commitment = if thread_rng().gen::<bool>() {
-                gen_rand_update_client_commitment().into()
-            } else {
-                gen_rand_state_commitment().into()
-            };
             let p1 = CommitmentProof {
-                commitment_bytes: c.clone().to_commitment_bytes(),
-                signer: Address::try_from(gen_rand_vec(20).as_slice()).unwrap(),
-                signature: gen_rand_vec(65),
+                commitment_bytes: Commitment::from(c1).to_commitment_bytes(),
+                signer: Address(proof_signer),
+                signature: proof_signature.to_vec(),
             };
-            let v = p1.clone().ethabi_encode();
-            let p2 = CommitmentProof::ethabi_decode(&v).unwrap();
+            let p2 = CommitmentProof::ethabi_decode(&p1.clone().ethabi_encode()).unwrap();
             assert_eq!(p1, p2);
-            assert_eq!(c, p2.commitment().unwrap());
-        }
-    }
-
-    fn gen_rand_update_client_commitment() -> UpdateClientCommitment {
-        UpdateClientCommitment {
-            prev_state_id: rand_or_none(gen_rand_state_id),
-            new_state_id: gen_rand_state_id(),
-            new_state: rand_or_none(|| -> Any {
-                ProtoAny {
-                    type_url: "/".to_owned(),
-                    value: gen_rand_vec(thread_rng().gen::<usize>() % 2_i32.pow(16) as usize),
-                }
-                .try_into()
-                .unwrap()
-            }),
-            prev_height: rand_or_none(gen_rand_height),
-            new_height: gen_rand_height(),
-            timestamp: Time::now(),
-            validation_params: Default::default(),
-        }
-    }
-
-    fn gen_rand_state_commitment() -> StateCommitment {
-        StateCommitment {
-            prefix: gen_rand_ascii_str().as_bytes().to_vec(),
-            path: format!(
-                "clients/{}/clientType",
-                ClientId::new(TENDERMINT_CLIENT_TYPE, thread_rng().gen()).unwrap()
-            ),
-            value: rand_or_none(|| gen_rand_vec(32).as_slice().try_into().unwrap()),
-            height: gen_rand_height(),
-            state_id: gen_rand_state_id(),
-        }
-    }
-
-    fn gen_rand_vec(size: usize) -> Vec<u8> {
-        let mut rng = thread_rng();
-        let range = Uniform::new_inclusive(0, u8::MAX);
-        let vals: Vec<u8> = (0..size).map(|_| rng.sample(range)).collect();
-        vals
-    }
-
-    fn gen_rand_state_id() -> StateID {
-        gen_rand_vec(32).as_slice().try_into().unwrap()
-    }
-
-    fn gen_rand_height() -> Height {
-        Height::new(thread_rng().gen(), thread_rng().gen())
-    }
-
-    fn gen_rand_ascii_str() -> String {
-        let mut rng = thread_rng();
-        let range = Uniform::new_inclusive(0x20u8, 0x7Eu8);
-        let vals = (0..rng.gen::<u8>()).map(|_| rng.sample(range)).collect();
-        String::from_utf8(vals).unwrap()
-    }
-
-    fn rand_or_none<T, F: Fn() -> T>(func: F) -> Option<T> {
-        if thread_rng().gen_bool(0.5) {
-            Some(func())
-        } else {
-            None
         }
     }
 }

@@ -9,7 +9,6 @@ use commitments::{CommitmentPrefix, CommitmentProof, EthABIEncoder, StateCommitm
 use crypto::{verify_signature_address, Address, Keccak256};
 use lcp_types::{ClientId, Height, Time};
 use light_client::{ClientKeeper, ClientReader, HostClientKeeper, HostClientReader};
-use validation_context::{validation_predicate, ValidationContext};
 
 pub const LCP_CLIENT_TYPE: &str = "0000-lcp";
 
@@ -95,8 +94,7 @@ impl LCPClient {
         assert!(message.signer() == signer);
 
         // check if proxy's validation context matches our's context
-        let vctx = ValidationContext::new(ctx.host_timestamp());
-        assert!(validation_predicate(&vctx, message.validation_params()).unwrap());
+        message.context().validate(ctx.host_timestamp())?;
 
         // create a new state
         let new_client_state = client_state.with_header(&message);
@@ -119,9 +117,8 @@ impl LCPClient {
     ) -> Result<(), Error> {
         // TODO return an error instead of assertion
 
-        let vctx = ValidationContext::new(ctx.host_timestamp());
         let eavr = message.0;
-        let (key, attestation_time) = verify_report(&vctx, &client_state, &eavr)?;
+        let (key, attestation_time) = verify_report(ctx.host_timestamp(), &client_state, &eavr)?;
 
         self.add_enclave_key(
             ctx,
@@ -172,8 +169,6 @@ impl LCPClient {
         assert!(commitment_proof.signer == signer);
 
         // check if the specified signer is not expired and exists in the client state
-        let vctx = ValidationContext::new(ctx.host_timestamp());
-
         assert!(self.is_active_enclave_key(ctx, &client_id, signer));
 
         Ok(())
@@ -224,22 +219,22 @@ impl LCPClient {
 // - verifies the Attestation Verification Report
 // - calculate a key expiration with client_state and report's timestamp
 fn verify_report(
-    vctx: &ValidationContext,
+    current_timestamp: Time,
     client_state: &ClientState,
     eavr: &EndorsedAttestationVerificationReport,
 ) -> Result<(Address, Time), Error> {
     // verify AVR with Intel SGX Attestation Report Signing CA
     // NOTE: This verification is skipped in tests because the CA is not available in the test environment
     #[cfg(not(test))]
-    attestation_report::verify_report(eavr, vctx.current_timestamp)?;
+    attestation_report::verify_report(eavr, current_timestamp)?;
 
     let quote = eavr.get_avr()?.parse_quote()?;
 
     // check if attestation report's timestamp is not expired
     let key_expiration = (quote.attestation_time + client_state.key_expiration)?;
-    if vctx.current_timestamp > key_expiration {
+    if current_timestamp > key_expiration {
         return Err(Error::expired_avr(
-            vctx.current_timestamp,
+            current_timestamp,
             quote.attestation_time,
             client_state.key_expiration,
         ));

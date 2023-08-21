@@ -2,7 +2,7 @@ use crate::errors::Error;
 use crate::header::Header;
 use crate::prelude::*;
 use crate::state::{gen_state_id, ClientState, ConsensusState};
-use commitments::{gen_state_id_from_any, UpdateClientCommitment};
+use commitments::{gen_state_id_from_any, CommitmentContext, UpdateClientCommitment};
 use ibc::core::ics02_client::client_state::{
     downcast_client_state, ClientState as Ics02ClientState, UpdatedState,
 };
@@ -12,13 +12,11 @@ use ibc::core::ics02_client::header::Header as Ics02Header;
 use ibc::mock::client_state::{client_type, MockClientState, MOCK_CLIENT_STATE_TYPE_URL};
 use ibc::mock::consensus_state::MockConsensusState;
 use lcp_types::{Any, ClientId, Height, Time};
-use light_client::ibc::IBCContext;
 use light_client::{
-    CreateClientResult, Error as LightClientError, HostClientReader, LightClient,
+    ibc::IBCContext, CreateClientResult, Error as LightClientError, HostClientReader, LightClient,
     StateVerificationResult, UpdateClientResult,
 };
 use light_client_registry::LightClientRegistry;
-use validation_context::ValidationParams;
 
 #[derive(Default)]
 pub struct MockLightClient;
@@ -59,7 +57,7 @@ impl LightClient for MockLightClient {
                 prev_height: None,
                 new_height: height,
                 timestamp,
-                validation_params: ValidationParams::Empty,
+                context: CommitmentContext::Empty,
             }
             .into(),
             prove: false,
@@ -142,7 +140,7 @@ impl LightClient for MockLightClient {
                 prev_height: Some(latest_height.into()),
                 new_height: height,
                 timestamp: header_timestamp,
-                validation_params: ValidationParams::Empty,
+                context: CommitmentContext::Empty,
             }
             .into(),
             prove: true,

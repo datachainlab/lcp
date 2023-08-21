@@ -16,7 +16,6 @@ members = [
     "modules/keymanager",
     "modules/store",
     "modules/lcp-client",
-    "modules/validation-context",
     "modules/light-client",
     "modules/light-client-registry",
     "modules/tendermint-lc",

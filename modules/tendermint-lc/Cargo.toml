@@ -14,5 +14,4 @@ lcp-types = { path = "../types", default-features = false }
 light-client = { path = "../light-client", default-features = false, features = ["ibc"] }
 light-client-registry = { path = "../light-client-registry", default-features = false }
 commitments = { path = "../commitments", default-features = false }
-validation-context = { path = "../validation-context", default-features = false }
 crypto = { path = "../crypto", default-features = false }

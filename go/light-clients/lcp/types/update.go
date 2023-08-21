@@ -57,6 +57,10 @@ func (cs ClientState) verifyUpdateClient(ctx sdk.Context, cdc codec.BinaryCodec,
 		return sdkerrors.Wrapf(clienttypes.ErrInvalidHeader, err.Error())
 	}
 
+	if err := commitment.Context.Validate(ctx.BlockTime()); err != nil {
+		return sdkerrors.Wrapf(clienttypes.ErrInvalidHeader, "invalid context: %v", err)
+	}
+
 	return nil
 }
 

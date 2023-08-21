@@ -8,6 +8,10 @@ use ibc::timestamp::Timestamp;
 use serde::{Deserialize, Serialize};
 use tendermint::Time as TmTime;
 
+// NOTE: This value is limited by "tendermint/time" crate
+// i.e. 9999-12-31T23:59:59.999999999Z
+pub const MAX_UNIX_TIMESTAMP_NANOS: u128 = 253_402_300_799_999_999_999;
+
 #[derive(Copy, Clone, Debug, Eq, PartialEq, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(transparent)]
 pub struct Time(TmTime);
@@ -32,24 +36,10 @@ impl Time {
     }
 
     pub fn from_unix_timestamp_nanos(timestamp: u128) -> Result<Self, TimeError> {
-        let ut = TmTime::from_unix_timestamp(
-            (timestamp / 1_000_000_000) as i64,
-            (timestamp % 1_000_000_000) as u32,
-        )
-        .map_err(TimeError::tendermint)?;
+        let d = nanos_to_duration(timestamp)?;
+        let ut = TmTime::from_unix_timestamp(d.as_secs().try_into()?, d.subsec_nanos())
+            .map_err(TimeError::tendermint)?;
         Ok(Time(ut))
-    }
-
-    pub fn from_unix_timestamp_secs(timestamp: u64) -> Result<Self, TimeError> {
-        let ut = TmTime::from_unix_timestamp(timestamp as i64, 0).map_err(TimeError::tendermint)?;
-        Ok(Time(ut))
-    }
-
-    pub fn as_unix_timestamp_nanos(&self) -> u128 {
-        self.0
-            .duration_since(TmTime::unix_epoch())
-            .unwrap()
-            .as_nanos()
     }
 
     pub fn as_unix_timestamp_secs(&self) -> u64 {
@@ -58,6 +48,19 @@ impl Time {
             .unwrap()
             .as_secs()
     }
+
+    pub fn as_unix_timestamp_nanos(&self) -> u128 {
+        self.0
+            .duration_since(TmTime::unix_epoch())
+            .unwrap()
+            .as_nanos()
+    }
+}
+
+pub fn nanos_to_duration(nanos: u128) -> Result<Duration, TimeError> {
+    let secs = (nanos / 1_000_000_000).try_into()?;
+    let nanos = (nanos % 1_000_000_000) as u32;
+    Ok(Duration::new(secs, nanos))
 }
 
 impl Deref for Time {
@@ -104,5 +107,35 @@ impl Sub<Duration> for Time {
 
     fn sub(self, rhs: Duration) -> Self::Output {
         Ok(Self((*self - rhs).map_err(TimeError::tendermint)?))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use proptest::prelude::*;
+
+    proptest! {
+        #[test]
+        fn test_time_from_unix_timestamp_nanos(timestamp in ..=MAX_UNIX_TIMESTAMP_NANOS) {
+            let time = Time::from_unix_timestamp_nanos(timestamp);
+            assert!(time.is_ok());
+            assert_eq!(time.unwrap().as_unix_timestamp_nanos(), timestamp);
+        }
+
+        #[test]
+        fn test_time_from_unix_timestamp_nanos_overflow(timestamp in MAX_UNIX_TIMESTAMP_NANOS + 1..) {
+            assert!(Time::from_unix_timestamp_nanos(timestamp).is_err());
+            assert!(nanos_to_duration(timestamp).is_err());
+        }
+    }
+
+    #[test]
+    fn test_max_time() {
+        assert!(Time::from_unix_timestamp_nanos(MAX_UNIX_TIMESTAMP_NANOS).is_ok());
+        assert!(Time::from_unix_timestamp_nanos(MAX_UNIX_TIMESTAMP_NANOS + 1).is_err());
+        let max_time = Time::from_unix_timestamp_nanos(MAX_UNIX_TIMESTAMP_NANOS).unwrap();
+        assert_eq!(max_time.as_unix_timestamp_nanos(), MAX_UNIX_TIMESTAMP_NANOS);
+        assert!((max_time + Duration::new(0, 1)).is_err());
     }
 }

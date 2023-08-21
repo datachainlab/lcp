@@ -18,7 +18,7 @@ pub struct ConsensusState {
 
 impl ConsensusState {
     pub fn is_empty(&self) -> bool {
-        self.state_id.is_zero()
+        self.state_id == Default::default() && self.timestamp.as_unix_timestamp_nanos() == 0
     }
 }
 
@@ -37,7 +37,9 @@ impl TryFrom<RawConsensusState> for ConsensusState {
     fn try_from(raw: RawConsensusState) -> Result<Self, Self::Error> {
         Ok(ConsensusState {
             state_id: raw.state_id.as_slice().try_into().unwrap(),
-            timestamp: Time::from_unix_timestamp_secs(raw.timestamp).unwrap(),
+            timestamp: Time::from_unix_timestamp_nanos(
+                (raw.timestamp as u128).checked_mul(1_000_000_000).unwrap(),
+            )?,
         })
     }
 }
