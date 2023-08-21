@@ -441,7 +441,7 @@ mod tests {
         assert!(res.is_err());
         if let ErrorDetail::OutOfTrustingPeriod(_) = res.as_ref().err().unwrap().detail() {
         } else {
-            assert!(false);
+            panic!("{:?}", res);
         }
     }
 
@@ -456,7 +456,7 @@ mod tests {
         assert!(res.is_err());
         if let ErrorDetail::HeaderFromFuture(_) = res.as_ref().err().unwrap().detail() {
         } else {
-            assert!(false);
+            panic!("{:?}", res);
         }
     }
 

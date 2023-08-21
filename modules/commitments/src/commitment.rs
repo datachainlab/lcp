@@ -558,7 +558,7 @@ mod tests {
         fn pt_update_client_commitment_with_empty_context(
             prev_state_id in any::<Option<[u8; 32]>>().prop_map(|v| v.map(StateID::from)),
             new_state_id in any::<[u8; 32]>().prop_map(StateID::from),
-            new_state in any::<Option<(String, Vec<u8>)>>().prop_filter("type_url length must be greater than 0", |t| t.is_none() || t.as_ref().unwrap().0.len() > 0),
+            new_state in any::<Option<(String, Vec<u8>)>>().prop_filter("type_url length must be greater than 0", |t| t.is_none() || !t.as_ref().unwrap().0.is_empty()),
             prev_height in any::<Option<(u64, u64)>>().prop_map(|v| v.map(height_from_tuple)),
             new_height in any::<(u64, u64)>().prop_map(height_from_tuple),
             timestamp in ..=MAX_UNIX_TIMESTAMP_NANOS,
@@ -587,7 +587,7 @@ mod tests {
         fn pt_update_client_commitment_with_trusting_period_context(
             prev_state_id in any::<Option<[u8; 32]>>().prop_map(|v| v.map(StateID::from)),
             new_state_id in any::<[u8; 32]>().prop_map(StateID::from),
-            new_state in any::<Option<(String, Vec<u8>)>>().prop_filter("type_url length must be greater than 0", |t| t.is_none() || t.as_ref().unwrap().0.len() > 0),
+            new_state in any::<Option<(String, Vec<u8>)>>().prop_filter("type_url length must be greater than 0", |t| t.is_none() || !t.as_ref().unwrap().0.is_empty()),
             prev_height in any::<Option<(u64, u64)>>().prop_map(|v| v.map(height_from_tuple)),
             new_height in any::<(u64, u64)>().prop_map(height_from_tuple),
             timestamp in ..=MAX_UNIX_TIMESTAMP_NANOS,
