@@ -1,5 +1,4 @@
 use crate::errors::Error;
-use commitments::{gen_state_id_from_any, StateID};
 use core::ops::Deref;
 use ibc::clients::ics07_tendermint::{
     client_state::{
@@ -11,7 +10,8 @@ use ibc::clients::ics07_tendermint::{
 };
 use ibc_proto::google::protobuf::Any as IBCAny;
 use ibc_proto::ibc::lightclients::tendermint::v1::ClientState as RawTmClientState;
-use lcp_types::{Any, Height};
+use light_client::commitments::{gen_state_id_from_any, StateID};
+use light_client::types::{Any, Height};
 
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct ClientState(pub(crate) TendermintClientState);

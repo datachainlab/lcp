@@ -1,8 +1,8 @@
+use crate::commitments::{Commitment, CommitmentPrefix};
 use crate::context::HostClientReader;
 use crate::errors::Error;
 use crate::prelude::*;
-use commitments::{Commitment, CommitmentPrefix};
-use lcp_types::{Any, ClientId, Height};
+use crate::types::{Any, ClientId, Height};
 
 #[allow(clippy::too_many_arguments)]
 pub trait LightClient {

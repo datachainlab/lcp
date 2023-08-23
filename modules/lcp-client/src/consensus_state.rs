@@ -1,9 +1,9 @@
 use crate::errors::Error;
 use crate::prelude::*;
-use commitments::StateID;
 use ibc_proto::protobuf::Protobuf;
 use lcp_proto::ibc::lightclients::lcp::v1::ConsensusState as RawConsensusState;
 use lcp_types::{Any, Time};
+use light_client::commitments::StateID;
 use prost::Message;
 use prost_types::Any as ProtoAny;
 use serde::{Deserialize, Serialize};

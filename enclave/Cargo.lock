@@ -402,7 +402,6 @@ name = "ecall-handler"
 version = "0.1.0"
 dependencies = [
  "attestation-report",
- "commitments",
  "context",
  "crypto",
  "ecall-commands",
@@ -1657,12 +1656,10 @@ dependencies = [
 name = "tendermint-lc"
 version = "0.1.0"
 dependencies = [
- "commitments",
  "crypto",
  "flex-error",
  "ibc",
  "ibc-proto",
- "lcp-types",
  "light-client",
  "log 0.4.17",
  "serde",

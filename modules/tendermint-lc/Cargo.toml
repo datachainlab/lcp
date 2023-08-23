@@ -10,7 +10,5 @@ serde = { version = "1.0", default-features = false, features = ["alloc"] }
 log = { version = "0.4.8", default-features = false }
 flex-error = { version = "0.4.4", default-features = false }
 
-lcp-types = { path = "../types", default-features = false }
 light-client = { path = "../light-client", default-features = false, features = ["ibc"] }
-commitments = { path = "../commitments", default-features = false }
 crypto = { path = "../crypto", default-features = false }

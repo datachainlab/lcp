@@ -1,12 +1,12 @@
 use crate::prelude::*;
+use crate::types::{ClientId, Height};
 use flex_error::*;
-use lcp_types::{ClientId, Height};
 
 define_error! {
     #[derive(Debug, PartialEq, Eq)]
     Error {
         Commitment
-        [commitments::Error]
+        [crate::commitments::Error]
         |_| { "Commitment error" },
 
         ClientTypeNotFound

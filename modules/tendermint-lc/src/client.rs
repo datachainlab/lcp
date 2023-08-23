@@ -2,10 +2,6 @@ use crate::errors::Error;
 use crate::header::Header;
 use crate::prelude::*;
 use crate::state::{canonicalize_state, gen_state_id, ClientState, ConsensusState};
-use commitments::{
-    CommitmentContext, CommitmentPrefix, StateCommitment, TrustingPeriodContext,
-    UpdateClientCommitment,
-};
 use core::str::FromStr;
 use crypto::Keccak256;
 use ibc::clients::ics07_tendermint::client_state::{
@@ -29,7 +25,11 @@ use ibc::core::ics23_commitment::commitment::{
 use ibc::core::ics23_commitment::merkle::{apply_prefix, MerkleProof};
 use ibc::core::ics24_host::Path;
 use ibc_proto::ibc::core::commitment::v1::MerkleProof as RawMerkleProof;
-use lcp_types::{Any, ClientId, Height, Time};
+use light_client::commitments::{
+    CommitmentContext, CommitmentPrefix, StateCommitment, TrustingPeriodContext,
+    UpdateClientCommitment,
+};
+use light_client::types::{Any, ClientId, Height, Time};
 use light_client::{
     ibc::IBCContext, CreateClientResult, Error as LightClientError, HostClientReader, LightClient,
     LightClientRegistry, StateVerificationResult, UpdateClientResult,

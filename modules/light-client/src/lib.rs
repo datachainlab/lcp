@@ -21,7 +21,7 @@ mod prelude {
 
 /// re-export
 pub use commitments;
-pub use lcp_types;
+pub use lcp_types as types;
 
 pub use client::{CreateClientResult, LightClient, StateVerificationResult, UpdateClientResult};
 pub use context::{ClientKeeper, ClientReader, HostClientKeeper, HostClientReader, HostContext};

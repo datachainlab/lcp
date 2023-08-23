@@ -1,7 +1,6 @@
 use crate::errors::Error;
 use crate::prelude::*;
 use attestation_report::EndorsedAttestationVerificationReport;
-use commitments::{Commitment, CommitmentContext, StateID, UpdateClientCommitment};
 use crypto::Address;
 use ibc_proto::protobuf::Protobuf;
 use lcp_proto::ibc::lightclients::lcp::v1::{
@@ -9,6 +8,7 @@ use lcp_proto::ibc::lightclients::lcp::v1::{
     UpdateClientMessage as RawUpdateClientMessage,
 };
 use lcp_types::{Any, Height, Time};
+use light_client::commitments::{Commitment, CommitmentContext, StateID, UpdateClientCommitment};
 use prost_types::Any as ProtoAny;
 use serde::{Deserialize, Serialize};
 

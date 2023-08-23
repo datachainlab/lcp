@@ -1,4 +1,5 @@
 use crate::prelude::*;
+use crate::types::Height;
 use crate::{ErrorDetail as LightClientErrorDetail, HostClientReader};
 use core::marker::PhantomData;
 use ibc::core::ics02_client::client_state::ClientState as Ics02ClientState;
@@ -9,7 +10,6 @@ use ibc::core::{
     ValidationContext,
 };
 use ibc_proto::google::protobuf::Any as IBCAny;
-use lcp_types::Height;
 
 /// IBCContext is a context that implements ValidationContext from ibc-rs over elc's context
 /// NOTE: Since elc provides only 02-client equivalent functions, it implements only a very limited functions of ValidationContext trait.

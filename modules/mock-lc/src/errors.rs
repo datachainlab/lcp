@@ -29,15 +29,15 @@ define_error! {
         |_| { "ICS23 commitment error" },
 
         Commitment
-        [commitments::Error]
+        [light_client::commitments::Error]
         |_| { "Commitment error" }
     }
 }
 
 impl LightClientSpecificError for Error {}
 
-impl From<commitments::Error> for Error {
-    fn from(value: commitments::Error) -> Self {
+impl From<light_client::commitments::Error> for Error {
+    fn from(value: light_client::commitments::Error) -> Self {
         Self::commitment(value)
     }
 }

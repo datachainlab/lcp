@@ -53,7 +53,7 @@ define_error! {
         |_| { "Light Client error" },
 
         CommitmentProof
-        [commitments::Error]
+        [light_client::commitments::Error]
         |_| { "Commitment proof error" },
 
         IbcProto
@@ -86,8 +86,8 @@ impl From<light_client::Error> for Error {
     }
 }
 
-impl From<commitments::Error> for Error {
-    fn from(value: commitments::Error) -> Self {
+impl From<light_client::commitments::Error> for Error {
+    fn from(value: light_client::commitments::Error) -> Self {
         Self::commitment_proof(value)
     }
 }
