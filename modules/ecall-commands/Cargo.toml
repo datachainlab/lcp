@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-serde = { version = "1.0", default-features = false, features = ["alloc", "derive"] }
+serde = { version = "1.0.184", default-features = false, features = ["alloc", "derive"] }
 flex-error = { version = "0.4.4", default-features = false }
 
 commitments = { path = "../commitments", default-features = false }

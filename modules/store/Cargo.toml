@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-serde = { version = "1.0", default-features = false, features = ["alloc", "derive"] }
+serde = { version = "1.0.184", default-features = false, features = ["alloc", "derive"] }
 log = { version = "0.4.8", default-features = false }
 flex-error = { version = "0.4.4", default-features = false }
 ouroboros = { version = "0.17.0", optional = true }

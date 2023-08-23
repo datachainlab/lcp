@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-serde = { version = "1.0", default-features = false, features = ["alloc"] }
+serde = { version = "1.0.184", default-features = false, features = ["alloc"] }
 prost = { version = "0.11", default-features = false }
 hex = { version = "0.4", default-features = false, features = ["alloc"] }
 sha2 = { version = "0.10.6", default-features = false }
