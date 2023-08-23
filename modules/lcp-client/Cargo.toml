@@ -10,7 +10,6 @@ flex-error = { version = "0.4.4", default-features = false }
 
 attestation-report = { path = "../attestation-report", default-features = false }
 light-client = { path = "../light-client", default-features = false }
-lcp-proto = { path = "../../proto", default-features = false }
 crypto = { path = "../crypto", default-features = false }
 
 [dev-dependencies]

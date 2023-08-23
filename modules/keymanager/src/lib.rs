@@ -2,7 +2,7 @@ pub mod errors;
 pub use crate::errors::Error;
 use attestation_report::EndorsedAttestationVerificationReport;
 use crypto::{Address, SealedEnclaveKey};
-use lcp_proto::lcp::service::enclave::v1::EnclaveKeyInfo as ProtoEnclaveKeyInfo;
+use lcp_types::proto::lcp::service::enclave::v1::EnclaveKeyInfo as ProtoEnclaveKeyInfo;
 use lcp_types::{Mrenclave, Time};
 use log::*;
 use rusqlite::{params, types::Type, Connection};

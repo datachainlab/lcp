@@ -9,7 +9,7 @@ use ibc::core::{
     context::Router, ics02_client::consensus_state::ConsensusState as Ics02ConsensusState,
     ValidationContext,
 };
-use lcp_proto::google::protobuf::Any as IBCAny;
+use lcp_types::proto::google::protobuf::Any as ProtoAny;
 
 /// IBCContext is a context that implements ValidationContext from ibc-rs over elc's context
 /// NOTE: Since elc provides only 02-client equivalent functions, it implements only a very limited functions of ValidationContext trait.
@@ -40,7 +40,7 @@ impl<'a, ClientState: Ics02ClientState, ConsensusState: Ics02ConsensusState> Val
         alloc::boxed::Box<dyn ibc::core::ics02_client::client_state::ClientState>,
         ibc::core::ContextError,
     > {
-        let any_client_state: IBCAny = self
+        let any_client_state: ProtoAny = self
             .parent
             .client_state(&client_id.clone().into())
             .map_err(|e| {
@@ -54,12 +54,12 @@ impl<'a, ClientState: Ics02ClientState, ConsensusState: Ics02ConsensusState> Val
 
     fn decode_client_state(
         &self,
-        client_state: lcp_proto::google::protobuf::Any,
+        client_state: lcp_types::proto::google::protobuf::Any,
     ) -> Result<
         alloc::boxed::Box<dyn ibc::core::ics02_client::client_state::ClientState>,
         ibc::core::ContextError,
     > {
-        let any = IBCAny {
+        let any = ProtoAny {
             type_url: client_state.type_url,
             value: client_state.value,
         };
@@ -79,7 +79,7 @@ impl<'a, ClientState: Ics02ClientState, ConsensusState: Ics02ConsensusState> Val
             .consensus_state(&client_cons_state_path.client_id.clone().into(), &height)
         {
             Ok(any_consensus_state) => {
-                let any_consensus_state = IBCAny::from(any_consensus_state);
+                let any_consensus_state = ProtoAny::from(any_consensus_state);
                 let consensus_state = ConsensusState::try_from(any_consensus_state).unwrap();
                 Ok(consensus_state.into_box())
             }
@@ -155,7 +155,7 @@ impl<'a, ClientState: Ics02ClientState, ConsensusState: Ics02ConsensusState> Val
 
     fn validate_self_client(
         &self,
-        client_state_of_host_on_counterparty: lcp_proto::google::protobuf::Any,
+        client_state_of_host_on_counterparty: lcp_types::proto::google::protobuf::Any,
     ) -> Result<(), ibc::core::ics03_connection::error::ConnectionError> {
         unimplemented!()
     }

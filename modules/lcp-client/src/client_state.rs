@@ -2,9 +2,13 @@ use crate::errors::Error;
 use crate::message::CommitmentReader;
 use crate::prelude::*;
 use core::time::Duration;
-use lcp_proto::ibc::core::client::v1::Height as ProtoHeight;
-use lcp_proto::ibc::lightclients::lcp::v1::ClientState as RawClientState;
-use lcp_proto::protobuf::Protobuf;
+use light_client::types::proto::{
+    ibc::{
+        core::client::v1::Height as ProtoHeight,
+        lightclients::lcp::v1::ClientState as RawClientState,
+    },
+    protobuf::Protobuf,
+};
 use light_client::types::{Any, Height};
 use prost::Message;
 use serde::{Deserialize, Serialize};

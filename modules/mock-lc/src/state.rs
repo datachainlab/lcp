@@ -2,9 +2,9 @@ use crate::errors::Error;
 use core::ops::Deref;
 use ibc::mock::client_state::{MockClientState, MOCK_CLIENT_STATE_TYPE_URL};
 use ibc::mock::consensus_state::{MockConsensusState, MOCK_CONSENSUS_STATE_TYPE_URL};
-use lcp_proto::google::protobuf::Any as IBCAny;
-use lcp_types::Any;
 use light_client::commitments::{gen_state_id_from_any, StateID};
+use light_client::types::proto::google::protobuf::Any as IBCAny;
+use light_client::types::Any;
 
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct ClientState(pub(crate) MockClientState);

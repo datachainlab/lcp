@@ -2,12 +2,12 @@ use crate::errors::Error;
 use crate::prelude::*;
 use attestation_report::EndorsedAttestationVerificationReport;
 use crypto::Address;
-use lcp_proto::ibc::lightclients::lcp::v1::{
+use light_client::commitments::{Commitment, CommitmentContext, StateID, UpdateClientCommitment};
+use light_client::types::proto::ibc::lightclients::lcp::v1::{
     RegisterEnclaveKeyMessage as RawRegisterEnclaveKeyMessage,
     UpdateClientMessage as RawUpdateClientMessage,
 };
-use lcp_proto::protobuf::Protobuf;
-use light_client::commitments::{Commitment, CommitmentContext, StateID, UpdateClientCommitment};
+use light_client::types::proto::protobuf::Protobuf;
 use light_client::types::{Any, Height, Time};
 use serde::{Deserialize, Serialize};
 

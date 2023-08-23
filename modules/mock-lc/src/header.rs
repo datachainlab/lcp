@@ -1,8 +1,8 @@
 use crate::errors::Error;
 use core::ops::Deref;
 use ibc::mock::header::{MockHeader, MOCK_HEADER_TYPE_URL};
-use lcp_proto::google::protobuf::Any as IBCAny;
-use lcp_types::Any;
+use light_client::types::proto::google::protobuf::Any as IBCAny;
+use light_client::types::Any;
 
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct Header(pub(crate) MockHeader);
