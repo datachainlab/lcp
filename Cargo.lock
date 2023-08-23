@@ -806,7 +806,6 @@ dependencies = [
  "crypto",
  "lcp-types",
  "light-client",
- "light-client-registry",
  "store",
 ]
 
@@ -2631,7 +2630,6 @@ dependencies = [
  "lcp-proto",
  "lcp-types",
  "light-client",
- "light-client-registry",
  "mock-lc",
  "prost",
  "prost-types",
@@ -2821,15 +2819,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "light-client-registry"
-version = "0.1.0"
-dependencies = [
- "flex-error",
- "light-client",
- "sgx_tstd",
-]
-
-[[package]]
 name = "link-cplusplus"
 version = "1.0.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2986,7 +2975,6 @@ dependencies = [
  "ibc-proto 0.26.0",
  "lcp-types",
  "light-client",
- "light-client-registry",
  "serde",
 ]
 
@@ -5090,7 +5078,6 @@ dependencies = [
  "ibc-proto 0.26.0",
  "lcp-types",
  "light-client",
- "light-client-registry",
  "log 0.4.17",
  "serde",
 ]

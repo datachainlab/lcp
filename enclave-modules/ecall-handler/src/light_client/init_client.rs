@@ -6,8 +6,7 @@ use core::str::FromStr;
 use crypto::Signer;
 use ecall_commands::{InitClientInput, InitClientResult, LightClientResult};
 use lcp_types::{Any, ClientId};
-use light_client::{ClientKeeper, ClientReader};
-use light_client_registry::LightClientResolver;
+use light_client::{ClientKeeper, ClientReader, LightClientResolver};
 use store::KVStore;
 
 pub fn init_client<R: LightClientResolver, S: KVStore, K: Signer>(

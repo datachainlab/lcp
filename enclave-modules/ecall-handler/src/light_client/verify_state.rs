@@ -7,7 +7,7 @@ use ecall_commands::{
     LightClientResult, VerifyMembershipInput, VerifyMembershipResult, VerifyNonMembershipInput,
     VerifyNonMembershipResult,
 };
-use light_client_registry::LightClientResolver;
+use light_client::LightClientResolver;
 use store::KVStore;
 
 pub fn verify_membership<R: LightClientResolver, S: KVStore, K: Signer>(

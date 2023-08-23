@@ -275,8 +275,7 @@ mod tests {
         },
         Height as ICS02Height,
     };
-    use light_client::LightClient;
-    use light_client_registry::{memory::HashMapLightClientRegistry, LightClientResolver};
+    use light_client::{LightClient, LightClientResolver, MapLightClientRegistry};
     use mock_lc::MockLightClient;
     use sgx_types::{sgx_quote_t, sgx_report_body_t};
     use store::memory::MemStore;
@@ -415,7 +414,7 @@ mod tests {
     }
 
     fn build_lc_registry() -> Arc<dyn LightClientResolver> {
-        let registry = HashMapLightClientRegistry::new();
+        let registry = MapLightClientRegistry::new();
         Arc::new(registry)
     }
 

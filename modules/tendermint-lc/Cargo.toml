@@ -12,6 +12,5 @@ flex-error = { version = "0.4.4", default-features = false }
 
 lcp-types = { path = "../types", default-features = false }
 light-client = { path = "../light-client", default-features = false, features = ["ibc"] }
-light-client-registry = { path = "../light-client-registry", default-features = false }
 commitments = { path = "../commitments", default-features = false }
 crypto = { path = "../crypto", default-features = false }

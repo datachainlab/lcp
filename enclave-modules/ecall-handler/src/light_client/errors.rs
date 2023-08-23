@@ -12,7 +12,7 @@ define_error! {
         |_| { "LightClient error" },
 
         LightClientRegistry
-        [light_client_registry::Error]
+        [light_client::RegistryError]
         |_| { "LightClientRegistry error" },
 
         Commitment

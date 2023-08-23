@@ -4,8 +4,7 @@ use commitments::{prove_commitment, Commitment, CommitmentProof, UpdateClientCom
 use context::Context;
 use crypto::Signer;
 use ecall_commands::{LightClientResult, UpdateClientInput, UpdateClientResult};
-use light_client::ClientKeeper;
-use light_client_registry::LightClientResolver;
+use light_client::{ClientKeeper, LightClientResolver};
 use store::KVStore;
 
 pub fn update_client<R: LightClientResolver, S: KVStore, K: Signer>(

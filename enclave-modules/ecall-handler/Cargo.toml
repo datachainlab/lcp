@@ -15,7 +15,6 @@ context = { path = "../../modules/context", default-features = false }
 enclave-environment = { path = "../environment", default-features = false }
 
 lcp-types = { path = "../../modules/types", default-features = false }
-light-client-registry = { path = "../../modules/light-client-registry", default-features = false }
 ecall-commands = { path = "../../modules/ecall-commands", default-features = false }
 commitments = { path = "../../modules/commitments", default-features = false }
 light-client = { path = "../../modules/light-client", default-features = false }

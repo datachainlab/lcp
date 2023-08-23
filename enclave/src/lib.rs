@@ -5,7 +5,7 @@ extern crate sgx_tstd;
 
 use enclave_environment::Environment;
 use enclave_runtime::setup_runtime;
-use light_client_registry::memory::HashMapLightClientRegistry;
+use light_client::MapLightClientRegistry;
 
 setup_runtime!({
     simple_logger::SimpleLogger::new()
@@ -15,8 +15,8 @@ setup_runtime!({
     Environment::new(build_lc_registry())
 });
 
-fn build_lc_registry() -> HashMapLightClientRegistry {
-    let mut registry = HashMapLightClientRegistry::new();
+fn build_lc_registry() -> MapLightClientRegistry {
+    let mut registry = MapLightClientRegistry::new();
     tendermint_lc::register_implementations(&mut registry);
     registry
 }

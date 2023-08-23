@@ -8,4 +8,3 @@ lcp-types = { path = "../types", default-features = false }
 store = { path = "../store", default-features = false }
 crypto = { path = "../crypto", default-features = false }
 light-client = { path = "../light-client", default-features = false }
-light-client-registry = { path = "../light-client-registry", default-features = false }

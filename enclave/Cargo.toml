@@ -23,7 +23,7 @@ log = { version = "0.4.8", default-features = false }
 
 simple_logger = { git = "https://github.com/bluele/rust-simple_logger", branch = "sgx", default-features = false, features = ["sgx"] }
 enclave-runtime = { path = "../enclave-modules/runtime" }
-light-client-registry = { path = "../modules/light-client-registry", default-features = false, features = ["sgx"] }
+light-client = { path = "../modules/light-client", default-features = false }
 enclave-environment = { path = "../enclave-modules/environment" }
 tendermint-lc = { path = "../modules/tendermint-lc", default-features = false }
 

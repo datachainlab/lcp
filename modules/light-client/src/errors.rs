@@ -48,3 +48,27 @@ impl<T: 'static + LightClientSpecificError> From<T> for Error {
         Self::light_client_specific(Box::new(value))
     }
 }
+
+define_error! {
+    #[derive(Debug, Clone, PartialEq, Eq)]
+    RegistryError {
+        TypeUrlNotFound
+        {
+            type_url: String
+        }
+        |e| {
+            format_args!("type_url not found: type_url={}", e.type_url)
+        },
+
+        TypeUrlAlreadyExists
+        {
+            type_url: String
+        }
+        |e| {
+            format_args!("type_url already exists: type_url={}", e.type_url)
+        },
+
+        AlreadySealed
+        |_| { "registry is already sealed" },
+    }
+}

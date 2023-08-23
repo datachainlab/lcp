@@ -234,7 +234,6 @@ dependencies = [
  "crypto",
  "lcp-types",
  "light-client",
- "light-client-registry",
  "store",
 ]
 
@@ -413,7 +412,6 @@ dependencies = [
  "hex",
  "lcp-types",
  "light-client",
- "light-client-registry",
  "sgx_types",
  "store",
 ]
@@ -452,7 +450,7 @@ version = "0.1.0"
 dependencies = [
  "enclave-environment",
  "enclave-runtime",
- "light-client-registry",
+ "light-client",
  "log 0.4.17",
  "sgx_tstd",
  "simple_logger",
@@ -465,7 +463,6 @@ version = "0.1.0"
 dependencies = [
  "enclave-store",
  "light-client",
- "light-client-registry",
  "store",
 ]
 
@@ -952,15 +949,6 @@ dependencies = [
  "lcp-types",
  "serde",
  "store",
-]
-
-[[package]]
-name = "light-client-registry"
-version = "0.1.0"
-dependencies = [
- "flex-error",
- "light-client",
- "sgx_tstd",
 ]
 
 [[package]]
@@ -1676,7 +1664,6 @@ dependencies = [
  "ibc-proto",
  "lcp-types",
  "light-client",
- "light-client-registry",
  "log 0.4.17",
  "serde",
 ]

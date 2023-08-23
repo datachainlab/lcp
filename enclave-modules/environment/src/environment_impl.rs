@@ -1,16 +1,15 @@
 use crate::{prelude::*, Env};
 use alloc::sync::Arc;
 use enclave_store::EnclaveStore;
-use light_client::LightClient;
-use light_client_registry::{memory::HashMapLightClientRegistry, LightClientResolver};
+use light_client::{LightClient, LightClientResolver, MapLightClientRegistry};
 use store::{KVStore, TxId};
 
 pub struct Environment {
-    lc_registry: Arc<HashMapLightClientRegistry>,
+    lc_registry: Arc<MapLightClientRegistry>,
 }
 
 impl Environment {
-    pub fn new(lc_registry: HashMapLightClientRegistry) -> Self {
+    pub fn new(lc_registry: MapLightClientRegistry) -> Self {
         Self {
             lc_registry: Arc::new(lc_registry),
         }

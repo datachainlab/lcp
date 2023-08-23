@@ -14,9 +14,8 @@ use ibc::mock::consensus_state::MockConsensusState;
 use lcp_types::{Any, ClientId, Height, Time};
 use light_client::{
     ibc::IBCContext, CreateClientResult, Error as LightClientError, HostClientReader, LightClient,
-    StateVerificationResult, UpdateClientResult,
+    LightClientRegistry, StateVerificationResult, UpdateClientResult,
 };
-use light_client_registry::LightClientRegistry;
 
 #[derive(Default)]
 pub struct MockLightClient;
