@@ -525,9 +525,8 @@ mod tests {
     use super::*;
     use crate::{CommitmentProof, TrustingPeriodContext};
     use crypto::Address;
-    use lcp_types::{nanos_to_duration, MAX_UNIX_TIMESTAMP_NANOS};
+    use lcp_types::{nanos_to_duration, Any, MAX_UNIX_TIMESTAMP_NANOS};
     use proptest::prelude::*;
-    use prost_types::Any as ProtoAny;
 
     fn height_from_tuple(tuple: (u64, u64)) -> Height {
         Height::new(tuple.0, tuple.1)
@@ -569,11 +568,7 @@ mod tests {
                 prev_state_id,
                 new_state_id,
                 new_state: new_state.map(|(type_url, value)| {
-                    ProtoAny {
-                        type_url,
-                        value,
-                    }.try_into()
-                    .unwrap()
+                    Any::new(type_url, value)
                 }),
                 prev_height,
                 new_height,
@@ -602,11 +597,7 @@ mod tests {
                 prev_state_id,
                 new_state_id,
                 new_state: new_state.map(|(type_url, value)| {
-                    ProtoAny {
-                        type_url,
-                        value,
-                    }.try_into()
-                    .unwrap()
+                    Any::new(type_url, value)
                 }),
                 prev_height,
                 new_height,

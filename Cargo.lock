@@ -774,7 +774,6 @@ dependencies = [
  "lcp-types",
  "proptest",
  "prost",
- "prost-types",
  "serde",
  "sha2 0.10.6",
  "time",
