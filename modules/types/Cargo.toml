@@ -6,7 +6,7 @@ edition = "2021"
 [dependencies]
 sgx_types = { rev = "v1.1.6", git = "https://github.com/apache/incubator-teaclave-sgx-sdk" }
 sgx_tstd = { rev = "v1.1.6", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", features = ["untrusted_time"], optional = true }
-prost-types = { version = "0.11", default-features = false }
+prost = { version = "0.11", default-features = false }
 ibc = { version = "0.29.0", default-features = false, features = ["serde"] }
 lcp-proto = { path = "../../proto", default-features = false }
 tendermint = { version = "0.29", default-features = false }

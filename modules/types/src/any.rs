@@ -1,8 +1,7 @@
 use crate::errors::TypeError;
 use crate::prelude::*;
 use core::ops::Deref;
-use lcp_proto::{google::protobuf::Any as IBCAny, protobuf::Protobuf};
-use prost_types::Any as ProtoAny;
+use lcp_proto::{google::protobuf::Any as ProtoAny, protobuf::Protobuf};
 use serde::{Deserialize, Serialize};
 
 #[derive(Default, Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -37,17 +36,8 @@ impl From<Any> for ProtoAny {
     }
 }
 
-impl From<Any> for IBCAny {
-    fn from(v: Any) -> Self {
-        IBCAny {
-            type_url: v.0.type_url,
-            value: v.0.value,
-        }
-    }
-}
-
-impl From<IBCAny> for Any {
-    fn from(v: IBCAny) -> Self {
+impl From<ProtoAny> for Any {
+    fn from(v: ProtoAny) -> Self {
         Any(ProtoAny {
             type_url: v.type_url,
             value: v.value,
@@ -62,14 +52,6 @@ impl TryFrom<Vec<u8>> for Any {
     }
 }
 
-impl TryFrom<ProtoAny> for Any {
-    type Error = TypeError;
-
-    fn try_from(value: ProtoAny) -> Result<Self, Self::Error> {
-        Ok(Self::from_any(value))
-    }
-}
-
 impl Protobuf<ProtoAny> for Any {}
 
 #[derive(Default, Debug, Serialize, Deserialize)]
@@ -77,4 +59,36 @@ impl Protobuf<ProtoAny> for Any {}
 pub struct ProtoAnyDef {
     pub type_url: String,
     pub value: Vec<u8>,
+}
+
+impl prost::Message for Any {
+    fn encode_raw<B>(&self, buf: &mut B)
+    where
+        B: prost::bytes::BufMut,
+        Self: Sized,
+    {
+        self.0.encode_raw(buf)
+    }
+
+    fn merge_field<B>(
+        &mut self,
+        tag: u32,
+        wire_type: prost::encoding::WireType,
+        buf: &mut B,
+        ctx: prost::encoding::DecodeContext,
+    ) -> Result<(), prost::DecodeError>
+    where
+        B: prost::bytes::Buf,
+        Self: Sized,
+    {
+        self.0.merge_field(tag, wire_type, buf, ctx)
+    }
+
+    fn encoded_len(&self) -> usize {
+        self.0.encoded_len()
+    }
+
+    fn clear(&mut self) {
+        self.0.clear()
+    }
 }

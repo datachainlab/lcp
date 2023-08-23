@@ -873,7 +873,7 @@ dependencies = [
  "hex",
  "ibc",
  "lcp-proto",
- "prost-types",
+ "prost",
  "serde",
  "serde_json",
  "sgx_tstd",
