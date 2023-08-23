@@ -4,7 +4,6 @@ use core::fmt::Display;
 use core::ops::Deref;
 use core::ops::{Add, Sub};
 use core::time::Duration;
-use ibc::timestamp::Timestamp;
 use serde::{Deserialize, Serialize};
 use tendermint::Time as TmTime;
 
@@ -76,18 +75,6 @@ impl Display for Time {
     }
 }
 
-impl From<Time> for Timestamp {
-    fn from(value: Time) -> Self {
-        value.0.into()
-    }
-}
-
-impl From<Timestamp> for Time {
-    fn from(value: Timestamp) -> Self {
-        Self(value.into_tm_time().unwrap())
-    }
-}
-
 impl From<TmTime> for Time {
     fn from(value: TmTime) -> Self {
         Self(value)
@@ -107,6 +94,20 @@ impl Sub<Duration> for Time {
 
     fn sub(self, rhs: Duration) -> Self::Output {
         Ok(Self((*self - rhs).map_err(TimeError::tendermint)?))
+    }
+}
+
+#[cfg(feature = "ibc")]
+impl From<Time> for ibc::timestamp::Timestamp {
+    fn from(value: Time) -> Self {
+        value.0.into()
+    }
+}
+
+#[cfg(feature = "ibc")]
+impl From<ibc::timestamp::Timestamp> for Time {
+    fn from(value: ibc::timestamp::Timestamp) -> Self {
+        Self(value.into_tm_time().unwrap())
     }
 }
 

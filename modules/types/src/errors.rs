@@ -11,13 +11,40 @@ define_error! {
             |e| {
                 format_args!("height bytes length must be 16, but got {:?}", e.bz)
             },
-        InvalidClientIdFormat
+        HeightConversion
             {
-                client_id_str: String,
-                reason: String,
+                height: String,
             }
             |e| {
-                format_args!("invalid clientId format: got={:?} reason={:?}", e.client_id_str, e.reason)
+                format_args!("height conversion error: {}", e.height)
+            },
+        InvalidHeightResult
+            |_| {
+                "height cannot end up zero or negative"
+            },
+        ClientIdContainSeparator
+            { id: String }
+            |e| {
+                format_args!("identifier `{}` cannot contain separator '/'", e.id)
+            },
+        ClientIdInvalidLength
+            {
+                id: String,
+                length: usize,
+                min: usize,
+                max: usize,
+            }
+            |e| {
+                format_args!("identifier `{}` has invalid length `{}` must be between `{}`-`{}` characters", e.id, e.length, e.min, e.max)
+            },
+        ClientIdInvalidCharacter
+            { id: String }
+            |e| {
+                format_args!("identifier `{}` must only contain alphanumeric characters or `.`, `_`, `+`, `-`, `#`, - `[`, `]`, `<`, `>`", e.id)
+            },
+        ClientIdEmpty
+            |_| {
+                "identifier cannot be empty"
             },
         MrenclaveBytesConversion
             {

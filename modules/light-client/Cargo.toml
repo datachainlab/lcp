@@ -24,4 +24,7 @@ std = [
     "store/std",
     "ibc?/std",
 ]
-ibc = ["dep:ibc"]
+ibc = [
+    "dep:ibc",
+    "lcp-types/ibc"
+]

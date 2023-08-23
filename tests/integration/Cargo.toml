@@ -23,7 +23,7 @@ once_cell = "1.15.0"
 tempfile = "3"
 
 lcp-proto = { path = "../../proto" }
-lcp-types = { path = "../../modules/types" }
+lcp-types = { path = "../../modules/types", features = ["ibc"] }
 host = { path = "../../modules/host" }
 host-environment = { path = "../../modules/host-environment" }
 store = { path = "../../modules/store" }
