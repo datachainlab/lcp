@@ -2,11 +2,11 @@ use crate::errors::Error;
 use crate::prelude::*;
 use attestation_report::EndorsedAttestationVerificationReport;
 use crypto::Address;
-use ibc_proto::protobuf::Protobuf;
 use lcp_proto::ibc::lightclients::lcp::v1::{
     RegisterEnclaveKeyMessage as RawRegisterEnclaveKeyMessage,
     UpdateClientMessage as RawUpdateClientMessage,
 };
+use lcp_proto::protobuf::Protobuf;
 use light_client::commitments::{Commitment, CommitmentContext, StateID, UpdateClientCommitment};
 use light_client::types::{Any, Height, Time};
 use prost_types::Any as ProtoAny;

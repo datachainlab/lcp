@@ -4,7 +4,6 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-ibc-proto = { version = "0.26.0", default-features = false }
 prost = { version = "0.11", default-features = false }
 prost-types = { version = "0.11", default-features = false }
 serde = { version = "1.0.184", default-features = false, features = ["alloc", "derive"] }

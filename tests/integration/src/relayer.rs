@@ -10,7 +10,6 @@ use ibc::core::ics04_channel::channel::ChannelEnd;
 use ibc::core::ics23_commitment::merkle::MerkleProof;
 use ibc::core::ics24_host::identifier::{ChannelId, PortId};
 use ibc::Height;
-use ibc_proto::google::protobuf::Any as IBCAny;
 use ibc_relayer::chain::{
     client::ClientSettings,
     cosmos::{client::Settings, CosmosSdkChain},
@@ -21,6 +20,7 @@ use ibc_relayer::client_state::AnyClientState;
 use ibc_relayer::config::ChainConfig;
 use ibc_relayer::light_client::tendermint::LightClient as TmLightClient;
 use ibc_relayer::light_client::{tendermint::LightClient, LightClient as IBCLightClient};
+use lcp_proto::google::protobuf::Any as IBCAny;
 use lcp_types::Any;
 use std::sync::Arc;
 use tendermint_rpc::{Client, HttpClient};

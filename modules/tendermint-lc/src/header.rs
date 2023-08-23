@@ -4,7 +4,7 @@ use crate::errors::Error;
 use ibc::clients::ics07_tendermint::header::{
     Header as TendermintHeader, TENDERMINT_HEADER_TYPE_URL,
 };
-use ibc_proto::google::protobuf::Any as IBCAny;
+use lcp_proto::google::protobuf::Any as IBCAny;
 use light_client::types::Any;
 
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]

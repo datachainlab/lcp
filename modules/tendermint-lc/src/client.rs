@@ -24,7 +24,7 @@ use ibc::core::ics23_commitment::commitment::{
 };
 use ibc::core::ics23_commitment::merkle::{apply_prefix, MerkleProof};
 use ibc::core::ics24_host::Path;
-use ibc_proto::ibc::core::commitment::v1::MerkleProof as RawMerkleProof;
+use lcp_proto::ibc::core::commitment::v1::MerkleProof as RawMerkleProof;
 use light_client::commitments::{
     CommitmentContext, CommitmentPrefix, StateCommitment, TrustingPeriodContext,
     UpdateClientCommitment,

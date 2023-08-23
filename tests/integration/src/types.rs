@@ -9,7 +9,6 @@ use ibc::{
     },
     Height,
 };
-use ibc_proto::{google::protobuf::Any as IBCAny, protobuf::Protobuf};
 use ibc_proto_relayer::{
     google::protobuf::Any as IBCRelayerAny, protobuf::Protobuf as RelayerProtobuf,
 };
@@ -22,6 +21,7 @@ use ibc_relayer_types::{
     core::ics04_channel::channel::ChannelEnd as RChannelEnd,
 };
 use ibc_relayer_types::{core::ics24_host::identifier::ChainId as RChainId, Height as RHeight};
+use lcp_proto::{google::protobuf::Any as IBCAny, protobuf::Protobuf};
 use lcp_types::Any;
 use std::str::FromStr;
 

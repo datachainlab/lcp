@@ -25,12 +25,12 @@ mod tests {
             Path,
         },
     };
-    use ibc_proto::protobuf::Protobuf;
     use ibc_test_framework::prelude::{
         run_binary_channel_test, BinaryChannelTest, ChainHandle, Config, ConnectedChains,
         ConnectedChannel, Error, RelayerDriver, TestConfig, TestOverrides,
     };
     use keymanager::EnclaveKeyManager;
+    use lcp_proto::protobuf::Protobuf;
     use lcp_types::Time;
     use log::*;
     use std::str::FromStr;

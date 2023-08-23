@@ -9,7 +9,7 @@ use ibc::core::{
     context::Router, ics02_client::consensus_state::ConsensusState as Ics02ConsensusState,
     ValidationContext,
 };
-use ibc_proto::google::protobuf::Any as IBCAny;
+use lcp_proto::google::protobuf::Any as IBCAny;
 
 /// IBCContext is a context that implements ValidationContext from ibc-rs over elc's context
 /// NOTE: Since elc provides only 02-client equivalent functions, it implements only a very limited functions of ValidationContext trait.
@@ -54,7 +54,7 @@ impl<'a, ClientState: Ics02ClientState, ConsensusState: Ics02ConsensusState> Val
 
     fn decode_client_state(
         &self,
-        client_state: ibc_proto::google::protobuf::Any,
+        client_state: lcp_proto::google::protobuf::Any,
     ) -> Result<
         alloc::boxed::Box<dyn ibc::core::ics02_client::client_state::ClientState>,
         ibc::core::ContextError,
@@ -155,7 +155,7 @@ impl<'a, ClientState: Ics02ClientState, ConsensusState: Ics02ConsensusState> Val
 
     fn validate_self_client(
         &self,
-        client_state_of_host_on_counterparty: ibc_proto::google::protobuf::Any,
+        client_state_of_host_on_counterparty: lcp_proto::google::protobuf::Any,
     ) -> Result<(), ibc::core::ics03_connection::error::ConnectionError> {
         unimplemented!()
     }

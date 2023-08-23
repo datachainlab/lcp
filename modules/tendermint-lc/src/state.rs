@@ -8,8 +8,8 @@ use ibc::clients::ics07_tendermint::{
         ConsensusState as TendermintConsensusState, TENDERMINT_CONSENSUS_STATE_TYPE_URL,
     },
 };
-use ibc_proto::google::protobuf::Any as IBCAny;
-use ibc_proto::ibc::lightclients::tendermint::v1::ClientState as RawTmClientState;
+use lcp_proto::google::protobuf::Any as IBCAny;
+use lcp_proto::ibc::lightclients::tendermint::v1::ClientState as RawTmClientState;
 use light_client::commitments::{gen_state_id_from_any, StateID};
 use light_client::types::{Any, Height};
 
