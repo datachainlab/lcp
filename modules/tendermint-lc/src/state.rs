@@ -8,7 +8,7 @@ use ibc::clients::ics07_tendermint::{
         ConsensusState as TendermintConsensusState, TENDERMINT_CONSENSUS_STATE_TYPE_URL,
     },
 };
-use lcp_proto::google::protobuf::Any as IBCAny;
+use lcp_proto::google::protobuf::Any as ProtoAny;
 use lcp_proto::ibc::lightclients::tendermint::v1::ClientState as RawTmClientState;
 use light_client::commitments::{gen_state_id_from_any, StateID};
 use light_client::types::{Any, Height};
@@ -28,7 +28,7 @@ impl TryFrom<Any> for ClientState {
     type Error = Error;
 
     fn try_from(value: Any) -> Result<Self, Self::Error> {
-        let any: IBCAny = value.into();
+        let any: ProtoAny = value.into();
         if any.type_url == TENDERMINT_CLIENT_STATE_TYPE_URL {
             Ok(Self(
                 TendermintClientState::try_from(any).map_err(Error::ics02)?,
@@ -41,7 +41,7 @@ impl TryFrom<Any> for ClientState {
 
 impl From<ClientState> for Any {
     fn from(value: ClientState) -> Self {
-        IBCAny::from(value.0).into()
+        ProtoAny::from(value.0).into()
     }
 }
 
@@ -60,7 +60,7 @@ impl TryFrom<Any> for ConsensusState {
     type Error = Error;
 
     fn try_from(value: Any) -> Result<Self, Self::Error> {
-        let any: IBCAny = value.into();
+        let any: ProtoAny = value.into();
         if any.type_url == TENDERMINT_CONSENSUS_STATE_TYPE_URL {
             Ok(Self(
                 TendermintConsensusState::try_from(any).map_err(Error::ics02)?,
@@ -73,7 +73,7 @@ impl TryFrom<Any> for ConsensusState {
 
 impl From<ConsensusState> for Any {
     fn from(value: ConsensusState) -> Self {
-        IBCAny::from(value.0).into()
+        ProtoAny::from(value.0).into()
     }
 }
 

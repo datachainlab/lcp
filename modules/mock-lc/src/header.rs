@@ -1,7 +1,7 @@
 use crate::errors::Error;
 use core::ops::Deref;
 use ibc::mock::header::{MockHeader, MOCK_HEADER_TYPE_URL};
-use light_client::types::proto::google::protobuf::Any as IBCAny;
+use light_client::types::proto::google::protobuf::Any as ProtoAny;
 use light_client::types::Any;
 
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
@@ -24,7 +24,7 @@ impl TryFrom<Any> for Header {
     type Error = Error;
 
     fn try_from(value: Any) -> Result<Self, Self::Error> {
-        let any: IBCAny = value.into();
+        let any: ProtoAny = value.into();
         if any.type_url == MOCK_HEADER_TYPE_URL {
             Ok(Self(MockHeader::try_from(any).map_err(Error::ics02)?))
         } else {
@@ -35,6 +35,6 @@ impl TryFrom<Any> for Header {
 
 impl From<Header> for Any {
     fn from(value: Header) -> Self {
-        IBCAny::from(value.0).into()
+        ProtoAny::from(value.0).into()
     }
 }

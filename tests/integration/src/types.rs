@@ -21,7 +21,7 @@ use ibc_relayer_types::{
     core::ics04_channel::channel::ChannelEnd as RChannelEnd,
 };
 use ibc_relayer_types::{core::ics24_host::identifier::ChainId as RChainId, Height as RHeight};
-use lcp_proto::{google::protobuf::Any as IBCAny, protobuf::Protobuf};
+use lcp_proto::{google::protobuf::Any as ProtoAny, protobuf::Protobuf};
 use lcp_types::Any;
 use std::str::FromStr;
 
@@ -47,7 +47,7 @@ pub(crate) fn to_ibc_height(value: RHeight) -> Height {
 
 pub(crate) fn to_ibc_client_state(value: RTendermintClientState) -> TendermintClientState {
     let any = IBCRelayerAny::from(value);
-    TendermintClientState::try_from(IBCAny {
+    TendermintClientState::try_from(ProtoAny {
         type_url: any.type_url,
         value: any.value,
     })
@@ -56,7 +56,7 @@ pub(crate) fn to_ibc_client_state(value: RTendermintClientState) -> TendermintCl
 
 pub(crate) fn to_ibc_consensus_state(value: RTendermintConsensusState) -> TendermintConsensusState {
     let any = IBCRelayerAny::from(value);
-    TendermintConsensusState::try_from(IBCAny {
+    TendermintConsensusState::try_from(ProtoAny {
         type_url: any.type_url,
         value: any.value,
     })
@@ -82,7 +82,7 @@ pub(crate) fn to_relayer_port_id(value: PortId) -> RPortId {
 }
 
 pub(crate) fn to_relayer_client_state(value: TendermintClientState) -> RTendermintClientState {
-    let any = IBCAny::from(value);
+    let any = ProtoAny::from(value);
     RTendermintClientState::try_from(IBCRelayerAny {
         type_url: any.type_url,
         value: any.value,

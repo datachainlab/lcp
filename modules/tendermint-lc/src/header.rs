@@ -4,7 +4,7 @@ use crate::errors::Error;
 use ibc::clients::ics07_tendermint::header::{
     Header as TendermintHeader, TENDERMINT_HEADER_TYPE_URL,
 };
-use lcp_proto::google::protobuf::Any as IBCAny;
+use lcp_proto::google::protobuf::Any as ProtoAny;
 use light_client::types::Any;
 
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
@@ -31,7 +31,7 @@ impl From<TendermintHeader> for Header {
 
 impl From<Header> for Any {
     fn from(value: Header) -> Self {
-        IBCAny::from(value.0).into()
+        ProtoAny::from(value.0).into()
     }
 }
 
@@ -39,7 +39,7 @@ impl TryFrom<Any> for Header {
     type Error = Error;
 
     fn try_from(value: Any) -> Result<Self, Self::Error> {
-        let any: IBCAny = value.into();
+        let any: ProtoAny = value.into();
         if any.type_url == TENDERMINT_HEADER_TYPE_URL {
             Ok(Self(TendermintHeader::try_from(any).map_err(Error::ics02)?))
         } else {
