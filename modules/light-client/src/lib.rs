@@ -19,6 +19,10 @@ mod prelude {
     pub use core::iter::FromIterator;
 }
 
+/// re-export
+pub use commitments;
+pub use lcp_types;
+
 pub use client::{CreateClientResult, LightClient, StateVerificationResult, UpdateClientResult};
 pub use context::{ClientKeeper, ClientReader, HostClientKeeper, HostClientReader, HostContext};
 pub use errors::{Error, ErrorDetail, LightClientSpecificError, RegistryError};
