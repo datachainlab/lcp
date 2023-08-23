@@ -22,3 +22,7 @@ proptest = "1.2.0"
 
 [features]
 default = []
+std = [
+    "flex-error/std",
+    "lcp-types/std",
+]

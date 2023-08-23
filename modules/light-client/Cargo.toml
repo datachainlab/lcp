@@ -17,4 +17,12 @@ store = { path = "../store", default-features = false }
 
 [features]
 default = []
+std = [
+    "flex-error/std",
+    "lcp-types/std",
+    "commitments/std",
+    "store/std",
+    "ibc?/std",
+    "ibc-proto?/std",
+]
 ibc = ["dep:ibc", "dep:ibc-proto"]

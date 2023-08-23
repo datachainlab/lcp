@@ -6,10 +6,10 @@ use crate::message::{
 };
 use attestation_report::EndorsedAttestationVerificationReport;
 use crypto::{verify_signature_address, Address, Keccak256};
-use lcp_types::{ClientId, Height, Time};
 use light_client::commitments::{
     CommitmentPrefix, CommitmentProof, EthABIEncoder, StateCommitment,
 };
+use light_client::types::{ClientId, Height, Time};
 use light_client::{ClientKeeper, ClientReader, HostClientKeeper, HostClientReader};
 
 pub const LCP_CLIENT_TYPE: &str = "0000-lcp";

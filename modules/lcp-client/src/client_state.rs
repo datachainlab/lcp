@@ -5,7 +5,7 @@ use core::time::Duration;
 use ibc_proto::protobuf::Protobuf;
 use lcp_proto::ibc::core::client::v1::Height as ProtoHeight;
 use lcp_proto::ibc::lightclients::lcp::v1::ClientState as RawClientState;
-use lcp_types::{Any, Height};
+use light_client::types::{Any, Height};
 use prost::Message;
 use prost_types::Any as ProtoAny;
 use serde::{Deserialize, Serialize};

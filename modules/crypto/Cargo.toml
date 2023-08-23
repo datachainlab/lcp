@@ -20,7 +20,8 @@ libsecp256k1 = { version = "0.7.1", default-features = false, features = ["stati
 [features]
 default = ["std"]
 std = [
-    "rand/default"
+    "rand/default",
+    "flex-error/std"
 ]
 sgx = [
     "sgx_trts",

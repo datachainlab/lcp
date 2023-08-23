@@ -16,5 +16,8 @@ crypto = { path = "../crypto", default-features = false }
 
 [features]
 default = ["std"]
-std = ["lcp-types/std"]
+std = [
+    "flex-error/std",
+    "lcp-types/std"
+]
 sgx-sw = []

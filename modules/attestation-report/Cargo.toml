@@ -25,6 +25,7 @@ default = ["std"]
 std = [
     "rustls",
     "webpki",
+    "flex-error/std",
     "serde_json/preserve_order"
 ]
 sgx = [

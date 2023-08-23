@@ -7,8 +7,8 @@ use lcp_proto::ibc::lightclients::lcp::v1::{
     RegisterEnclaveKeyMessage as RawRegisterEnclaveKeyMessage,
     UpdateClientMessage as RawUpdateClientMessage,
 };
-use lcp_types::{Any, Height, Time};
 use light_client::commitments::{Commitment, CommitmentContext, StateID, UpdateClientCommitment};
+use light_client::types::{Any, Height, Time};
 use prost_types::Any as ProtoAny;
 use serde::{Deserialize, Serialize};
 
