@@ -2654,7 +2654,7 @@ dependencies = [
  "flex-error",
  "hex",
  "ibc",
- "ibc-proto 0.26.0",
+ "lcp-proto",
  "proptest",
  "prost-types",
  "serde",

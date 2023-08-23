@@ -29,7 +29,7 @@ pub const IBC_GO_COMMIT: &str = include_str!("IBC_GO_COMMIT");
 #[cfg(feature = "server")]
 pub const FILE_DESCRIPTOR_SET: &[u8] = include_bytes!("descriptor.bin");
 
-pub use ibc_proto::{cosmos, google};
+pub use ibc_proto::{cosmos, google, protobuf};
 
 pub mod ibc {
     pub use ibc_proto::ibc::core;

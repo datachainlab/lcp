@@ -5,8 +5,8 @@ use core::str::FromStr;
 use ibc::core::ics02_client::error::ClientError as ICS02Error;
 use ibc::core::ics02_client::height::Height as ICS02Height;
 use ibc::core::ics02_client::height::HeightError;
-use ibc_proto::ibc::core::client::v1::Height as RawHeight;
-use ibc_proto::protobuf::Protobuf;
+use lcp_proto::ibc::core::client::v1::Height as RawHeight;
+use lcp_proto::protobuf::Protobuf;
 use serde::{Deserialize, Serialize};
 
 #[derive(Default, Copy, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]

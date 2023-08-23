@@ -1,8 +1,7 @@
 use crate::errors::TypeError;
 use crate::prelude::*;
 use core::ops::Deref;
-use ibc_proto::google::protobuf::Any as IBCAny;
-use ibc_proto::protobuf::Protobuf;
+use lcp_proto::{google::protobuf::Any as IBCAny, protobuf::Protobuf};
 use prost_types::Any as ProtoAny;
 use serde::{Deserialize, Serialize};
 
