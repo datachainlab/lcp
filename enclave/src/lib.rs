@@ -1,8 +1,5 @@
 #![no_std]
 extern crate alloc;
-#[macro_use]
-extern crate sgx_tstd;
-
 use enclave_runtime::{setup_runtime, Environment, MapLightClientRegistry};
 
 setup_runtime!({

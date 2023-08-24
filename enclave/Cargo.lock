@@ -448,7 +448,6 @@ version = "0.1.0"
 dependencies = [
  "enclave-runtime",
  "log 0.4.17",
- "sgx_tstd",
  "simple_logger",
  "tendermint-lc",
 ]
