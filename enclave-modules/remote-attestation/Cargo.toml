@@ -22,7 +22,7 @@ rustls = { git = "https://github.com/mesalock-linux/rustls", branch = "mesalock_
 
 host-api = { path = "../host-api" }
 
-lcp-types = { path = "../../modules/types", default-features = false, features = ["sgx"] }
+lcp-types = { path = "../../modules/types", default-features = false }
 crypto = { path = "../../modules/crypto", default-features = false }
 attestation-report = { path = "../../modules/attestation-report", default-features = false }
 ocall-commands = { path = "../../modules/ocall-commands", default-features = false }

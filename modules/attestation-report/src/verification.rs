@@ -26,10 +26,12 @@ static SUPPORTED_SIG_ALGS: SignatureAlgorithms = &[
 ];
 
 pub fn verify_report(
+    current_timestamp: Time,
     report: &EndorsedAttestationVerificationReport,
-    current_time: Time,
 ) -> Result<(), Error> {
-    let current_unix_timestamp = current_time.duration_since(TmTime::unix_epoch()).unwrap();
+    let current_unix_timestamp = current_timestamp
+        .duration_since(TmTime::unix_epoch())
+        .unwrap();
     // NOTE: Currently, webpki::Time's constructor only accepts seconds as unix timestamp.
     // Therefore, the current time are rounded up conservatively.
     let secs = if current_unix_timestamp.subsec_nanos() > 0 {

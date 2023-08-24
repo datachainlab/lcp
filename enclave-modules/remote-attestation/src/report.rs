@@ -8,19 +8,26 @@ use log::*;
 use ocall_commands::{GetReportAttestationStatusInput, GetReportAttestationStatusResult};
 use sgx_types::{sgx_platform_info_t, sgx_status_t};
 
-pub fn validate_quote_status(avr: &AttestationVerificationReport) -> Result<Quote, Error> {
+pub fn validate_quote_status(
+    current_timestamp: Time,
+    avr: &AttestationVerificationReport,
+) -> Result<Quote, Error> {
     // 1. Verify quote body
     let quote = avr.parse_quote().map_err(Error::attestation_report)?;
 
     // 2. Check quote's timestamp is within 24H
-    let now = Time::now();
     info!(
-        "Time: now={:?} quote_timestamp={:?}",
-        now, quote.attestation_time
+        "Time: current_timestamp={:?} quote_timestamp={:?}",
+        current_timestamp, quote.attestation_time
     );
 
-    if now >= (quote.attestation_time + Duration::from_secs(60 * 60 * 24)).map_err(Error::time)? {
-        return Err(Error::too_old_report_timestamp(now, quote.attestation_time));
+    if current_timestamp
+        >= (quote.attestation_time + Duration::from_secs(60 * 60 * 24)).map_err(Error::time)?
+    {
+        return Err(Error::too_old_report_timestamp(
+            current_timestamp,
+            quote.attestation_time,
+        ));
     }
 
     // 3. Verify quote status (mandatory field)
