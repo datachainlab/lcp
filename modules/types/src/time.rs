@@ -23,13 +23,6 @@ impl Time {
         Time(TmTime::from_unix_timestamp(now.as_secs() as i64, now.subsec_nanos()).unwrap())
     }
 
-    #[cfg(all(feature = "sgx", not(feature = "std")))]
-    pub fn now() -> Self {
-        use sgx_tstd::time::{SystemTime, UNIX_EPOCH};
-        let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
-        Time(TmTime::from_unix_timestamp(now.as_secs() as i64, now.subsec_nanos()).unwrap())
-    }
-
     pub fn unix_epoch() -> Self {
         Time(TmTime::unix_epoch())
     }

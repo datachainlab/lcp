@@ -1338,6 +1338,7 @@ dependencies = [
  "host",
  "keymanager",
  "lcp-proto",
+ "lcp-types",
  "log 0.4.17",
  "rsa",
  "sgx_types",
@@ -2653,7 +2654,6 @@ dependencies = [
  "prost",
  "serde",
  "serde_json",
- "sgx_tstd",
  "sgx_types",
  "tendermint 0.29.0",
 ]

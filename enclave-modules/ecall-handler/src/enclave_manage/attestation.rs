@@ -6,7 +6,6 @@ use ecall_commands::{CommandContext, IASRemoteAttestationInput, IASRemoteAttesta
 use enclave_remote_attestation::{
     attestation::create_attestation_report, report::validate_quote_status,
 };
-use lcp_types::Time;
 use sgx_types::{sgx_quote_sign_type_t, sgx_spid_t};
 
 pub(crate) fn ias_remote_attestation(
@@ -24,10 +23,10 @@ pub(crate) fn ias_remote_attestation(
             spid,
             &input.ias_key,
         )?;
-        verify_report(&report, Time::now())?;
+        verify_report(cctx.current_timestamp, &report)?;
         report
     };
-    validate_quote_status(&report.get_avr()?)?;
+    validate_quote_status(cctx.current_timestamp, &report.get_avr()?)?;
     Ok(IASRemoteAttestationResult { report })
 }
 
@@ -45,7 +44,7 @@ pub(crate) fn simulate_remote_attestation(
         input.advisory_ids,
         input.isv_enclave_quote_status,
     )?;
-    validate_quote_status(&avr)?;
+    validate_quote_status(cctx.current_timestamp, &avr)?;
     Ok(ecall_commands::SimulateRemoteAttestationResult { avr })
 }
 

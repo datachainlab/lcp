@@ -3,6 +3,7 @@ use crate::{
     ffi, Error, Result,
 };
 use ecall_commands::{Command, CommandContext, CommandResult, ECallCommand, EnclaveKeySelector};
+use lcp_types::Time;
 use log::*;
 use sgx_types::{sgx_enclave_id_t, sgx_status_t};
 use store::transaction::{CommitStore, Tx};
@@ -14,14 +15,15 @@ pub trait EnclavePrimitiveAPI<S: CommitStore>: EnclaveInfo + HostStoreTxManager<
             "prepare command: inner={:?} update_key={:?}",
             cmd, update_key
         );
+        let current_timestamp = Time::now();
         let tx = self.begin_tx(update_key)?;
 
         let cctx = match cmd.get_enclave_key() {
             Some(addr) => {
                 let ski = self.get_key_manager().load(addr)?;
-                CommandContext::new(Some(ski.sealed_ek), tx.get_id())
+                CommandContext::new(current_timestamp, Some(ski.sealed_ek), tx.get_id())
             }
-            None => CommandContext::new(None, tx.get_id()),
+            None => CommandContext::new(current_timestamp, None, tx.get_id()),
         };
 
         let ecmd = ECallCommand::new(cctx, cmd);

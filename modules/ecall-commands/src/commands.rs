@@ -3,6 +3,7 @@ use crate::{
     LightClientResult,
 };
 use crypto::SealedEnclaveKey;
+use lcp_types::Time;
 use serde::{Deserialize, Serialize};
 use store::TxId;
 
@@ -20,13 +21,18 @@ impl ECallCommand {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct CommandContext {
+    pub current_timestamp: Time,
     pub sealed_ek: Option<SealedEnclaveKey>,
     pub tx_id: TxId,
 }
 
 impl CommandContext {
-    pub fn new(sealed_ek: Option<SealedEnclaveKey>, tx_id: TxId) -> Self {
-        Self { sealed_ek, tx_id }
+    pub fn new(current_timestamp: Time, sealed_ek: Option<SealedEnclaveKey>, tx_id: TxId) -> Self {
+        Self {
+            current_timestamp,
+            sealed_ek,
+            tx_id,
+        }
     }
 }
 
