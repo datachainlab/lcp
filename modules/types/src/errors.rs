@@ -20,7 +20,7 @@ define_error! {
             },
         InvalidHeightResult
             |_| {
-                "height cannot end up zero or negative"
+                "height cannot end up negative or overflow"
             },
         ClientIdContainSeparator
             { id: String }

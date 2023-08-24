@@ -35,30 +35,24 @@ impl Height {
         self.revision_height
     }
 
-    pub fn add(&self, delta: u64) -> Height {
-        Height {
-            revision_number: self.revision_number,
-            revision_height: self.revision_height + delta,
-        }
-    }
-
-    pub fn increment(&self) -> Height {
-        self.add(1)
-    }
-
-    pub fn sub(&self, delta: u64) -> Result<Height, TypeError> {
-        if self.revision_height < delta {
-            return Err(TypeError::invalid_height_result());
-        }
-
+    pub fn add(&self, delta: u64) -> Result<Height, TypeError> {
         Ok(Height {
             revision_number: self.revision_number,
-            revision_height: self.revision_height - delta,
+            revision_height: self
+                .revision_height
+                .checked_add(delta)
+                .ok_or_else(TypeError::invalid_height_result)?,
         })
     }
 
-    pub fn decrement(&self) -> Result<Height, TypeError> {
-        self.sub(1)
+    pub fn sub(&self, delta: u64) -> Result<Height, TypeError> {
+        Ok(Height {
+            revision_number: self.revision_number,
+            revision_height: self
+                .revision_height
+                .checked_sub(delta)
+                .ok_or_else(TypeError::invalid_height_result)?,
+        })
     }
 
     pub fn is_zero(&self) -> bool {
@@ -138,41 +132,11 @@ impl TryFrom<&str> for Height {
     }
 }
 
-impl From<Height> for String {
-    fn from(height: Height) -> Self {
-        format!("{}-{}", height.revision_number, height.revision_height)
-    }
-}
-
 impl FromStr for Height {
     type Err = TypeError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Height::try_from(s)
-    }
-}
-
-impl From<Height> for Vec<u8> {
-    fn from(height: Height) -> Self {
-        let mut bz: [u8; 16] = Default::default();
-        bz[..8].copy_from_slice(&height.revision_number().to_be_bytes());
-        bz[8..].copy_from_slice(&height.revision_height().to_be_bytes());
-        bz.to_vec()
-    }
-}
-
-impl TryFrom<&[u8]> for Height {
-    type Error = TypeError;
-    fn try_from(bz: &[u8]) -> Result<Self, Self::Error> {
-        if bz.len() != 16 {
-            return Err(TypeError::height_bytes_conversion(bz.into()));
-        }
-        let mut ar: [u8; 8] = Default::default();
-        ar.copy_from_slice(&bz[..8]);
-        let revision_number = u64::from_be_bytes(ar);
-        ar.copy_from_slice(&bz[8..]);
-        let revision_height = u64::from_be_bytes(ar);
-        Ok(Height::new(revision_number, revision_height))
     }
 }
 
@@ -201,13 +165,72 @@ impl From<ibc::core::ics02_client::height::Height> for Height {
 mod tests {
     use super::*;
     use ibc::core::ics02_client::height::Height as ICS02Height;
+    use proptest::prelude::*;
+
+    proptest! {
+        #[test]
+        fn test_height_str_conversion(rev_num: u64, rev_height: u64) {
+            let h = Height::new(rev_num, rev_height);
+            let h2 = Height::try_from(h.to_string().as_str());
+            assert!(h2.is_ok());
+            assert_eq!(h, h2.unwrap());
+        }
+    }
 
     #[test]
-    fn test_zero_height_conversion() {
+    fn test_height() {
         let h = Height::zero();
+        assert!(h.is_zero());
+        assert!(h.sub(1).is_err());
         let res: Result<ICS02Height, _> = h.try_into();
         assert!(res.is_ok());
         let ibc_height = res.unwrap();
         assert_eq!(ibc_height.revision_number(), 0);
+        assert_eq!(ibc_height.revision_height(), 0);
+
+        let h = Height::new(u64::MAX, u64::MAX);
+        assert!(h.add(1).is_err());
+        let res: Result<ICS02Height, _> = h.try_into();
+        assert!(res.is_ok());
+        let ibc_height = res.unwrap();
+        assert_eq!(ibc_height.revision_number(), u64::MAX);
+        assert_eq!(ibc_height.revision_height(), u64::MAX);
+    }
+
+    #[test]
+    fn test_height_ordering() {
+        let h1 = Height::new(0, 0);
+        let h2 = Height::new(0, 1);
+        let h3 = Height::new(1, 0);
+        let h4 = Height::new(1, 1);
+
+        assert!(h1 < h2);
+        assert!(h1 < h3);
+        assert!(h1 < h4);
+
+        assert!(h2 < h3);
+        assert!(h2 < h4);
+
+        assert!(h3 < h4);
+    }
+
+    #[test]
+    fn test_height_add_sub() {
+        let h1 = Height::new(0, 0);
+        let h2 = Height::new(0, 1);
+        let h3 = Height::new(1, 0);
+        let h4 = Height::new(1, 1);
+
+        assert_eq!(h1.add(0).unwrap(), h1);
+        assert_eq!(h1.sub(0).unwrap(), h1);
+
+        assert_eq!(h1.add(1).unwrap(), h2);
+        assert_eq!(h2.sub(1).unwrap(), h1);
+
+        assert_eq!(h3.add(0).unwrap(), h3);
+        assert_eq!(h3.sub(0).unwrap(), h3);
+
+        assert_eq!(h3.add(1).unwrap(), h4);
+        assert_eq!(h4.sub(1).unwrap(), h3);
     }
 }
