@@ -19,6 +19,9 @@ mod prelude {
     pub use core::iter::FromIterator;
 }
 
+/// re-export
+pub use light_client::MapLightClientRegistry;
+
 pub use environment::Env;
 #[cfg(feature = "environment_impl")]
 pub use environment_impl::Environment;

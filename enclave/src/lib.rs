@@ -3,9 +3,7 @@ extern crate alloc;
 #[macro_use]
 extern crate sgx_tstd;
 
-use enclave_environment::Environment;
-use enclave_runtime::setup_runtime;
-use light_client::MapLightClientRegistry;
+use enclave_runtime::{setup_runtime, Environment, MapLightClientRegistry};
 
 setup_runtime!({
     simple_logger::SimpleLogger::new()

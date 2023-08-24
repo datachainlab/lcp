@@ -21,10 +21,8 @@ sgx-sw = [
 sgx_tstd = { rev = "v1.1.6", git = "https://github.com/apache/incubator-teaclave-sgx-sdk" }
 log = { version = "0.4.8", default-features = false }
 
-simple_logger = { git = "https://github.com/bluele/rust-simple_logger", branch = "sgx", default-features = false, features = ["sgx"] }
 enclave-runtime = { path = "../enclave-modules/runtime" }
-light-client = { path = "../modules/light-client", default-features = false }
-enclave-environment = { path = "../enclave-modules/environment" }
+simple_logger = { git = "https://github.com/bluele/rust-simple_logger", branch = "sgx", default-features = false, features = ["sgx"] }
 tendermint-lc = { path = "../modules/tendermint-lc", default-features = false }
 
 [patch."https://github.com/apache/teaclave-sgx-sdk.git"]

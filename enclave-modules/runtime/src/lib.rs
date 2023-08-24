@@ -19,6 +19,8 @@ mod prelude {
 }
 
 pub use ecalls::{ecall_execute_command, set_environment};
+/// re-export
+pub use enclave_environment::{Environment, MapLightClientRegistry};
 
 mod ecalls;
 mod errors;
