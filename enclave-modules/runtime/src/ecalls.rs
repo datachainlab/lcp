@@ -33,7 +33,7 @@ pub fn ecall_execute_command(
         sgx_status_t::SGX_ERROR_UNEXPECTED
     );
 
-    let (status, result) = raw_ecall_execute_command(command, command_len);
+    let (status, result) = execute_command(command, command_len);
     let res = match bincode::serde::encode_to_vec(&result, bincode::config::standard()) {
         Ok(res) => {
             if res.len() > output_buf_maxlen as usize {
@@ -57,10 +57,7 @@ pub fn ecall_execute_command(
     status
 }
 
-fn raw_ecall_execute_command(
-    command: *const u8,
-    command_len: u32,
-) -> (sgx_status_t, CommandResult) {
+fn execute_command(command: *const u8, command_len: u32) -> (sgx_status_t, CommandResult) {
     let cmd: ECallCommand = match bincode::serde::decode_borrowed_from_slice(
         unsafe { alloc::slice::from_raw_parts(command, command_len as usize) },
         bincode::config::standard(),
