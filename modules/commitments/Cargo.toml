@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-serde = { version = "1.0", default-features = false, features = ["alloc"] }
+serde = { version = "1.0.184", default-features = false, features = ["alloc"] }
 prost = { version = "0.11", default-features = false }
 hex = { version = "0.4", default-features = false, features = ["alloc"] }
 sha2 = { version = "0.10.6", default-features = false }
@@ -15,10 +15,13 @@ lcp-types = { path = "../types", default-features = false }
 crypto = { path = "../crypto", default-features = false }
 
 [dev-dependencies]
-prost-types = { version = "0.11", default-features = false }
 lcp-types = { path = "../types", default-features = false, features = ["std"] }
 time = { version = "0.3", default-features = false, features = ["macros", "parsing"] }
 proptest = "1.2.0"
 
 [features]
 default = []
+std = [
+    "flex-error/std",
+    "lcp-types/std",
+]

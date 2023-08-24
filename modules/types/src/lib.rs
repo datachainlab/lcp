@@ -5,6 +5,8 @@ pub use any::Any;
 pub use errors::{TimeError, TypeError};
 pub use height::Height;
 pub use host::ClientId;
+/// re-export
+pub use lcp_proto as proto;
 pub use sgx::Mrenclave;
 pub use time::{nanos_to_duration, Time, MAX_UNIX_TIMESTAMP_NANOS};
 

@@ -12,7 +12,7 @@ anyhow = { version = "1.0.56" }
 lcp-types = { path = "../types" }
 crypto = { path = "../crypto" }
 enclave-api = { path = "../enclave-api" }
-lcp-proto = { path = "../../proto", default-features = false }
+lcp-proto = { path = "../../proto", default-features = false, features = ["server"] }
 store = { path = "../store", default-features = false }
 
 [features]

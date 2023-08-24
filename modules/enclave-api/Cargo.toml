@@ -21,7 +21,10 @@ attestation-report = { path = "../attestation-report" }
 lcp-proto = { path = "../../proto", features = ["server"] }
 
 [features]
-default = ["rocksdb"]
+default = ["std", "rocksdb"]
+std = [
+    "flex-error/std"
+]
 rocksdb = ["store/rocksdbstore"]
 sgx-sw = [
     "rsa",

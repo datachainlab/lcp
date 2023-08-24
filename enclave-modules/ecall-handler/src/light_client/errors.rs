@@ -12,11 +12,11 @@ define_error! {
         |_| { "LightClient error" },
 
         LightClientRegistry
-        [light_client_registry::Error]
+        [light_client::RegistryError]
         |_| { "LightClientRegistry error" },
 
         Commitment
-        [commitments::Error]
+        [light_client::commitments::Error]
         |_| { "Commitment error" },
 
         LcpType
@@ -26,8 +26,8 @@ define_error! {
     }
 }
 
-impl From<commitments::Error> for Error {
-    fn from(err: commitments::Error) -> Self {
+impl From<light_client::commitments::Error> for Error {
+    fn from(err: light_client::commitments::Error) -> Self {
         Error::commitment(err)
     }
 }

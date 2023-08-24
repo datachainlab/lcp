@@ -5,9 +5,11 @@ use crate::message::{
     ClientMessage, CommitmentReader, RegisterEnclaveKeyMessage, UpdateClientMessage,
 };
 use attestation_report::EndorsedAttestationVerificationReport;
-use commitments::{CommitmentPrefix, CommitmentProof, EthABIEncoder, StateCommitment};
 use crypto::{verify_signature_address, Address, Keccak256};
-use lcp_types::{ClientId, Height, Time};
+use light_client::commitments::{
+    CommitmentPrefix, CommitmentProof, EthABIEncoder, StateCommitment,
+};
+use light_client::types::{ClientId, Height, Time};
 use light_client::{ClientKeeper, ClientReader, HostClientKeeper, HostClientReader};
 
 pub const LCP_CLIENT_TYPE: &str = "0000-lcp";
@@ -263,7 +265,6 @@ mod tests {
     use alloc::rc::Rc;
     use alloc::sync::Arc;
     use attestation_report::AttestationVerificationReport;
-    use commitments::prove_commitment;
     use context::Context;
     use core::cell::RefCell;
     use core::str::FromStr;
@@ -275,8 +276,8 @@ mod tests {
         },
         Height as ICS02Height,
     };
-    use light_client::LightClient;
-    use light_client_registry::{memory::HashMapLightClientRegistry, LightClientResolver};
+    use light_client::commitments::prove_commitment;
+    use light_client::{LightClient, LightClientResolver, MapLightClientRegistry};
     use mock_lc::MockLightClient;
     use sgx_types::{sgx_quote_t, sgx_report_body_t};
     use store::memory::MemStore;
@@ -415,7 +416,7 @@ mod tests {
     }
 
     fn build_lc_registry() -> Arc<dyn LightClientResolver> {
-        let registry = HashMapLightClientRegistry::new();
+        let registry = MapLightClientRegistry::new();
         Arc::new(registry)
     }
 

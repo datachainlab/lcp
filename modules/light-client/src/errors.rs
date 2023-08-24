@@ -1,12 +1,12 @@
 use crate::prelude::*;
+use crate::types::{ClientId, Height};
 use flex_error::*;
-use lcp_types::{ClientId, Height};
 
 define_error! {
     #[derive(Debug, PartialEq, Eq)]
     Error {
         Commitment
-        [commitments::Error]
+        [crate::commitments::Error]
         |_| { "Commitment error" },
 
         ClientTypeNotFound
@@ -46,5 +46,29 @@ pub trait LightClientSpecificError: core::fmt::Display + core::fmt::Debug + Sync
 impl<T: 'static + LightClientSpecificError> From<T> for Error {
     fn from(value: T) -> Self {
         Self::light_client_specific(Box::new(value))
+    }
+}
+
+define_error! {
+    #[derive(Debug, Clone, PartialEq, Eq)]
+    RegistryError {
+        TypeUrlNotFound
+        {
+            type_url: String
+        }
+        |e| {
+            format_args!("type_url not found: type_url={}", e.type_url)
+        },
+
+        TypeUrlAlreadyExists
+        {
+            type_url: String
+        }
+        |e| {
+            format_args!("type_url already exists: type_url={}", e.type_url)
+        },
+
+        AlreadySealed
+        |_| { "registry is already sealed" },
     }
 }

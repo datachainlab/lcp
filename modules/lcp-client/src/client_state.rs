@@ -2,12 +2,15 @@ use crate::errors::Error;
 use crate::message::CommitmentReader;
 use crate::prelude::*;
 use core::time::Duration;
-use ibc_proto::protobuf::Protobuf;
-use lcp_proto::ibc::core::client::v1::Height as ProtoHeight;
-use lcp_proto::ibc::lightclients::lcp::v1::ClientState as RawClientState;
-use lcp_types::{Any, Height};
+use light_client::types::proto::{
+    ibc::{
+        core::client::v1::Height as ProtoHeight,
+        lightclients::lcp::v1::ClientState as RawClientState,
+    },
+    protobuf::Protobuf,
+};
+use light_client::types::{Any, Height};
 use prost::Message;
-use prost_types::Any as ProtoAny;
 use serde::{Deserialize, Serialize};
 
 pub const LCP_CLIENT_STATE_TYPE_URL: &str = "/ibc.lightclients.lcp.v1.ClientState";
@@ -56,42 +59,25 @@ impl TryFrom<RawClientState> for ClientState {
     }
 }
 
-impl Protobuf<ProtoAny> for ClientState {}
+impl Protobuf<Any> for ClientState {}
 
-impl From<ClientState> for ProtoAny {
+impl From<ClientState> for Any {
     fn from(value: ClientState) -> Self {
         let value = RawClientState::try_from(value).expect("encoding to `Any` from `ClientState`");
-        ProtoAny {
-            type_url: LCP_CLIENT_STATE_TYPE_URL.to_string(),
-            value: value.encode_to_vec(),
-        }
-    }
-}
-
-impl TryFrom<ProtoAny> for ClientState {
-    type Error = Error;
-
-    fn try_from(raw: ProtoAny) -> Result<Self, Self::Error> {
-        match raw.type_url.as_str() {
-            LCP_CLIENT_STATE_TYPE_URL => Ok(ClientState::try_from(
-                RawClientState::decode(&*raw.value).unwrap(),
-            )?),
-            _ => Err(Error::unexpected_client_type(raw.type_url)),
-        }
+        Any::new(LCP_CLIENT_STATE_TYPE_URL.to_string(), value.encode_to_vec())
     }
 }
 
 impl TryFrom<Any> for ClientState {
     type Error = Error;
 
-    fn try_from(any: Any) -> Result<Self, Self::Error> {
-        TryFrom::<ProtoAny>::try_from(any.into())
-    }
-}
-
-impl From<ClientState> for Any {
-    fn from(value: ClientState) -> Self {
-        ProtoAny::from(value).try_into().unwrap()
+    fn try_from(raw: Any) -> Result<Self, Self::Error> {
+        match raw.type_url.as_str() {
+            LCP_CLIENT_STATE_TYPE_URL => Ok(ClientState::try_from(
+                RawClientState::decode(&*raw.value).unwrap(),
+            )?),
+            type_url => Err(Error::unexpected_client_type(type_url.to_owned())),
+        }
     }
 }
 

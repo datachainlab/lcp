@@ -3,8 +3,7 @@ use crate::prelude::*;
 use context::Context;
 use crypto::Signer;
 use lcp_types::ClientId;
-use light_client::{ClientReader, LightClient};
-use light_client_registry::{Error as LightClientRegistryError, LightClientResolver};
+use light_client::{ClientReader, LightClient, LightClientResolver, RegistryError};
 use store::KVStore;
 
 pub fn get_light_client_by_client_id<'a, R: LightClientResolver, S: KVStore, K: Signer>(
@@ -14,6 +13,6 @@ pub fn get_light_client_by_client_id<'a, R: LightClientResolver, S: KVStore, K: 
     let any_client_state = ctx.client_state(client_id)?.to_proto();
     ctx.get_light_client(any_client_state.type_url.as_ref())
         .ok_or(Error::light_client_registry(
-            LightClientRegistryError::type_url_not_found(any_client_state.type_url),
+            RegistryError::type_url_not_found(any_client_state.type_url),
         ))
 }

@@ -20,8 +20,8 @@ define_error! {
         },
 
         ExpiredAvr {
-            current_timestamp: lcp_types::Time,
-            attestation_time: lcp_types::Time,
+            current_timestamp: light_client::types::Time,
+            attestation_time: light_client::types::Time,
             client_state_key_expiration: Duration
         }
         |e| {
@@ -41,7 +41,7 @@ define_error! {
         |_| { "Attestation report error" },
 
         Time
-        [lcp_types::TimeError]
+        [light_client::types::TimeError]
         |_| { "Time error" },
 
         CryptoError
@@ -53,11 +53,11 @@ define_error! {
         |_| { "Light Client error" },
 
         CommitmentProof
-        [commitments::Error]
+        [light_client::commitments::Error]
         |_| { "Commitment proof error" },
 
         IbcProto
-        [TraceError<ibc_proto::protobuf::Error>]
+        [TraceError<light_client::types::proto::protobuf::Error>]
         |_| { "IBCProto error" }
     }
 }
@@ -68,8 +68,8 @@ impl From<attestation_report::Error> for Error {
     }
 }
 
-impl From<lcp_types::TimeError> for Error {
-    fn from(err: lcp_types::TimeError) -> Self {
+impl From<light_client::types::TimeError> for Error {
+    fn from(err: light_client::types::TimeError) -> Self {
         Error::time(err)
     }
 }
@@ -86,8 +86,8 @@ impl From<light_client::Error> for Error {
     }
 }
 
-impl From<commitments::Error> for Error {
-    fn from(value: commitments::Error) -> Self {
+impl From<light_client::commitments::Error> for Error {
+    fn from(value: light_client::commitments::Error) -> Self {
         Self::commitment_proof(value)
     }
 }

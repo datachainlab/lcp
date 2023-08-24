@@ -3,8 +3,7 @@ use crate::light_client::Error;
 use context::Context;
 use crypto::Signer;
 use ecall_commands::{LightClientResult, QueryClientInput, QueryClientResult};
-use light_client::ClientReader;
-use light_client_registry::LightClientResolver;
+use light_client::{ClientReader, LightClientResolver};
 use store::KVStore;
 
 pub fn query_client<R: LightClientResolver, S: KVStore, K: Signer>(

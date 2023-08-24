@@ -1,5 +1,4 @@
 use log::*;
-
 use sgx_trts::trts::{
     rsgx_lfence, rsgx_raw_is_outside_enclave, rsgx_sfence, rsgx_slice_is_outside_enclave,
 };

@@ -1,9 +1,9 @@
+use crate::types::{Any, ClientId, Height, Time};
 use crate::{
     errors::Error,
     path::{ClientConsensusStatePath, ClientStatePath, ClientTypePath, NEXT_CLIENT_SEQUENCE},
     prelude::*,
 };
-use lcp_types::{Any, ClientId, Height, Time};
 use store::KVStore;
 
 pub trait HostContext {

@@ -1,8 +1,10 @@
 use crate::prelude::*;
 use crypto::Signer;
 use lcp_types::Time;
-use light_client::{ClientKeeper, ClientReader, HostClientKeeper, HostClientReader, HostContext};
-use light_client_registry::LightClientResolver;
+use light_client::{
+    ClientKeeper, ClientReader, HostClientKeeper, HostClientReader, HostContext,
+    LightClientResolver,
+};
 use store::KVStore;
 
 pub struct Context<'k, R: LightClientResolver, S: KVStore, K: Signer> {

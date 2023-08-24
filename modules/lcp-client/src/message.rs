@@ -1,15 +1,14 @@
 use crate::errors::Error;
 use crate::prelude::*;
 use attestation_report::EndorsedAttestationVerificationReport;
-use commitments::{Commitment, CommitmentContext, StateID, UpdateClientCommitment};
 use crypto::Address;
-use ibc_proto::protobuf::Protobuf;
-use lcp_proto::ibc::lightclients::lcp::v1::{
+use light_client::commitments::{Commitment, CommitmentContext, StateID, UpdateClientCommitment};
+use light_client::types::proto::ibc::lightclients::lcp::v1::{
     RegisterEnclaveKeyMessage as RawRegisterEnclaveKeyMessage,
     UpdateClientMessage as RawUpdateClientMessage,
 };
-use lcp_types::{Any, Height, Time};
-use prost_types::Any as ProtoAny;
+use light_client::types::proto::protobuf::Protobuf;
+use light_client::types::{Any, Height, Time};
 use serde::{Deserialize, Serialize};
 
 pub const LCP_REGISTER_ENCLAVE_KEY_MESSAGE_TYPE_URL: &str =
@@ -23,12 +22,12 @@ pub enum ClientMessage {
     UpdateClient(UpdateClientMessage),
 }
 
-impl Protobuf<ProtoAny> for ClientMessage {}
+impl Protobuf<Any> for ClientMessage {}
 
-impl TryFrom<ProtoAny> for ClientMessage {
+impl TryFrom<Any> for ClientMessage {
     type Error = Error;
 
-    fn try_from(raw: ProtoAny) -> Result<Self, Self::Error> {
+    fn try_from(raw: Any) -> Result<Self, Self::Error> {
         match raw.type_url.as_str() {
             LCP_REGISTER_ENCLAVE_KEY_MESSAGE_TYPE_URL => Ok(ClientMessage::RegisterEnclaveKey(
                 RegisterEnclaveKeyMessage::decode_vec(&raw.value).map_err(Error::ibc_proto)?,
@@ -36,37 +35,23 @@ impl TryFrom<ProtoAny> for ClientMessage {
             LCP_UPDATE_CLIENT_MESSAGE_TYPE_URL => Ok(ClientMessage::UpdateClient(
                 UpdateClientMessage::decode_vec(&raw.value).map_err(Error::ibc_proto)?,
             )),
-            _ => Err(Error::unexpected_header_type(raw.type_url)),
+            type_url => Err(Error::unexpected_header_type(type_url.to_owned())),
         }
-    }
-}
-
-impl From<ClientMessage> for ProtoAny {
-    fn from(value: ClientMessage) -> Self {
-        match value {
-            ClientMessage::RegisterEnclaveKey(h) => ProtoAny {
-                type_url: LCP_REGISTER_ENCLAVE_KEY_MESSAGE_TYPE_URL.to_string(),
-                value: h.encode_vec().unwrap(),
-            },
-            ClientMessage::UpdateClient(h) => ProtoAny {
-                type_url: LCP_UPDATE_CLIENT_MESSAGE_TYPE_URL.to_string(),
-                value: h.encode_vec().unwrap(),
-            },
-        }
-    }
-}
-
-impl TryFrom<Any> for ClientMessage {
-    type Error = Error;
-
-    fn try_from(any: Any) -> Result<Self, Self::Error> {
-        TryFrom::<ProtoAny>::try_from(any.into())
     }
 }
 
 impl From<ClientMessage> for Any {
     fn from(value: ClientMessage) -> Self {
-        ProtoAny::from(value).try_into().unwrap()
+        match value {
+            ClientMessage::RegisterEnclaveKey(h) => Any::new(
+                LCP_REGISTER_ENCLAVE_KEY_MESSAGE_TYPE_URL.to_string(),
+                h.encode_vec().unwrap(),
+            ),
+            ClientMessage::UpdateClient(h) => Any::new(
+                LCP_UPDATE_CLIENT_MESSAGE_TYPE_URL.to_string(),
+                h.encode_vec().unwrap(),
+            ),
+        }
     }
 }
 

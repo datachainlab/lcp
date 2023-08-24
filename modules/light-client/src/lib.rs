@@ -19,9 +19,14 @@ mod prelude {
     pub use core::iter::FromIterator;
 }
 
+/// re-export
+pub use commitments;
+pub use lcp_types as types;
+
 pub use client::{CreateClientResult, LightClient, StateVerificationResult, UpdateClientResult};
 pub use context::{ClientKeeper, ClientReader, HostClientKeeper, HostClientReader, HostContext};
-pub use errors::{Error, ErrorDetail, LightClientSpecificError};
+pub use errors::{Error, ErrorDetail, LightClientSpecificError, RegistryError};
+pub use registry::{LightClientRegistry, LightClientResolver, MapLightClientRegistry};
 
 mod client;
 mod context;
@@ -29,3 +34,4 @@ mod errors;
 #[cfg(feature = "ibc")]
 pub mod ibc;
 mod path;
+mod registry;

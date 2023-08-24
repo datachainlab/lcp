@@ -7,7 +7,7 @@ edition = "2021"
 sgx_types = { rev = "v1.1.6", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", features = ["extra_traits"] }
 tendermint = { version = "0.29", default-features = false }
 chrono = { version = "0.4", default-features = false, features = ["alloc"]}
-serde = { version = "1.0", default-features = false, features = ["alloc"] }
+serde = { version = "1.0.184", default-features = false, features = ["alloc"] }
 serde_json = { version = "1.0", default-features = false, features = ["alloc"] }
 crypto = { path = "../crypto", default-features = false }
 lcp-types = { path = "../types", default-features = false }
@@ -25,6 +25,7 @@ default = ["std"]
 std = [
     "rustls",
     "webpki",
+    "flex-error/std",
     "serde_json/preserve_order"
 ]
 sgx = [

@@ -1,5 +1,5 @@
+use crate::types::{ClientId, Height};
 use derive_more::Display;
-use lcp_types::{ClientId, Height};
 
 pub static NEXT_CLIENT_SEQUENCE: &str = "nextClientSequence";
 

@@ -2,7 +2,6 @@ use crate::errors::Error;
 use crate::header::Header;
 use crate::prelude::*;
 use crate::state::{gen_state_id, ClientState, ConsensusState};
-use commitments::{gen_state_id_from_any, CommitmentContext, UpdateClientCommitment};
 use ibc::core::ics02_client::client_state::{
     downcast_client_state, ClientState as Ics02ClientState, UpdatedState,
 };
@@ -11,12 +10,12 @@ use ibc::core::ics02_client::error::ClientError as ICS02Error;
 use ibc::core::ics02_client::header::Header as Ics02Header;
 use ibc::mock::client_state::{client_type, MockClientState, MOCK_CLIENT_STATE_TYPE_URL};
 use ibc::mock::consensus_state::MockConsensusState;
-use lcp_types::{Any, ClientId, Height, Time};
+use light_client::commitments::{gen_state_id_from_any, CommitmentContext, UpdateClientCommitment};
+use light_client::types::{Any, ClientId, Height, Time};
 use light_client::{
     ibc::IBCContext, CreateClientResult, Error as LightClientError, HostClientReader, LightClient,
-    StateVerificationResult, UpdateClientResult,
+    LightClientRegistry, StateVerificationResult, UpdateClientResult,
 };
-use light_client_registry::LightClientRegistry;
 
 #[derive(Default)]
 pub struct MockLightClient;

@@ -1,10 +1,10 @@
 use crate::errors::Error;
-use commitments::{gen_state_id_from_any, StateID};
 use core::ops::Deref;
 use ibc::mock::client_state::{MockClientState, MOCK_CLIENT_STATE_TYPE_URL};
 use ibc::mock::consensus_state::{MockConsensusState, MOCK_CONSENSUS_STATE_TYPE_URL};
-use ibc_proto::google::protobuf::Any as IBCAny;
-use lcp_types::Any;
+use light_client::commitments::{gen_state_id_from_any, StateID};
+use light_client::types::proto::google::protobuf::Any as ProtoAny;
+use light_client::types::Any;
 
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct ClientState(pub(crate) MockClientState);
@@ -27,7 +27,7 @@ impl TryFrom<Any> for ClientState {
     type Error = Error;
 
     fn try_from(value: Any) -> Result<Self, Self::Error> {
-        let any: IBCAny = value.into();
+        let any: ProtoAny = value.into();
         if any.type_url == MOCK_CLIENT_STATE_TYPE_URL {
             Ok(Self(MockClientState::try_from(any).map_err(Error::ics02)?))
         } else {
@@ -38,7 +38,7 @@ impl TryFrom<Any> for ClientState {
 
 impl From<ClientState> for Any {
     fn from(value: ClientState) -> Self {
-        IBCAny::from(value.0).into()
+        ProtoAny::from(value.0).into()
     }
 }
 
@@ -63,7 +63,7 @@ impl TryFrom<Any> for ConsensusState {
     type Error = Error;
 
     fn try_from(value: Any) -> Result<Self, Self::Error> {
-        let any: IBCAny = value.into();
+        let any: ProtoAny = value.into();
         if any.type_url == MOCK_CONSENSUS_STATE_TYPE_URL {
             Ok(Self(
                 MockConsensusState::try_from(any).map_err(Error::ics02)?,
@@ -76,7 +76,7 @@ impl TryFrom<Any> for ConsensusState {
 
 impl From<ConsensusState> for Any {
     fn from(value: ConsensusState) -> Self {
-        IBCAny::from(value.0).into()
+        ProtoAny::from(value.0).into()
     }
 }
 

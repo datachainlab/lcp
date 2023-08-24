@@ -1,6 +1,6 @@
 use crate::prelude::*;
 use alloc::sync::Arc;
-use light_client_registry::LightClientResolver;
+use light_client::LightClientResolver;
 use store::{KVStore, TxId};
 
 pub trait Env: Sync + Send {

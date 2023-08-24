@@ -774,7 +774,6 @@ dependencies = [
  "lcp-types",
  "proptest",
  "prost",
- "prost-types",
  "serde",
  "sha2 0.10.6",
  "time",
@@ -806,7 +805,6 @@ dependencies = [
  "crypto",
  "lcp-types",
  "light-client",
- "light-client-registry",
  "store",
 ]
 
@@ -1236,7 +1234,6 @@ dependencies = [
  "commitments",
  "crypto",
  "flex-error",
- "lcp-proto",
  "lcp-types",
  "serde",
  "store",
@@ -2473,11 +2470,11 @@ dependencies = [
  "host-environment",
  "ibc",
  "ibc-proto 0.24.1",
- "ibc-proto 0.26.0",
  "ibc-relayer",
  "ibc-relayer-types",
  "ibc-test-framework",
  "keymanager",
+ "lcp-proto",
  "lcp-types",
  "log 0.4.17",
  "ocall-handler",
@@ -2566,7 +2563,6 @@ dependencies = [
  "chrono",
  "crypto",
  "flex-error",
- "lcp-proto",
  "lcp-types",
  "log 0.4.17",
  "rand 0.8.5",
@@ -2622,19 +2618,13 @@ dependencies = [
  "attestation-report",
  "base64 0.20.0-alpha.1",
  "chrono",
- "commitments",
  "context",
  "crypto",
  "flex-error",
  "ibc",
- "ibc-proto 0.26.0",
- "lcp-proto",
- "lcp-types",
  "light-client",
- "light-client-registry",
  "mock-lc",
  "prost",
- "prost-types",
  "serde",
  "sgx_types",
  "store",
@@ -2658,9 +2648,9 @@ dependencies = [
  "flex-error",
  "hex",
  "ibc",
- "ibc-proto 0.26.0",
+ "lcp-proto",
  "proptest",
- "prost-types",
+ "prost",
  "serde",
  "serde_json",
  "sgx_tstd",
@@ -2814,19 +2804,9 @@ dependencies = [
  "derive_more",
  "flex-error",
  "ibc",
- "ibc-proto 0.26.0",
  "lcp-types",
  "serde",
  "store",
-]
-
-[[package]]
-name = "light-client-registry"
-version = "0.1.0"
-dependencies = [
- "flex-error",
- "light-client",
- "sgx_tstd",
 ]
 
 [[package]]
@@ -2980,13 +2960,9 @@ dependencies = [
 name = "mock-lc"
 version = "0.1.0"
 dependencies = [
- "commitments",
  "flex-error",
  "ibc",
- "ibc-proto 0.26.0",
- "lcp-types",
  "light-client",
- "light-client-registry",
  "serde",
 ]
 
@@ -4424,9 +4400,9 @@ dependencies = [
 
 [[package]]
 name = "serde"
-version = "1.0.152"
+version = "1.0.185"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bb7d1f0d3021d347a83e556fc4683dea2ea09d87bccdf88ff5c12545d89d5efb"
+checksum = "be9b6f69f1dfd54c3b568ffa45c310d6973a5e5148fd40cf515acaf38cf5bc31"
 dependencies = [
  "serde_derive",
 ]
@@ -4461,13 +4437,13 @@ dependencies = [
 
 [[package]]
 name = "serde_derive"
-version = "1.0.152"
+version = "1.0.185"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "af487d118eecd09402d70a5d72551860e788df87b464af30e5ea6a38c75c541e"
+checksum = "dc59dfdcbad1437773485e0367fea4b090a2e0a16d9ffc46af47764536a298ec"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 1.0.108",
+ "syn 2.0.28",
 ]
 
 [[package]]
@@ -5083,14 +5059,11 @@ dependencies = [
 name = "tendermint-lc"
 version = "0.1.0"
 dependencies = [
- "commitments",
  "crypto",
  "flex-error",
  "ibc",
- "ibc-proto 0.26.0",
- "lcp-types",
+ "lcp-proto",
  "light-client",
- "light-client-registry",
  "log 0.4.17",
  "serde",
 ]

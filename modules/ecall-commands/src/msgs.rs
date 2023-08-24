@@ -3,7 +3,7 @@ use crate::light_client::*;
 use crate::prelude::*;
 use core::str::FromStr;
 use crypto::Address;
-use lcp_proto::lcp::service::elc::v1::{
+use lcp_types::proto::lcp::service::elc::v1::{
     MsgCreateClient, MsgCreateClientResponse, MsgUpdateClient, MsgUpdateClientResponse,
     MsgVerifyMembership, MsgVerifyMembershipResponse, MsgVerifyNonMembership,
     MsgVerifyNonMembershipResponse, QueryClientRequest, QueryClientResponse,

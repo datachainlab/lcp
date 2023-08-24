@@ -15,7 +15,7 @@ tokio = { version = "1.0", features = ["full"] }
 anyhow = { version = "1.0.56" }
 clap = { version = "3.2", features = ["derive"] }
 dirs = "4.0"
-serde = { version = "1.0", default-features = false, features = ["alloc"] }
+serde = { version = "1.0.184", default-features = false, features = ["alloc"] }
 serde_json = { version = "1.0", default-features = false, features = ["alloc", "preserve_order"] }
 
 lcp-types = { path = "../modules/types" }

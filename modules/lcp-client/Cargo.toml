@@ -4,17 +4,12 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-ibc-proto = { version = "0.26.0", default-features = false }
 prost = { version = "0.11", default-features = false }
-prost-types = { version = "0.11", default-features = false }
-serde = { version = "1.0", default-features = false, features = ["alloc", "derive"] }
+serde = { version = "1.0.184", default-features = false, features = ["alloc", "derive"] }
 flex-error = { version = "0.4.4", default-features = false }
 
-lcp-types = { path = "../types", default-features = false }
-commitments = { path = "../commitments", default-features = false }
 attestation-report = { path = "../attestation-report", default-features = false }
 light-client = { path = "../light-client", default-features = false }
-lcp-proto = { path = "../../proto", default-features = false }
 crypto = { path = "../crypto", default-features = false }
 
 [dev-dependencies]
@@ -23,20 +18,15 @@ ibc = { version = "0.29.0", default-features = false, features = ["serde", "std"
 chrono = { version = "0.4", default-features = false, features = ["alloc", "clock"]}
 base64 = { git = "https://github.com/marshallpierce/rust-base64", default-features = false, features = ["alloc"] }
 
-commitments = { path = "../commitments", default-features = false }
 mock-lc = { path = "../mock-lc" }
 store = { path = "../store" }
 context = { path = "../context" }
-light-client-registry = { path = "../light-client-registry", default-features = false, features = ["std"] }
 crypto = { path = "../crypto", default-features = false, features = ["std"] }
 
 [features]
 default = ["std"]
 std = [
-    "lcp-types/std",
+    "flex-error/std",
+    "light-client/std",
     "attestation-report/std",
-]
-sgx = [
-    "lcp-types/sgx",
-    "attestation-report/sgx",
 ]

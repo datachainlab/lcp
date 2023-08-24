@@ -10,7 +10,6 @@ use ibc::core::ics04_channel::channel::ChannelEnd;
 use ibc::core::ics23_commitment::merkle::MerkleProof;
 use ibc::core::ics24_host::identifier::{ChannelId, PortId};
 use ibc::Height;
-use ibc_proto::google::protobuf::Any as IBCAny;
 use ibc_relayer::chain::{
     client::ClientSettings,
     cosmos::{client::Settings, CosmosSdkChain},
@@ -21,6 +20,7 @@ use ibc_relayer::client_state::AnyClientState;
 use ibc_relayer::config::ChainConfig;
 use ibc_relayer::light_client::tendermint::LightClient as TmLightClient;
 use ibc_relayer::light_client::{tendermint::LightClient, LightClient as IBCLightClient};
+use lcp_proto::google::protobuf::Any as ProtoAny;
 use lcp_types::Any;
 use std::sync::Arc;
 use tendermint_rpc::{Client, HttpClient};
@@ -85,8 +85,8 @@ impl Relayer {
 
     pub fn fetch_state_as_any(&mut self, height: Height) -> Result<(Any, Any)> {
         let (client_state, consensus_state) = self.fetch_state(height)?;
-        let any_client_state = IBCAny::from(client_state);
-        let any_consensus_state = IBCAny::from(consensus_state);
+        let any_client_state = ProtoAny::from(client_state);
+        let any_consensus_state = ProtoAny::from(consensus_state);
         Ok((any_client_state.into(), any_consensus_state.into()))
     }
 

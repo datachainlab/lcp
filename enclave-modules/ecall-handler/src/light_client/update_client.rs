@@ -1,11 +1,12 @@
 use super::registry::get_light_client_by_client_id;
 use crate::light_client::Error;
-use commitments::{prove_commitment, Commitment, CommitmentProof, UpdateClientCommitment};
 use context::Context;
 use crypto::Signer;
 use ecall_commands::{LightClientResult, UpdateClientInput, UpdateClientResult};
-use light_client::ClientKeeper;
-use light_client_registry::LightClientResolver;
+use light_client::commitments::{
+    prove_commitment, Commitment, CommitmentProof, UpdateClientCommitment,
+};
+use light_client::{ClientKeeper, LightClientResolver};
 use store::KVStore;
 
 pub fn update_client<R: LightClientResolver, S: KVStore, K: Signer>(
