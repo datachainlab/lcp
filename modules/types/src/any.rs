@@ -13,10 +13,6 @@ impl Any {
         Self(ProtoAny { type_url, value })
     }
 
-    pub fn from_any<A: Into<ProtoAny>>(any: A) -> Self {
-        Self(any.into())
-    }
-
     pub fn to_proto(self) -> ProtoAny {
         self.into()
     }
@@ -48,7 +44,7 @@ impl From<ProtoAny> for Any {
 impl TryFrom<Vec<u8>> for Any {
     type Error = TypeError;
     fn try_from(value: Vec<u8>) -> Result<Self, Self::Error> {
-        Ok(Any::decode_vec(&value).unwrap())
+        Ok(Any::decode_vec(&value)?)
     }
 }
 
@@ -90,5 +86,29 @@ impl prost::Message for Any {
 
     fn clear(&mut self) {
         self.0.clear()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use proptest::prelude::*;
+    use prost::Message;
+
+    proptest! {
+        #[test]
+        fn test_encoding_compatibility_with_proto_any(type_url: String, value: Vec<u8>) {
+            let any1 = Any::new(type_url, value);
+            let bz = any1.encode_to_vec();
+            let any2 = ProtoAny{
+                type_url: any1.type_url.clone(),
+                value: any1.value.clone(),
+            };
+            let bz2 = any2.encode_to_vec();
+            assert_eq!(bz, bz2);
+
+            let any3 = Any::decode_vec(&bz).unwrap();
+            assert_eq!(any1, any3);
+        }
     }
 }

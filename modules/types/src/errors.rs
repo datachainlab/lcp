@@ -56,6 +56,21 @@ define_error! {
         HexParseError
             [TraceError<hex::FromHexError>]
             |_| { "hex parse error" },
+        ProtoError
+            [TraceError<lcp_proto::protobuf::Error>]
+            |_| { "proto error" },
+    }
+}
+
+impl From<hex::FromHexError> for TypeError {
+    fn from(value: hex::FromHexError) -> Self {
+        Self::hex_parse_error(value)
+    }
+}
+
+impl From<lcp_proto::protobuf::Error> for TypeError {
+    fn from(value: lcp_proto::protobuf::Error) -> Self {
+        Self::proto_error(value)
     }
 }
 
@@ -70,12 +85,6 @@ define_error! {
         TryFromIntError
             [TraceError<core::num::TryFromIntError>]
             |_| {"TryFromIntError"}
-    }
-}
-
-impl From<hex::FromHexError> for TypeError {
-    fn from(value: hex::FromHexError) -> Self {
-        Self::hex_parse_error(value)
     }
 }
 
