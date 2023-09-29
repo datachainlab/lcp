@@ -211,10 +211,6 @@ udeps:
 
 ######## Tools ########
 
-.PHONY: yrly
-yrly:
-	go build -o ./bin/yrly -tags customcert ./go/relay/bin
-
 .PHONY: nodes-runner
 nodes-runner:
 	@cargo build $(CARGO_TARGET) --package nodes-runner
@@ -239,8 +235,3 @@ bin/gaiad:
 .PHONY: docker
 sgx-docker:
 	@cd rust-sgx-sdk/dockerfile && docker build --no-cache -t datachainlab/sgx-rust:2004-1.1.6 -f Dockerfile.2004.nightly .
-
-.PHONY: tendermint-docker
-tendermint-docker:
-	$(DOCKER_BUILD) --build-arg CHAINID=ibc0 --tag tendermint-chain0 -f ./go/simapp/Dockerfile .
-	$(DOCKER_BUILD) --build-arg CHAINID=ibc1 --tag tendermint-chain1 -f ./go/simapp/Dockerfile .
