@@ -3,17 +3,72 @@ use crate::store::TxId;
 use crate::transaction::{CommitStore, CreatedTx, Tx, TxAccessor};
 use crate::{KVStore, Result};
 use std::collections::HashMap;
+use std::sync::Mutex;
 
 // MemStore is only available for testing purposes
 #[derive(Default, Debug)]
-pub struct MemStore {
+pub struct MemStore(Mutex<InnerMemStore>);
+
+impl KVStore for MemStore {
+    fn get(&self, key: &[u8]) -> Option<Vec<u8>> {
+        self.0.lock().unwrap().get(key)
+    }
+
+    fn set(&mut self, key: Vec<u8>, value: Vec<u8>) {
+        self.0.lock().unwrap().set(key, value)
+    }
+
+    fn remove(&mut self, key: &[u8]) {
+        self.0.lock().unwrap().remove(key)
+    }
+}
+
+impl TxAccessor for MemStore {
+    fn run_in_tx<T>(&self, tx_id: TxId, f: impl FnOnce(&dyn KVStore) -> T) -> Result<T> {
+        self.0.lock().unwrap().run_in_tx(tx_id, f)
+    }
+
+    fn run_in_mut_tx<T>(
+        &mut self,
+        tx_id: TxId,
+        f: impl FnOnce(&mut dyn KVStore) -> T,
+    ) -> Result<T> {
+        self.0.lock().unwrap().run_in_mut_tx(tx_id, f)
+    }
+}
+
+impl CommitStore for MemStore {
+    type Tx = MemTx;
+
+    fn create_transaction(
+        &mut self,
+        _update_key: Option<crate::transaction::UpdateKey>,
+    ) -> Result<Self::Tx> {
+        self.0.lock().unwrap().create_transaction(_update_key)
+    }
+
+    fn begin(&mut self, tx: &<Self::Tx as CreatedTx>::PreparedTx) -> Result<()> {
+        self.0.lock().unwrap().begin(tx)
+    }
+
+    fn commit(&mut self, tx: <Self::Tx as CreatedTx>::PreparedTx) -> Result<()> {
+        self.0.lock().unwrap().commit(tx)
+    }
+
+    fn rollback(&mut self, tx: <Self::Tx as CreatedTx>::PreparedTx) {
+        self.0.lock().unwrap().rollback(tx)
+    }
+}
+
+#[derive(Default, Debug)]
+pub struct InnerMemStore {
     running_tx_exists: bool,
     latest_tx_id: TxId,
     uncommitted_data: HashMap<Vec<u8>, Option<Vec<u8>>>,
     committed_data: HashMap<Vec<u8>, Vec<u8>>,
 }
 
-impl KVStore for MemStore {
+impl KVStore for InnerMemStore {
     fn get(&self, key: &[u8]) -> Option<Vec<u8>> {
         if self.running_tx_exists {
             match self.uncommitted_data.get(key) {
@@ -42,7 +97,7 @@ impl KVStore for MemStore {
     }
 }
 
-impl TxAccessor for MemStore {
+impl TxAccessor for InnerMemStore {
     fn run_in_tx<T>(&self, _tx_id: TxId, f: impl FnOnce(&dyn KVStore) -> T) -> Result<T> {
         Ok(f(self))
     }
@@ -56,7 +111,7 @@ impl TxAccessor for MemStore {
     }
 }
 
-impl CommitStore for MemStore {
+impl CommitStore for InnerMemStore {
     type Tx = MemTx;
 
     fn create_transaction(

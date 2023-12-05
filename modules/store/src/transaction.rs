@@ -19,7 +19,7 @@ pub trait CreatedTx: Tx {
 }
 
 /// `CommitStore` is a store that supports transactions
-pub trait CommitStore {
+pub trait CommitStore: Sync + Send {
     type Tx: CreatedTx;
 
     /// `create_transaction` creates a transaction with a given `update_key`
