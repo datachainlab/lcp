@@ -9,7 +9,7 @@ use store::host::{HostStore, IntoCommitStore};
 use store::transaction::{CommitStore, CreatedTx, UpdateKey};
 
 /// `Enclave` keeps an enclave id and reference to the host environement
-pub struct Enclave<S> {
+pub struct Enclave<S: CommitStore> {
     pub(crate) path: PathBuf,
     pub(crate) key_manager: EnclaveKeyManager,
     pub(crate) store: Arc<RwLock<HostStore>>,
@@ -17,7 +17,7 @@ pub struct Enclave<S> {
     _marker: PhantomData<S>,
 }
 
-impl<S> Enclave<S> {
+impl<S: CommitStore> Enclave<S> {
     pub fn new(
         path: impl Into<PathBuf>,
         key_manager: EnclaveKeyManager,
@@ -49,7 +49,7 @@ impl<S> Enclave<S> {
 }
 
 /// `EnclaveInfo` is an accessor to enclave information
-pub trait EnclaveInfo {
+pub trait EnclaveInfo: Sync + Send {
     /// `get_eid` returns the enclave id
     fn get_eid(&self) -> sgx_enclave_id_t;
     /// `metadata` returns the metadata of the enclave
@@ -58,7 +58,7 @@ pub trait EnclaveInfo {
     fn get_key_manager(&self) -> &EnclaveKeyManager;
 }
 
-impl<S> EnclaveInfo for Enclave<S> {
+impl<S: CommitStore> EnclaveInfo for Enclave<S> {
     /// `get_eid` returns the enclave id
     fn get_eid(&self) -> sgx_enclave_id_t {
         self.sgx_enclave.geteid()

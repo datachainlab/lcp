@@ -36,7 +36,15 @@ define_error! {
 
         Rusqlite
         [TraceError<rusqlite::Error>]
-        |_| { "rusqlite error" }
+        |_| { "rusqlite error" },
+
+        MutexLock
+        {
+            descr: String
+        }
+        |e| {
+            format_args!("mutex lock error: descr={}", e.descr)
+        }
     }
 }
 

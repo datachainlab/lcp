@@ -7,22 +7,23 @@ use lcp_types::{Mrenclave, Time};
 use log::*;
 use rusqlite::{params, types::Type, Connection};
 use serde::{Deserialize, Serialize};
+use std::sync::Mutex;
 use std::{ops::Deref, path::Path, time::Duration};
 
 pub static KEY_MANAGER_DB: &str = "km.sqlite";
 
 pub struct EnclaveKeyManager {
-    conn: Connection,
+    conn: Mutex<Connection>,
 }
 
 impl EnclaveKeyManager {
     pub fn new(home_dir: &Path) -> Result<Self, Error> {
         let km_db = home_dir.join(KEY_MANAGER_DB);
         let db_exists = km_db.exists();
-        let conn = Connection::open(&km_db)?;
+        let conn = Mutex::new(Connection::open(&km_db)?);
         let this = Self { conn };
         if !db_exists {
-            this.setup()?;
+            this.init_db()?;
             info!("initialized Key Manager: {:?}", km_db);
         }
         Ok(this)
@@ -30,14 +31,18 @@ impl EnclaveKeyManager {
 
     #[cfg(test)]
     pub fn new_in_memory() -> Result<Self, Error> {
-        let conn = Connection::open_in_memory()?;
+        let conn = Mutex::new(Connection::open_in_memory()?);
         let this = Self { conn };
-        this.setup()?;
+        this.init_db()?;
         Ok(this)
     }
 
-    fn setup(&self) -> Result<(), Error> {
-        self.conn.execute_batch(
+    fn init_db(&self) -> Result<(), Error> {
+        let conn = self
+            .conn
+            .lock()
+            .map_err(|e| Error::mutex_lock(e.to_string()))?;
+        conn.execute_batch(
             r#"
             BEGIN;
             CREATE TABLE enclave_keys (
@@ -61,7 +66,11 @@ impl EnclaveKeyManager {
 
     /// Load a sealed enclave key by address
     pub fn load(&self, address: Address) -> Result<SealedEnclaveKeyInfo, Error> {
-        let mut stmt = self.conn.prepare(
+        let conn = self
+            .conn
+            .lock()
+            .map_err(|e| Error::mutex_lock(e.to_string()))?;
+        let mut stmt = conn.prepare(
             "SELECT ek_sealed, mrenclave, avr, signature, signing_cert FROM enclave_keys WHERE ek_address = ?1",
         )?;
         let key_info = stmt.query_row(params![address.to_hex_string()], |row| {
@@ -98,7 +107,11 @@ impl EnclaveKeyManager {
         sealed_ek: SealedEnclaveKey,
         mrenclave: Mrenclave,
     ) -> Result<(), Error> {
-        let mut stmt = self.conn.prepare(
+        let conn = self
+            .conn
+            .lock()
+            .map_err(|e| Error::mutex_lock(e.to_string()))?;
+        let mut stmt = conn.prepare(
             "INSERT INTO enclave_keys (ek_address, ek_sealed, mrenclave) VALUES (?1, ?2, ?3)",
         )?;
         let _ = stmt.execute(params![
@@ -115,9 +128,13 @@ impl EnclaveKeyManager {
         address: Address,
         avr: EndorsedAttestationVerificationReport,
     ) -> Result<(), Error> {
+        let conn = self
+            .conn
+            .lock()
+            .map_err(|e| Error::mutex_lock(e.to_string()))?;
         let attested_at = avr.get_avr()?.attestation_time()?;
         // update avr and attested_at and signature and sigining_cert
-        let mut stmt = self.conn.prepare(
+        let mut stmt = conn.prepare(
             "UPDATE enclave_keys SET avr = ?1, attested_at = ?2, signature = ?3, signing_cert = ?4 WHERE ek_address = ?5",
         )?;
         stmt.execute(params![
@@ -132,7 +149,11 @@ impl EnclaveKeyManager {
 
     /// Returns a list of available enclave keys
     pub fn available_keys(&self, mrenclave: Mrenclave) -> Result<Vec<SealedEnclaveKeyInfo>, Error> {
-        let mut stmt = self.conn.prepare(
+        let conn = self
+            .conn
+            .lock()
+            .map_err(|e| Error::mutex_lock(e.to_string()))?;
+        let mut stmt = conn.prepare(
             r#"
             SELECT ek_address, ek_sealed, mrenclave, avr, signature, signing_cert
             FROM enclave_keys
@@ -164,7 +185,11 @@ impl EnclaveKeyManager {
 
     /// Returns a list of all enclave keys
     pub fn all_keys(&self) -> Result<Vec<SealedEnclaveKeyInfo>, Error> {
-        let mut stmt = self.conn.prepare(
+        let conn = self
+            .conn
+            .lock()
+            .map_err(|e| Error::mutex_lock(e.to_string()))?;
+        let mut stmt = conn.prepare(
             "SELECT ek_address, ek_sealed, mrenclave, avr, signature, signing_cert FROM enclave_keys ORDER BY updated_at DESC",
         )?;
         let key_infos = stmt
@@ -200,10 +225,12 @@ impl EnclaveKeyManager {
 
     /// Prune keys after the expiration time(secs) from the attestation time.
     pub fn prune(&self, expiration_time: u64) -> Result<usize, Error> {
-        let expired = (Time::now() - Duration::from_secs(expiration_time))?;
-        let mut stmt = self
+        let conn = self
             .conn
-            .prepare("DELETE FROM enclave_keys WHERE attested_at <= ?1")?;
+            .lock()
+            .map_err(|e| Error::mutex_lock(e.to_string()))?;
+        let expired = (Time::now() - Duration::from_secs(expiration_time))?;
+        let mut stmt = conn.prepare("DELETE FROM enclave_keys WHERE attested_at <= ?1")?;
         let count = stmt.execute(params![expired.as_unix_timestamp_secs()])?;
         Ok(count)
     }

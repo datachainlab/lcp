@@ -33,19 +33,6 @@ where
     }
 }
 
-unsafe impl<E, S> Send for AppService<E, S>
-where
-    S: CommitStore + 'static,
-    E: EnclaveProtoAPI<S> + 'static,
-{
-}
-unsafe impl<E, S> Sync for AppService<E, S>
-where
-    S: CommitStore + 'static,
-    E: EnclaveProtoAPI<S> + 'static,
-{
-}
-
 impl<E, S> AppService<E, S>
 where
     S: CommitStore + 'static,
