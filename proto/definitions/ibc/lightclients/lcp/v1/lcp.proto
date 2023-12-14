@@ -8,7 +8,7 @@ option go_package = "github.com/datachainlab/lcp/go/light-clients/lcp/types";
 option (gogoproto.goproto_getters_all) = false;
 
 message UpdateClientMessage {
-  bytes commitment = 1;
+  bytes elc_message = 1;
   bytes signer = 2;
   bytes signature = 3;
 }

@@ -1,36 +1,37 @@
-use crate::{commitment::EthABIEncoder, prelude::*, Commitment, Error};
+use crate::{encoder::EthABIEncoder, prelude::*, Error, Message};
 use crypto::Address;
 use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct CommitmentProof {
-    pub commitment_bytes: Vec<u8>,
+    pub message: Vec<u8>,
     pub signer: Address,
     pub signature: Vec<u8>,
 }
 
 impl CommitmentProof {
-    pub fn new(commitment_bytes: Vec<u8>, signer: Address, signature: Vec<u8>) -> Self {
+    pub fn new(message: Vec<u8>, signer: Address, signature: Vec<u8>) -> Self {
         Self {
-            commitment_bytes,
+            message,
             signer,
             signature,
         }
     }
 
-    pub fn new_with_no_signature(commitment_bytes: Vec<u8>) -> Self {
+    pub fn new_with_no_signature(message: Vec<u8>) -> Self {
         Self {
-            commitment_bytes,
-            ..Default::default()
+            message,
+            signer: Default::default(),
+            signature: Default::default(),
         }
-    }
-
-    pub fn commitment(&self) -> Result<Commitment, Error> {
-        Commitment::from_commitment_bytes(&self.commitment_bytes)
     }
 
     pub fn is_proven(&self) -> bool {
         !self.signature.is_empty()
+    }
+
+    pub fn message(&self) -> Result<Message, Error> {
+        Message::from_bytes(&self.message)
     }
 }
 
@@ -45,7 +46,7 @@ impl EthABIEncoder for CommitmentProof {
 }
 
 pub(crate) struct EthABICommitmentProof {
-    pub commitment_bytes: ethabi::Bytes,
+    pub message: ethabi::Bytes,
     pub signer: ethabi::Address,
     pub signature: ethabi::Bytes,
 }
@@ -53,7 +54,7 @@ pub(crate) struct EthABICommitmentProof {
 impl From<EthABICommitmentProof> for CommitmentProof {
     fn from(value: EthABICommitmentProof) -> Self {
         Self {
-            commitment_bytes: value.commitment_bytes,
+            message: value.message,
             signer: Address(value.signer.0),
             signature: value.signature,
         }
@@ -63,7 +64,7 @@ impl From<EthABICommitmentProof> for CommitmentProof {
 impl EthABICommitmentProof {
     pub fn encode(self) -> Vec<u8> {
         ethabi::encode(&[ethabi::Token::Tuple(vec![
-            ethabi::Token::Bytes(self.commitment_bytes),
+            ethabi::Token::Bytes(self.message),
             ethabi::Token::Address(self.signer),
             ethabi::Token::Bytes(self.signature),
         ])])
@@ -88,7 +89,7 @@ impl EthABICommitmentProof {
         assert!(tuple.len() == 3);
         let mut values = tuple.into_iter();
         Ok(Self {
-            commitment_bytes: values.next().unwrap().into_bytes().unwrap(),
+            message: values.next().unwrap().into_bytes().unwrap(),
             signer: values.next().unwrap().into_address().unwrap(),
             signature: values.next().unwrap().into_bytes().unwrap(),
         })
@@ -99,7 +100,7 @@ impl From<CommitmentProof> for EthABICommitmentProof {
     fn from(value: CommitmentProof) -> Self {
         use ethabi::*;
         Self {
-            commitment_bytes: value.commitment_bytes,
+            message: value.message,
             signer: Address::from(value.signer.0),
             signature: value.signature,
         }

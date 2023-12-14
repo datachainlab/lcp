@@ -1,6 +1,6 @@
-use crate::errors::Error;
-use crate::message::CommitmentReader;
+use crate::message::ELCMessageReader;
 use crate::prelude::*;
+use crate::{errors::Error, message::UpdateClientMessage};
 use core::time::Duration;
 use light_client::types::proto::{
     ibc::{
@@ -23,7 +23,7 @@ pub struct ClientState {
 }
 
 impl ClientState {
-    pub fn with_header<C: CommitmentReader>(mut self, header: &C) -> Self {
+    pub fn with_header(mut self, header: &UpdateClientMessage) -> Self {
         if self.latest_height < header.height() {
             self.latest_height = header.height();
         }

@@ -1,4 +1,4 @@
-use crate::commitments::{Commitment, CommitmentPrefix};
+use crate::commitments::{CommitmentPrefix, Message};
 use crate::context::HostClientReader;
 use crate::errors::Error;
 use crate::prelude::*;
@@ -60,8 +60,8 @@ pub trait LightClient {
 pub struct CreateClientResult {
     /// height corresponding to the updated state
     pub height: Height,
-    /// commitment represents a state transition of the client
-    pub commitment: Commitment,
+    /// message represents a state transition of the client
+    pub message: Message,
     /// if true, sign the commitment with Enclave Key
     pub prove: bool,
 }
@@ -74,8 +74,8 @@ pub struct UpdateClientResult {
     pub new_any_consensus_state: Any,
     /// height corresponding to the updated state
     pub height: Height,
-    /// commitment represents a state transition of the client
-    pub commitment: Commitment,
+    /// message represents a state transition of the client
+    pub message: Message,
     /// if true, sign the commitment with Enclave Key
     pub prove: bool,
 }
@@ -83,5 +83,5 @@ pub struct UpdateClientResult {
 #[derive(Clone, Debug, PartialEq)]
 pub struct StateVerificationResult {
     /// state commitment represents a result of the state verification
-    pub state_commitment: Commitment,
+    pub message: Message,
 }

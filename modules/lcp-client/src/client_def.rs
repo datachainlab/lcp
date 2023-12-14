@@ -2,12 +2,12 @@ use crate::client_state::ClientState;
 use crate::consensus_state::ConsensusState;
 use crate::errors::Error;
 use crate::message::{
-    ClientMessage, CommitmentReader, RegisterEnclaveKeyMessage, UpdateClientMessage,
+    ClientMessage, ELCMessageReader, RegisterEnclaveKeyMessage, UpdateClientMessage,
 };
 use attestation_report::EndorsedAttestationVerificationReport;
 use crypto::{verify_signature_address, Address, Keccak256};
 use light_client::commitments::{
-    CommitmentPrefix, CommitmentProof, EthABIEncoder, StateCommitment,
+    CommitmentPrefix, CommitmentProof, EthABIEncoder, VerifyMembershipMessage,
 };
 use light_client::types::{ClientId, Height, Time};
 use light_client::{ClientKeeper, ClientReader, HostClientKeeper, HostClientReader};
@@ -76,7 +76,7 @@ impl LCPClient {
 
         if client_state.latest_height.is_zero() {
             // if the client state's latest height is zero, the commitment's new_state must be non-nil
-            assert!(message.commitment.new_state.is_some());
+            assert!(!message.elc_message.emitted_states.is_empty());
         } else {
             // if the client state's latest height is non-zero, the commitment's prev_* must be non-nil
             assert!(message.prev_height().is_some() && message.prev_state_id().is_some());
@@ -92,7 +92,7 @@ impl LCPClient {
 
         // check if the `header.signer` matches the commitment prover
         let signer =
-            verify_signature_address(&message.commitment_bytes, &message.signature).unwrap();
+            verify_signature_address(&message.elc_message_bytes(), &message.signature).unwrap();
         assert!(message.signer() == signer);
 
         // check if proxy's validation context matches our's context
@@ -146,28 +146,26 @@ impl LCPClient {
 
         // convert `proof` to CommitmentProof
         let commitment_proof = CommitmentProof::ethabi_decode(proof.as_slice()).unwrap();
-        let commitment: StateCommitment = commitment_proof.commitment()?.try_into()?;
+        let msg: VerifyMembershipMessage = commitment_proof.message()?.try_into()?;
 
         // check if `.prefix` matches the counterparty connection's prefix
-        assert!(commitment.prefix == prefix);
+        assert!(msg.prefix == prefix);
         // check if `.path` matches expected the commitment path
-        assert!(commitment.path == path);
+        assert!(msg.path == path);
         // check if `.height` matches proof height
-        assert!(commitment.height == proof_height);
+        assert!(msg.height == proof_height);
 
         // check if `.value` matches expected state
-        assert!(commitment.value == Some(value.keccak256()));
+        assert!(msg.value == Some(value.keccak256()));
 
         // check if `.state_id` matches the corresponding stored consensus state's state_id
         let consensus_state =
             ConsensusState::try_from(ctx.consensus_state(&client_id, &proof_height)?)?;
-        assert!(consensus_state.state_id == commitment.state_id);
+        assert!(consensus_state.state_id == msg.state_id);
 
         // check if the `commitment_proof.signer` matches the commitment prover
-        let signer = verify_signature_address(
-            &commitment_proof.commitment_bytes,
-            &commitment_proof.signature,
-        )?;
+        let signer =
+            verify_signature_address(&commitment_proof.message, &commitment_proof.signature)?;
         assert!(commitment_proof.signer == signer);
 
         // check if the specified signer is not expired and exists in the client state
@@ -228,7 +226,7 @@ fn verify_report(
     // verify AVR with Intel SGX Attestation Report Signing CA
     // NOTE: This verification is skipped in tests because the CA is not available in the test environment
     #[cfg(not(test))]
-    attestation_report::verify_report(eavr, current_timestamp)?;
+    attestation_report::verify_report(current_timestamp, eavr)?;
 
     let quote = eavr.get_avr()?.parse_quote()?;
 
@@ -388,7 +386,7 @@ mod tests {
             let res = prove_commitment(
                 ctx.get_enclave_key(),
                 ctx.get_enclave_key().pubkey().unwrap().as_address(),
-                res.commitment,
+                res.message,
             );
             assert!(res.is_ok(), "res={:?}", res);
 
@@ -402,8 +400,7 @@ mod tests {
         // 5. on the downstream side, updates LCP Light Client's state with the commitment from the LCP
         {
             let header = ClientMessage::UpdateClient(UpdateClientMessage {
-                commitment: proof1.commitment().unwrap().try_into().unwrap(),
-                commitment_bytes: proof1.commitment_bytes,
+                elc_message: proof1.message().unwrap().try_into().unwrap(),
                 signer: proof1.signer,
                 signature: proof1.signature,
             });

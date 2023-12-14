@@ -26,8 +26,8 @@ use ibc::core::ics23_commitment::merkle::{apply_prefix, MerkleProof};
 use ibc::core::ics24_host::Path;
 use lcp_proto::ibc::core::commitment::v1::MerkleProof as RawMerkleProof;
 use light_client::commitments::{
-    CommitmentContext, CommitmentPrefix, StateCommitment, TrustingPeriodContext,
-    UpdateClientCommitment,
+    CommitmentContext, CommitmentPrefix, EmittedState, TrustingPeriodContext, UpdateClientMessage,
+    VerifyMembershipMessage,
 };
 use light_client::types::{Any, ClientId, Height, Time};
 use light_client::{
@@ -72,14 +72,14 @@ impl LightClient for TendermintLightClient {
 
         Ok(CreateClientResult {
             height,
-            commitment: UpdateClientCommitment {
-                prev_state_id: None,
-                new_state_id: state_id,
-                new_state: Some(any_client_state),
+            message: UpdateClientMessage {
                 prev_height: None,
-                new_height: height,
+                prev_state_id: None,
+                post_height: height,
+                post_state_id: state_id,
                 timestamp,
                 context: CommitmentContext::Empty,
+                emitted_states: vec![EmittedState(height, any_client_state)],
             }
             .into(),
             prove: false,
@@ -182,7 +182,7 @@ impl LightClient for TendermintLightClient {
 
         let prev_state_id =
             gen_state_id(canonicalize_state(&client_state), trusted_consensus_state)?;
-        let new_state_id = gen_state_id(
+        let post_state_id = gen_state_id(
             canonicalize_state(&new_client_state),
             new_consensus_state.clone(),
         )?;
@@ -190,12 +190,11 @@ impl LightClient for TendermintLightClient {
             new_any_client_state: new_client_state.into(),
             new_any_consensus_state: new_consensus_state.into(),
             height,
-            commitment: UpdateClientCommitment {
-                prev_state_id: Some(prev_state_id),
-                new_state_id,
-                new_state: None,
+            message: UpdateClientMessage {
                 prev_height: Some(header.trusted_height.into()),
-                new_height: height,
+                prev_state_id: Some(prev_state_id),
+                post_height: height,
+                post_state_id,
                 timestamp: header_timestamp,
                 context: TrustingPeriodContext::new(
                     lc_opts.trusting_period,
@@ -204,6 +203,7 @@ impl LightClient for TendermintLightClient {
                     trusted_state_timestamp,
                 )
                 .into(),
+                emitted_states: Default::default(),
             }
             .into(),
             prove: true,
@@ -243,7 +243,7 @@ impl LightClient for TendermintLightClient {
         })?;
 
         Ok(StateVerificationResult {
-            state_commitment: StateCommitment::new(
+            message: VerifyMembershipMessage::new(
                 prefix.into_vec(),
                 path.to_string(),
                 Some(value.keccak256()),
@@ -285,7 +285,7 @@ impl LightClient for TendermintLightClient {
         })?;
 
         Ok(StateVerificationResult {
-            state_commitment: StateCommitment::new(
+            message: VerifyMembershipMessage::new(
                 prefix.into_vec(),
                 path.to_string(),
                 None,

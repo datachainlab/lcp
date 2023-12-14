@@ -289,7 +289,7 @@ pub struct MsgCreateClientResponse {
     #[prost(string, tag = "1")]
     pub client_id: ::prost::alloc::string::String,
     #[prost(bytes = "vec", tag = "2")]
-    pub commitment: ::prost::alloc::vec::Vec<u8>,
+    pub message: ::prost::alloc::vec::Vec<u8>,
     #[prost(bytes = "vec", tag = "3")]
     pub signer: ::prost::alloc::vec::Vec<u8>,
     #[prost(bytes = "vec", tag = "4")]
@@ -309,7 +309,7 @@ pub struct MsgUpdateClient {
     pub header: ::core::option::Option<
         super::super::super::super::google::protobuf::Any,
     >,
-    /// request to include state in a commitment
+    /// request to emit state
     #[prost(bool, tag = "3")]
     pub include_state: bool,
     /// enclave key for signing
@@ -322,7 +322,7 @@ pub struct MsgUpdateClient {
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct MsgUpdateClientResponse {
     #[prost(bytes = "vec", tag = "1")]
-    pub commitment: ::prost::alloc::vec::Vec<u8>,
+    pub message: ::prost::alloc::vec::Vec<u8>,
     #[prost(bytes = "vec", tag = "2")]
     pub signer: ::prost::alloc::vec::Vec<u8>,
     #[prost(bytes = "vec", tag = "3")]
@@ -355,7 +355,7 @@ pub struct MsgVerifyMembership {
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct MsgVerifyMembershipResponse {
     #[prost(bytes = "vec", tag = "1")]
-    pub commitment: ::prost::alloc::vec::Vec<u8>,
+    pub message: ::prost::alloc::vec::Vec<u8>,
     #[prost(bytes = "vec", tag = "2")]
     pub signer: ::prost::alloc::vec::Vec<u8>,
     #[prost(bytes = "vec", tag = "3")]
@@ -386,7 +386,7 @@ pub struct MsgVerifyNonMembership {
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct MsgVerifyNonMembershipResponse {
     #[prost(bytes = "vec", tag = "1")]
-    pub commitment: ::prost::alloc::vec::Vec<u8>,
+    pub message: ::prost::alloc::vec::Vec<u8>,
     #[prost(bytes = "vec", tag = "2")]
     pub signer: ::prost::alloc::vec::Vec<u8>,
     #[prost(bytes = "vec", tag = "3")]
