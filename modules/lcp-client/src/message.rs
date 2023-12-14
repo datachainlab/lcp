@@ -2,7 +2,10 @@ use crate::errors::Error;
 use crate::prelude::*;
 use attestation_report::EndorsedAttestationVerificationReport;
 use crypto::Address;
-use light_client::commitments::{Commitment, CommitmentContext, StateID, UpdateClientCommitment};
+use light_client::commitments::{
+    Message as ELCMessage, StateID, UpdateClientMessage as ELCUpdateClientMessage,
+    ValidationContext,
+};
 use light_client::types::proto::ibc::lightclients::lcp::v1::{
     RegisterEnclaveKeyMessage as RawRegisterEnclaveKeyMessage,
     UpdateClientMessage as RawUpdateClientMessage,
@@ -85,10 +88,9 @@ impl From<RegisterEnclaveKeyMessage> for RawRegisterEnclaveKeyMessage {
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub struct UpdateClientMessage {
-    pub commitment_bytes: Vec<u8>,
     pub signer: Address,
     pub signature: Vec<u8>,
-    pub commitment: UpdateClientCommitment,
+    pub elc_message: ELCUpdateClientMessage,
 }
 
 impl Protobuf<RawUpdateClientMessage> for UpdateClientMessage {}
@@ -99,8 +101,7 @@ impl TryFrom<RawUpdateClientMessage> for UpdateClientMessage {
         Ok(UpdateClientMessage {
             signer: Address::try_from(value.signer.as_slice())?,
             signature: value.signature,
-            commitment: Commitment::from_commitment_bytes(&value.commitment)?.try_into()?,
-            commitment_bytes: value.commitment,
+            elc_message: ELCMessage::from_bytes(&value.elc_message)?.try_into()?,
         })
     }
 }
@@ -108,50 +109,54 @@ impl TryFrom<RawUpdateClientMessage> for UpdateClientMessage {
 impl From<UpdateClientMessage> for RawUpdateClientMessage {
     fn from(value: UpdateClientMessage) -> Self {
         RawUpdateClientMessage {
-            commitment: Into::<Commitment>::into(value.commitment).to_commitment_bytes(),
+            elc_message: Into::<ELCMessage>::into(value.elc_message).to_bytes(),
             signer: value.signer.into(),
             signature: value.signature,
         }
     }
 }
 
-impl CommitmentReader for UpdateClientMessage {
+impl ELCMessageReader for UpdateClientMessage {
     fn signer(&self) -> Address {
         self.signer
     }
 
-    fn commitment(&self) -> &UpdateClientCommitment {
-        &self.commitment
+    fn elc_message(&self) -> &ELCUpdateClientMessage {
+        &self.elc_message
     }
 }
 
-pub trait CommitmentReader {
+pub trait ELCMessageReader {
     fn signer(&self) -> Address;
 
-    fn commitment(&self) -> &UpdateClientCommitment;
+    fn elc_message(&self) -> &ELCUpdateClientMessage;
+
+    fn elc_message_bytes(&self) -> Vec<u8> {
+        ELCMessage::from(self.elc_message().clone()).to_bytes()
+    }
 
     fn height(&self) -> Height {
-        self.commitment().new_height
+        self.elc_message().post_height
     }
 
     fn prev_height(&self) -> Option<Height> {
-        self.commitment().prev_height
+        self.elc_message().prev_height
     }
 
     fn prev_state_id(&self) -> Option<StateID> {
-        self.commitment().prev_state_id
+        self.elc_message().prev_state_id
     }
 
     fn state_id(&self) -> StateID {
-        self.commitment().new_state_id
+        self.elc_message().post_state_id
     }
 
     fn timestamp(&self) -> Time {
-        self.commitment().timestamp
+        self.elc_message().timestamp
     }
 
-    fn context(&self) -> &CommitmentContext {
-        &self.commitment().context
+    fn context(&self) -> &ValidationContext {
+        &self.elc_message().context
     }
 }
 

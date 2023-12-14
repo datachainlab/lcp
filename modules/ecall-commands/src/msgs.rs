@@ -103,7 +103,7 @@ impl From<InitClientResult> for MsgCreateClientResponse {
     fn from(res: InitClientResult) -> Self {
         Self {
             client_id: res.client_id.to_string(),
-            commitment: res.proof.commitment_bytes,
+            message: res.proof.message,
             signer: res.proof.signer.into(),
             signature: res.proof.signature,
         }
@@ -113,7 +113,7 @@ impl From<InitClientResult> for MsgCreateClientResponse {
 impl From<UpdateClientResult> for MsgUpdateClientResponse {
     fn from(res: UpdateClientResult) -> Self {
         Self {
-            commitment: res.0.commitment_bytes,
+            message: res.0.message,
             signer: res.0.signer.into(),
             signature: res.0.signature,
         }
@@ -123,7 +123,7 @@ impl From<UpdateClientResult> for MsgUpdateClientResponse {
 impl From<VerifyMembershipResult> for MsgVerifyMembershipResponse {
     fn from(res: VerifyMembershipResult) -> Self {
         Self {
-            commitment: res.0.commitment_bytes,
+            message: res.0.message,
             signer: res.0.signer.to_vec(),
             signature: res.0.signature,
         }
@@ -133,7 +133,7 @@ impl From<VerifyMembershipResult> for MsgVerifyMembershipResponse {
 impl From<VerifyNonMembershipResult> for MsgVerifyNonMembershipResponse {
     fn from(res: VerifyNonMembershipResult) -> Self {
         Self {
-            commitment: res.0.commitment_bytes,
+            message: res.0.message,
             signer: res.0.signer.to_vec(),
             signature: res.0.signature,
         }

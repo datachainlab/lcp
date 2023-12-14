@@ -19,18 +19,20 @@ mod prelude {
     pub use core::iter::FromIterator;
 }
 
-pub use commitment::{
-    Commitment, CommitmentPrefix, EthABIEncoder, StateCommitment, UpdateClientCommitment,
-};
-pub use context::{CommitmentContext, TrustingPeriodContext};
+pub use context::{TrustingPeriodContext, ValidationContext};
+pub use encoder::EthABIEncoder;
 pub use errors::Error;
+pub use message::{
+    CommitmentPrefix, EmittedState, Message, UpdateClientMessage, VerifyMembershipMessage,
+};
 pub use proof::CommitmentProof;
 pub use prover::prove_commitment;
 pub use state::{gen_state_id_from_any, gen_state_id_from_bytes, StateID, STATE_ID_SIZE};
 
-mod commitment;
 mod context;
+mod encoder;
 mod errors;
+mod message;
 mod proof;
 mod prover;
 mod state;

@@ -12,9 +12,9 @@ pub trait EnclaveProtoAPI<S: CommitStore>: EnclaveCommandAPI<S> {
     fn proto_create_client(&self, msg: MsgCreateClient) -> Result<MsgCreateClientResponse> {
         let res = self.init_client(msg.try_into()?)?;
         info!(
-            "create_client: client_id={} commitment={{{}}}",
+            "create_client: client_id={} message={{{}}}",
             res.client_id,
-            res.proof.commitment()?
+            res.proof.message()?
         );
         Ok(res.into())
     }
@@ -23,9 +23,9 @@ pub trait EnclaveProtoAPI<S: CommitStore>: EnclaveCommandAPI<S> {
         let client_id = msg.client_id.clone();
         let res = self.update_client(msg.try_into()?)?;
         info!(
-            "update_client: client_id={} commitment={{{}}}",
+            "update_client: client_id={} message={{{}}}",
             client_id,
-            res.0.commitment()?
+            res.0.message()?
         );
         Ok(res.into())
     }
@@ -37,9 +37,9 @@ pub trait EnclaveProtoAPI<S: CommitStore>: EnclaveCommandAPI<S> {
         let client_id = msg.client_id.clone();
         let res = self.verify_membership(msg.try_into()?)?;
         info!(
-            "verify_membership: client_id={} commitment={{{}}}",
+            "verify_membership: client_id={} message={{{}}}",
             client_id,
-            res.0.commitment()?
+            res.0.message()?
         );
         Ok(res.into())
     }
@@ -51,9 +51,9 @@ pub trait EnclaveProtoAPI<S: CommitStore>: EnclaveCommandAPI<S> {
         let client_id = msg.client_id.clone();
         let res = self.verify_non_membership(msg.try_into()?)?;
         info!(
-            "verify_non_membership: client_id={} commitment={{{}}}",
+            "verify_non_membership: client_id={} message={{{}}}",
             client_id,
-            res.0.commitment()?
+            res.0.message()?
         );
         Ok(res.into())
     }

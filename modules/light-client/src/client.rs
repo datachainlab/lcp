@@ -1,4 +1,4 @@
-use crate::commitments::{Commitment, CommitmentPrefix};
+use crate::commitments::{CommitmentPrefix, Message};
 use crate::context::HostClientReader;
 use crate::errors::Error;
 use crate::prelude::*;
@@ -42,7 +42,7 @@ pub trait LightClient {
         value: Vec<u8>,
         proof_height: Height,
         proof: Vec<u8>,
-    ) -> Result<StateVerificationResult, Error>;
+    ) -> Result<VerifyMembershipResult, Error>;
 
     /// verify_non_membership is a generic proof verification method which verifies the absence of a given path at a specified height.
     fn verify_non_membership(
@@ -53,15 +53,15 @@ pub trait LightClient {
         path: String,
         proof_height: Height,
         proof: Vec<u8>,
-    ) -> Result<StateVerificationResult, Error>;
+    ) -> Result<VerifyNonMembershipResult, Error>;
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct CreateClientResult {
     /// height corresponding to the updated state
     pub height: Height,
-    /// commitment represents a state transition of the client
-    pub commitment: Commitment,
+    /// message represents a state transition of the client
+    pub message: Message,
     /// if true, sign the commitment with Enclave Key
     pub prove: bool,
 }
@@ -74,14 +74,20 @@ pub struct UpdateClientResult {
     pub new_any_consensus_state: Any,
     /// height corresponding to the updated state
     pub height: Height,
-    /// commitment represents a state transition of the client
-    pub commitment: Commitment,
+    /// message represents a state transition of the client
+    pub message: Message,
     /// if true, sign the commitment with Enclave Key
     pub prove: bool,
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct StateVerificationResult {
-    /// state commitment represents a result of the state verification
-    pub state_commitment: Commitment,
+pub struct VerifyMembershipResult {
+    /// message represents a result of the state verification
+    pub message: Message,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct VerifyNonMembershipResult {
+    /// message represents a result of the state verification
+    pub message: Message,
 }

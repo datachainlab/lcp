@@ -4,68 +4,69 @@ use core::{fmt::Display, time::Duration};
 use lcp_types::{nanos_to_duration, Time};
 use serde::{Deserialize, Serialize};
 
-pub const COMMITMENT_CONTEXT_TYPE_EMPTY: u16 = 0;
-pub const COMMITMENT_CONTEXT_TYPE_WITHIN_TRUSTING_PERIOD: u16 = 1;
-pub const COMMITMENT_CONTEXT_HEADER_SIZE: usize = 32;
+pub const VALIDATION_CONTEXT_TYPE_EMPTY_EMPTY: u16 = 0;
+pub const VALIDATION_CONTEXT_TYPE_EMPTY_WITHIN_TRUSTING_PERIOD: u16 = 1;
+pub const VALIDATION_CONTEXT_HEADER_SIZE: usize = 32;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub enum CommitmentContext {
+pub enum ValidationContext {
     Empty,
     TrustingPeriod(TrustingPeriodContext),
 }
 
-impl CommitmentContext {
+impl ValidationContext {
     pub fn validate(&self, current_timestamp: Time) -> Result<(), Error> {
         match self {
-            CommitmentContext::Empty => Ok(()),
-            CommitmentContext::TrustingPeriod(ctx) => ctx.validate(current_timestamp),
+            ValidationContext::Empty => Ok(()),
+            ValidationContext::TrustingPeriod(ctx) => ctx.validate(current_timestamp),
         }
     }
 
     // MSB first
     // 0-1:  type
     // 2-31: reserved
-    pub fn header(&self) -> [u8; COMMITMENT_CONTEXT_HEADER_SIZE] {
-        let mut header = [0u8; COMMITMENT_CONTEXT_HEADER_SIZE];
+    pub fn header(&self) -> [u8; VALIDATION_CONTEXT_HEADER_SIZE] {
+        let mut header = [0u8; VALIDATION_CONTEXT_HEADER_SIZE];
 
         match self {
-            CommitmentContext::Empty => {
-                header[0..=1].copy_from_slice(&COMMITMENT_CONTEXT_TYPE_EMPTY.to_be_bytes());
+            ValidationContext::Empty => {
+                header[0..=1].copy_from_slice(&VALIDATION_CONTEXT_TYPE_EMPTY_EMPTY.to_be_bytes());
             }
-            CommitmentContext::TrustingPeriod(_) => {
-                header[0..=1]
-                    .copy_from_slice(&COMMITMENT_CONTEXT_TYPE_WITHIN_TRUSTING_PERIOD.to_be_bytes());
+            ValidationContext::TrustingPeriod(_) => {
+                header[0..=1].copy_from_slice(
+                    &VALIDATION_CONTEXT_TYPE_EMPTY_WITHIN_TRUSTING_PERIOD.to_be_bytes(),
+                );
             }
         }
         header
     }
 
     fn parse_context_type_from_header(header_bytes: &[u8]) -> Result<u16, Error> {
-        if header_bytes.len() != COMMITMENT_CONTEXT_HEADER_SIZE {
-            return Err(Error::invalid_commitment_context_header(format!(
-                "invalid commitment context header length: expected={} actual={}",
-                COMMITMENT_CONTEXT_HEADER_SIZE,
+        if header_bytes.len() != VALIDATION_CONTEXT_HEADER_SIZE {
+            return Err(Error::invalid_validation_context_header(format!(
+                "invalid validation context header length: expected={} actual={}",
+                VALIDATION_CONTEXT_HEADER_SIZE,
                 header_bytes.len()
             )));
         }
 
-        let mut header = [0u8; COMMITMENT_CONTEXT_HEADER_SIZE];
+        let mut header = [0u8; VALIDATION_CONTEXT_HEADER_SIZE];
         header.copy_from_slice(header_bytes);
 
         Ok(u16::from_be_bytes([header[0], header[1]]))
     }
 }
 
-impl EthABIEncoder for CommitmentContext {
+impl EthABIEncoder for ValidationContext {
     fn ethabi_encode(self) -> Vec<u8> {
         let header = self.header().as_ref().try_into().unwrap();
         match self {
-            CommitmentContext::Empty => EthABICommitmentContext {
+            ValidationContext::Empty => EthABIValidationContext {
                 header,
                 context_bytes: vec![],
             }
             .encode(),
-            CommitmentContext::TrustingPeriod(ctx) => EthABICommitmentContext {
+            ValidationContext::TrustingPeriod(ctx) => EthABIValidationContext {
                 header,
                 context_bytes: ctx.ethabi_encode(),
             }
@@ -73,34 +74,34 @@ impl EthABIEncoder for CommitmentContext {
         }
     }
     fn ethabi_decode(bz: &[u8]) -> Result<Self, Error> {
-        let EthABICommitmentContext {
+        let EthABIValidationContext {
             header,
             context_bytes,
-        } = EthABICommitmentContext::decode(bz)?;
+        } = EthABIValidationContext::decode(bz)?;
 
-        match CommitmentContext::parse_context_type_from_header(&header)? {
-            COMMITMENT_CONTEXT_TYPE_EMPTY => {
+        match ValidationContext::parse_context_type_from_header(&header)? {
+            VALIDATION_CONTEXT_TYPE_EMPTY_EMPTY => {
                 assert!(context_bytes.is_empty());
-                Ok(CommitmentContext::Empty)
+                Ok(ValidationContext::Empty)
             }
-            COMMITMENT_CONTEXT_TYPE_WITHIN_TRUSTING_PERIOD => {
+            VALIDATION_CONTEXT_TYPE_EMPTY_WITHIN_TRUSTING_PERIOD => {
                 let ctx = TrustingPeriodContext::ethabi_decode(&context_bytes)?;
-                Ok(CommitmentContext::TrustingPeriod(ctx))
+                Ok(ValidationContext::TrustingPeriod(ctx))
             }
-            type_ => Err(Error::invalid_commitment_context_header(format!(
-                "unknown commitment context type: {}",
+            type_ => Err(Error::invalid_validation_context_header(format!(
+                "unknown validation context type: {}",
                 type_
             ))),
         }
     }
 }
 
-pub(crate) struct EthABICommitmentContext {
+pub(crate) struct EthABIValidationContext {
     header: ethabi::FixedBytes,   // bytes32
     context_bytes: ethabi::Bytes, // bytes
 }
 
-impl EthABICommitmentContext {
+impl EthABIValidationContext {
     fn encode(&self) -> Vec<u8> {
         use ethabi::Token;
         ethabi::encode(&[Token::Tuple(vec![
@@ -133,17 +134,17 @@ impl EthABICommitmentContext {
     }
 }
 
-impl Default for CommitmentContext {
+impl Default for ValidationContext {
     fn default() -> Self {
-        CommitmentContext::Empty
+        ValidationContext::Empty
     }
 }
 
-impl Display for CommitmentContext {
+impl Display for ValidationContext {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
-            CommitmentContext::Empty => write!(f, "Empty"),
-            CommitmentContext::TrustingPeriod(ctx) => write!(f, "TrustingPeriod {{{}}}", ctx),
+            ValidationContext::Empty => write!(f, "Empty"),
+            ValidationContext::TrustingPeriod(ctx) => write!(f, "TrustingPeriod {{{}}}", ctx),
         }
     }
 }
@@ -285,9 +286,9 @@ impl EthABIEncoder for TrustingPeriodContext {
     }
 }
 
-impl From<TrustingPeriodContext> for CommitmentContext {
+impl From<TrustingPeriodContext> for ValidationContext {
     fn from(ctx: TrustingPeriodContext) -> Self {
-        CommitmentContext::TrustingPeriod(ctx)
+        ValidationContext::TrustingPeriod(ctx)
     }
 }
 
@@ -351,49 +352,49 @@ mod tests {
             untrusted_header_timestamp in ..=MAX_UNIX_TIMESTAMP_NANOS,
             trusted_state_timestamp in ..=MAX_UNIX_TIMESTAMP_NANOS
         ) {
-            let ctx: CommitmentContext = TrustingPeriodContext::new(
+            let ctx: ValidationContext = TrustingPeriodContext::new(
                 nanos_to_duration(trusting_period).unwrap(),
                 nanos_to_duration(clock_drift).unwrap(),
                 Time::from_unix_timestamp_nanos(untrusted_header_timestamp).unwrap(),
                 Time::from_unix_timestamp_nanos(trusted_state_timestamp).unwrap(),
             ).into();
             let bz = ctx.clone().ethabi_encode();
-            let ctx2 = CommitmentContext::ethabi_decode(&bz).unwrap();
+            let ctx2 = ValidationContext::ethabi_decode(&bz).unwrap();
             assert_eq!(ctx, ctx2);
         }
     }
 
     #[test]
     fn test_empty_context_serialization() {
-        let ctx = CommitmentContext::Empty;
+        let ctx = ValidationContext::Empty;
         let bz = ctx.clone().ethabi_encode();
-        let ctx2 = CommitmentContext::ethabi_decode(&bz).unwrap();
+        let ctx2 = ValidationContext::ethabi_decode(&bz).unwrap();
         assert_eq!(ctx, ctx2);
     }
 
     #[test]
     fn test_trusting_period_context_serialization() {
-        let ctx = CommitmentContext::TrustingPeriod(TrustingPeriodContext::new(
+        let ctx = ValidationContext::TrustingPeriod(TrustingPeriodContext::new(
             Duration::new(60 * 60 * 24, 0),
             Duration::new(60 * 60, 0),
             Time::now(),
             Time::now(),
         ));
         let bz = ctx.clone().ethabi_encode();
-        let ctx2 = CommitmentContext::ethabi_decode(&bz).unwrap();
+        let ctx2 = ValidationContext::ethabi_decode(&bz).unwrap();
         assert_eq!(ctx, ctx2);
     }
 
     #[test]
     fn test_context_header() {
-        let ctx = CommitmentContext::Empty;
+        let ctx = ValidationContext::Empty;
         let header = ctx.header();
         assert_eq!(
-            COMMITMENT_CONTEXT_TYPE_EMPTY,
-            CommitmentContext::parse_context_type_from_header(&header).unwrap()
+            VALIDATION_CONTEXT_TYPE_EMPTY_EMPTY,
+            ValidationContext::parse_context_type_from_header(&header).unwrap()
         );
 
-        let ctx = CommitmentContext::TrustingPeriod(TrustingPeriodContext::new(
+        let ctx = ValidationContext::TrustingPeriod(TrustingPeriodContext::new(
             Duration::new(60 * 60 * 24, 0),
             Duration::new(60 * 60, 0),
             Time::now(),
@@ -401,8 +402,8 @@ mod tests {
         ));
         let header = ctx.header();
         assert_eq!(
-            COMMITMENT_CONTEXT_TYPE_WITHIN_TRUSTING_PERIOD,
-            CommitmentContext::parse_context_type_from_header(&header).unwrap()
+            VALIDATION_CONTEXT_TYPE_EMPTY_WITHIN_TRUSTING_PERIOD,
+            ValidationContext::parse_context_type_from_header(&header).unwrap()
         );
     }
 

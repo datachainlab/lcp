@@ -10,11 +10,14 @@ use ibc::core::ics02_client::error::ClientError as ICS02Error;
 use ibc::core::ics02_client::header::Header as Ics02Header;
 use ibc::mock::client_state::{client_type, MockClientState, MOCK_CLIENT_STATE_TYPE_URL};
 use ibc::mock::consensus_state::MockConsensusState;
-use light_client::commitments::{gen_state_id_from_any, CommitmentContext, UpdateClientCommitment};
+use light_client::commitments::{
+    gen_state_id_from_any, EmittedState, UpdateClientMessage, ValidationContext,
+};
 use light_client::types::{Any, ClientId, Height, Time};
+use light_client::VerifyNonMembershipResult;
 use light_client::{
     ibc::IBCContext, CreateClientResult, Error as LightClientError, HostClientReader, LightClient,
-    LightClientRegistry, StateVerificationResult, UpdateClientResult,
+    LightClientRegistry, UpdateClientResult, VerifyMembershipResult,
 };
 
 #[derive(Default)]
@@ -49,14 +52,14 @@ impl LightClient for MockLightClient {
         let timestamp: Time = consensus_state.timestamp().into();
         Ok(CreateClientResult {
             height,
-            commitment: UpdateClientCommitment {
-                prev_state_id: None,
-                new_state_id: state_id,
-                new_state: Some(any_client_state),
+            message: UpdateClientMessage {
                 prev_height: None,
-                new_height: height,
+                prev_state_id: None,
+                post_state_id: state_id,
+                post_height: height,
                 timestamp,
-                context: CommitmentContext::Empty,
+                context: ValidationContext::Empty,
+                emitted_states: vec![EmittedState(height, any_client_state)],
             }
             .into(),
             prove: false,
@@ -125,21 +128,21 @@ impl LightClient for MockLightClient {
         );
 
         let prev_state_id = gen_state_id(client_state, latest_consensus_state)?;
-        let new_state_id = gen_state_id(new_client_state.clone(), new_consensus_state.clone())?;
+        let post_state_id = gen_state_id(new_client_state.clone(), new_consensus_state.clone())?;
         let new_any_client_state = Any::try_from(new_client_state).unwrap();
 
         Ok(UpdateClientResult {
             new_any_client_state: new_any_client_state.clone(),
             new_any_consensus_state: Any::try_from(new_consensus_state).unwrap(),
             height,
-            commitment: UpdateClientCommitment {
-                prev_state_id: Some(prev_state_id),
-                new_state_id,
-                new_state: new_any_client_state.into(),
+            message: UpdateClientMessage {
                 prev_height: Some(latest_height.into()),
-                new_height: height,
+                prev_state_id: Some(prev_state_id),
+                post_height: height,
+                post_state_id,
                 timestamp: header_timestamp,
-                context: CommitmentContext::Empty,
+                context: ValidationContext::Empty,
+                emitted_states: vec![EmittedState(height, new_any_client_state)],
             }
             .into(),
             prove: true,
@@ -156,7 +159,7 @@ impl LightClient for MockLightClient {
         value: Vec<u8>,
         proof_height: Height,
         proof: Vec<u8>,
-    ) -> Result<StateVerificationResult, LightClientError> {
+    ) -> Result<VerifyMembershipResult, LightClientError> {
         todo!()
     }
 
@@ -169,7 +172,7 @@ impl LightClient for MockLightClient {
         path: String,
         proof_height: Height,
         proof: Vec<u8>,
-    ) -> Result<StateVerificationResult, LightClientError> {
+    ) -> Result<VerifyNonMembershipResult, LightClientError> {
         todo!()
     }
 }

@@ -29,9 +29,9 @@ pub fn init_client<R: LightClientResolver, S: KVStore, K: Signer>(
     ctx.increase_client_counter();
 
     let proof = if res.prove {
-        prove_commitment(ek, input.signer, res.commitment)?
+        prove_commitment(ek, input.signer, res.message)?
     } else {
-        CommitmentProof::new_with_no_signature(res.commitment.to_commitment_bytes())
+        CommitmentProof::new_with_no_signature(res.message.to_bytes())
     };
     Ok(LightClientResult::InitClient(InitClientResult {
         client_id,

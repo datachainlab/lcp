@@ -10,7 +10,7 @@ mod tests {
     use super::*;
     use crate::relayer::Relayer;
     use anyhow::{anyhow, bail};
-    use commitments::UpdateClientCommitment;
+    use commitments::UpdateClientMessage;
     use ecall_commands::{
         CommitmentProofPair, GenerateEnclaveKeyInput, InitClientInput, UpdateClientInput,
         VerifyMembershipInput,
@@ -179,8 +179,8 @@ mod tests {
         info!("update_client's result is {:?}", res);
         assert!(res.0.is_proven());
 
-        let commitment: UpdateClientCommitment = res.0.commitment().unwrap().try_into()?;
-        let height = commitment.new_height;
+        let msg: UpdateClientMessage = res.0.message().unwrap().try_into()?;
+        let height = msg.post_height;
 
         info!("current height is {}", height);
 

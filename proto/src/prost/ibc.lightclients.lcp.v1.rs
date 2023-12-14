@@ -2,7 +2,7 @@
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct UpdateClientMessage {
     #[prost(bytes = "vec", tag = "1")]
-    pub commitment: ::prost::alloc::vec::Vec<u8>,
+    pub elc_message: ::prost::alloc::vec::Vec<u8>,
     #[prost(bytes = "vec", tag = "2")]
     pub signer: ::prost::alloc::vec::Vec<u8>,
     #[prost(bytes = "vec", tag = "3")]

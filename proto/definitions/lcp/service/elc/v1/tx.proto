@@ -43,7 +43,7 @@ message MsgCreateClientResponse {
   option (gogoproto.goproto_getters) = false;
  
   string client_id = 1;
-  bytes commitment = 2;
+  bytes message = 2;
   bytes signer = 3;
   bytes signature = 4;
 }
@@ -58,7 +58,7 @@ message MsgUpdateClient {
   string client_id = 1 [(gogoproto.moretags) = "yaml:\"client_id\""];
   // header to update the light client
   google.protobuf.Any header = 2;
-  // request to include state in a commitment
+  // request to emit state
   bool include_state = 3;
   // enclave key for signing
   bytes signer = 4;
@@ -69,7 +69,7 @@ message MsgUpdateClientResponse {
   option (gogoproto.equal)           = false;
   option (gogoproto.goproto_getters) = false;
 
-  bytes commitment = 1;
+  bytes message = 1;
   bytes signer = 2;
   bytes signature = 3;
 }
@@ -92,7 +92,7 @@ message MsgVerifyMembershipResponse {
   option (gogoproto.equal)           = false;
   option (gogoproto.goproto_getters) = false;
 
-  bytes commitment = 1;
+  bytes message = 1;
   bytes signer = 2;
   bytes signature = 3;
 }
@@ -114,7 +114,7 @@ message MsgVerifyNonMembershipResponse {
   option (gogoproto.equal)           = false;
   option (gogoproto.goproto_getters) = false;
 
-  bytes commitment = 1;
+  bytes message = 1;
   bytes signer = 2;
   bytes signature = 3;
 }
