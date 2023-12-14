@@ -1,5 +1,5 @@
 use super::bytes_to_bytes32;
-use crate::context::CommitmentContext;
+use crate::context::ValidationContext;
 use crate::encoder::{EthABIEmittedState, EthABIEncoder, EthABIHeight};
 use crate::prelude::*;
 use crate::{Error, StateID};
@@ -14,7 +14,7 @@ pub struct UpdateClientMessage {
     pub post_height: Height,
     pub post_state_id: StateID,
     pub timestamp: Time,
-    pub context: CommitmentContext,
+    pub context: ValidationContext,
     pub emitted_states: Vec<EmittedState>,
 }
 
@@ -142,7 +142,7 @@ impl TryFrom<EthABIUpdateClientMessage> for UpdateClientMessage {
             post_height: value.post_height.into(),
             post_state_id: value.post_state_id.as_slice().try_into()?,
             timestamp: Time::from_unix_timestamp_nanos(value.timestamp.as_u128())?,
-            context: CommitmentContext::ethabi_decode(value.context.as_slice())?,
+            context: ValidationContext::ethabi_decode(value.context.as_slice())?,
             emitted_states: value
                 .emitted_states
                 .into_iter()

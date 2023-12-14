@@ -3,8 +3,8 @@ use crate::prelude::*;
 use attestation_report::EndorsedAttestationVerificationReport;
 use crypto::Address;
 use light_client::commitments::{
-    CommitmentContext, Message as ELCMessage, StateID,
-    UpdateClientMessage as ELCUpdateClientMessage,
+    Message as ELCMessage, StateID, UpdateClientMessage as ELCUpdateClientMessage,
+    ValidationContext,
 };
 use light_client::types::proto::ibc::lightclients::lcp::v1::{
     RegisterEnclaveKeyMessage as RawRegisterEnclaveKeyMessage,
@@ -155,7 +155,7 @@ pub trait ELCMessageReader {
         self.elc_message().timestamp
     }
 
-    fn context(&self) -> &CommitmentContext {
+    fn context(&self) -> &ValidationContext {
         &self.elc_message().context
     }
 }

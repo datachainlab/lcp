@@ -19,7 +19,7 @@ mod prelude {
     pub use core::iter::FromIterator;
 }
 
-pub use context::{CommitmentContext, TrustingPeriodContext};
+pub use context::{TrustingPeriodContext, ValidationContext};
 pub use encoder::EthABIEncoder;
 pub use errors::Error;
 pub use message::{

@@ -26,7 +26,7 @@ use ibc::core::ics23_commitment::merkle::{apply_prefix, MerkleProof};
 use ibc::core::ics24_host::Path;
 use lcp_proto::ibc::core::commitment::v1::MerkleProof as RawMerkleProof;
 use light_client::commitments::{
-    CommitmentContext, CommitmentPrefix, EmittedState, TrustingPeriodContext, UpdateClientMessage,
+    CommitmentPrefix, EmittedState, TrustingPeriodContext, UpdateClientMessage, ValidationContext,
     VerifyMembershipMessage,
 };
 use light_client::types::{Any, ClientId, Height, Time};
@@ -78,7 +78,7 @@ impl LightClient for TendermintLightClient {
                 post_height: height,
                 post_state_id: state_id,
                 timestamp,
-                context: CommitmentContext::Empty,
+                context: ValidationContext::Empty,
                 emitted_states: vec![EmittedState(height, any_client_state)],
             }
             .into(),

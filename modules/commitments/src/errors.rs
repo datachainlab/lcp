@@ -61,7 +61,7 @@ define_error! {
             format_args!("invalid commitment header: descr={}", e.descr)
         },
 
-        InvalidCommitmentContextHeader
+        InvalidValidationContextHeader
         {
             descr: String
         }

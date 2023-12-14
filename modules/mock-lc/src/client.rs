@@ -11,7 +11,7 @@ use ibc::core::ics02_client::header::Header as Ics02Header;
 use ibc::mock::client_state::{client_type, MockClientState, MOCK_CLIENT_STATE_TYPE_URL};
 use ibc::mock::consensus_state::MockConsensusState;
 use light_client::commitments::{
-    gen_state_id_from_any, CommitmentContext, EmittedState, UpdateClientMessage,
+    gen_state_id_from_any, EmittedState, UpdateClientMessage, ValidationContext,
 };
 use light_client::types::{Any, ClientId, Height, Time};
 use light_client::{
@@ -57,7 +57,7 @@ impl LightClient for MockLightClient {
                 post_state_id: state_id,
                 post_height: height,
                 timestamp,
-                context: CommitmentContext::Empty,
+                context: ValidationContext::Empty,
                 emitted_states: vec![EmittedState(height, any_client_state)],
             }
             .into(),
@@ -140,7 +140,7 @@ impl LightClient for MockLightClient {
                 post_height: height,
                 post_state_id,
                 timestamp: header_timestamp,
-                context: CommitmentContext::Empty,
+                context: ValidationContext::Empty,
                 emitted_states: vec![EmittedState(height, new_any_client_state)],
             }
             .into(),
