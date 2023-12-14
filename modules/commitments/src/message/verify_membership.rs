@@ -24,7 +24,7 @@ impl Display for VerifyMembershipMessage {
             "VerifyMembership(prefix: {:?}, path: {}, value: {}, height: {}, state_id: {})",
             self.prefix,
             self.path,
-            self.value.map_or("None".to_string(), |v| hex::encode(&v)),
+            self.value.map_or("None".to_string(), hex::encode),
             self.height,
             self.state_id,
         )

@@ -41,8 +41,8 @@ impl Message {
 
     pub fn commitment_type(&self) -> u16 {
         match self {
-            &Message::UpdateClient(_) => MESSAGE_TYPE_UPDATE_CLIENT,
-            &Message::VerifyMembership(_) => MESSAGE_TYPE_STATE,
+            Message::UpdateClient(_) => MESSAGE_TYPE_UPDATE_CLIENT,
+            Message::VerifyMembership(_) => MESSAGE_TYPE_STATE,
         }
     }
 }
