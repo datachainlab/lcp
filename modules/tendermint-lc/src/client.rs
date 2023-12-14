@@ -30,9 +30,10 @@ use light_client::commitments::{
     VerifyMembershipMessage,
 };
 use light_client::types::{Any, ClientId, Height, Time};
+use light_client::VerifyNonMembershipResult;
 use light_client::{
     ibc::IBCContext, CreateClientResult, Error as LightClientError, HostClientReader, LightClient,
-    LightClientRegistry, StateVerificationResult, UpdateClientResult,
+    LightClientRegistry, UpdateClientResult, VerifyMembershipResult,
 };
 use log::*;
 
@@ -219,7 +220,7 @@ impl LightClient for TendermintLightClient {
         value: Vec<u8>,
         proof_height: Height,
         proof: Vec<u8>,
-    ) -> Result<StateVerificationResult, LightClientError> {
+    ) -> Result<VerifyMembershipResult, LightClientError> {
         let (client_state, consensus_state, prefix, path, proof) =
             Self::validate_args(ctx, client_id.clone(), prefix, path, proof_height, proof)?;
 
@@ -242,7 +243,7 @@ impl LightClient for TendermintLightClient {
             })
         })?;
 
-        Ok(StateVerificationResult {
+        Ok(VerifyMembershipResult {
             message: VerifyMembershipMessage::new(
                 prefix.into_vec(),
                 path.to_string(),
@@ -262,7 +263,7 @@ impl LightClient for TendermintLightClient {
         path: String,
         proof_height: Height,
         proof: Vec<u8>,
-    ) -> Result<StateVerificationResult, LightClientError> {
+    ) -> Result<VerifyNonMembershipResult, LightClientError> {
         let (client_state, consensus_state, prefix, path, proof) =
             Self::validate_args(ctx, client_id.clone(), prefix, path, proof_height, proof)?;
 
@@ -284,7 +285,7 @@ impl LightClient for TendermintLightClient {
             })
         })?;
 
-        Ok(StateVerificationResult {
+        Ok(VerifyNonMembershipResult {
             message: VerifyMembershipMessage::new(
                 prefix.into_vec(),
                 path.to_string(),

@@ -42,7 +42,7 @@ pub trait LightClient {
         value: Vec<u8>,
         proof_height: Height,
         proof: Vec<u8>,
-    ) -> Result<StateVerificationResult, Error>;
+    ) -> Result<VerifyMembershipResult, Error>;
 
     /// verify_non_membership is a generic proof verification method which verifies the absence of a given path at a specified height.
     fn verify_non_membership(
@@ -53,7 +53,7 @@ pub trait LightClient {
         path: String,
         proof_height: Height,
         proof: Vec<u8>,
-    ) -> Result<StateVerificationResult, Error>;
+    ) -> Result<VerifyNonMembershipResult, Error>;
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -81,7 +81,13 @@ pub struct UpdateClientResult {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct StateVerificationResult {
+pub struct VerifyMembershipResult {
+    /// state commitment represents a result of the state verification
+    pub message: Message,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct VerifyNonMembershipResult {
     /// state commitment represents a result of the state verification
     pub message: Message,
 }

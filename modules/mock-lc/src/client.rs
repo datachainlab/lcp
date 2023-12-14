@@ -14,9 +14,10 @@ use light_client::commitments::{
     gen_state_id_from_any, EmittedState, UpdateClientMessage, ValidationContext,
 };
 use light_client::types::{Any, ClientId, Height, Time};
+use light_client::VerifyNonMembershipResult;
 use light_client::{
     ibc::IBCContext, CreateClientResult, Error as LightClientError, HostClientReader, LightClient,
-    LightClientRegistry, StateVerificationResult, UpdateClientResult,
+    LightClientRegistry, UpdateClientResult, VerifyMembershipResult,
 };
 
 #[derive(Default)]
@@ -158,7 +159,7 @@ impl LightClient for MockLightClient {
         value: Vec<u8>,
         proof_height: Height,
         proof: Vec<u8>,
-    ) -> Result<StateVerificationResult, LightClientError> {
+    ) -> Result<VerifyMembershipResult, LightClientError> {
         todo!()
     }
 
@@ -171,7 +172,7 @@ impl LightClient for MockLightClient {
         path: String,
         proof_height: Height,
         proof: Vec<u8>,
-    ) -> Result<StateVerificationResult, LightClientError> {
+    ) -> Result<VerifyNonMembershipResult, LightClientError> {
         todo!()
     }
 }
