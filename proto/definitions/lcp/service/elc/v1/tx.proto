@@ -16,6 +16,9 @@ service Msg {
   // UpdateClient defines a rpc handler method for MsgUpdateClient.
   rpc UpdateClient(MsgUpdateClient) returns (MsgUpdateClientResponse);
 
+  // AggregateMessages defines a rpc handler method for MsgAggregateMessages
+  rpc AggregateMessages(MsgAggregateMessages) returns (MsgAggregateMessagesResponse);
+
   // VerifyMembership defines a rpc handler method for MsgVerifyMembership
   rpc VerifyMembership(MsgVerifyMembership) returns (MsgVerifyMembershipResponse);
 
@@ -66,6 +69,24 @@ message MsgUpdateClient {
 
 // MsgUpdateClientResponse defines the Msg/UpdateClient response type.
 message MsgUpdateClientResponse {
+  option (gogoproto.equal)           = false;
+  option (gogoproto.goproto_getters) = false;
+
+  bytes message = 1;
+  bytes signer = 2;
+  bytes signature = 3;
+}
+
+message MsgAggregateMessages {
+  option (gogoproto.equal)           = false;
+  option (gogoproto.goproto_getters) = false;
+
+  bytes signer = 1;
+  repeated bytes messages = 2;
+  repeated bytes signatures = 3;
+}
+
+message MsgAggregateMessagesResponse {
   option (gogoproto.equal)           = false;
   option (gogoproto.goproto_getters) = false;
 

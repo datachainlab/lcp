@@ -4,9 +4,10 @@ use crate::prelude::*;
 use core::str::FromStr;
 use crypto::Address;
 use lcp_types::proto::lcp::service::elc::v1::{
-    MsgCreateClient, MsgCreateClientResponse, MsgUpdateClient, MsgUpdateClientResponse,
-    MsgVerifyMembership, MsgVerifyMembershipResponse, MsgVerifyNonMembership,
-    MsgVerifyNonMembershipResponse, QueryClientRequest, QueryClientResponse,
+    MsgAggregateMessages, MsgAggregateMessagesResponse, MsgCreateClient, MsgCreateClientResponse,
+    MsgUpdateClient, MsgUpdateClientResponse, MsgVerifyMembership, MsgVerifyMembershipResponse,
+    MsgVerifyNonMembership, MsgVerifyNonMembershipResponse, QueryClientRequest,
+    QueryClientResponse,
 };
 use lcp_types::{ClientId, Time};
 
@@ -44,6 +45,19 @@ impl TryFrom<MsgUpdateClient> for UpdateClientInput {
             include_state: msg.include_state,
             current_timestamp: Time::now(),
             signer: Address::try_from(msg.signer.as_slice())?,
+        })
+    }
+}
+
+impl TryFrom<MsgAggregateMessages> for AggregateMessagesInput {
+    type Error = Error;
+    fn try_from(msg: MsgAggregateMessages) -> Result<Self, Error> {
+        let signer = Address::try_from(msg.signer.as_slice())?;
+        Ok(Self {
+            signer,
+            messages: msg.messages,
+            signatures: msg.signatures,
+            current_timestamp: Time::now(),
         })
     }
 }
@@ -112,6 +126,16 @@ impl From<InitClientResult> for MsgCreateClientResponse {
 
 impl From<UpdateClientResult> for MsgUpdateClientResponse {
     fn from(res: UpdateClientResult) -> Self {
+        Self {
+            message: res.0.message,
+            signer: res.0.signer.into(),
+            signature: res.0.signature,
+        }
+    }
+}
+
+impl From<AggregateMessagesResult> for MsgAggregateMessagesResponse {
+    fn from(res: AggregateMessagesResult) -> Self {
         Self {
             message: res.0.message,
             signer: res.0.signer.into(),

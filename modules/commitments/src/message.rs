@@ -1,4 +1,4 @@
-pub use self::update_client::{EmittedState, UpdateClientMessage};
+pub use self::update_client::{aggregate_messages, EmittedState, UpdateClientMessage};
 pub use self::verify_membership::{CommitmentPrefix, VerifyMembershipMessage};
 use crate::encoder::EthABIEncoder;
 use crate::prelude::*;

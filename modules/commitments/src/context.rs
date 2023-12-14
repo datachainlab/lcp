@@ -8,7 +8,7 @@ pub const VALIDATION_CONTEXT_TYPE_EMPTY_EMPTY: u16 = 0;
 pub const VALIDATION_CONTEXT_TYPE_EMPTY_WITHIN_TRUSTING_PERIOD: u16 = 1;
 pub const VALIDATION_CONTEXT_HEADER_SIZE: usize = 32;
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ValidationContext {
     Empty,
     TrustingPeriod(TrustingPeriodContext),
@@ -39,6 +39,42 @@ impl ValidationContext {
             }
         }
         header
+    }
+
+    pub fn aggregate(self, other: Self) -> Result<Self, Error> {
+        match (self, other) {
+            (Self::Empty, Self::Empty) => Ok(Self::Empty),
+            (Self::Empty, Self::TrustingPeriod(ctx)) => Ok(Self::TrustingPeriod(ctx)),
+            (Self::TrustingPeriod(ctx), Self::Empty) => Ok(Self::TrustingPeriod(ctx)),
+            (Self::TrustingPeriod(ctx1), Self::TrustingPeriod(ctx2)) => {
+                if ctx1.trusting_period != ctx2.trusting_period {
+                    return Err(Error::context_aggregation_failed(format!(
+                        "trusting_period mismatch: ctx1={:?} ctx2={:?}",
+                        ctx1.trusting_period, ctx2.trusting_period,
+                    )));
+                }
+                if ctx1.clock_drift != ctx2.clock_drift {
+                    return Err(Error::context_aggregation_failed(format!(
+                        "clock_drift mismatch: ctx1={:?} ctx2={:?}",
+                        ctx1.clock_drift, ctx2.clock_drift
+                    )));
+                }
+                Ok(Self::TrustingPeriod(TrustingPeriodContext::new(
+                    ctx1.trusting_period,
+                    ctx1.clock_drift,
+                    if ctx1.untrusted_header_timestamp > ctx2.untrusted_header_timestamp {
+                        ctx1.untrusted_header_timestamp
+                    } else {
+                        ctx2.untrusted_header_timestamp
+                    },
+                    if ctx1.trusted_state_timestamp < ctx2.trusted_state_timestamp {
+                        ctx1.trusted_state_timestamp
+                    } else {
+                        ctx2.trusted_state_timestamp
+                    },
+                )))
+            }
+        }
     }
 
     fn parse_context_type_from_header(header_bytes: &[u8]) -> Result<u16, Error> {
@@ -150,7 +186,7 @@ impl Display for ValidationContext {
 }
 
 /// NOTE: time precision is in seconds (i.e. nanoseconds are truncated)
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct TrustingPeriodContext {
     /// How long a validator set is trusted for (must be shorter than the chain's
     /// unbonding period)
@@ -535,6 +571,156 @@ mod tests {
                 trusted_state_timestamp,
             );
             validate_and_assert_no_error(ctx, current_timestamp);
+        }
+    }
+
+    #[test]
+    fn test_validation_context_aggregation() {
+        {
+            let ctx0 = ValidationContext::from(build_trusting_period_context(
+                1,
+                1,
+                datetime!(2023-08-19 0:00 UTC),
+                datetime!(2023-08-19 0:00 UTC),
+            ));
+            let ctx1 = ValidationContext::from(build_trusting_period_context(
+                1,
+                1,
+                datetime!(2023-08-20 0:00 UTC),
+                datetime!(2023-08-20 0:00 UTC),
+            ));
+            let expected = ValidationContext::from(build_trusting_period_context(
+                1,
+                1,
+                datetime!(2023-08-20 0:00 UTC),
+                datetime!(2023-08-19 0:00 UTC),
+            ));
+            let res = ctx0.aggregate(ctx1);
+            if let Ok(ctx) = res {
+                assert_eq!(ctx, expected);
+            } else {
+                panic!("{:?}", res);
+            }
+        }
+
+        {
+            let ctx0 = ValidationContext::from(build_trusting_period_context(
+                1,
+                1,
+                datetime!(2023-08-20 0:00 UTC),
+                datetime!(2023-08-20 0:00 UTC),
+            ));
+            let ctx1 = ValidationContext::from(build_trusting_period_context(
+                1,
+                1,
+                datetime!(2023-08-19 0:00 UTC),
+                datetime!(2023-08-19 0:00 UTC),
+            ));
+            let expected = ValidationContext::from(build_trusting_period_context(
+                1,
+                1,
+                datetime!(2023-08-20 0:00 UTC),
+                datetime!(2023-08-19 0:00 UTC),
+            ));
+            let res = ctx0.aggregate(ctx1);
+            if let Ok(ctx) = res {
+                assert_eq!(ctx, expected);
+            } else {
+                panic!("{:?}", res);
+            }
+        }
+
+        {
+            let ctx0 = ValidationContext::from(build_trusting_period_context(
+                2,
+                1,
+                datetime!(2023-08-20 0:00 UTC),
+                datetime!(2023-08-20 0:00 UTC),
+            ));
+            let ctx1 = ValidationContext::from(build_trusting_period_context(
+                1,
+                1,
+                datetime!(2023-08-20 0:00 UTC),
+                datetime!(2023-08-20 0:00 UTC),
+            ));
+            let res = ctx0.aggregate(ctx1);
+            assert!(res.is_err());
+        }
+
+        {
+            let ctx0 = ValidationContext::from(build_trusting_period_context(
+                1,
+                2,
+                datetime!(2023-08-20 0:00 UTC),
+                datetime!(2023-08-20 0:00 UTC),
+            ));
+            let ctx1 = ValidationContext::from(build_trusting_period_context(
+                1,
+                1,
+                datetime!(2023-08-20 0:00 UTC),
+                datetime!(2023-08-20 0:00 UTC),
+            ));
+            let res = ctx0.aggregate(ctx1);
+            assert!(res.is_err());
+        }
+    }
+
+    #[test]
+    fn test_validation_context_and_empty_aggregation() {
+        {
+            let ctx0 = ValidationContext::from(build_trusting_period_context(
+                1,
+                1,
+                datetime!(2023-08-20 0:00 UTC),
+                datetime!(2023-08-20 0:00 UTC),
+            ));
+            let ctx1 = ValidationContext::Empty;
+            let expected = ValidationContext::from(build_trusting_period_context(
+                1,
+                1,
+                datetime!(2023-08-20 0:00 UTC),
+                datetime!(2023-08-20 0:00 UTC),
+            ));
+            let res = ctx0.aggregate(ctx1);
+            if let Ok(ctx) = res {
+                assert_eq!(ctx, expected);
+            } else {
+                panic!("{:?}", res);
+            }
+        }
+
+        {
+            let ctx0 = ValidationContext::Empty;
+            let ctx1 = ValidationContext::from(build_trusting_period_context(
+                1,
+                1,
+                datetime!(2023-08-20 0:00 UTC),
+                datetime!(2023-08-20 0:00 UTC),
+            ));
+            let expected = ValidationContext::from(build_trusting_period_context(
+                1,
+                1,
+                datetime!(2023-08-20 0:00 UTC),
+                datetime!(2023-08-20 0:00 UTC),
+            ));
+            let res = ctx0.aggregate(ctx1);
+            if let Ok(ctx) = res {
+                assert_eq!(ctx, expected);
+            } else {
+                panic!("{:?}", res);
+            }
+        }
+    }
+
+    #[test]
+    fn test_empty_context_aggregation() {
+        let ctx0 = ValidationContext::Empty;
+        let ctx1 = ValidationContext::Empty;
+        let res = ctx0.aggregate(ctx1);
+        if let Ok(ctx) = res {
+            assert_eq!(ctx, ValidationContext::Empty);
+        } else {
+            panic!("{:?}", res);
         }
     }
 }

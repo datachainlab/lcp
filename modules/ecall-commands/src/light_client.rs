@@ -14,6 +14,7 @@ pub enum LightClientCommand {
 pub enum LightClientExecuteCommand {
     InitClient(InitClientInput),
     UpdateClient(UpdateClientInput),
+    AggregateMessages(AggregateMessagesInput),
     VerifyMembership(VerifyMembershipInput),
     VerifyNonMembership(VerifyNonMembershipInput),
 }
@@ -29,6 +30,7 @@ impl EnclaveKeySelector for LightClientCommand {
             Self::Execute(cmd) => match cmd {
                 LightClientExecuteCommand::InitClient(input) => Some(input.signer),
                 LightClientExecuteCommand::UpdateClient(input) => Some(input.signer),
+                LightClientExecuteCommand::AggregateMessages(input) => Some(input.signer),
                 LightClientExecuteCommand::VerifyMembership(input) => Some(input.signer),
                 LightClientExecuteCommand::VerifyNonMembership(input) => Some(input.signer),
             },
@@ -52,6 +54,14 @@ pub struct UpdateClientInput {
     pub include_state: bool,
     pub current_timestamp: Time,
     pub signer: Address,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct AggregateMessagesInput {
+    pub signer: Address,
+    pub messages: Vec<Vec<u8>>,
+    pub signatures: Vec<Vec<u8>>,
+    pub current_timestamp: Time,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -85,6 +95,7 @@ pub struct QueryClientInput {
 pub enum LightClientResult {
     InitClient(InitClientResult),
     UpdateClient(UpdateClientResult),
+    AggregateMessages(AggregateMessagesResult),
 
     VerifyMembership(VerifyMembershipResult),
     VerifyNonMembership(VerifyNonMembershipResult),
@@ -99,8 +110,10 @@ pub struct InitClientResult {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-#[serde(transparent)]
 pub struct UpdateClientResult(pub CommitmentProof);
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct AggregateMessagesResult(pub CommitmentProof);
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct VerifyMembershipResult(pub CommitmentProof);

@@ -4,6 +4,14 @@ use flex_error::*;
 define_error! {
     #[derive(Debug, PartialEq, Eq)]
     Error {
+        InvalidArgument
+        {
+            descr: String
+        }
+        |e| {
+            format_args!("invalid argument: descr={}", e.descr)
+        },
+
         SealedEnclaveKeyNotFound
         |_| { "Sealed EnclaveKey not found" },
 
@@ -18,6 +26,10 @@ define_error! {
         Commitment
         [light_client::commitments::Error]
         |_| { "Commitment error" },
+
+        Crypto
+        [crypto::Error]
+        |_| { "Crypto error" },
 
         LcpType
         {}
