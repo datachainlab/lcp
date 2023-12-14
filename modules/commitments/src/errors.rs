@@ -44,21 +44,21 @@ define_error! {
             format_args!("invalid bytes length: expected=0or{} actual={}", e.expected, e.actual)
         },
 
-        UnexpectedCommitmentType
+        UnexpectedMessageType
         {
             expected: u16,
             actual: u16
         }
         |e| {
-            format_args!("unexpected commitment type: expected={} actual={}", e.expected, e.actual)
+            format_args!("unexpected message type: expected={} actual={}", e.expected, e.actual)
         },
 
-        InvalidCommitmentHeader
+        InvalidMessageHeader
         {
             descr: String
         }
         |e| {
-            format_args!("invalid commitment header: descr={}", e.descr)
+            format_args!("invalid message header: descr={}", e.descr)
         },
 
         InvalidValidationContextHeader
@@ -66,7 +66,7 @@ define_error! {
             descr: String
         }
         |e| {
-            format_args!("invalid commitment context header: descr={}", e.descr)
+            format_args!("invalid validation context header: descr={}", e.descr)
         },
 
         OutOfTrustingPeriod

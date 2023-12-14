@@ -30,16 +30,16 @@ impl Message {
 
     // MSB first
     // 0-1:  version
-    // 2-3:  commitment type
+    // 2-3:  message type
     // 4-31: reserved
     pub fn header(&self) -> [u8; MESSAGE_HEADER_SIZE] {
         let mut header = [0u8; MESSAGE_HEADER_SIZE];
         header[0..=1].copy_from_slice(&MESSAGE_SCHEMA_VERSION.to_be_bytes());
-        header[2..=3].copy_from_slice(&self.commitment_type().to_be_bytes());
+        header[2..=3].copy_from_slice(&self.message_type().to_be_bytes());
         header
     }
 
-    pub fn commitment_type(&self) -> u16 {
+    pub fn message_type(&self) -> u16 {
         match self {
             Message::UpdateClient(_) => MESSAGE_TYPE_UPDATE_CLIENT,
             Message::VerifyMembership(_) => MESSAGE_TYPE_STATE,
@@ -61,9 +61,9 @@ impl TryFrom<Message> for UpdateClientMessage {
     fn try_from(value: Message) -> Result<Self, Self::Error> {
         match value {
             Message::UpdateClient(m) => Ok(m),
-            _ => Err(Error::unexpected_commitment_type(
+            _ => Err(Error::unexpected_message_type(
                 MESSAGE_TYPE_UPDATE_CLIENT,
-                value.commitment_type(),
+                value.message_type(),
             )),
         }
     }
@@ -74,9 +74,9 @@ impl TryFrom<Message> for VerifyMembershipMessage {
     fn try_from(value: Message) -> Result<Self, Self::Error> {
         match value {
             Message::VerifyMembership(m) => Ok(m),
-            _ => Err(Error::unexpected_commitment_type(
+            _ => Err(Error::unexpected_message_type(
                 MESSAGE_TYPE_STATE,
-                value.commitment_type(),
+                value.message_type(),
             )),
         }
     }
@@ -147,14 +147,14 @@ impl EthABIEncoder for Message {
     }
 
     fn ethabi_decode(bz: &[u8]) -> Result<Self, Error> {
-        let eth_abi_commitment = EthABIHeaderedMessage::decode(bz)?;
-        let (version, commitment_type) = {
-            let header = &eth_abi_commitment.header;
+        let eth_abi_message = EthABIHeaderedMessage::decode(bz)?;
+        let (version, message_type) = {
+            let header = &eth_abi_message.header;
             if header.len() != MESSAGE_HEADER_SIZE {
-                return Err(Error::invalid_commitment_header(format!(
+                return Err(Error::invalid_message_header(format!(
                     "invalid header length: expected={MESSAGE_HEADER_SIZE} actual={} header={:?}",
                     header.len(),
-                    eth_abi_commitment.header
+                    eth_abi_message.header
                 )));
             }
             let mut version = [0u8; 2];
@@ -167,18 +167,18 @@ impl EthABIEncoder for Message {
             )
         };
         if version != MESSAGE_SCHEMA_VERSION {
-            return Err(Error::invalid_commitment_header(format!(
+            return Err(Error::invalid_message_header(format!(
                 "invalid version: expected={} actual={} header={:?}",
-                MESSAGE_SCHEMA_VERSION, version, eth_abi_commitment.header
+                MESSAGE_SCHEMA_VERSION, version, eth_abi_message.header
             )));
         }
-        let message = eth_abi_commitment.message;
-        match commitment_type {
+        let message = eth_abi_message.message;
+        match message_type {
             MESSAGE_TYPE_UPDATE_CLIENT => Ok(UpdateClientMessage::ethabi_decode(&message)?.into()),
             MESSAGE_TYPE_STATE => Ok(VerifyMembershipMessage::ethabi_decode(&message)?.into()),
             _ => Err(Error::invalid_abi(format!(
-                "invalid commitment type: {}",
-                commitment_type
+                "invalid message type: {}",
+                message_type
             ))),
         }
     }
@@ -210,7 +210,7 @@ mod tests {
         Height::new(tuple.0, tuple.1)
     }
 
-    fn test_update_client_commitment(
+    fn test_update_client_message(
         c1: UpdateClientMessage,
         proof_signer: Address,
         proof_signature: Vec<u8>,
@@ -232,7 +232,7 @@ mod tests {
 
     proptest! {
         #[test]
-        fn pt_update_client_commitment_with_empty_context(
+        fn pt_update_client_message_with_empty_context(
             prev_height in any::<Option<(u64, u64)>>().prop_map(|v| v.map(height_from_tuple)),
             prev_state_id in any::<Option<[u8; 32]>>().prop_map(|v| v.map(StateID::from)),
             post_height in any::<(u64, u64)>().prop_map(height_from_tuple),
@@ -253,11 +253,11 @@ mod tests {
                 timestamp: Time::from_unix_timestamp_nanos(timestamp).unwrap(),
                 context: Default::default(),
             };
-            test_update_client_commitment(c1, Address(proof_signer), proof_signature.to_vec());
+            test_update_client_message(c1, Address(proof_signer), proof_signature.to_vec());
         }
 
         #[test]
-        fn pt_update_client_commitment_with_trusting_period_context(
+        fn pt_update_client_message_with_trusting_period_context(
             prev_height in any::<Option<(u64, u64)>>().prop_map(|v| v.map(height_from_tuple)),
             prev_state_id in any::<Option<[u8; 32]>>().prop_map(|v| v.map(StateID::from)),
             post_height in any::<(u64, u64)>().prop_map(height_from_tuple),
@@ -287,11 +287,11 @@ mod tests {
                     Time::from_unix_timestamp_nanos(trusted_state_timestamp).unwrap(),
                 ).into(),
             };
-            test_update_client_commitment(c1, Address(proof_signer), proof_signature.to_vec());
+            test_update_client_message(c1, Address(proof_signer), proof_signature.to_vec());
         }
 
         #[test]
-        fn pt_state_commitment(
+        fn pt_verify_membership(
             prefix in any::<CommitmentPrefix>(),
             path in any::<String>(),
             value in any::<Option<[u8; 32]>>(),

@@ -397,7 +397,7 @@ mod tests {
             res.unwrap()
         };
 
-        // 5. on the downstream side, updates LCP Light Client's state with the commitment from the LCP
+        // 5. on the downstream side, updates LCP Light Client's state with the message from the ELC
         {
             let header = ClientMessage::UpdateClient(UpdateClientMessage {
                 elc_message: proof1.message().unwrap().try_into().unwrap(),

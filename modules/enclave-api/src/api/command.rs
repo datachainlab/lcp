@@ -109,7 +109,7 @@ pub trait EnclaveCommandAPI<S: CommitStore>: EnclavePrimitiveAPI<S> {
         }
     }
 
-    /// verify_membership verifies the existence of the state in the upstream chain and generates the state commitment of its result
+    /// verify_membership verifies the existence of the state in the upstream chain and generates a message that represents membership of value in the state
     fn verify_membership(&self, input: VerifyMembershipInput) -> Result<VerifyMembershipResult> {
         match self.execute_command(
             Command::LightClient(LightClientCommand::Execute(
@@ -122,7 +122,7 @@ pub trait EnclaveCommandAPI<S: CommitStore>: EnclavePrimitiveAPI<S> {
         }
     }
 
-    /// verify_non_membership verifies the non-existence of the state in the upstream chain and generates the state commitment of its result
+    /// verify_non_membership verifies the non-existence of the state in the upstream chain and generates a message that represents non-membership of value in the state
     fn verify_non_membership(
         &self,
         input: VerifyNonMembershipInput,

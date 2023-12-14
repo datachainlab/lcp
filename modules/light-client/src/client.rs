@@ -82,12 +82,12 @@ pub struct UpdateClientResult {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct VerifyMembershipResult {
-    /// state commitment represents a result of the state verification
+    /// message represents a result of the state verification
     pub message: Message,
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct VerifyNonMembershipResult {
-    /// state commitment represents a result of the state verification
+    /// message represents a result of the state verification
     pub message: Message,
 }
