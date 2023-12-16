@@ -22,11 +22,8 @@ pub fn update_client<R: LightClientResolver, S: KVStore, K: Signer>(
 
     let message: Message = {
         let mut msg = UpdateClientMessage::try_from(res.message)?;
-        if input.include_state && !msg.emitted_states.is_empty() {
-            msg.emitted_states = vec![EmittedState(
-                res.height,
-                res.new_any_consensus_state.clone(),
-            )];
+        if input.include_state && msg.emitted_states.is_empty() {
+            msg.emitted_states = vec![EmittedState(res.height, res.new_any_client_state.clone())];
         }
         msg.into()
     };

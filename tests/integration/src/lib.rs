@@ -180,6 +180,7 @@ mod tests {
         assert!(res.0.is_proven());
 
         let msg: UpdateClientMessage = res.0.message().unwrap().try_into()?;
+        assert!(msg.emitted_states.len() == 1);
         let height = msg.post_height;
 
         info!("current height is {}", height);
