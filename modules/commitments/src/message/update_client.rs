@@ -5,6 +5,7 @@ use crate::prelude::*;
 use crate::{Error, StateID};
 use core::fmt::Display;
 use lcp_types::{Any, Height, Time};
+use prost::Message;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -20,6 +21,17 @@ pub struct UpdateClientMessage {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct EmittedState(pub Height, pub Any);
+
+impl Display for EmittedState {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(
+            f,
+            "EmittedState(height: {}, state: {})",
+            self.0,
+            hex::encode(self.1.encode_to_vec())
+        )
+    }
+}
 
 impl UpdateClientMessage {
     pub fn aggregate(self, other: Self) -> Result<Self, Error> {
@@ -53,14 +65,14 @@ impl Display for UpdateClientMessage {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(
             f,
-            "UpdateClient(prev_height: {}, prev_state_id: {}, post_height: {}, post_state_id: {}, timestamp: {}, context: {}, emitted_states: {})",
+            "UpdateClient(prev_height: {}, prev_state_id: {}, post_height: {}, post_state_id: {}, timestamp: {}, context: {}, emitted_states: [{}])",
             self.prev_height.as_ref().map_or("None".to_string(), |h| h.to_string()),
             self.prev_state_id.as_ref().map_or("None".to_string(), |id| id.to_string()),
             self.post_height,
             self.post_state_id,
-            self.timestamp,
+            self.timestamp.as_unix_timestamp_nanos(),
             self.context,
-            self.emitted_states.len(),
+            self.emitted_states.iter().map(|v| v.to_string()).collect::<Vec<_>>().join(", ")
         )
     }
 }

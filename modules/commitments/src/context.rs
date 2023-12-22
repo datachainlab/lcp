@@ -272,7 +272,7 @@ impl Display for TrustingPeriodContext {
         write!(
             f,
             "trusting_period={} clock_drift={} untrusted_header_timestamp={} trusted_state_timestamp={}",
-            self.trusting_period.as_secs(), self.clock_drift.as_secs(), self.untrusted_header_timestamp, self.trusted_state_timestamp
+            self.trusting_period.as_nanos(), self.clock_drift.as_nanos(), self.untrusted_header_timestamp.as_unix_timestamp_nanos(), self.trusted_state_timestamp.as_unix_timestamp_nanos()
         )
     }
 }
