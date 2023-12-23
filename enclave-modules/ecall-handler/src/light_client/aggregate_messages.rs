@@ -5,7 +5,7 @@ use crypto::{EnclavePublicKey, Signer, Verifier};
 use ecall_commands::{AggregateMessagesInput, AggregateMessagesResult, LightClientResult};
 use light_client::{
     commitments::{self, prove_commitment, Message, UpdateClientMessage},
-    LightClientResolver,
+    HostContext, LightClientResolver,
 };
 use store::KVStore;
 
@@ -38,6 +38,7 @@ pub fn aggregate_messages<R: LightClientResolver, S: KVStore, K: Signer>(
         .zip(input.signatures.iter())
         .map(|(c, s)| -> Result<_, Error> {
             verify_commitment(&pk, &c, s)?;
+            c.context.validate(ctx.host_timestamp())?;
             Ok(c)
         })
         .collect::<Result<Vec<_>, _>>()?;
