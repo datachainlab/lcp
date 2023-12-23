@@ -196,11 +196,8 @@ mod tests {
                 PortId::from_str("transfer")?,
                 ChannelId::from_str("channel-0")?,
             );
-            let res = rly.query_channel_proof(
-                port_id.clone(),
-                channel_id.clone(),
-                Some(last_height.into()),
-            )?;
+            let res =
+                rly.query_channel_proof(port_id.clone(), channel_id.clone(), Some(last_height))?;
 
             info!("expected channel is {:?}", res.0);
 
@@ -249,7 +246,7 @@ mod tests {
             let msg: UpdateClientMessage = res.0.message().unwrap().try_into()?;
             assert!(msg.prev_height == Some(Height::from(last_height)));
             assert!(msg.post_height == Height::from(lh));
-            assert!(msg.emitted_states.len() == 0);
+            assert!(msg.emitted_states.is_empty());
             lh
         };
         info!("current last_height is {}", last_height);
