@@ -12,18 +12,21 @@ mod tests {
     use anyhow::{anyhow, bail};
     use commitments::UpdateClientMessage;
     use ecall_commands::{
-        CommitmentProofPair, GenerateEnclaveKeyInput, InitClientInput, UpdateClientInput,
-        VerifyMembershipInput,
+        AggregateMessagesInput, CommitmentProofPair, GenerateEnclaveKeyInput, InitClientInput,
+        UpdateClientInput, VerifyMembershipInput,
     };
     use enclave_api::{Enclave, EnclaveCommandAPI};
     use host_environment::Environment;
-    use ibc::core::{
-        ics23_commitment::{commitment::CommitmentProofBytes, merkle::MerkleProof},
-        ics24_host::{
-            identifier::{ChannelId, PortId},
-            path::ChannelEndPath,
-            Path,
+    use ibc::{
+        core::{
+            ics23_commitment::{commitment::CommitmentProofBytes, merkle::MerkleProof},
+            ics24_host::{
+                identifier::{ChannelId, PortId},
+                path::ChannelEndPath,
+                Path,
+            },
         },
+        Height as IBCHeight,
     };
     use ibc_test_framework::prelude::{
         run_binary_channel_test, BinaryChannelTest, ChainHandle, Config, ConnectedChains,
@@ -31,10 +34,10 @@ mod tests {
     };
     use keymanager::EnclaveKeyManager;
     use lcp_proto::protobuf::Protobuf;
-    use lcp_types::Time;
+    use lcp_types::{Height, Time};
     use log::*;
-    use std::str::FromStr;
     use std::sync::{Arc, RwLock};
+    use std::{ops::Add, str::FromStr, time::Duration};
     use store::{host::HostStore, memory::MemStore};
     use tempfile::TempDir;
     use tokio::runtime::Runtime as TokioRuntime;
@@ -144,71 +147,124 @@ mod tests {
             };
         }
 
-        // XXX use non-latest height here
-        let initial_height = rly
-            .query_latest_height()?
-            .decrement()?
-            .decrement()?
-            .decrement()?;
+        let (client_id, last_height) = {
+            // XXX use non-latest height here
+            let initial_height = rly.query_latest_height()?.decrement()?.decrement()?;
 
-        let (client_state, consensus_state) = rly.fetch_state_as_any(initial_height)?;
-        info!(
-            "initial_height: {:?} client_state: {:?}, consensus_state: {:?}",
-            initial_height, client_state, consensus_state
-        );
+            let (client_state, consensus_state) = rly.fetch_state_as_any(initial_height)?;
+            info!(
+                "initial_height: {:?} client_state: {:?}, consensus_state: {:?}",
+                initial_height, client_state, consensus_state
+            );
 
-        let res = enclave.init_client(InitClientInput {
-            any_client_state: client_state,
-            any_consensus_state: consensus_state,
-            current_timestamp: Time::now(),
-            signer,
-        })?;
-        assert!(!res.proof.is_proven());
-        let client_id = res.client_id;
+            let res = enclave.init_client(InitClientInput {
+                any_client_state: client_state,
+                any_consensus_state: consensus_state,
+                current_timestamp: Time::now(),
+                signer,
+            })?;
+            assert!(!res.proof.is_proven());
+            let client_id = res.client_id;
 
-        info!("generated client id is {}", client_id.as_str().to_string());
+            (client_id, initial_height)
+        };
+        info!("generated client: id={} height={}", client_id, last_height);
 
-        let target_header = rly.create_header(initial_height, initial_height.increment())?;
-        let res = enclave.update_client(UpdateClientInput {
-            client_id: client_id.clone(),
-            any_header: target_header,
-            current_timestamp: Time::now(),
-            include_state: true,
-            signer,
-        })?;
-        info!("update_client's result is {:?}", res);
-        assert!(res.0.is_proven());
+        let last_height = {
+            let post_height = last_height.increment();
+            let target_header = rly.create_header(last_height, post_height)?;
+            let res = enclave.update_client(UpdateClientInput {
+                client_id: client_id.clone(),
+                any_header: target_header,
+                current_timestamp: Time::now(),
+                include_state: true,
+                signer,
+            })?;
+            info!("update_client's result is {:?}", res);
+            assert!(res.0.is_proven());
 
-        let msg: UpdateClientMessage = res.0.message().unwrap().try_into()?;
-        let height = msg.post_height;
+            let msg: UpdateClientMessage = res.0.message().unwrap().try_into()?;
+            assert!(msg.prev_height == Some(Height::from(last_height)));
+            assert!(msg.post_height == Height::from(post_height));
+            assert!(msg.emitted_states.len() == 1);
+            post_height
+        };
+        info!("current last_height is {}", last_height);
 
-        info!("current height is {}", height);
+        {
+            let (port_id, channel_id) = (
+                PortId::from_str("transfer")?,
+                ChannelId::from_str("channel-0")?,
+            );
+            let res =
+                rly.query_channel_proof(port_id.clone(), channel_id.clone(), Some(last_height))?;
 
-        let (port_id, channel_id) = (
-            PortId::from_str("transfer")?,
-            ChannelId::from_str("channel-0")?,
-        );
-        let res = rly.query_channel_proof(
-            port_id.clone(),
-            channel_id.clone(),
-            Some(height.try_into().map_err(|e| anyhow!("{:?}", e))?),
-        )?;
+            info!("expected channel is {:?}", res.0);
 
-        info!("expected channel is {:?}", res.0);
+            let _ = enclave.verify_membership(VerifyMembershipInput {
+                client_id: client_id.clone(),
+                prefix: "ibc".into(),
+                path: Path::ChannelEnd(ChannelEndPath(port_id, channel_id)).to_string(),
+                value: res.0.encode_vec()?,
+                proof: CommitmentProofPair(
+                    res.2.try_into().map_err(|e| anyhow!("{:?}", e))?,
+                    merkle_proof_to_bytes(res.1)?,
+                ),
+                signer,
+            })?;
+        }
 
-        let _ = enclave.verify_membership(VerifyMembershipInput {
-            client_id,
-            prefix: "ibc".into(),
-            path: Path::ChannelEnd(ChannelEndPath(port_id, channel_id)).to_string(),
-            value: res.0.encode_vec()?,
-            proof: CommitmentProofPair(
-                res.2.try_into().map_err(|e| anyhow!("{:?}", e))?,
-                merkle_proof_to_bytes(res.1)?,
-            ),
-            signer,
-        })?;
+        let last_height = {
+            let mut lh = last_height;
+            let mut proofs = vec![];
+            for _ in 0..10 {
+                let target_height = wait_block_advance(&mut rly)?;
+                let target_header = rly.create_header(lh, target_height)?;
+                let res = enclave.update_client(UpdateClientInput {
+                    client_id: client_id.clone(),
+                    any_header: target_header,
+                    current_timestamp: Time::now().add(Duration::from_secs(10))?, // for gaiad's clock drift
+                    include_state: false,
+                    signer,
+                })?;
+                info!("update_client's result is {:?}", res);
+                lh = target_height;
+                proofs.push(res.0);
+            }
+            let messages = proofs
+                .iter()
+                .map(|p| p.message().map(|m| m.to_bytes()))
+                .collect::<Result<_, _>>()?;
+            let signatures = proofs.into_iter().map(|p| p.signature).collect();
+
+            let res = enclave.aggregate_messages(AggregateMessagesInput {
+                messages,
+                signatures,
+                signer,
+                current_timestamp: Time::now().add(Duration::from_secs(10))?,
+            })?;
+            let msg: UpdateClientMessage = res.0.message().unwrap().try_into()?;
+            assert!(msg.prev_height == Some(Height::from(last_height)));
+            assert!(msg.post_height == Height::from(lh));
+            assert!(msg.emitted_states.is_empty());
+            lh
+        };
+        info!("current last_height is {}", last_height);
 
         Ok(())
+    }
+
+    fn wait_block_advance(rly: &mut Relayer) -> Result<IBCHeight, anyhow::Error> {
+        let mut height = rly.query_latest_height()?;
+        loop {
+            let next_height = rly.query_latest_height()?;
+            if next_height > height {
+                height = next_height;
+                break;
+            }
+            std::thread::sleep(std::time::Duration::from_secs(1));
+        }
+        Ok(height)
     }
 
     fn merkle_proof_to_bytes(proof: MerkleProof) -> Result<Vec<u8>, anyhow::Error> {

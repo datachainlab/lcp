@@ -331,6 +331,28 @@ pub struct MsgUpdateClientResponse {
 #[derive(::serde::Serialize, ::serde::Deserialize)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
+pub struct MsgAggregateMessages {
+    #[prost(bytes = "vec", tag = "1")]
+    pub signer: ::prost::alloc::vec::Vec<u8>,
+    #[prost(bytes = "vec", repeated, tag = "2")]
+    pub messages: ::prost::alloc::vec::Vec<::prost::alloc::vec::Vec<u8>>,
+    #[prost(bytes = "vec", repeated, tag = "3")]
+    pub signatures: ::prost::alloc::vec::Vec<::prost::alloc::vec::Vec<u8>>,
+}
+#[derive(::serde::Serialize, ::serde::Deserialize)]
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct MsgAggregateMessagesResponse {
+    #[prost(bytes = "vec", tag = "1")]
+    pub message: ::prost::alloc::vec::Vec<u8>,
+    #[prost(bytes = "vec", tag = "2")]
+    pub signer: ::prost::alloc::vec::Vec<u8>,
+    #[prost(bytes = "vec", tag = "3")]
+    pub signature: ::prost::alloc::vec::Vec<u8>,
+}
+#[derive(::serde::Serialize, ::serde::Deserialize)]
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct MsgVerifyMembership {
     #[prost(string, tag = "1")]
     pub client_id: ::prost::alloc::string::String,
@@ -503,6 +525,29 @@ pub mod msg_client {
             );
             self.inner.unary(request.into_request(), path, codec).await
         }
+        /// AggregateMessages defines a rpc handler method for MsgAggregateMessages
+        pub async fn aggregate_messages(
+            &mut self,
+            request: impl tonic::IntoRequest<super::MsgAggregateMessages>,
+        ) -> Result<
+            tonic::Response<super::MsgAggregateMessagesResponse>,
+            tonic::Status,
+        > {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::new(
+                        tonic::Code::Unknown,
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/lcp.service.elc.v1.Msg/AggregateMessages",
+            );
+            self.inner.unary(request.into_request(), path, codec).await
+        }
         /// VerifyMembership defines a rpc handler method for MsgVerifyMembership
         pub async fn verify_membership(
             &mut self,
@@ -566,6 +611,11 @@ pub mod msg_server {
             &self,
             request: tonic::Request<super::MsgUpdateClient>,
         ) -> Result<tonic::Response<super::MsgUpdateClientResponse>, tonic::Status>;
+        /// AggregateMessages defines a rpc handler method for MsgAggregateMessages
+        async fn aggregate_messages(
+            &self,
+            request: tonic::Request<super::MsgAggregateMessages>,
+        ) -> Result<tonic::Response<super::MsgAggregateMessagesResponse>, tonic::Status>;
         /// VerifyMembership defines a rpc handler method for MsgVerifyMembership
         async fn verify_membership(
             &self,
@@ -705,6 +755,44 @@ pub mod msg_server {
                     let fut = async move {
                         let inner = inner.0;
                         let method = UpdateClientSvc(inner);
+                        let codec = tonic::codec::ProstCodec::default();
+                        let mut grpc = tonic::server::Grpc::new(codec)
+                            .apply_compression_config(
+                                accept_compression_encodings,
+                                send_compression_encodings,
+                            );
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
+                "/lcp.service.elc.v1.Msg/AggregateMessages" => {
+                    #[allow(non_camel_case_types)]
+                    struct AggregateMessagesSvc<T: Msg>(pub Arc<T>);
+                    impl<T: Msg> tonic::server::UnaryService<super::MsgAggregateMessages>
+                    for AggregateMessagesSvc<T> {
+                        type Response = super::MsgAggregateMessagesResponse;
+                        type Future = BoxFuture<
+                            tonic::Response<Self::Response>,
+                            tonic::Status,
+                        >;
+                        fn call(
+                            &mut self,
+                            request: tonic::Request<super::MsgAggregateMessages>,
+                        ) -> Self::Future {
+                            let inner = self.0.clone();
+                            let fut = async move {
+                                (*inner).aggregate_messages(request).await
+                            };
+                            Box::pin(fut)
+                        }
+                    }
+                    let accept_compression_encodings = self.accept_compression_encodings;
+                    let send_compression_encodings = self.send_compression_encodings;
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let inner = inner.0;
+                        let method = AggregateMessagesSvc(inner);
                         let codec = tonic::codec::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(

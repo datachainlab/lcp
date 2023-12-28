@@ -95,6 +95,22 @@ define_error! {
             format_args!("not truncated timestamp: timestamp_nanos={}", e.timestamp_nanos)
         },
 
+        MessageAggregationFailed
+        {
+            descr: String
+        }
+        |e| {
+            format_args!("message aggregation failed: descr={}", e.descr)
+        },
+
+        ContextAggregationFailed
+        {
+            descr: String
+        }
+        |e| {
+            format_args!("context aggregation failed: descr={}", e.descr)
+        },
+
         LcpType
         {}
         [lcp_types::TypeError]

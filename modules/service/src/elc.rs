@@ -1,10 +1,10 @@
 use crate::service::AppService;
 use enclave_api::EnclaveProtoAPI;
 use lcp_proto::lcp::service::elc::v1::{
-    msg_server::Msg, query_server::Query, MsgCreateClient, MsgCreateClientResponse,
-    MsgUpdateClient, MsgUpdateClientResponse, MsgVerifyMembership, MsgVerifyMembershipResponse,
-    MsgVerifyNonMembership, MsgVerifyNonMembershipResponse, QueryClientRequest,
-    QueryClientResponse,
+    msg_server::Msg, query_server::Query, MsgAggregateMessages, MsgAggregateMessagesResponse,
+    MsgCreateClient, MsgCreateClientResponse, MsgUpdateClient, MsgUpdateClientResponse,
+    MsgVerifyMembership, MsgVerifyMembershipResponse, MsgVerifyNonMembership,
+    MsgVerifyNonMembershipResponse, QueryClientRequest, QueryClientResponse,
 };
 use store::transaction::CommitStore;
 use tonic::{Request, Response, Status};
@@ -30,6 +30,16 @@ where
         request: Request<MsgUpdateClient>,
     ) -> Result<Response<MsgUpdateClientResponse>, Status> {
         match self.enclave.proto_update_client(request.into_inner()) {
+            Ok(res) => Ok(Response::new(res)),
+            Err(e) => Err(Status::aborted(e.to_string())),
+        }
+    }
+
+    async fn aggregate_messages(
+        &self,
+        request: Request<MsgAggregateMessages>,
+    ) -> Result<Response<MsgAggregateMessagesResponse>, Status> {
+        match self.enclave.proto_aggregate_messages(request.into_inner()) {
             Ok(res) => Ok(Response::new(res)),
             Err(e) => Err(Status::aborted(e.to_string())),
         }

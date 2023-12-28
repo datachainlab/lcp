@@ -1,5 +1,6 @@
 use crate::light_client::{
-    init_client, query_client, update_client, verify_membership, verify_non_membership, Error,
+    aggregate_messages, init_client, query_client, update_client, verify_membership,
+    verify_non_membership, Error,
 };
 use context::Context;
 use crypto::NopSigner;
@@ -25,6 +26,7 @@ pub fn dispatch<E: Env>(
             match cmd {
                 InitClient(input) => init_client(&mut ctx, input)?,
                 UpdateClient(input) => update_client(&mut ctx, input)?,
+                AggregateMessages(input) => aggregate_messages(&mut ctx, input)?,
                 VerifyMembership(input) => verify_membership(&mut ctx, input)?,
                 VerifyNonMembership(input) => verify_non_membership(&mut ctx, input)?,
             }

@@ -1,11 +1,12 @@
 use crate::{EnclavePrimitiveAPI, Result};
 use ecall_commands::{
-    Command, CommandResult, EnclaveManageCommand, EnclaveManageResult, GenerateEnclaveKeyInput,
-    GenerateEnclaveKeyResult, IASRemoteAttestationInput, IASRemoteAttestationResult,
-    InitClientInput, InitClientResult, LightClientCommand, LightClientExecuteCommand,
-    LightClientQueryCommand, LightClientResult, QueryClientInput, QueryClientResult,
-    UpdateClientInput, UpdateClientResult, VerifyMembershipInput, VerifyMembershipResult,
-    VerifyNonMembershipInput, VerifyNonMembershipResult,
+    AggregateMessagesInput, AggregateMessagesResult, Command, CommandResult, EnclaveManageCommand,
+    EnclaveManageResult, GenerateEnclaveKeyInput, GenerateEnclaveKeyResult,
+    IASRemoteAttestationInput, IASRemoteAttestationResult, InitClientInput, InitClientResult,
+    LightClientCommand, LightClientExecuteCommand, LightClientQueryCommand, LightClientResult,
+    QueryClientInput, QueryClientResult, UpdateClientInput, UpdateClientResult,
+    VerifyMembershipInput, VerifyMembershipResult, VerifyNonMembershipInput,
+    VerifyNonMembershipResult,
 };
 use store::transaction::CommitStore;
 
@@ -105,6 +106,18 @@ pub trait EnclaveCommandAPI<S: CommitStore>: EnclavePrimitiveAPI<S> {
             update_key,
         )? {
             CommandResult::LightClient(LightClientResult::UpdateClient(res)) => Ok(res),
+            _ => unreachable!(),
+        }
+    }
+
+    fn aggregate_messages(&self, input: AggregateMessagesInput) -> Result<AggregateMessagesResult> {
+        match self.execute_command(
+            Command::LightClient(LightClientCommand::Execute(
+                LightClientExecuteCommand::AggregateMessages(input),
+            )),
+            None,
+        )? {
+            CommandResult::LightClient(LightClientResult::AggregateMessages(res)) => Ok(res),
             _ => unreachable!(),
         }
     }

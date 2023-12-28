@@ -1,9 +1,10 @@
 use super::command::EnclaveCommandAPI;
 use crate::Result;
 use lcp_proto::lcp::service::elc::v1::{
-    MsgCreateClient, MsgCreateClientResponse, MsgUpdateClient, MsgUpdateClientResponse,
-    MsgVerifyMembership, MsgVerifyMembershipResponse, MsgVerifyNonMembership,
-    MsgVerifyNonMembershipResponse, QueryClientRequest, QueryClientResponse,
+    MsgAggregateMessages, MsgAggregateMessagesResponse, MsgCreateClient, MsgCreateClientResponse,
+    MsgUpdateClient, MsgUpdateClientResponse, MsgVerifyMembership, MsgVerifyMembershipResponse,
+    MsgVerifyNonMembership, MsgVerifyNonMembershipResponse, QueryClientRequest,
+    QueryClientResponse,
 };
 use log::*;
 use store::transaction::CommitStore;
@@ -27,6 +28,15 @@ pub trait EnclaveProtoAPI<S: CommitStore>: EnclaveCommandAPI<S> {
             client_id,
             res.0.message()?
         );
+        Ok(res.into())
+    }
+
+    fn proto_aggregate_messages(
+        &self,
+        msg: MsgAggregateMessages,
+    ) -> Result<MsgAggregateMessagesResponse> {
+        let res = self.aggregate_messages(msg.try_into()?)?;
+        info!("aggregate_commitments: message={{{}}}", res.0.message()?);
         Ok(res.into())
     }
 
