@@ -35,11 +35,12 @@ impl<S: CommitStore> Enclave<S> {
 
     pub fn create(
         path: impl Into<PathBuf>,
+        debug: bool,
         key_manager: EnclaveKeyManager,
         store: Arc<RwLock<HostStore>>,
     ) -> SgxResult<Self> {
         let path = path.into();
-        let enclave = host::create_enclave(path.clone())?;
+        let enclave = host::create_enclave(path.clone(), debug)?;
         Ok(Self::new(path, key_manager, store, enclave))
     }
 

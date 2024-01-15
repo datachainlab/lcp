@@ -1,4 +1,4 @@
-use crate::opts::Opts;
+use crate::opts::{EnclaveOpts, Opts};
 use anyhow::Result;
 use clap::Parser;
 use enclave_api::{Enclave, EnclaveProtoAPI};
@@ -18,9 +18,9 @@ pub enum ServiceCmd {
 
 #[derive(Clone, Debug, Parser, PartialEq)]
 pub struct Start {
-    /// Path to the enclave binary
-    #[clap(long = "enclave", help = "Path to enclave binary")]
-    pub enclave: Option<PathBuf>,
+    /// Options for enclave
+    #[clap(flatten)]
+    pub enclave: EnclaveOpts,
     /// Address of the App service
     #[clap(
         long = "address",
@@ -41,7 +41,7 @@ impl ServiceCmd {
     pub fn run<S>(
         &self,
         opts: &Opts,
-        enclave_loader: impl FnOnce(&Opts, Option<&PathBuf>) -> Result<Enclave<S>>,
+        enclave_loader: impl FnOnce(&Opts, Option<&PathBuf>, bool) -> Result<Enclave<S>>,
     ) -> Result<()>
     where
         S: CommitStore + 'static,
@@ -50,7 +50,7 @@ impl ServiceCmd {
         match self {
             Self::Start(cmd) => {
                 let addr = cmd.address.parse()?;
-                let enclave = enclave_loader(opts, cmd.enclave.as_ref())?;
+                let enclave = enclave_loader(opts, cmd.enclave.path.as_ref(), cmd.enclave.debug)?;
 
                 let mut rb = Builder::new_multi_thread();
                 let rb = if let Some(threads) = cmd.threads {

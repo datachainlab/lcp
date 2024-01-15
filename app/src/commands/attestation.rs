@@ -1,4 +1,4 @@
-use crate::opts::Opts;
+use crate::opts::{EnclaveOpts, Opts};
 use anyhow::{bail, Result};
 use clap::Parser;
 use crypto::Address;
@@ -22,7 +22,7 @@ impl AttestationCmd {
     pub fn run<S>(
         &self,
         opts: &Opts,
-        enclave_loader: impl FnOnce(&Opts, Option<&PathBuf>) -> Result<Enclave<S>>,
+        enclave_loader: impl FnOnce(&Opts, Option<&PathBuf>, bool) -> Result<Enclave<S>>,
     ) -> Result<()>
     where
         S: CommitStore,
@@ -34,14 +34,20 @@ impl AttestationCmd {
                 if !home.exists() {
                     bail!("home directory doesn't exist at {:?}", home);
                 }
-                run_ias_remote_attestation(enclave_loader(opts, cmd.enclave.as_ref())?, cmd)
+                run_ias_remote_attestation(
+                    enclave_loader(opts, cmd.enclave.path.as_ref(), cmd.enclave.debug)?,
+                    cmd,
+                )
             }
             #[cfg(feature = "sgx-sw")]
             AttestationCmd::Simulate(cmd) => {
                 if !home.exists() {
                     bail!("home directory doesn't exist at {:?}", home);
                 }
-                run_simulate_remote_attestation(enclave_loader(opts, cmd.enclave.as_ref())?, cmd)
+                run_simulate_remote_attestation(
+                    enclave_loader(opts, cmd.enclave.path.as_ref(), cmd.enclave.debug)?,
+                    cmd,
+                )
             }
         }
     }
@@ -49,10 +55,9 @@ impl AttestationCmd {
 
 #[derive(Clone, Debug, Parser, PartialEq)]
 pub struct IASRemoteAttestation {
-    /// Path to the enclave binary
-    #[clap(long = "enclave", help = "Path to the enclave binary")]
-    pub enclave: Option<PathBuf>,
-
+    /// Options for enclave
+    #[clap(flatten)]
+    pub enclave: EnclaveOpts,
     /// An enclave key attested by Remote Attestation
     #[clap(
         long = "enclave_key",
@@ -81,9 +86,9 @@ fn run_ias_remote_attestation<E: EnclaveCommandAPI<S>, S: CommitStore>(
 #[cfg(feature = "sgx-sw")]
 #[derive(Clone, Debug, Parser, PartialEq)]
 pub struct SimulateRemoteAttestation {
-    /// Path to the enclave binary
-    #[clap(long = "enclave", help = "Path to the enclave binary")]
-    pub enclave: Option<PathBuf>,
+    /// Options for enclave
+    #[clap(flatten)]
+    pub enclave: EnclaveOpts,
 
     /// An enclave key attested by Remote Attestation
     #[clap(

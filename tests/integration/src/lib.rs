@@ -81,7 +81,7 @@ mod tests {
 
         let env = host::get_environment().unwrap();
         let km = EnclaveKeyManager::new(&env.home).unwrap();
-        let enclave = Enclave::create(ENCLAVE_FILE, km, env.store.clone()).unwrap();
+        let enclave = Enclave::create(ENCLAVE_FILE, false, km, env.store.clone()).unwrap();
 
         match std::env::var(ENV_SETUP_NODES).map(|v| v.to_lowercase()) {
             Ok(v) if v == "false" => run_test(&enclave).unwrap(),

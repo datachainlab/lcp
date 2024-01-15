@@ -6,11 +6,11 @@ use std::path::PathBuf;
 use store::transaction::CommitStore;
 
 pub(crate) fn build_enclave_loader<S: CommitStore>(
-) -> impl FnOnce(&Opts, Option<&PathBuf>) -> Result<Enclave<S>>
+) -> impl FnOnce(&Opts, Option<&PathBuf>, bool) -> Result<Enclave<S>>
 where
     Enclave<S>: EnclaveProtoAPI<S>,
 {
-    |opts, path| {
+    |opts, path, debug| {
         let path = if let Some(path) = path {
             path.clone()
         } else {
@@ -18,7 +18,7 @@ where
         };
         let env = host::get_environment().unwrap();
         let km = EnclaveKeyManager::new(&env.home)?;
-        match Enclave::create(&path, km, env.store.clone()) {
+        match Enclave::create(&path, debug, km, env.store.clone()) {
             Ok(enclave) => Ok(enclave),
             Err(x) => {
                 bail!(
