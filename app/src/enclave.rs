@@ -5,12 +5,18 @@ use keymanager::EnclaveKeyManager;
 use std::path::PathBuf;
 use store::transaction::CommitStore;
 
-pub(crate) fn build_enclave_loader<S: CommitStore>(
-) -> impl FnOnce(&Opts, Option<&PathBuf>, bool) -> Result<Enclave<S>>
+pub trait EnclaveLoader<S: CommitStore> {
+    fn load(&self, opts: &Opts, path: Option<&PathBuf>, debug: bool) -> Result<Enclave<S>>;
+}
+
+#[derive(Debug)]
+pub struct DefaultEnclaveLoader<S: CommitStore>(std::marker::PhantomData<S>);
+
+impl<S: CommitStore> EnclaveLoader<S> for DefaultEnclaveLoader<S>
 where
     Enclave<S>: EnclaveProtoAPI<S>,
 {
-    |opts, path, debug| {
+    fn load(&self, opts: &Opts, path: Option<&PathBuf>, debug: bool) -> Result<Enclave<S>> {
         let path = if let Some(path) = path {
             path.clone()
         } else {
@@ -29,4 +35,11 @@ where
             }
         }
     }
+}
+
+pub const fn build_enclave_loader<S: CommitStore>() -> DefaultEnclaveLoader<S>
+where
+    Enclave<S>: EnclaveProtoAPI<S>,
+{
+    DefaultEnclaveLoader(std::marker::PhantomData)
 }

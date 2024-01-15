@@ -1,10 +1,12 @@
-use crate::opts::{EnclaveOpts, Opts};
+use crate::{
+    enclave::EnclaveLoader,
+    opts::{EnclaveOpts, Opts},
+};
 use anyhow::{bail, Result};
 use clap::Parser;
 use crypto::Address;
 use ecall_commands::IASRemoteAttestationInput;
 use enclave_api::{Enclave, EnclaveCommandAPI, EnclaveProtoAPI};
-use std::path::PathBuf;
 use store::transaction::CommitStore;
 
 /// `attestation` subcommand
@@ -19,14 +21,11 @@ pub enum AttestationCmd {
 }
 
 impl AttestationCmd {
-    pub fn run<S>(
-        &self,
-        opts: &Opts,
-        enclave_loader: impl FnOnce(&Opts, Option<&PathBuf>, bool) -> Result<Enclave<S>>,
-    ) -> Result<()>
+    pub fn run<S, L>(&self, opts: &Opts, enclave_loader: L) -> Result<()>
     where
         S: CommitStore,
         Enclave<S>: EnclaveProtoAPI<S>,
+        L: EnclaveLoader<S>,
     {
         let home = opts.get_home();
         match self {
@@ -35,7 +34,7 @@ impl AttestationCmd {
                     bail!("home directory doesn't exist at {:?}", home);
                 }
                 run_ias_remote_attestation(
-                    enclave_loader(opts, cmd.enclave.path.as_ref(), cmd.enclave.debug)?,
+                    enclave_loader.load(opts, cmd.enclave.path.as_ref(), cmd.enclave.debug)?,
                     cmd,
                 )
             }
@@ -45,7 +44,7 @@ impl AttestationCmd {
                     bail!("home directory doesn't exist at {:?}", home);
                 }
                 run_simulate_remote_attestation(
-                    enclave_loader(opts, cmd.enclave.path.as_ref(), cmd.enclave.debug)?,
+                    enclave_loader.load(opts, cmd.enclave.path.as_ref(), cmd.enclave.debug)?,
                     cmd,
                 )
             }
@@ -102,14 +101,14 @@ pub struct SimulateRemoteAttestation {
         long = "signing_cert_path",
         help = "Path to a der-encoded file that contains X.509 certificate"
     )]
-    pub signing_cert_path: PathBuf,
+    pub signing_cert_path: std::path::PathBuf,
 
     /// Path to a PEM-encoded file that contains PKCS#8 private key
     #[clap(
         long = "signing_key",
         help = "Path to a PEM-encoded file that contains PKCS#8 private key"
     )]
-    pub signing_key_path: PathBuf,
+    pub signing_key_path: std::path::PathBuf,
 
     /// Validate a signing certificate using openssl command
     #[clap(

@@ -1,4 +1,7 @@
-use crate::opts::{EnclaveOpts, Opts};
+use crate::{
+    enclave::EnclaveLoader,
+    opts::{EnclaveOpts, Opts},
+};
 use anyhow::Result;
 use clap::Parser;
 use enclave_api::{Enclave, EnclaveProtoAPI};
@@ -42,17 +45,15 @@ impl ELCOpts {
 }
 
 impl ELCCmd {
-    pub fn run<S>(
-        &self,
-        opts: &Opts,
-        enclave_loader: impl FnOnce(&Opts, Option<&PathBuf>, bool) -> Result<Enclave<S>>,
-    ) -> Result<()>
+    pub fn run<S, L>(&self, opts: &Opts, enclave_loader: L) -> Result<()>
     where
         S: CommitStore,
         Enclave<S>: EnclaveProtoAPI<S>,
+        L: EnclaveLoader<S>,
     {
         let elc_opts = self.opts();
-        let enclave = enclave_loader(opts, elc_opts.enclave.path.as_ref(), elc_opts.enclave.debug)?;
+        let enclave =
+            enclave_loader.load(opts, elc_opts.enclave.path.as_ref(), elc_opts.enclave.debug)?;
         match self {
             Self::CreateClient(_) => {
                 let _ = enclave.proto_create_client(elc_opts.load()?)?;

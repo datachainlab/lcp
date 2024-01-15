@@ -1,4 +1,7 @@
-use crate::opts::{EnclaveOpts, Opts};
+use crate::{
+    enclave::EnclaveLoader,
+    opts::{EnclaveOpts, Opts},
+};
 use anyhow::{anyhow, Result};
 use clap::Parser;
 use ecall_commands::GenerateEnclaveKeyInput;
@@ -6,7 +9,6 @@ use enclave_api::{Enclave, EnclaveCommandAPI, EnclaveProtoAPI};
 use lcp_types::Mrenclave;
 use log::*;
 use serde_json::json;
-use std::path::PathBuf;
 use store::transaction::CommitStore;
 
 // `enclave` subcommand
@@ -23,14 +25,11 @@ pub enum EnclaveCmd {
 }
 
 impl EnclaveCmd {
-    pub fn run<S>(
-        &self,
-        opts: &Opts,
-        enclave_loader: impl FnOnce(&Opts, Option<&PathBuf>, bool) -> Result<Enclave<S>>,
-    ) -> Result<()>
+    pub fn run<S, L>(&self, opts: &Opts, enclave_loader: L) -> Result<()>
     where
         S: CommitStore,
         Enclave<S>: EnclaveProtoAPI<S>,
+        L: EnclaveLoader<S>,
     {
         let home = opts.get_home();
         if !home.exists() {
@@ -39,15 +38,15 @@ impl EnclaveCmd {
         }
         match self {
             Self::GenerateKey(cmd) => run_generate_key(
-                enclave_loader(opts, cmd.enclave.path.as_ref(), cmd.enclave.debug)?,
+                enclave_loader.load(opts, cmd.enclave.path.as_ref(), cmd.enclave.debug)?,
                 cmd,
             ),
             Self::ListKeys(cmd) => run_list_keys(
-                enclave_loader(opts, cmd.enclave.path.as_ref(), cmd.enclave.debug)?,
+                enclave_loader.load(opts, cmd.enclave.path.as_ref(), cmd.enclave.debug)?,
                 cmd,
             ),
             Self::PruneKeys(cmd) => run_prune_keys(
-                enclave_loader(opts, cmd.enclave.path.as_ref(), cmd.enclave.debug)?,
+                enclave_loader.load(opts, cmd.enclave.path.as_ref(), cmd.enclave.debug)?,
                 cmd,
             ),
             Self::Metadata(cmd) => run_print_metadata(opts, cmd),
