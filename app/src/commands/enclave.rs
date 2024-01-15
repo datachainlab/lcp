@@ -1,4 +1,7 @@
-use crate::opts::Opts;
+use crate::{
+    enclave::EnclaveLoader,
+    opts::{EnclaveOpts, Opts},
+};
 use anyhow::{anyhow, Result};
 use clap::Parser;
 use ecall_commands::GenerateEnclaveKeyInput;
@@ -6,7 +9,6 @@ use enclave_api::{Enclave, EnclaveCommandAPI, EnclaveProtoAPI};
 use lcp_types::Mrenclave;
 use log::*;
 use serde_json::json;
-use std::path::PathBuf;
 use store::transaction::CommitStore;
 
 // `enclave` subcommand
@@ -23,14 +25,11 @@ pub enum EnclaveCmd {
 }
 
 impl EnclaveCmd {
-    pub fn run<S>(
-        &self,
-        opts: &Opts,
-        enclave_loader: impl FnOnce(&Opts, Option<&PathBuf>) -> Result<Enclave<S>>,
-    ) -> Result<()>
+    pub fn run<S, L>(&self, opts: &Opts, enclave_loader: L) -> Result<()>
     where
         S: CommitStore,
         Enclave<S>: EnclaveProtoAPI<S>,
+        L: EnclaveLoader<S>,
     {
         let home = opts.get_home();
         if !home.exists() {
@@ -38,13 +37,18 @@ impl EnclaveCmd {
             info!("created home directory: {:?}", home);
         }
         match self {
-            Self::GenerateKey(cmd) => {
-                run_generate_key(enclave_loader(opts, cmd.enclave.as_ref())?, cmd)
-            }
-            Self::ListKeys(cmd) => run_list_keys(enclave_loader(opts, cmd.enclave.as_ref())?, cmd),
-            Self::PruneKeys(cmd) => {
-                run_prune_keys(enclave_loader(opts, cmd.enclave.as_ref())?, cmd)
-            }
+            Self::GenerateKey(cmd) => run_generate_key(
+                enclave_loader.load(opts, cmd.enclave.path.as_ref(), cmd.enclave.debug)?,
+                cmd,
+            ),
+            Self::ListKeys(cmd) => run_list_keys(
+                enclave_loader.load(opts, cmd.enclave.path.as_ref(), cmd.enclave.debug)?,
+                cmd,
+            ),
+            Self::PruneKeys(cmd) => run_prune_keys(
+                enclave_loader.load(opts, cmd.enclave.path.as_ref(), cmd.enclave.debug)?,
+                cmd,
+            ),
             Self::Metadata(cmd) => run_print_metadata(opts, cmd),
         }
     }
@@ -52,9 +56,9 @@ impl EnclaveCmd {
 
 #[derive(Clone, Debug, Parser, PartialEq)]
 pub struct GenerateKey {
-    /// Path to the enclave binary
-    #[clap(long = "enclave", help = "Path to the enclave binary")]
-    pub enclave: Option<PathBuf>,
+    /// Options for enclave
+    #[clap(flatten)]
+    pub enclave: EnclaveOpts,
 }
 
 fn run_generate_key<E: EnclaveCommandAPI<S>, S: CommitStore>(
@@ -70,9 +74,9 @@ fn run_generate_key<E: EnclaveCommandAPI<S>, S: CommitStore>(
 
 #[derive(Clone, Debug, Parser, PartialEq)]
 pub struct ListKeys {
-    /// Path to the enclave binary
-    #[clap(long = "enclave", help = "Path to the enclave binary")]
-    pub enclave: Option<PathBuf>,
+    /// Options for enclave
+    #[clap(flatten)]
+    pub enclave: EnclaveOpts,
     #[clap(
         long = "available_only",
         short = 'a',
@@ -122,9 +126,9 @@ fn run_list_keys<E: EnclaveCommandAPI<S>, S: CommitStore>(
 
 #[derive(Clone, Debug, Parser, PartialEq)]
 pub struct PruneKeys {
-    /// Path to the enclave binary
-    #[clap(long = "enclave", help = "Path to the enclave binary")]
-    pub enclave: Option<PathBuf>,
+    /// Options for enclave
+    #[clap(flatten)]
+    pub enclave: EnclaveOpts,
     /// expiration in seconds from attested_at
     #[clap(long = "expiration", help = "expiration in seconds from attested_at")]
     pub expiration: u64,
@@ -142,14 +146,15 @@ fn run_prune_keys<E: EnclaveCommandAPI<S>, S: CommitStore>(
 
 #[derive(Clone, Debug, Parser, PartialEq)]
 pub struct Metadata {
-    /// Path to the enclave binary
-    #[clap(long = "enclave", help = "Path to the enclave binary")]
-    pub enclave: Option<PathBuf>,
+    /// Options for enclave
+    #[clap(flatten)]
+    pub enclave: EnclaveOpts,
 }
 
 fn run_print_metadata(opts: &Opts, cmd: &Metadata) -> Result<()> {
     let metadata = host::sgx_get_metadata(
         cmd.enclave
+            .path
             .clone()
             .unwrap_or_else(|| opts.default_enclave()),
     )?;

@@ -1,10 +1,12 @@
-use crate::opts::Opts;
+use crate::{
+    enclave::EnclaveLoader,
+    opts::{EnclaveOpts, Opts},
+};
 use anyhow::{bail, Result};
 use clap::Parser;
 use crypto::Address;
 use ecall_commands::IASRemoteAttestationInput;
 use enclave_api::{Enclave, EnclaveCommandAPI, EnclaveProtoAPI};
-use std::path::PathBuf;
 use store::transaction::CommitStore;
 
 /// `attestation` subcommand
@@ -19,14 +21,11 @@ pub enum AttestationCmd {
 }
 
 impl AttestationCmd {
-    pub fn run<S>(
-        &self,
-        opts: &Opts,
-        enclave_loader: impl FnOnce(&Opts, Option<&PathBuf>) -> Result<Enclave<S>>,
-    ) -> Result<()>
+    pub fn run<S, L>(&self, opts: &Opts, enclave_loader: L) -> Result<()>
     where
         S: CommitStore,
         Enclave<S>: EnclaveProtoAPI<S>,
+        L: EnclaveLoader<S>,
     {
         let home = opts.get_home();
         match self {
@@ -34,14 +33,20 @@ impl AttestationCmd {
                 if !home.exists() {
                     bail!("home directory doesn't exist at {:?}", home);
                 }
-                run_ias_remote_attestation(enclave_loader(opts, cmd.enclave.as_ref())?, cmd)
+                run_ias_remote_attestation(
+                    enclave_loader.load(opts, cmd.enclave.path.as_ref(), cmd.enclave.debug)?,
+                    cmd,
+                )
             }
             #[cfg(feature = "sgx-sw")]
             AttestationCmd::Simulate(cmd) => {
                 if !home.exists() {
                     bail!("home directory doesn't exist at {:?}", home);
                 }
-                run_simulate_remote_attestation(enclave_loader(opts, cmd.enclave.as_ref())?, cmd)
+                run_simulate_remote_attestation(
+                    enclave_loader.load(opts, cmd.enclave.path.as_ref(), cmd.enclave.debug)?,
+                    cmd,
+                )
             }
         }
     }
@@ -49,10 +54,9 @@ impl AttestationCmd {
 
 #[derive(Clone, Debug, Parser, PartialEq)]
 pub struct IASRemoteAttestation {
-    /// Path to the enclave binary
-    #[clap(long = "enclave", help = "Path to the enclave binary")]
-    pub enclave: Option<PathBuf>,
-
+    /// Options for enclave
+    #[clap(flatten)]
+    pub enclave: EnclaveOpts,
     /// An enclave key attested by Remote Attestation
     #[clap(
         long = "enclave_key",
@@ -81,9 +85,9 @@ fn run_ias_remote_attestation<E: EnclaveCommandAPI<S>, S: CommitStore>(
 #[cfg(feature = "sgx-sw")]
 #[derive(Clone, Debug, Parser, PartialEq)]
 pub struct SimulateRemoteAttestation {
-    /// Path to the enclave binary
-    #[clap(long = "enclave", help = "Path to the enclave binary")]
-    pub enclave: Option<PathBuf>,
+    /// Options for enclave
+    #[clap(flatten)]
+    pub enclave: EnclaveOpts,
 
     /// An enclave key attested by Remote Attestation
     #[clap(
@@ -97,14 +101,14 @@ pub struct SimulateRemoteAttestation {
         long = "signing_cert_path",
         help = "Path to a der-encoded file that contains X.509 certificate"
     )]
-    pub signing_cert_path: PathBuf,
+    pub signing_cert_path: std::path::PathBuf,
 
     /// Path to a PEM-encoded file that contains PKCS#8 private key
     #[clap(
         long = "signing_key",
         help = "Path to a PEM-encoded file that contains PKCS#8 private key"
     )]
-    pub signing_key_path: PathBuf,
+    pub signing_key_path: std::path::PathBuf,
 
     /// Validate a signing certificate using openssl command
     #[clap(

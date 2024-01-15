@@ -3,7 +3,7 @@ use clap::Parser;
 use log::LevelFilter;
 use std::{path::PathBuf, str::FromStr};
 
-#[derive(Debug, Parser)]
+#[derive(Debug, Clone, Parser)]
 pub struct Opts {
     /// Path to the home directory
     #[clap(long = "home", help = "Path to LCP home directory")]
@@ -14,6 +14,15 @@ pub struct Opts {
     /// 2. environment variable
     #[clap(long = "log_level", help = "Verbosity level of the logger")]
     pub log_level: Option<String>,
+}
+
+#[derive(Debug, Clone, Parser, PartialEq)]
+pub struct EnclaveOpts {
+    /// Path to the enclave binary
+    #[clap(long = "enclave", help = "Path to enclave binary")]
+    pub path: Option<PathBuf>,
+    #[clap(long = "enclave_debug", help = "Enable enclave debug mode")]
+    pub debug: bool,
 }
 
 impl Opts {

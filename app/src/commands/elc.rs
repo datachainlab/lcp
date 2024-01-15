@@ -1,4 +1,7 @@
-use crate::opts::Opts;
+use crate::{
+    enclave::EnclaveLoader,
+    opts::{EnclaveOpts, Opts},
+};
 use anyhow::Result;
 use clap::Parser;
 use enclave_api::{Enclave, EnclaveProtoAPI};
@@ -24,11 +27,11 @@ impl ELCCmd {
     }
 }
 
-#[derive(Clone, Debug, Parser, PartialEq)]
+#[derive(Clone, Debug, Parser)]
 pub struct ELCOpts {
-    /// Path to the enclave binary
-    #[clap(long = "enclave", help = "Path to enclave binary")]
-    pub enclave: Option<PathBuf>,
+    /// Options for enclave
+    #[clap(flatten)]
+    pub enclave: EnclaveOpts,
     /// Path to the proto msg
     #[clap(long = "msg", help = "Path to proto msg")]
     pub msg: PathBuf,
@@ -42,17 +45,15 @@ impl ELCOpts {
 }
 
 impl ELCCmd {
-    pub fn run<S>(
-        &self,
-        opts: &Opts,
-        enclave_loader: impl FnOnce(&Opts, Option<&PathBuf>) -> Result<Enclave<S>>,
-    ) -> Result<()>
+    pub fn run<S, L>(&self, opts: &Opts, enclave_loader: L) -> Result<()>
     where
         S: CommitStore,
         Enclave<S>: EnclaveProtoAPI<S>,
+        L: EnclaveLoader<S>,
     {
         let elc_opts = self.opts();
-        let enclave = enclave_loader(opts, elc_opts.enclave.as_ref())?;
+        let enclave =
+            enclave_loader.load(opts, elc_opts.enclave.path.as_ref(), elc_opts.enclave.debug)?;
         match self {
             Self::CreateClient(_) => {
                 let _ = enclave.proto_create_client(elc_opts.load()?)?;
