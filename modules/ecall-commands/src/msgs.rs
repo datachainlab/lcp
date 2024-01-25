@@ -6,8 +6,8 @@ use crypto::Address;
 use lcp_types::proto::lcp::service::elc::v1::{
     MsgAggregateMessages, MsgAggregateMessagesResponse, MsgCreateClient, MsgCreateClientResponse,
     MsgUpdateClient, MsgUpdateClientResponse, MsgVerifyMembership, MsgVerifyMembershipResponse,
-    MsgVerifyNonMembership, MsgVerifyNonMembershipResponse, QueryClientRequest,
-    QueryClientResponse,
+    MsgVerifyNonMembership, MsgVerifyNonMembershipResponse,
+    QueryClientRequest as MsgQueryClientRequest, QueryClientResponse as MsgQueryClientResponse,
 };
 use lcp_types::{ClientId, Time};
 
@@ -105,16 +105,16 @@ impl TryFrom<MsgVerifyNonMembership> for VerifyNonMembershipInput {
     }
 }
 
-impl TryFrom<QueryClientRequest> for QueryClientInput {
+impl TryFrom<MsgQueryClientRequest> for QueryClientInput {
     type Error = Error;
-    fn try_from(query: QueryClientRequest) -> Result<Self, Error> {
+    fn try_from(query: MsgQueryClientRequest) -> Result<Self, Error> {
         let client_id = ClientId::from_str(&query.client_id)?;
         Ok(Self { client_id })
     }
 }
 
-impl From<InitClientResult> for MsgCreateClientResponse {
-    fn from(res: InitClientResult) -> Self {
+impl From<InitClientResponse> for MsgCreateClientResponse {
+    fn from(res: InitClientResponse) -> Self {
         Self {
             client_id: res.client_id.to_string(),
             message: res.proof.message,
@@ -124,8 +124,8 @@ impl From<InitClientResult> for MsgCreateClientResponse {
     }
 }
 
-impl From<UpdateClientResult> for MsgUpdateClientResponse {
-    fn from(res: UpdateClientResult) -> Self {
+impl From<UpdateClientResponse> for MsgUpdateClientResponse {
+    fn from(res: UpdateClientResponse) -> Self {
         Self {
             message: res.0.message,
             signer: res.0.signer.into(),
@@ -134,8 +134,8 @@ impl From<UpdateClientResult> for MsgUpdateClientResponse {
     }
 }
 
-impl From<AggregateMessagesResult> for MsgAggregateMessagesResponse {
-    fn from(res: AggregateMessagesResult) -> Self {
+impl From<AggregateMessagesResponse> for MsgAggregateMessagesResponse {
+    fn from(res: AggregateMessagesResponse) -> Self {
         Self {
             message: res.0.message,
             signer: res.0.signer.into(),
@@ -144,8 +144,8 @@ impl From<AggregateMessagesResult> for MsgAggregateMessagesResponse {
     }
 }
 
-impl From<VerifyMembershipResult> for MsgVerifyMembershipResponse {
-    fn from(res: VerifyMembershipResult) -> Self {
+impl From<VerifyMembershipResponse> for MsgVerifyMembershipResponse {
+    fn from(res: VerifyMembershipResponse) -> Self {
         Self {
             message: res.0.message,
             signer: res.0.signer.to_vec(),
@@ -154,8 +154,8 @@ impl From<VerifyMembershipResult> for MsgVerifyMembershipResponse {
     }
 }
 
-impl From<VerifyNonMembershipResult> for MsgVerifyNonMembershipResponse {
-    fn from(res: VerifyNonMembershipResult) -> Self {
+impl From<VerifyNonMembershipResponse> for MsgVerifyNonMembershipResponse {
+    fn from(res: VerifyNonMembershipResponse) -> Self {
         Self {
             message: res.0.message,
             signer: res.0.signer.to_vec(),
@@ -164,8 +164,8 @@ impl From<VerifyNonMembershipResult> for MsgVerifyNonMembershipResponse {
     }
 }
 
-impl From<QueryClientResult> for QueryClientResponse {
-    fn from(res: QueryClientResult) -> Self {
+impl From<QueryClientResponse> for MsgQueryClientResponse {
+    fn from(res: QueryClientResponse) -> Self {
         Self {
             client_state: Some(res.any_client_state.into()),
             consensus_state: Some(res.any_consensus_state.into()),

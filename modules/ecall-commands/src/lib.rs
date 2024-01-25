@@ -20,21 +20,21 @@ mod prelude {
     pub use core::iter::FromIterator;
 }
 
-pub use commands::{Command, CommandContext, CommandResult, ECallCommand};
+pub use commands::{Command, CommandContext, CommandResponse, ECallCommand};
 use crypto::Address;
 pub use enclave_manage::{
-    EnclaveManageCommand, EnclaveManageResult, GenerateEnclaveKeyInput, GenerateEnclaveKeyResult,
-    IASRemoteAttestationInput, IASRemoteAttestationResult,
+    EnclaveManageCommand, EnclaveManageResponse, GenerateEnclaveKeyInput,
+    GenerateEnclaveKeyResponse, IASRemoteAttestationInput, IASRemoteAttestationResponse,
 };
 #[cfg(feature = "sgx-sw")]
-pub use enclave_manage::{SimulateRemoteAttestationInput, SimulateRemoteAttestationResult};
+pub use enclave_manage::{SimulateRemoteAttestationInput, SimulateRemoteAttestationResponse};
 pub use errors::InputValidationError;
 pub use light_client::{
-    AggregateMessagesInput, AggregateMessagesResult, CommitmentProofPair, InitClientInput,
-    InitClientResult, LightClientCommand, LightClientExecuteCommand, LightClientQueryCommand,
-    LightClientResult, QueryClientInput, QueryClientResult, UpdateClientInput, UpdateClientResult,
-    VerifyMembershipInput, VerifyMembershipResult, VerifyNonMembershipInput,
-    VerifyNonMembershipResult,
+    AggregateMessagesInput, AggregateMessagesResponse, CommitmentProofPair, InitClientInput,
+    InitClientResponse, LightClientCommand, LightClientExecuteCommand, LightClientQueryCommand,
+    LightClientResponse, QueryClientInput, QueryClientResponse, UpdateClientInput,
+    UpdateClientResponse, VerifyMembershipInput, VerifyMembershipResponse,
+    VerifyNonMembershipInput, VerifyNonMembershipResponse,
 };
 
 mod commands;

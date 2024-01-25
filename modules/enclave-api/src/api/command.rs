@@ -1,12 +1,12 @@
 use crate::{EnclavePrimitiveAPI, Result};
 use ecall_commands::{
-    AggregateMessagesInput, AggregateMessagesResult, Command, CommandResult, EnclaveManageCommand,
-    EnclaveManageResult, GenerateEnclaveKeyInput, GenerateEnclaveKeyResult,
-    IASRemoteAttestationInput, IASRemoteAttestationResult, InitClientInput, InitClientResult,
-    LightClientCommand, LightClientExecuteCommand, LightClientQueryCommand, LightClientResult,
-    QueryClientInput, QueryClientResult, UpdateClientInput, UpdateClientResult,
-    VerifyMembershipInput, VerifyMembershipResult, VerifyNonMembershipInput,
-    VerifyNonMembershipResult,
+    AggregateMessagesInput, AggregateMessagesResponse, Command, CommandResponse,
+    EnclaveManageCommand, EnclaveManageResponse, GenerateEnclaveKeyInput,
+    GenerateEnclaveKeyResponse, IASRemoteAttestationInput, IASRemoteAttestationResponse,
+    InitClientInput, InitClientResponse, LightClientCommand, LightClientExecuteCommand,
+    LightClientQueryCommand, LightClientResponse, QueryClientInput, QueryClientResponse,
+    UpdateClientInput, UpdateClientResponse, VerifyMembershipInput, VerifyMembershipResponse,
+    VerifyNonMembershipInput, VerifyNonMembershipResponse,
 };
 use store::transaction::CommitStore;
 
@@ -15,12 +15,12 @@ pub trait EnclaveCommandAPI<S: CommitStore>: EnclavePrimitiveAPI<S> {
     fn generate_enclave_key(
         &self,
         input: GenerateEnclaveKeyInput,
-    ) -> Result<GenerateEnclaveKeyResult> {
+    ) -> Result<GenerateEnclaveKeyResponse> {
         let res = match self.execute_command(
             Command::EnclaveManage(EnclaveManageCommand::GenerateEnclaveKey(input)),
             None,
         )? {
-            CommandResult::EnclaveManage(EnclaveManageResult::GenerateEnclaveKey(res)) => res,
+            CommandResponse::EnclaveManage(EnclaveManageResponse::GenerateEnclaveKey(res)) => res,
             _ => unreachable!(),
         };
         let metadata = self.metadata()?;
@@ -36,13 +36,13 @@ pub trait EnclaveCommandAPI<S: CommitStore>: EnclavePrimitiveAPI<S> {
     fn ias_remote_attestation(
         &self,
         input: IASRemoteAttestationInput,
-    ) -> Result<IASRemoteAttestationResult> {
+    ) -> Result<IASRemoteAttestationResponse> {
         let target_enclave_key = input.target_enclave_key;
         let res = match self.execute_command(
             Command::EnclaveManage(EnclaveManageCommand::IASRemoteAttestation(input)),
             None,
         )? {
-            CommandResult::EnclaveManage(EnclaveManageResult::IASRemoteAttestation(res)) => res,
+            CommandResponse::EnclaveManage(EnclaveManageResponse::IASRemoteAttestation(res)) => res,
             _ => unreachable!(),
         };
         self.get_key_manager()
@@ -57,7 +57,7 @@ pub trait EnclaveCommandAPI<S: CommitStore>: EnclavePrimitiveAPI<S> {
         input: ecall_commands::SimulateRemoteAttestationInput,
         signing_key: rsa::pkcs1v15::SigningKey<sha2::Sha256>,
         signing_cert: Vec<u8>,
-    ) -> Result<ecall_commands::SimulateRemoteAttestationResult> {
+    ) -> Result<ecall_commands::SimulateRemoteAttestationResponse> {
         use attestation_report::EndorsedAttestationVerificationReport;
         use rsa::signature::{SignatureEncoding, Signer};
 
@@ -66,9 +66,9 @@ pub trait EnclaveCommandAPI<S: CommitStore>: EnclavePrimitiveAPI<S> {
             Command::EnclaveManage(EnclaveManageCommand::SimulateRemoteAttestation(input)),
             None,
         )? {
-            CommandResult::EnclaveManage(EnclaveManageResult::SimulateRemoteAttestation(res)) => {
-                res
-            }
+            CommandResponse::EnclaveManage(EnclaveManageResponse::SimulateRemoteAttestation(
+                res,
+            )) => res,
             _ => unreachable!(),
         };
         let avr_json = res.avr.to_canonical_json().unwrap();
@@ -83,7 +83,7 @@ pub trait EnclaveCommandAPI<S: CommitStore>: EnclavePrimitiveAPI<S> {
     }
 
     /// init_client initializes an ELC instance with given states
-    fn init_client(&self, input: InitClientInput) -> Result<InitClientResult> {
+    fn init_client(&self, input: InitClientInput) -> Result<InitClientResponse> {
         let update_key = Some(input.any_client_state.type_url.clone());
         match self.execute_command(
             Command::LightClient(LightClientCommand::Execute(
@@ -91,13 +91,13 @@ pub trait EnclaveCommandAPI<S: CommitStore>: EnclavePrimitiveAPI<S> {
             )),
             update_key,
         )? {
-            CommandResult::LightClient(LightClientResult::InitClient(res)) => Ok(res),
+            CommandResponse::LightClient(LightClientResponse::InitClient(res)) => Ok(res),
             _ => unreachable!(),
         }
     }
 
     /// update_client updates the ELC instance corresponding to client_id
-    fn update_client(&self, input: UpdateClientInput) -> Result<UpdateClientResult> {
+    fn update_client(&self, input: UpdateClientInput) -> Result<UpdateClientResponse> {
         let update_key = Some(input.client_id.to_string());
         match self.execute_command(
             Command::LightClient(LightClientCommand::Execute(
@@ -105,32 +105,35 @@ pub trait EnclaveCommandAPI<S: CommitStore>: EnclavePrimitiveAPI<S> {
             )),
             update_key,
         )? {
-            CommandResult::LightClient(LightClientResult::UpdateClient(res)) => Ok(res),
+            CommandResponse::LightClient(LightClientResponse::UpdateClient(res)) => Ok(res),
             _ => unreachable!(),
         }
     }
 
-    fn aggregate_messages(&self, input: AggregateMessagesInput) -> Result<AggregateMessagesResult> {
+    fn aggregate_messages(
+        &self,
+        input: AggregateMessagesInput,
+    ) -> Result<AggregateMessagesResponse> {
         match self.execute_command(
             Command::LightClient(LightClientCommand::Execute(
                 LightClientExecuteCommand::AggregateMessages(input),
             )),
             None,
         )? {
-            CommandResult::LightClient(LightClientResult::AggregateMessages(res)) => Ok(res),
+            CommandResponse::LightClient(LightClientResponse::AggregateMessages(res)) => Ok(res),
             _ => unreachable!(),
         }
     }
 
     /// verify_membership verifies the existence of the state in the upstream chain and generates a message that represents membership of value in the state
-    fn verify_membership(&self, input: VerifyMembershipInput) -> Result<VerifyMembershipResult> {
+    fn verify_membership(&self, input: VerifyMembershipInput) -> Result<VerifyMembershipResponse> {
         match self.execute_command(
             Command::LightClient(LightClientCommand::Execute(
                 LightClientExecuteCommand::VerifyMembership(input),
             )),
             None,
         )? {
-            CommandResult::LightClient(LightClientResult::VerifyMembership(res)) => Ok(res),
+            CommandResponse::LightClient(LightClientResponse::VerifyMembership(res)) => Ok(res),
             _ => unreachable!(),
         }
     }
@@ -139,27 +142,27 @@ pub trait EnclaveCommandAPI<S: CommitStore>: EnclavePrimitiveAPI<S> {
     fn verify_non_membership(
         &self,
         input: VerifyNonMembershipInput,
-    ) -> Result<VerifyNonMembershipResult> {
+    ) -> Result<VerifyNonMembershipResponse> {
         match self.execute_command(
             Command::LightClient(LightClientCommand::Execute(
                 LightClientExecuteCommand::VerifyNonMembership(input),
             )),
             None,
         )? {
-            CommandResult::LightClient(LightClientResult::VerifyNonMembership(res)) => Ok(res),
+            CommandResponse::LightClient(LightClientResponse::VerifyNonMembership(res)) => Ok(res),
             _ => unreachable!(),
         }
     }
 
     /// query_client queries the client state and consensus state
-    fn query_client(&self, input: QueryClientInput) -> Result<QueryClientResult> {
+    fn query_client(&self, input: QueryClientInput) -> Result<QueryClientResponse> {
         match self.execute_command(
             Command::LightClient(LightClientCommand::Query(
                 LightClientQueryCommand::QueryClient(input),
             )),
             None,
         )? {
-            CommandResult::LightClient(LightClientResult::QueryClient(res)) => Ok(res),
+            CommandResponse::LightClient(LightClientResponse::QueryClient(res)) => Ok(res),
             _ => unreachable!(),
         }
     }

@@ -30,11 +30,11 @@ use light_client::commitments::{
     VerifyMembershipMessage,
 };
 use light_client::types::{Any, ClientId, Height, Time};
-use light_client::VerifyNonMembershipResult;
 use light_client::{
     ibc::IBCContext, CreateClientResult, Error as LightClientError, HostClientReader, LightClient,
     LightClientRegistry, UpdateClientResult, VerifyMembershipResult,
 };
+use light_client::{UpdateClientData, VerifyNonMembershipResult};
 use log::*;
 
 #[derive(Default)]
@@ -187,7 +187,7 @@ impl LightClient for TendermintLightClient {
             canonicalize_state(&new_client_state),
             new_consensus_state.clone(),
         )?;
-        Ok(UpdateClientResult {
+        Ok(UpdateClientData {
             new_any_client_state: new_client_state.into(),
             new_any_consensus_state: new_consensus_state.into(),
             height,
@@ -208,7 +208,8 @@ impl LightClient for TendermintLightClient {
             }
             .into(),
             prove: true,
-        })
+        }
+        .into())
     }
 
     fn verify_membership(

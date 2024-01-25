@@ -3,38 +3,46 @@ use crate::light_client::Error;
 use crate::prelude::*;
 use context::Context;
 use crypto::Signer;
-use ecall_commands::{LightClientResult, UpdateClientInput, UpdateClientResult};
-use light_client::commitments::{
-    prove_commitment, CommitmentProof, EmittedState, Message, UpdateClientMessage,
-};
-use light_client::{ClientKeeper, LightClientResolver};
+use ecall_commands::{LightClientResponse, UpdateClientInput, UpdateClientResponse};
+use light_client::commitments::{prove_commitment, CommitmentProof, EmittedState, Message};
+use light_client::{ClientKeeper, LightClientResolver, UpdateClientResult};
 use store::KVStore;
 
 pub fn update_client<R: LightClientResolver, S: KVStore, K: Signer>(
     ctx: &mut Context<R, S, K>,
     input: UpdateClientInput,
-) -> Result<LightClientResult, Error> {
+) -> Result<LightClientResponse, Error> {
     ctx.set_timestamp(input.current_timestamp);
 
     let lc = get_light_client_by_client_id(ctx, &input.client_id)?;
     let ek = ctx.get_enclave_key();
-    let res = lc.update_client(ctx, input.client_id.clone(), input.any_header.into())?;
+    match lc.update_client(ctx, input.client_id.clone(), input.any_header.into())? {
+        UpdateClientResult::UpdateClient(mut event) => {
+            let message: Message = {
+                if input.include_state && event.message.emitted_states.is_empty() {
+                    event.message.emitted_states = vec![EmittedState(
+                        event.height,
+                        event.new_any_client_state.clone(),
+                    )];
+                }
+                event.message.into()
+            };
 
-    let message: Message = {
-        let mut msg = UpdateClientMessage::try_from(res.message)?;
-        if input.include_state && msg.emitted_states.is_empty() {
-            msg.emitted_states = vec![EmittedState(res.height, res.new_any_client_state.clone())];
+            ctx.store_any_client_state(input.client_id.clone(), event.new_any_client_state)?;
+            ctx.store_any_consensus_state(
+                input.client_id,
+                event.height,
+                event.new_any_consensus_state,
+            )?;
+
+            let proof = if event.prove {
+                prove_commitment(ek, input.signer, message)?
+            } else {
+                CommitmentProof::new_with_no_signature(message.to_bytes())
+            };
+            return Ok(LightClientResponse::UpdateClient(UpdateClientResponse(
+                proof,
+            )));
         }
-        msg.into()
-    };
-
-    ctx.store_any_client_state(input.client_id.clone(), res.new_any_client_state)?;
-    ctx.store_any_consensus_state(input.client_id, res.height, res.new_any_consensus_state)?;
-
-    let proof = if res.prove {
-        prove_commitment(ek, input.signer, message)?
-    } else {
-        CommitmentProof::new_with_no_signature(message.to_bytes())
-    };
-    Ok(LightClientResult::UpdateClient(UpdateClientResult(proof)))
+    }
 }

@@ -1,10 +1,10 @@
 use crate::enclave_manage;
 use crate::light_client;
 use crate::{Error, Result};
-use ecall_commands::{Command, CommandResult, ECallCommand};
+use ecall_commands::{Command, CommandResponse, ECallCommand};
 use enclave_environment::Env;
 
-pub fn dispatch<E: Env>(env: E, command: ECallCommand) -> Result<CommandResult> {
+pub fn dispatch<E: Env>(env: E, command: ECallCommand) -> Result<CommandResponse> {
     match command.cmd {
         Command::EnclaveManage(cmd) => {
             enclave_manage::dispatch(command.ctx, cmd).map_err(Error::enclave_manage_command)

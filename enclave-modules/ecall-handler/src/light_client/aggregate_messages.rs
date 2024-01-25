@@ -2,7 +2,7 @@ use crate::light_client::Error;
 use crate::prelude::*;
 use context::Context;
 use crypto::{EnclavePublicKey, Signer, Verifier};
-use ecall_commands::{AggregateMessagesInput, AggregateMessagesResult, LightClientResult};
+use ecall_commands::{AggregateMessagesInput, AggregateMessagesResponse, LightClientResponse};
 use light_client::{
     commitments::{self, prove_commitment, Message, UpdateClientMessage},
     HostContext, LightClientResolver,
@@ -12,7 +12,7 @@ use store::KVStore;
 pub fn aggregate_messages<R: LightClientResolver, S: KVStore, K: Signer>(
     ctx: &mut Context<R, S, K>,
     input: AggregateMessagesInput,
-) -> Result<LightClientResult, Error> {
+) -> Result<LightClientResponse, Error> {
     ctx.set_timestamp(input.current_timestamp);
 
     if input.messages.len() < 2 {
@@ -46,8 +46,8 @@ pub fn aggregate_messages<R: LightClientResolver, S: KVStore, K: Signer>(
     let message = Message::from(commitments::aggregate_messages(messages)?);
     let proof = prove_commitment(ek, input.signer, message)?;
 
-    Ok(LightClientResult::AggregateMessages(
-        AggregateMessagesResult(proof),
+    Ok(LightClientResponse::AggregateMessages(
+        AggregateMessagesResponse(proof),
     ))
 }
 

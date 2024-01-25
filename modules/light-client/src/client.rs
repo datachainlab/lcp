@@ -3,6 +3,7 @@ use crate::context::HostClientReader;
 use crate::errors::Error;
 use crate::prelude::*;
 use crate::types::{Any, ClientId, Height};
+use commitments::{UpdateClientMessage, VerifyMembershipMessage};
 
 #[allow(clippy::too_many_arguments)]
 pub trait LightClient {
@@ -29,7 +30,7 @@ pub trait LightClient {
         &self,
         ctx: &dyn HostClientReader,
         client_id: ClientId,
-        any_header: Any,
+        client_message: Any,
     ) -> Result<UpdateClientResult, Error>;
 
     /// verify_membership is a generic proof verification method which verifies a proof of the existence of a value at a given path at the specified height.
@@ -67,7 +68,12 @@ pub struct CreateClientResult {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct UpdateClientResult {
+pub enum UpdateClientResult {
+    UpdateClient(UpdateClientData),
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct UpdateClientData {
     /// updated client state
     pub new_any_client_state: Any,
     /// updated consensus state
@@ -75,19 +81,25 @@ pub struct UpdateClientResult {
     /// height corresponding to the updated state
     pub height: Height,
     /// message represents a state transition of the client
-    pub message: Message,
+    pub message: UpdateClientMessage,
     /// if true, sign the commitment with Enclave Key
     pub prove: bool,
+}
+
+impl From<UpdateClientData> for UpdateClientResult {
+    fn from(event: UpdateClientData) -> Self {
+        UpdateClientResult::UpdateClient(event)
+    }
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct VerifyMembershipResult {
     /// message represents a result of the state verification
-    pub message: Message,
+    pub message: VerifyMembershipMessage,
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct VerifyNonMembershipResult {
     /// message represents a result of the state verification
-    pub message: Message,
+    pub message: VerifyMembershipMessage,
 }

@@ -14,10 +14,10 @@ use light_client::commitments::{
     gen_state_id_from_any, EmittedState, UpdateClientMessage, ValidationContext,
 };
 use light_client::types::{Any, ClientId, Height, Time};
-use light_client::VerifyNonMembershipResult;
 use light_client::{
     ibc::IBCContext, CreateClientResult, Error as LightClientError, HostClientReader, LightClient,
-    LightClientRegistry, UpdateClientResult, VerifyMembershipResult,
+    LightClientRegistry, UpdateClientData, UpdateClientResult, VerifyMembershipResult,
+    VerifyNonMembershipResult,
 };
 
 #[derive(Default)]
@@ -131,7 +131,7 @@ impl LightClient for MockLightClient {
         let post_state_id = gen_state_id(new_client_state.clone(), new_consensus_state.clone())?;
         let new_any_client_state = Any::try_from(new_client_state).unwrap();
 
-        Ok(UpdateClientResult {
+        Ok(UpdateClientData {
             new_any_client_state: new_any_client_state.clone(),
             new_any_consensus_state: Any::try_from(new_consensus_state).unwrap(),
             height,
@@ -146,7 +146,8 @@ impl LightClient for MockLightClient {
             }
             .into(),
             prove: true,
-        })
+        }
+        .into())
     }
 
     #[allow(unused_variables)]

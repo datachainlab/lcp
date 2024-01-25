@@ -2,7 +2,7 @@ use crate::enclave_manage::errors::Error;
 use crate::prelude::*;
 use attestation_report::verify_report;
 use crypto::{EnclaveKey, SealingKey};
-use ecall_commands::{CommandContext, IASRemoteAttestationInput, IASRemoteAttestationResult};
+use ecall_commands::{CommandContext, IASRemoteAttestationInput, IASRemoteAttestationResponse};
 use enclave_remote_attestation::{
     attestation::create_attestation_report, report::validate_quote_status,
 };
@@ -11,7 +11,7 @@ use sgx_types::{sgx_quote_sign_type_t, sgx_spid_t};
 pub(crate) fn ias_remote_attestation(
     cctx: CommandContext,
     input: IASRemoteAttestationInput,
-) -> Result<IASRemoteAttestationResult, Error> {
+) -> Result<IASRemoteAttestationResponse, Error> {
     input.validate()?;
     let pub_key =
         EnclaveKey::unseal(&cctx.sealed_ek.ok_or(Error::enclave_key_not_found())?)?.get_pubkey();
@@ -27,14 +27,14 @@ pub(crate) fn ias_remote_attestation(
         report
     };
     validate_quote_status(cctx.current_timestamp, &report.get_avr()?)?;
-    Ok(IASRemoteAttestationResult { report })
+    Ok(IASRemoteAttestationResponse { report })
 }
 
 #[cfg(feature = "sgx-sw")]
 pub(crate) fn simulate_remote_attestation(
     cctx: CommandContext,
     input: ecall_commands::SimulateRemoteAttestationInput,
-) -> Result<ecall_commands::SimulateRemoteAttestationResult, Error> {
+) -> Result<ecall_commands::SimulateRemoteAttestationResponse, Error> {
     input.validate()?;
     let pub_key =
         EnclaveKey::unseal(&cctx.sealed_ek.ok_or(Error::enclave_key_not_found())?)?.get_pubkey();
@@ -45,7 +45,7 @@ pub(crate) fn simulate_remote_attestation(
         input.isv_enclave_quote_status,
     )?;
     validate_quote_status(cctx.current_timestamp, &avr)?;
-    Ok(ecall_commands::SimulateRemoteAttestationResult { avr })
+    Ok(ecall_commands::SimulateRemoteAttestationResponse { avr })
 }
 
 // CONTRACT: `hex` length must be 32

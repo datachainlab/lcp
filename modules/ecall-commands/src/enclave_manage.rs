@@ -60,26 +60,26 @@ impl SimulateRemoteAttestationInput {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-pub enum EnclaveManageResult {
-    GenerateEnclaveKey(GenerateEnclaveKeyResult),
-    IASRemoteAttestation(IASRemoteAttestationResult),
+pub enum EnclaveManageResponse {
+    GenerateEnclaveKey(GenerateEnclaveKeyResponse),
+    IASRemoteAttestation(IASRemoteAttestationResponse),
     #[cfg(feature = "sgx-sw")]
-    SimulateRemoteAttestation(SimulateRemoteAttestationResult),
+    SimulateRemoteAttestation(SimulateRemoteAttestationResponse),
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct GenerateEnclaveKeyResult {
+pub struct GenerateEnclaveKeyResponse {
     pub pub_key: EnclavePublicKey,
     pub sealed_ek: SealedEnclaveKey,
 }
 
 #[derive(Serialize, Deserialize, Debug, Default)]
-pub struct IASRemoteAttestationResult {
+pub struct IASRemoteAttestationResponse {
     pub report: EndorsedAttestationVerificationReport,
 }
 
 #[cfg(feature = "sgx-sw")]
 #[derive(Serialize, Deserialize, Debug, Default)]
-pub struct SimulateRemoteAttestationResult {
+pub struct SimulateRemoteAttestationResponse {
     pub avr: attestation_report::AttestationVerificationReport,
 }

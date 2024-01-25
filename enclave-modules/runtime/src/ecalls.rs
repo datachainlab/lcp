@@ -1,5 +1,5 @@
 use crate::prelude::*;
-use ecall_commands::{CommandResult, ECallCommand};
+use ecall_commands::{CommandResponse, ECallCommand};
 use ecall_handler::dispatch;
 use enclave_environment::Env;
 use enclave_utils::validate_const_ptr;
@@ -57,7 +57,7 @@ pub fn ecall_execute_command(
     status
 }
 
-fn execute_command(command: *const u8, command_len: u32) -> (sgx_status_t, CommandResult) {
+fn execute_command(command: *const u8, command_len: u32) -> (sgx_status_t, CommandResponse) {
     let cmd: ECallCommand = match bincode::serde::decode_borrowed_from_slice(
         unsafe { alloc::slice::from_raw_parts(command, command_len as usize) },
         bincode::config::standard(),
@@ -66,7 +66,7 @@ fn execute_command(command: *const u8, command_len: u32) -> (sgx_status_t, Comma
         Err(e) => {
             return (
                 sgx_status_t::SGX_ERROR_UNEXPECTED,
-                CommandResult::CommandError(format!("failed to bincode::deserialize: {:?}", e)),
+                CommandResponse::CommandError(format!("failed to bincode::deserialize: {:?}", e)),
             );
         }
     };
@@ -79,7 +79,7 @@ fn execute_command(command: *const u8, command_len: u32) -> (sgx_status_t, Comma
         Ok(result) => (sgx_status_t::SGX_SUCCESS, result),
         Err(e) => (
             sgx_status_t::SGX_ERROR_UNEXPECTED,
-            CommandResult::CommandError(format!("{:?}", e)),
+            CommandResponse::CommandError(format!("{:?}", e)),
         ),
     }
 }

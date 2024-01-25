@@ -3,7 +3,7 @@ use crate::prelude::*;
 use context::Context;
 use core::str::FromStr;
 use crypto::Signer;
-use ecall_commands::{InitClientInput, InitClientResult, LightClientResult};
+use ecall_commands::{InitClientInput, InitClientResponse, LightClientResponse};
 use lcp_types::{Any, ClientId};
 use light_client::commitments::{prove_commitment, CommitmentProof};
 use light_client::{ClientKeeper, ClientReader, LightClientResolver};
@@ -12,7 +12,7 @@ use store::KVStore;
 pub fn init_client<R: LightClientResolver, S: KVStore, K: Signer>(
     ctx: &mut Context<R, S, K>,
     input: InitClientInput,
-) -> Result<LightClientResult, Error> {
+) -> Result<LightClientResponse, Error> {
     ctx.set_timestamp(input.current_timestamp);
 
     let any_client_state: Any = input.any_client_state.into();
@@ -33,7 +33,7 @@ pub fn init_client<R: LightClientResolver, S: KVStore, K: Signer>(
     } else {
         CommitmentProof::new_with_no_signature(res.message.to_bytes())
     };
-    Ok(LightClientResult::InitClient(InitClientResult {
+    Ok(LightClientResponse::InitClient(InitClientResponse {
         client_id,
         proof,
     }))

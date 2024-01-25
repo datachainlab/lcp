@@ -274,7 +274,7 @@ mod tests {
         },
         Height as ICS02Height,
     };
-    use light_client::commitments::prove_commitment;
+    use light_client::{commitments::prove_commitment, UpdateClientResult};
     use light_client::{LightClient, LightClientResolver, MapLightClientRegistry};
     use mock_lc::MockLightClient;
     use sgx_types::{sgx_quote_t, sgx_report_body_t};
@@ -374,7 +374,11 @@ mod tests {
                 mock_lc::Header::from(header).into(),
             );
             assert!(res.is_ok(), "res={:?}", res);
-            let res = res.unwrap();
+
+            let res = match res.unwrap() {
+                UpdateClientResult::UpdateClient(res) => res,
+                _ => unreachable!(),
+            };
             let (client_state, consensus_state, height) = {
                 (
                     res.new_any_client_state,
@@ -386,7 +390,7 @@ mod tests {
             let res = prove_commitment(
                 ctx.get_enclave_key(),
                 ctx.get_enclave_key().pubkey().unwrap().as_address(),
-                res.message,
+                res.message.into(),
             );
             assert!(res.is_ok(), "res={:?}", res);
 

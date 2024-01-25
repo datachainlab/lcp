@@ -1,6 +1,6 @@
 use crate::{
-    prelude::*, EnclaveKeySelector, EnclaveManageCommand, EnclaveManageResult, LightClientCommand,
-    LightClientResult,
+    prelude::*, EnclaveKeySelector, EnclaveManageCommand, EnclaveManageResponse,
+    LightClientCommand, LightClientResponse,
 };
 use crypto::SealedEnclaveKey;
 use lcp_types::Time;
@@ -52,8 +52,8 @@ impl EnclaveKeySelector for Command {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-pub enum CommandResult {
-    EnclaveManage(EnclaveManageResult),
-    LightClient(LightClientResult),
+pub enum CommandResponse {
+    EnclaveManage(EnclaveManageResponse),
+    LightClient(LightClientResponse),
     CommandError(String),
 }

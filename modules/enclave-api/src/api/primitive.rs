@@ -2,7 +2,7 @@ use crate::{
     enclave::{EnclaveInfo, HostStoreTxManager},
     ffi, Error, Result,
 };
-use ecall_commands::{Command, CommandContext, CommandResult, ECallCommand, EnclaveKeySelector};
+use ecall_commands::{Command, CommandContext, CommandResponse, ECallCommand, EnclaveKeySelector};
 use lcp_types::Time;
 use log::*;
 use sgx_types::{sgx_enclave_id_t, sgx_status_t};
@@ -10,7 +10,7 @@ use store::transaction::{CommitStore, Tx};
 
 pub trait EnclavePrimitiveAPI<S: CommitStore>: EnclaveInfo + HostStoreTxManager<S> {
     /// execute_command runs a given command in the enclave
-    fn execute_command(&self, cmd: Command, update_key: Option<String>) -> Result<CommandResult> {
+    fn execute_command(&self, cmd: Command, update_key: Option<String>) -> Result<CommandResponse> {
         debug!(
             "prepare command: inner={:?} update_key={:?}",
             cmd, update_key
@@ -43,7 +43,7 @@ pub trait EnclavePrimitiveAPI<S: CommitStore>: EnclaveInfo + HostStoreTxManager<
     }
 }
 
-fn raw_execute_command(eid: sgx_enclave_id_t, cmd: ECallCommand) -> Result<CommandResult> {
+fn raw_execute_command(eid: sgx_enclave_id_t, cmd: ECallCommand) -> Result<CommandResponse> {
     let mut output_len = 0;
     let output_maxlen = 65536;
     let mut output_buf = Vec::with_capacity(output_maxlen);
@@ -78,7 +78,7 @@ fn raw_execute_command(eid: sgx_enclave_id_t, cmd: ECallCommand) -> Result<Comma
 
         if ret == sgx_status_t::SGX_SUCCESS {
             Ok(res)
-        } else if let CommandResult::CommandError(descr) = res {
+        } else if let CommandResponse::CommandError(descr) = res {
             Err(Error::command(ret, descr))
         } else {
             unreachable!()

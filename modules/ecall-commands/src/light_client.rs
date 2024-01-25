@@ -92,37 +92,37 @@ pub struct QueryClientInput {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-pub enum LightClientResult {
-    InitClient(InitClientResult),
-    UpdateClient(UpdateClientResult),
-    AggregateMessages(AggregateMessagesResult),
+pub enum LightClientResponse {
+    InitClient(InitClientResponse),
+    UpdateClient(UpdateClientResponse),
+    AggregateMessages(AggregateMessagesResponse),
 
-    VerifyMembership(VerifyMembershipResult),
-    VerifyNonMembership(VerifyNonMembershipResult),
+    VerifyMembership(VerifyMembershipResponse),
+    VerifyNonMembership(VerifyNonMembershipResponse),
 
-    QueryClient(QueryClientResult),
+    QueryClient(QueryClientResponse),
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct InitClientResult {
+pub struct InitClientResponse {
     pub client_id: ClientId,
     pub proof: CommitmentProof,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct UpdateClientResult(pub CommitmentProof);
+pub struct UpdateClientResponse(pub CommitmentProof);
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct AggregateMessagesResult(pub CommitmentProof);
+pub struct AggregateMessagesResponse(pub CommitmentProof);
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct VerifyMembershipResult(pub CommitmentProof);
+pub struct VerifyMembershipResponse(pub CommitmentProof);
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct VerifyNonMembershipResult(pub CommitmentProof);
+pub struct VerifyNonMembershipResponse(pub CommitmentProof);
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct QueryClientResult {
+pub struct QueryClientResponse {
     pub any_client_state: Any,
     pub any_consensus_state: Any,
 }
