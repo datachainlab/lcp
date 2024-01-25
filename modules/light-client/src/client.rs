@@ -3,7 +3,7 @@ use crate::context::HostClientReader;
 use crate::errors::Error;
 use crate::prelude::*;
 use crate::types::{Any, ClientId, Height};
-use commitments::{UpdateClientMessage, VerifyMembershipMessage};
+use commitments::{MisbehaviourMessage, UpdateClientMessage, VerifyMembershipMessage};
 
 #[allow(clippy::too_many_arguments)]
 pub trait LightClient {
@@ -70,6 +70,7 @@ pub struct CreateClientResult {
 #[derive(Clone, Debug, PartialEq)]
 pub enum UpdateClientResult {
     UpdateClient(UpdateClientData),
+    SubmitMisbehaviour(SubmitMisbehaviourData),
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -86,9 +87,23 @@ pub struct UpdateClientData {
     pub prove: bool,
 }
 
+#[derive(Clone, Debug, PartialEq)]
+pub struct SubmitMisbehaviourData {
+    /// updated client state
+    pub new_any_client_state: Any,
+    /// message represents a state transition of the client
+    pub message: MisbehaviourMessage,
+}
+
 impl From<UpdateClientData> for UpdateClientResult {
     fn from(event: UpdateClientData) -> Self {
         UpdateClientResult::UpdateClient(event)
+    }
+}
+
+impl From<SubmitMisbehaviourData> for UpdateClientResult {
+    fn from(event: SubmitMisbehaviourData) -> Self {
+        UpdateClientResult::SubmitMisbehaviour(event)
     }
 }
 

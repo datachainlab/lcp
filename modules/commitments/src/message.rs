@@ -1,3 +1,4 @@
+pub use self::misbehaviour::MisbehaviourMessage;
 pub use self::update_client::{aggregate_messages, EmittedState, UpdateClientMessage};
 pub use self::verify_membership::{CommitmentPrefix, VerifyMembershipMessage};
 use crate::encoder::EthABIEncoder;
@@ -5,18 +6,22 @@ use crate::prelude::*;
 use crate::Error;
 use core::fmt::Display;
 use serde::{Deserialize, Serialize};
+mod misbehaviour;
 mod update_client;
 mod verify_membership;
 
 pub const MESSAGE_SCHEMA_VERSION: u16 = 1;
+pub const MESSAGE_HEADER_SIZE: usize = 32;
+
 pub const MESSAGE_TYPE_UPDATE_CLIENT: u16 = 1;
 pub const MESSAGE_TYPE_STATE: u16 = 2;
-pub const MESSAGE_HEADER_SIZE: usize = 32;
+pub const MESSAGE_TYPE_MISBEHAVIOUR: u16 = 3;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum Message {
     UpdateClient(UpdateClientMessage),
     VerifyMembership(VerifyMembershipMessage),
+    Misbehaviour(MisbehaviourMessage),
 }
 
 impl Message {
@@ -43,6 +48,7 @@ impl Message {
         match self {
             Message::UpdateClient(_) => MESSAGE_TYPE_UPDATE_CLIENT,
             Message::VerifyMembership(_) => MESSAGE_TYPE_STATE,
+            Message::Misbehaviour(_) => MESSAGE_TYPE_MISBEHAVIOUR,
         }
     }
 }
@@ -52,6 +58,7 @@ impl Display for Message {
         match self {
             Message::UpdateClient(c) => write!(f, "{}", c),
             Message::VerifyMembership(c) => write!(f, "{}", c),
+            Message::Misbehaviour(c) => write!(f, "{}", c),
         }
     }
 }
@@ -82,6 +89,19 @@ impl TryFrom<Message> for VerifyMembershipMessage {
     }
 }
 
+impl TryFrom<Message> for MisbehaviourMessage {
+    type Error = Error;
+    fn try_from(value: Message) -> Result<Self, Self::Error> {
+        match value {
+            Message::Misbehaviour(m) => Ok(m),
+            _ => Err(Error::unexpected_message_type(
+                MESSAGE_TYPE_MISBEHAVIOUR,
+                value.message_type(),
+            )),
+        }
+    }
+}
+
 impl From<UpdateClientMessage> for Message {
     fn from(value: UpdateClientMessage) -> Self {
         Message::UpdateClient(value)
@@ -91,6 +111,12 @@ impl From<UpdateClientMessage> for Message {
 impl From<VerifyMembershipMessage> for Message {
     fn from(value: VerifyMembershipMessage) -> Self {
         Message::VerifyMembership(value)
+    }
+}
+
+impl From<MisbehaviourMessage> for Message {
+    fn from(value: MisbehaviourMessage) -> Self {
+        Message::Misbehaviour(value)
     }
 }
 
@@ -141,6 +167,7 @@ impl EthABIEncoder for Message {
             message: match self {
                 Message::UpdateClient(c) => c.ethabi_encode(),
                 Message::VerifyMembership(c) => c.ethabi_encode(),
+                Message::Misbehaviour(c) => c.ethabi_encode(),
             },
         }
         .encode()

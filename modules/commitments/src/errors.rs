@@ -111,8 +111,11 @@ define_error! {
             format_args!("context aggregation failed: descr={}", e.descr)
         },
 
+        ProtoDecodeError
+        [TraceError<prost::DecodeError>]
+        |_| {"proto decode error"},
+
         LcpType
-        {}
         [lcp_types::TypeError]
         |_| {"Type"},
 
