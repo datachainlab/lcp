@@ -23,5 +23,5 @@ pub use client::{register_implementations, TendermintLightClient};
 
 pub mod client;
 pub mod errors;
-pub mod header;
+pub mod message;
 pub mod state;

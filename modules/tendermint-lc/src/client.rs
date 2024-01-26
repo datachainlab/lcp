@@ -1,5 +1,5 @@
 use crate::errors::Error;
-use crate::header::Header;
+use crate::message::{ClientMessage, Header, Misbehaviour};
 use crate::prelude::*;
 use crate::state::{canonicalize_state, gen_state_id, ClientState, ConsensusState};
 use core::str::FromStr;
@@ -34,7 +34,7 @@ use light_client::{
     ibc::IBCContext, CreateClientResult, Error as LightClientError, HostClientReader, LightClient,
     LightClientRegistry, UpdateClientResult, VerifyMembershipResult,
 };
-use light_client::{UpdateClientData, VerifyNonMembershipResult};
+use light_client::{SubmitMisbehaviourData, UpdateClientData, VerifyNonMembershipResult};
 use log::*;
 
 #[derive(Default)]
@@ -91,125 +91,14 @@ impl LightClient for TendermintLightClient {
         &self,
         ctx: &dyn HostClientReader,
         client_id: ClientId,
-        any_header: Any,
+        any_client_message: Any,
     ) -> Result<UpdateClientResult, LightClientError> {
-        let header = Header::try_from(any_header.clone())?;
-
-        // Read client state from the host chain store.
-        let client_state: ClientState = ctx.client_state(&client_id)?.try_into()?;
-
-        if client_state.is_frozen() {
-            return Err(Error::ics02(ICS02Error::ClientFrozen {
-                client_id: client_id.into(),
-            })
-            .into());
-        }
-
-        // Read consensus state from the host chain store.
-        let latest_consensus_state: ConsensusState = ctx
-            .consensus_state(&client_id, &client_state.latest_height().into())
-            .map_err(|_| {
-                Error::ics02(ICS02Error::ConsensusStateNotFound {
-                    client_id: client_id.clone().into(),
-                    height: client_state.latest_height(),
-                })
-            })?
-            .try_into()?;
-
-        debug!("latest consensus state: {:?}", latest_consensus_state);
-
-        let now = ctx.host_timestamp();
-        let duration = now
-            .duration_since(latest_consensus_state.timestamp().into_tm_time().unwrap())
-            .map_err(|_| {
-                Error::ics02(ICS02Error::InvalidConsensusStateTimestamp {
-                    time1: latest_consensus_state.timestamp(),
-                    time2: now.into(),
-                })
-            })?;
-
-        if client_state.expired(duration) {
-            return Err(Error::ics02(ICS02Error::HeaderNotWithinTrustPeriod {
-                latest_time: latest_consensus_state.timestamp(),
-                update_time: header.timestamp(),
-            })
-            .into());
-        }
-
-        let height = header.height().into();
-        let header_timestamp: Time = header.timestamp().into();
-
-        let trusted_consensus_state: ConsensusState = ctx
-            .consensus_state(&client_id, &header.trusted_height.into())
-            .map_err(|_| {
-                Error::ics02(ICS02Error::ConsensusStateNotFound {
-                    client_id: client_id.clone().into(),
-                    height: header.trusted_height,
-                })
-            })?
-            .try_into()?;
-
-        // Use client_state to validate the new header against the latest consensus_state.
-        // This function will return the new client_state (its latest_height changed) and a
-        // consensus_state obtained from header. These will be later persisted by the keeper.
-        let UpdatedState {
-            client_state: new_client_state,
-            consensus_state: new_consensus_state,
-        } = client_state
-            .check_header_and_update_state(
-                &IBCContext::<TendermintClientState, TendermintConsensusState>::new(ctx),
-                client_id.into(),
-                any_header.into(),
-            )
-            .map_err(|e| {
-                Error::ics02(ICS02Error::HeaderVerificationFailure {
-                    reason: e.to_string(),
-                })
-            })?;
-
-        let new_client_state = ClientState(
-            downcast_client_state::<TendermintClientState>(new_client_state.as_ref())
-                .unwrap()
-                .clone(),
-        );
-        let new_consensus_state = ConsensusState(
-            downcast_consensus_state::<TendermintConsensusState>(new_consensus_state.as_ref())
-                .unwrap()
-                .clone(),
-        );
-
-        let trusted_state_timestamp: Time = trusted_consensus_state.timestamp().into();
-        let lc_opts = client_state.as_light_client_options().unwrap();
-
-        let prev_state_id =
-            gen_state_id(canonicalize_state(&client_state), trusted_consensus_state)?;
-        let post_state_id = gen_state_id(
-            canonicalize_state(&new_client_state),
-            new_consensus_state.clone(),
-        )?;
-        Ok(UpdateClientData {
-            new_any_client_state: new_client_state.into(),
-            new_any_consensus_state: new_consensus_state.into(),
-            height,
-            message: UpdateClientMessage {
-                prev_height: Some(header.trusted_height.into()),
-                prev_state_id: Some(prev_state_id),
-                post_height: height,
-                post_state_id,
-                timestamp: header_timestamp,
-                context: TrustingPeriodContext::new(
-                    lc_opts.trusting_period,
-                    lc_opts.clock_drift,
-                    header_timestamp,
-                    trusted_state_timestamp,
-                )
-                .into(),
-                emitted_states: Default::default(),
+        match ClientMessage::try_from(any_client_message.clone())? {
+            ClientMessage::Header(h) => Ok(self.update_state(ctx, client_id, h)?.into()),
+            ClientMessage::Misbehaviour(m) => {
+                Ok(self.submit_misbehaviour(ctx, client_id, m)?.into())
             }
-            .into(),
-            prove: true,
         }
-        .into())
     }
 
     fn verify_membership(
@@ -333,6 +222,166 @@ impl TendermintLightClient {
         let prefix: IBCCommitmentPrefix = counterparty_prefix.try_into().map_err(Error::ics23)?;
         let path: Path = Path::from_str(&path).unwrap();
         Ok((client_state, consensus_state, prefix, path, proof))
+    }
+
+    fn update_state(
+        &self,
+        ctx: &dyn HostClientReader,
+        client_id: ClientId,
+        header: Header,
+    ) -> Result<UpdateClientData, LightClientError> {
+        // Read client state from the host chain store.
+        let client_state: ClientState = ctx.client_state(&client_id)?.try_into()?;
+
+        if client_state.is_frozen() {
+            return Err(Error::ics02(ICS02Error::ClientFrozen {
+                client_id: client_id.into(),
+            })
+            .into());
+        }
+
+        // Read consensus state from the host chain store.
+        let latest_consensus_state: ConsensusState = ctx
+            .consensus_state(&client_id, &client_state.latest_height().into())
+            .map_err(|_| {
+                Error::ics02(ICS02Error::ConsensusStateNotFound {
+                    client_id: client_id.clone().into(),
+                    height: client_state.latest_height(),
+                })
+            })?
+            .try_into()?;
+
+        debug!("latest consensus state: {:?}", latest_consensus_state);
+
+        let now = ctx.host_timestamp();
+        let duration = now
+            .duration_since(latest_consensus_state.timestamp().into_tm_time().unwrap())
+            .map_err(|_| {
+                Error::ics02(ICS02Error::InvalidConsensusStateTimestamp {
+                    time1: latest_consensus_state.timestamp(),
+                    time2: now.into(),
+                })
+            })?;
+
+        if client_state.expired(duration) {
+            return Err(Error::ics02(ICS02Error::HeaderNotWithinTrustPeriod {
+                latest_time: latest_consensus_state.timestamp(),
+                update_time: header.timestamp(),
+            })
+            .into());
+        }
+
+        let height = header.height().into();
+        let header_timestamp: Time = header.timestamp().into();
+
+        let trusted_consensus_state: ConsensusState = ctx
+            .consensus_state(&client_id, &header.trusted_height.into())
+            .map_err(|_| {
+                Error::ics02(ICS02Error::ConsensusStateNotFound {
+                    client_id: client_id.clone().into(),
+                    height: header.trusted_height,
+                })
+            })?
+            .try_into()?;
+
+        // Use client_state to validate the new header against the latest consensus_state.
+        // This function will return the new client_state (its latest_height changed) and a
+        // consensus_state obtained from header. These will be later persisted by the keeper.
+        let UpdatedState {
+            client_state: new_client_state,
+            consensus_state: new_consensus_state,
+        } = client_state
+            .check_header_and_update_state(
+                &IBCContext::<TendermintClientState, TendermintConsensusState>::new(ctx),
+                client_id.into(),
+                Any::from(header.clone()).into(),
+            )
+            .map_err(|e| {
+                Error::ics02(ICS02Error::HeaderVerificationFailure {
+                    reason: e.to_string(),
+                })
+            })?;
+
+        let new_client_state = ClientState(
+            downcast_client_state::<TendermintClientState>(new_client_state.as_ref())
+                .unwrap()
+                .clone(),
+        );
+        let new_consensus_state = ConsensusState(
+            downcast_consensus_state::<TendermintConsensusState>(new_consensus_state.as_ref())
+                .unwrap()
+                .clone(),
+        );
+
+        let trusted_state_timestamp: Time = trusted_consensus_state.timestamp().into();
+        let lc_opts = client_state.as_light_client_options().unwrap();
+
+        let prev_state_id =
+            gen_state_id(canonicalize_state(&client_state), trusted_consensus_state)?;
+        let post_state_id = gen_state_id(
+            canonicalize_state(&new_client_state),
+            new_consensus_state.clone(),
+        )?;
+        Ok(UpdateClientData {
+            new_any_client_state: new_client_state.into(),
+            new_any_consensus_state: new_consensus_state.into(),
+            height,
+            message: UpdateClientMessage {
+                prev_height: Some(header.trusted_height.into()),
+                prev_state_id: Some(prev_state_id),
+                post_height: height,
+                post_state_id,
+                timestamp: header_timestamp,
+                context: TrustingPeriodContext::new(
+                    lc_opts.trusting_period,
+                    lc_opts.clock_drift,
+                    header_timestamp,
+                    trusted_state_timestamp,
+                )
+                .into(),
+                emitted_states: Default::default(),
+            }
+            .into(),
+            prove: true,
+        }
+        .into())
+    }
+
+    fn submit_misbehaviour(
+        &self,
+        ctx: &dyn HostClientReader,
+        client_id: ClientId,
+        misbehaviour: Misbehaviour,
+    ) -> Result<SubmitMisbehaviourData, LightClientError> {
+        // Read client state from the host chain store.
+        let client_state: ClientState = ctx.client_state(&client_id)?.try_into()?;
+
+        if client_state.is_frozen() {
+            return Err(Error::ics02(ICS02Error::ClientFrozen {
+                client_id: client_id.into(),
+            })
+            .into());
+        }
+
+        let new_client_state = client_state
+            .check_misbehaviour_and_update_state(
+                &IBCContext::<TendermintClientState, TendermintConsensusState>::new(ctx),
+                client_id.into(),
+                Any::from(misbehaviour.clone()).into(),
+            )
+            .map_err(|e| {
+                Error::ics02(ICS02Error::HeaderVerificationFailure {
+                    reason: e.to_string(),
+                })
+            })?;
+
+        let new_client_state = ClientState(
+            downcast_client_state::<TendermintClientState>(new_client_state.as_ref())
+                .unwrap()
+                .clone(),
+        );
+
+        todo!()
     }
 }
 
