@@ -1,5 +1,5 @@
 use crate::errors::Error;
-use crate::header::Header;
+use crate::message::{ClientMessage, Header, Misbehaviour};
 use crate::prelude::*;
 use crate::state::{gen_state_id, ClientState, ConsensusState};
 use ibc::core::ics02_client::client_state::{
@@ -11,13 +11,14 @@ use ibc::core::ics02_client::header::Header as Ics02Header;
 use ibc::mock::client_state::{client_type, MockClientState, MOCK_CLIENT_STATE_TYPE_URL};
 use ibc::mock::consensus_state::MockConsensusState;
 use light_client::commitments::{
-    gen_state_id_from_any, EmittedState, UpdateClientMessage, ValidationContext,
+    gen_state_id_from_any, EmittedState, MisbehaviourMessage, UpdateClientMessage,
+    ValidationContext,
 };
 use light_client::types::{Any, ClientId, Height, Time};
 use light_client::{
     ibc::IBCContext, CreateClientResult, Error as LightClientError, HostClientReader, LightClient,
-    LightClientRegistry, UpdateClientData, UpdateClientResult, VerifyMembershipResult,
-    VerifyNonMembershipResult,
+    LightClientRegistry, SubmitMisbehaviourData, UpdateClientData, UpdateClientResult,
+    VerifyMembershipResult, VerifyNonMembershipResult,
 };
 
 #[derive(Default)]
@@ -70,10 +71,52 @@ impl LightClient for MockLightClient {
         &self,
         ctx: &dyn HostClientReader,
         client_id: ClientId,
-        any_header: Any,
+        any_client_message: Any,
     ) -> Result<UpdateClientResult, LightClientError> {
-        let header = Header::try_from(any_header.clone())?;
+        let client_message = ClientMessage::try_from(any_client_message.clone())?;
+        match client_message {
+            ClientMessage::Header(header) => Ok(self.update_state(ctx, client_id, header)?.into()),
+            ClientMessage::Misbehaviour(misbehaviour) => Ok(self
+                .submit_misbehaviour(ctx, client_id, misbehaviour)?
+                .into()),
+        }
+    }
 
+    #[allow(unused_variables)]
+    fn verify_membership(
+        &self,
+        ctx: &dyn HostClientReader,
+        client_id: ClientId,
+        prefix: Vec<u8>,
+        path: String,
+        value: Vec<u8>,
+        proof_height: Height,
+        proof: Vec<u8>,
+    ) -> Result<VerifyMembershipResult, LightClientError> {
+        todo!()
+    }
+
+    #[allow(unused_variables)]
+    fn verify_non_membership(
+        &self,
+        ctx: &dyn HostClientReader,
+        client_id: ClientId,
+        prefix: Vec<u8>,
+        path: String,
+        proof_height: Height,
+        proof: Vec<u8>,
+    ) -> Result<VerifyNonMembershipResult, LightClientError> {
+        todo!()
+    }
+}
+
+impl MockLightClient {
+    fn update_state(
+        &self,
+        ctx: &dyn HostClientReader,
+        client_id: ClientId,
+        header: Header,
+    ) -> Result<UpdateClientData, LightClientError> {
         // Read client state from the host chain store.
         let client_state: ClientState = ctx.client_state(&client_id)?.try_into()?;
 
@@ -110,7 +153,7 @@ impl LightClient for MockLightClient {
             .check_header_and_update_state(
                 &IBCContext::<MockClientState, MockConsensusState>::new(ctx),
                 client_id.into(),
-                any_header.into(),
+                Any::from(header).into(),
             )
             .map_err(|e| {
                 Error::ics02(ICS02Error::HeaderVerificationFailure {
@@ -146,35 +189,60 @@ impl LightClient for MockLightClient {
             }
             .into(),
             prove: true,
+        })
+    }
+
+    fn submit_misbehaviour(
+        &self,
+        ctx: &dyn HostClientReader,
+        client_id: ClientId,
+        misbehaviour: Misbehaviour,
+    ) -> Result<SubmitMisbehaviourData, LightClientError> {
+        assert_eq!(client_id.as_str(), misbehaviour.client_id.as_str());
+
+        // Read client state from the host chain store.
+        let client_state: ClientState = ctx.client_state(&client_id)?.try_into()?;
+        let latest_height = client_state.latest_height();
+        if client_state.is_frozen() {
+            return Err(Error::ics02(ICS02Error::ClientFrozen {
+                client_id: client_id.into(),
+            })
+            .into());
         }
-        .into())
-    }
 
-    #[allow(unused_variables)]
-    fn verify_membership(
-        &self,
-        ctx: &dyn HostClientReader,
-        client_id: ClientId,
-        prefix: Vec<u8>,
-        path: String,
-        value: Vec<u8>,
-        proof_height: Height,
-        proof: Vec<u8>,
-    ) -> Result<VerifyMembershipResult, LightClientError> {
-        todo!()
-    }
+        // Read consensus state from the host chain store.
+        let latest_consensus_state: ConsensusState = ctx
+            .consensus_state(&client_id, &latest_height.into())
+            .map_err(|_| {
+                Error::ics02(ICS02Error::ConsensusStateNotFound {
+                    client_id: client_id.clone().into(),
+                    height: latest_height,
+                })
+            })?
+            .try_into()?;
 
-    #[allow(unused_variables)]
-    fn verify_non_membership(
-        &self,
-        ctx: &dyn HostClientReader,
-        client_id: ClientId,
-        prefix: Vec<u8>,
-        path: String,
-        proof_height: Height,
-        proof: Vec<u8>,
-    ) -> Result<VerifyNonMembershipResult, LightClientError> {
-        todo!()
+        let new_client_state = client_state
+            .check_misbehaviour_and_update_state(
+                &IBCContext::<MockClientState, MockConsensusState>::new(ctx),
+                client_id.into(),
+                Any::from(misbehaviour.clone()).into(),
+            )
+            .unwrap();
+
+        let new_client_state = ClientState(
+            *downcast_client_state::<MockClientState>(new_client_state.as_ref()).unwrap(),
+        );
+
+        Ok(SubmitMisbehaviourData {
+            new_any_client_state: Any::try_from(new_client_state).unwrap(),
+            message: MisbehaviourMessage {
+                prev_height: latest_height.into(),
+                prev_state_id: gen_state_id(client_state, latest_consensus_state)?,
+                context: ValidationContext::Empty,
+                client_message: Any::from(misbehaviour).into(),
+            }
+            .into(),
+        })
     }
 }
 

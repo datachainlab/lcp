@@ -24,8 +24,8 @@ pub use commitments;
 pub use lcp_types as types;
 
 pub use client::{
-    CreateClientResult, LightClient, UpdateClientData, UpdateClientResult, VerifyMembershipResult,
-    VerifyNonMembershipResult,
+    CreateClientResult, LightClient, SubmitMisbehaviourData, UpdateClientData, UpdateClientResult,
+    VerifyMembershipResult, VerifyNonMembershipResult,
 };
 pub use context::{ClientKeeper, ClientReader, HostClientKeeper, HostClientReader, HostContext};
 pub use errors::{Error, ErrorDetail, LightClientSpecificError, RegistryError};

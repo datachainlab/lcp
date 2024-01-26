@@ -20,10 +20,10 @@ mod prelude {
 }
 
 pub use client::{register_implementations, MockLightClient};
-pub use header::Header;
+pub use message::Header;
 pub use state::{ClientState, ConsensusState};
 
 mod client;
 mod errors;
-pub mod header;
+pub mod message;
 pub mod state;
