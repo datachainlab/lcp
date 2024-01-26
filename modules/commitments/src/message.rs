@@ -1,9 +1,10 @@
-pub use self::misbehaviour::MisbehaviourMessage;
+pub use self::misbehaviour::{MisbehaviourMessage, PrevState};
 pub use self::update_client::{aggregate_messages, EmittedState, UpdateClientMessage};
 pub use self::verify_membership::{CommitmentPrefix, VerifyMembershipMessage};
 use crate::encoder::EthABIEncoder;
 use crate::prelude::*;
 use crate::Error;
+use alloy_sol_types::{sol, SolValue};
 use core::fmt::Display;
 use serde::{Deserialize, Serialize};
 mod misbehaviour;
@@ -120,43 +121,10 @@ impl From<MisbehaviourMessage> for Message {
     }
 }
 
-/// the struct is encoded as a tuple of 2 elements
-pub(crate) struct EthABIHeaderedMessage {
-    header: ethabi::FixedBytes, // bytes32
-    message: ethabi::Bytes,     // bytes
-}
-
-impl EthABIHeaderedMessage {
-    pub fn encode(self) -> Vec<u8> {
-        use ethabi::Token;
-        ethabi::encode(&[Token::Tuple(vec![
-            Token::FixedBytes(self.header),
-            Token::Bytes(self.message),
-        ])])
-    }
-
-    pub fn decode(bytes: &[u8]) -> Result<Self, Error> {
-        use ethabi::ParamType;
-        let tuple = ethabi::decode(
-            &[ParamType::Tuple(vec![
-                ParamType::FixedBytes(32),
-                ParamType::Bytes,
-            ])],
-            bytes,
-        )?
-        .into_iter()
-        .next()
-        .unwrap()
-        .into_tuple()
-        .unwrap();
-
-        // if the decoding is successful, the length of the tuple should be 2
-        assert!(tuple.len() == 2);
-        let mut values = tuple.into_iter();
-        Ok(Self {
-            header: values.next().unwrap().into_fixed_bytes().unwrap(),
-            message: values.next().unwrap().into_bytes().unwrap(),
-        })
+sol! {
+    struct EthABIHeaderedMessage {
+        bytes32 header;
+        bytes message;
     }
 }
 
@@ -170,11 +138,11 @@ impl EthABIEncoder for Message {
                 Message::Misbehaviour(c) => c.ethabi_encode(),
             },
         }
-        .encode()
+        .abi_encode()
     }
 
     fn ethabi_decode(bz: &[u8]) -> Result<Self, Error> {
-        let eth_abi_message = EthABIHeaderedMessage::decode(bz)?;
+        let eth_abi_message = EthABIHeaderedMessage::abi_decode(bz, true).unwrap();
         let (version, message_type) = {
             let header = &eth_abi_message.header;
             if header.len() != MESSAGE_HEADER_SIZE {
@@ -211,14 +179,11 @@ impl EthABIEncoder for Message {
     }
 }
 
-pub(crate) fn bytes_to_bytes32(bytes: Vec<u8>) -> Result<Option<[u8; 32]>, Error> {
+pub(crate) fn bytes_to_bytes32(bytes: [u8; 32]) -> Option<[u8; 32]> {
     if bytes == [0u8; 32] {
-        Ok(None)
-    } else if bytes.len() == 32 {
-        // SAFETY: the length of bytes is 32
-        Ok(Some(bytes.as_slice().try_into().unwrap()))
+        None
     } else {
-        Err(Error::invalid_optional_bytes_length(32, bytes.len()))
+        Some(bytes)
     }
 }
 

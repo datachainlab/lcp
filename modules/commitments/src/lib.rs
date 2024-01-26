@@ -23,7 +23,7 @@ pub use context::{TrustingPeriodContext, ValidationContext};
 pub use encoder::EthABIEncoder;
 pub use errors::Error;
 pub use message::{
-    aggregate_messages, CommitmentPrefix, EmittedState, Message, MisbehaviourMessage,
+    aggregate_messages, CommitmentPrefix, EmittedState, Message, MisbehaviourMessage, PrevState,
     UpdateClientMessage, VerifyMembershipMessage,
 };
 pub use proof::CommitmentProof;

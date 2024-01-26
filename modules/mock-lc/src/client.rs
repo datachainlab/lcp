@@ -11,7 +11,7 @@ use ibc::core::ics02_client::header::Header as Ics02Header;
 use ibc::mock::client_state::{client_type, MockClientState, MOCK_CLIENT_STATE_TYPE_URL};
 use ibc::mock::consensus_state::MockConsensusState;
 use light_client::commitments::{
-    gen_state_id_from_any, EmittedState, MisbehaviourMessage, UpdateClientMessage,
+    gen_state_id_from_any, EmittedState, MisbehaviourMessage, PrevState, UpdateClientMessage,
     ValidationContext,
 };
 use light_client::types::{Any, ClientId, Height, Time};
@@ -236,8 +236,10 @@ impl MockLightClient {
         Ok(SubmitMisbehaviourData {
             new_any_client_state: Any::try_from(new_client_state).unwrap(),
             message: MisbehaviourMessage {
-                prev_height: latest_height.into(),
-                prev_state_id: gen_state_id(client_state, latest_consensus_state)?,
+                prev_states: vec![PrevState {
+                    height: latest_height.into(),
+                    state_id: gen_state_id(client_state, latest_consensus_state)?,
+                }],
                 context: ValidationContext::Empty,
                 client_message: Any::from(misbehaviour).into(),
             }

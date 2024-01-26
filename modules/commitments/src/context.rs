@@ -1,5 +1,6 @@
 use crate::prelude::*;
 use crate::{Error, EthABIEncoder};
+use alloy_sol_types::{sol, SolValue};
 use core::{fmt::Display, time::Duration};
 use lcp_types::{nanos_to_duration, Time};
 use serde::{Deserialize, Serialize};
@@ -101,21 +102,21 @@ impl EthABIEncoder for ValidationContext {
                 header,
                 context_bytes: vec![],
             }
-            .encode(),
+            .abi_encode(),
             ValidationContext::TrustingPeriod(ctx) => EthABIValidationContext {
                 header,
                 context_bytes: ctx.ethabi_encode(),
             }
-            .encode(),
+            .abi_encode(),
         }
     }
     fn ethabi_decode(bz: &[u8]) -> Result<Self, Error> {
         let EthABIValidationContext {
             header,
             context_bytes,
-        } = EthABIValidationContext::decode(bz)?;
+        } = EthABIValidationContext::abi_decode(bz, true)?;
 
-        match ValidationContext::parse_context_type_from_header(&header)? {
+        match ValidationContext::parse_context_type_from_header(header.as_slice())? {
             VALIDATION_CONTEXT_TYPE_EMPTY_EMPTY => {
                 assert!(context_bytes.is_empty());
                 Ok(ValidationContext::Empty)
@@ -132,41 +133,10 @@ impl EthABIEncoder for ValidationContext {
     }
 }
 
-pub(crate) struct EthABIValidationContext {
-    header: ethabi::FixedBytes,   // bytes32
-    context_bytes: ethabi::Bytes, // bytes
-}
-
-impl EthABIValidationContext {
-    fn encode(&self) -> Vec<u8> {
-        use ethabi::Token;
-        ethabi::encode(&[Token::Tuple(vec![
-            Token::FixedBytes(self.header.clone()),
-            Token::Bytes(self.context_bytes.clone()),
-        ])])
-    }
-    fn decode(bytes: &[u8]) -> Result<Self, Error> {
-        use ethabi::ParamType;
-        let tuple = ethabi::decode(
-            &[ParamType::Tuple(vec![
-                ParamType::FixedBytes(32),
-                ParamType::Bytes,
-            ])],
-            bytes,
-        )?
-        .into_iter()
-        .next()
-        .unwrap()
-        .into_tuple()
-        .unwrap();
-
-        // if the decoding is successful, the length of the tuple should be 2
-        assert!(tuple.len() == 2);
-        let mut values = tuple.into_iter();
-        Ok(Self {
-            header: values.next().unwrap().into_fixed_bytes().unwrap(),
-            context_bytes: values.next().unwrap().into_bytes().unwrap(),
-        })
+sol! {
+    struct EthABIValidationContext {
+        bytes32 header;
+        bytes context_bytes;
     }
 }
 
@@ -296,13 +266,13 @@ impl EthABIEncoder for TrustingPeriodContext {
         params[0..=15].copy_from_slice(&self.trusting_period.as_nanos().to_be_bytes());
         params[16..=31].copy_from_slice(&self.clock_drift.as_nanos().to_be_bytes());
         EthABITrustingPeriodContext {
-            timestamps: timestamps.to_vec(),
-            params: params.to_vec(),
+            timestamps: timestamps.into(),
+            params: params.into(),
         }
-        .encode()
+        .abi_encode()
     }
     fn ethabi_decode(bz: &[u8]) -> Result<Self, Error> {
-        let c = EthABITrustingPeriodContext::decode(bz)?;
+        let c = EthABITrustingPeriodContext::abi_decode(bz, true)?;
         let trusting_period =
             nanos_to_duration(u128::from_be_bytes(c.params[0..=15].try_into().unwrap()))?;
         let clock_drift =
@@ -328,47 +298,15 @@ impl From<TrustingPeriodContext> for ValidationContext {
     }
 }
 
-pub(crate) struct EthABITrustingPeriodContext {
-    /// bytes32 in solidity
-    /// MSB first
-    /// 0-15: untrusted_header_timestamp
-    /// 16-31: trusted_state_timestamp
-    pub timestamps: ethabi::FixedBytes,
-    /// bytes32 in solidity
-    /// MSB first
-    /// 0-15: trusting_period
-    /// 16-31: clock_drift
-    pub params: ethabi::FixedBytes,
-}
-
-impl EthABITrustingPeriodContext {
-    fn encode(self) -> Vec<u8> {
-        use ethabi::Token;
-        ethabi::encode(&[Token::Tuple(vec![
-            Token::FixedBytes(self.timestamps),
-            Token::FixedBytes(self.params),
-        ])])
-    }
-    fn decode(bytes: &[u8]) -> Result<Self, Error> {
-        use ethabi::ParamType;
-        let tuple = ethabi::decode(
-            &[ParamType::Tuple(vec![
-                ParamType::FixedBytes(32),
-                ParamType::FixedBytes(32),
-            ])],
-            bytes,
-        )?
-        .into_iter()
-        .next()
-        .unwrap()
-        .into_tuple()
-        .unwrap();
-        assert!(tuple.len() == 2);
-        let mut values = tuple.into_iter();
-        Ok(Self {
-            timestamps: values.next().unwrap().into_fixed_bytes().unwrap(),
-            params: values.next().unwrap().into_fixed_bytes().unwrap(),
-        })
+sol! {
+    struct EthABITrustingPeriodContext {
+        /// MSB first
+        /// 0-15: untrusted_header_timestamp
+        /// 16-31: trusted_state_timestamp
+        bytes32 timestamps;
+        /// 0-15: trusting_period
+        /// 16-31: clock_drift
+        bytes32 params;
     }
 }
 
