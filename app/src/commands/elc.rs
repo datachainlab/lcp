@@ -52,8 +52,11 @@ impl ELCCmd {
         L: EnclaveLoader<S>,
     {
         let elc_opts = self.opts();
-        let enclave =
-            enclave_loader.load(opts, elc_opts.enclave.path.as_ref(), elc_opts.enclave.debug)?;
+        let enclave = enclave_loader.load(
+            opts,
+            elc_opts.enclave.path.as_ref(),
+            elc_opts.enclave.is_debug(),
+        )?;
         match self {
             Self::CreateClient(_) => {
                 let _ = enclave.proto_create_client(elc_opts.load()?)?;

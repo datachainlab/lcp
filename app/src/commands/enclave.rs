@@ -38,15 +38,15 @@ impl EnclaveCmd {
         }
         match self {
             Self::GenerateKey(cmd) => run_generate_key(
-                enclave_loader.load(opts, cmd.enclave.path.as_ref(), cmd.enclave.debug)?,
+                enclave_loader.load(opts, cmd.enclave.path.as_ref(), cmd.enclave.is_debug())?,
                 cmd,
             ),
             Self::ListKeys(cmd) => run_list_keys(
-                enclave_loader.load(opts, cmd.enclave.path.as_ref(), cmd.enclave.debug)?,
+                enclave_loader.load(opts, cmd.enclave.path.as_ref(), cmd.enclave.is_debug())?,
                 cmd,
             ),
             Self::PruneKeys(cmd) => run_prune_keys(
-                enclave_loader.load(opts, cmd.enclave.path.as_ref(), cmd.enclave.debug)?,
+                enclave_loader.load(opts, cmd.enclave.path.as_ref(), cmd.enclave.is_debug())?,
                 cmd,
             ),
             Self::Metadata(cmd) => run_print_metadata(opts, cmd),
