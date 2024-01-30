@@ -179,14 +179,6 @@ impl EthABIEncoder for Message {
     }
 }
 
-pub(crate) fn bytes_to_bytes32(bytes: [u8; 32]) -> Option<[u8; 32]> {
-    if bytes == [0u8; 32] {
-        None
-    } else {
-        Some(bytes)
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -1,4 +1,3 @@
-use super::bytes_to_bytes32;
 use crate::encoder::{EthABIEncoder, EthABIHeight};
 use crate::prelude::*;
 use crate::{Error, StateID};
@@ -43,26 +42,26 @@ sol! {
 }
 
 impl From<VerifyMembershipMessage> for EthABIVerifyMembershipMessage {
-    fn from(value: VerifyMembershipMessage) -> Self {
+    fn from(msg: VerifyMembershipMessage) -> Self {
         Self {
-            prefix: value.prefix,
-            path: value.path.into_bytes(),
-            value: B256::from_slice(value.value.unwrap_or_default().as_slice()),
-            height: EthABIHeight::from(value.height),
-            state_id: B256::from_slice(&value.state_id.to_vec()),
+            prefix: msg.prefix,
+            path: msg.path.into_bytes(),
+            value: B256::from_slice(msg.value.unwrap_or_default().as_slice()),
+            height: EthABIHeight::from(msg.height),
+            state_id: B256::from_slice(&msg.state_id.to_vec()),
         }
     }
 }
 
 impl TryFrom<EthABIVerifyMembershipMessage> for VerifyMembershipMessage {
     type Error = Error;
-    fn try_from(value: EthABIVerifyMembershipMessage) -> Result<Self, Self::Error> {
+    fn try_from(msg: EthABIVerifyMembershipMessage) -> Result<Self, Self::Error> {
         Ok(Self {
-            prefix: value.prefix,
-            path: String::from_utf8(value.path)?,
-            value: bytes_to_bytes32(value.value.0),
-            height: value.height.into(),
-            state_id: value.state_id.as_slice().try_into()?,
+            prefix: msg.prefix,
+            path: String::from_utf8(msg.path)?,
+            value: (!msg.value.is_zero()).then_some(msg.value.0),
+            height: msg.height.into(),
+            state_id: msg.state_id.as_slice().try_into()?,
         })
     }
 }

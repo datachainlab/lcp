@@ -42,9 +42,9 @@ sol! {
 }
 
 impl From<MisbehaviourMessage> for EthABIMisbehaviourMessage {
-    fn from(value: MisbehaviourMessage) -> Self {
+    fn from(msg: MisbehaviourMessage) -> Self {
         Self {
-            prev_states: value
+            prev_states: msg
                 .prev_states
                 .into_iter()
                 .map(|v| EthABIPrevState {
@@ -52,8 +52,8 @@ impl From<MisbehaviourMessage> for EthABIMisbehaviourMessage {
                     state_id: B256::from_slice(v.state_id.to_vec().as_slice()),
                 })
                 .collect(),
-            context: value.context.ethabi_encode(),
-            client_message: value.client_message.encode_to_vec(),
+            context: msg.context.ethabi_encode(),
+            client_message: msg.client_message.encode_to_vec(),
         }
     }
 }
@@ -61,9 +61,9 @@ impl From<MisbehaviourMessage> for EthABIMisbehaviourMessage {
 impl TryFrom<EthABIMisbehaviourMessage> for MisbehaviourMessage {
     type Error = Error;
 
-    fn try_from(value: EthABIMisbehaviourMessage) -> Result<Self, Self::Error> {
+    fn try_from(msg: EthABIMisbehaviourMessage) -> Result<Self, Self::Error> {
         Ok(Self {
-            prev_states: value
+            prev_states: msg
                 .prev_states
                 .into_iter()
                 .map(|v| PrevState {
@@ -71,8 +71,8 @@ impl TryFrom<EthABIMisbehaviourMessage> for MisbehaviourMessage {
                     state_id: StateID::from(v.state_id.0),
                 })
                 .collect(),
-            context: ValidationContext::ethabi_decode(value.context.as_slice())?,
-            client_message: Any::decode(value.client_message.as_slice())
+            context: ValidationContext::ethabi_decode(msg.context.as_slice())?,
+            client_message: Any::decode(msg.client_message.as_slice())
                 .map_err(Error::proto_decode_error)?,
         })
     }

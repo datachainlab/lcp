@@ -1,4 +1,3 @@
-use super::bytes_to_bytes32;
 use crate::context::ValidationContext;
 use crate::encoder::{EthABIEmittedState, EthABIEncoder, EthABIHeight};
 use crate::prelude::*;
@@ -108,17 +107,17 @@ sol! {
 }
 
 impl From<UpdateClientMessage> for EthABIUpdateClientMessage {
-    fn from(value: UpdateClientMessage) -> Self {
+    fn from(msg: UpdateClientMessage) -> Self {
         Self {
-            prev_height: value.prev_height.into(),
+            prev_height: msg.prev_height.into(),
             prev_state_id: B256::from_slice(
-                value.prev_state_id.unwrap_or_default().to_vec().as_slice(),
+                msg.prev_state_id.unwrap_or_default().to_vec().as_slice(),
             ),
-            post_height: value.post_height.into(),
-            post_state_id: B256::from_slice(value.post_state_id.to_vec().as_slice()),
-            timestamp: value.timestamp.as_unix_timestamp_nanos(),
-            context: value.context.ethabi_encode(),
-            emitted_states: value
+            post_height: msg.post_height.into(),
+            post_state_id: B256::from_slice(msg.post_state_id.to_vec().as_slice()),
+            timestamp: msg.timestamp.as_unix_timestamp_nanos(),
+            context: msg.context.ethabi_encode(),
+            emitted_states: msg
                 .emitted_states
                 .into_iter()
                 .map(EthABIEmittedState::from)
@@ -129,15 +128,16 @@ impl From<UpdateClientMessage> for EthABIUpdateClientMessage {
 
 impl TryFrom<EthABIUpdateClientMessage> for UpdateClientMessage {
     type Error = Error;
-    fn try_from(value: EthABIUpdateClientMessage) -> Result<Self, Self::Error> {
+    fn try_from(msg: EthABIUpdateClientMessage) -> Result<Self, Self::Error> {
         Ok(Self {
-            prev_height: value.prev_height.into(),
-            prev_state_id: bytes_to_bytes32(value.prev_state_id.0).map(StateID::from),
-            post_height: value.post_height.into(),
-            post_state_id: value.post_state_id.as_slice().try_into()?,
-            timestamp: Time::from_unix_timestamp_nanos(value.timestamp)?,
-            context: ValidationContext::ethabi_decode(value.context.as_slice())?,
-            emitted_states: value
+            prev_height: msg.prev_height.into(),
+            prev_state_id: (!msg.prev_state_id.is_zero())
+                .then_some(StateID::from(msg.prev_state_id.0)),
+            post_height: msg.post_height.into(),
+            post_state_id: msg.post_state_id.as_slice().try_into()?,
+            timestamp: Time::from_unix_timestamp_nanos(msg.timestamp)?,
+            context: ValidationContext::ethabi_decode(msg.context.as_slice())?,
+            emitted_states: msg
                 .emitted_states
                 .into_iter()
                 .map(EmittedState::try_from)
