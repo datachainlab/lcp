@@ -26,8 +26,8 @@ use ibc::core::ics23_commitment::merkle::{apply_prefix, MerkleProof};
 use ibc::core::ics24_host::Path;
 use lcp_proto::ibc::core::commitment::v1::MerkleProof as RawMerkleProof;
 use light_client::commitments::{
-    CommitmentPrefix, EmittedState, TrustingPeriodContext, UpdateClientMessage, ValidationContext,
-    VerifyMembershipMessage,
+    CommitmentPrefix, EmittedState, MisbehaviourMessage, PrevState, TrustingPeriodContext,
+    UpdateClientMessage, ValidationContext, VerifyMembershipMessage,
 };
 use light_client::types::{Any, ClientId, Height, Time};
 use light_client::{
@@ -366,7 +366,7 @@ impl TendermintLightClient {
         let new_client_state = client_state
             .check_misbehaviour_and_update_state(
                 &IBCContext::<TendermintClientState, TendermintConsensusState>::new(ctx),
-                client_id.into(),
+                client_id.clone().into(),
                 Any::from(misbehaviour.clone()).into(),
             )
             .map_err(|e| {
@@ -381,7 +381,54 @@ impl TendermintLightClient {
                 .clone(),
         );
 
-        todo!()
+        let prev_states = self.make_prev_states(
+            ctx,
+            &client_id,
+            &client_state,
+            vec![
+                misbehaviour.header1().trusted_height.into(),
+                misbehaviour.header2().trusted_height.into(),
+            ],
+        )?;
+
+        Ok(SubmitMisbehaviourData {
+            new_any_client_state: new_client_state.into(),
+            message: MisbehaviourMessage {
+                prev_states,
+                context: ValidationContext::Empty,
+                client_message: Any::from(misbehaviour).into(),
+            }
+            .into(),
+        })
+    }
+
+    fn make_prev_states(
+        &self,
+        ctx: &dyn HostClientReader,
+        client_id: &ClientId,
+        client_state: &ClientState,
+        heights: Vec<Height>,
+    ) -> Result<Vec<PrevState>, LightClientError> {
+        let mut prev_states = Vec::new();
+        for height in heights {
+            let ibc_height = height.try_into().map_err(Error::ics02)?;
+            let consensus_state: ConsensusState = ctx
+                .consensus_state(&client_id, &height)
+                .map_err(|_| {
+                    Error::ics02(ICS02Error::ConsensusStateNotFound {
+                        client_id: client_id.clone().into(),
+                        height: ibc_height,
+                    })
+                })?
+                .try_into()?;
+            let prev_state_id =
+                gen_state_id(canonicalize_state(client_state), consensus_state.clone())?;
+            prev_states.push(PrevState {
+                height: height.into(),
+                state_id: prev_state_id,
+            });
+        }
+        Ok(prev_states)
     }
 }
 
