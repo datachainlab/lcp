@@ -82,6 +82,19 @@ impl VerifyMembershipMessage {
             state_id,
         }
     }
+
+    pub fn validate(&self) -> Result<(), Error> {
+        if self.path.is_empty() {
+            return Err(Error::empty_path());
+        }
+        if self.height.is_zero() {
+            return Err(Error::zero_height());
+        }
+        if self.state_id.is_zero() {
+            return Err(Error::zero_state_id());
+        }
+        Ok(())
+    }
 }
 
 impl EthABIEncoder for VerifyMembershipMessage {

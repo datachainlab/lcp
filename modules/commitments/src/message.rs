@@ -52,6 +52,14 @@ impl Message {
             Message::Misbehaviour(_) => MESSAGE_TYPE_MISBEHAVIOUR,
         }
     }
+
+    pub fn validate(&self) -> Result<(), Error> {
+        match self {
+            Message::UpdateClient(c) => c.validate(),
+            Message::VerifyMembership(c) => c.validate(),
+            Message::Misbehaviour(c) => c.validate(),
+        }
+    }
 }
 
 impl Display for Message {

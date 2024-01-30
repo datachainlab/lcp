@@ -107,6 +107,26 @@ define_error! {
             format_args!("context aggregation failed: descr={}", e.descr)
         },
 
+        EmptyPath
+        {}
+        |_| {"empty path"},
+
+        ZeroHeight
+        {}
+        |_| {"zero height"},
+
+        ZeroStateId
+        {}
+        |_| {"zero stateID"},
+
+        InvalidPrevStateAndHeight
+        {}
+        |_| {"prev_height and prev_state_id must be both None or both Some"},
+
+        EmptyPrevStates
+        {}
+        |_| {"empty prev_states in misbehaviour message"},
+
         ProtoDecodeError
         [TraceError<prost::DecodeError>]
         |_| {"proto decode error"},

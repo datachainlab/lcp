@@ -18,6 +18,15 @@ pub struct PrevState {
     pub state_id: StateID,
 }
 
+impl MisbehaviourMessage {
+    pub fn validate(&self) -> Result<(), Error> {
+        if self.prev_states.is_empty() {
+            return Err(Error::empty_prev_states());
+        }
+        Ok(())
+    }
+}
+
 impl Display for MisbehaviourMessage {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(

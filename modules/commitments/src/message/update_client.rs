@@ -34,6 +34,13 @@ impl Display for EmittedState {
 }
 
 impl UpdateClientMessage {
+    pub fn validate(&self) -> Result<(), Error> {
+        if self.prev_height.is_none() != self.prev_state_id.is_none() {
+            return Err(Error::invalid_prev_state_and_height());
+        }
+        Ok(())
+    }
+
     pub fn aggregate(self, other: Self) -> Result<Self, Error> {
         if self.post_state_id != other.prev_state_id.unwrap_or_default() {
             return Err(Error::message_aggregation_failed(format!(
