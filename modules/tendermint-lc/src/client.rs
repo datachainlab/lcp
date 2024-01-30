@@ -93,7 +93,7 @@ impl LightClient for TendermintLightClient {
         client_id: ClientId,
         any_client_message: Any,
     ) -> Result<UpdateClientResult, LightClientError> {
-        match ClientMessage::try_from(any_client_message.clone())? {
+        match ClientMessage::try_from(any_client_message)? {
             ClientMessage::Header(h) => Ok(self.update_state(ctx, client_id, h)?.into()),
             ClientMessage::Misbehaviour(m) => {
                 Ok(self.submit_misbehaviour(ctx, client_id, m)?.into())
@@ -140,8 +140,7 @@ impl LightClient for TendermintLightClient {
                 Some(value.keccak256()),
                 proof_height,
                 gen_state_id(canonicalize_state(&client_state), consensus_state)?,
-            )
-            .into(),
+            ),
         })
     }
 
@@ -182,8 +181,7 @@ impl LightClient for TendermintLightClient {
                 None,
                 proof_height,
                 gen_state_id(canonicalize_state(&client_state), consensus_state)?,
-            )
-            .into(),
+            ),
         })
     }
 }
@@ -340,11 +338,9 @@ impl TendermintLightClient {
                 )
                 .into(),
                 emitted_states: Default::default(),
-            }
-            .into(),
+            },
             prove: true,
-        }
-        .into())
+        })
     }
 
     fn submit_misbehaviour(
@@ -396,9 +392,8 @@ impl TendermintLightClient {
             message: MisbehaviourMessage {
                 prev_states,
                 context: ValidationContext::Empty,
-                client_message: Any::from(misbehaviour).into(),
-            }
-            .into(),
+                client_message: Any::from(misbehaviour),
+            },
         })
     }
 
@@ -413,7 +408,7 @@ impl TendermintLightClient {
         for height in heights {
             let ibc_height = height.try_into().map_err(Error::ics02)?;
             let consensus_state: ConsensusState = ctx
-                .consensus_state(&client_id, &height)
+                .consensus_state(client_id, &height)
                 .map_err(|_| {
                     Error::ics02(ICS02Error::ConsensusStateNotFound {
                         client_id: client_id.clone().into(),
@@ -424,7 +419,7 @@ impl TendermintLightClient {
             let prev_state_id =
                 gen_state_id(canonicalize_state(client_state), consensus_state.clone())?;
             prev_states.push(PrevState {
-                height: height.into(),
+                height,
                 state_id: prev_state_id,
             });
         }

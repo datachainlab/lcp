@@ -73,7 +73,7 @@ impl LightClient for MockLightClient {
         client_id: ClientId,
         any_client_message: Any,
     ) -> Result<UpdateClientResult, LightClientError> {
-        let client_message = ClientMessage::try_from(any_client_message.clone())?;
+        let client_message = ClientMessage::try_from(any_client_message)?;
         match client_message {
             ClientMessage::Header(header) => Ok(self.update_state(ctx, client_id, header)?.into()),
             ClientMessage::Misbehaviour(misbehaviour) => Ok(self
@@ -186,8 +186,7 @@ impl MockLightClient {
                 timestamp: header_timestamp,
                 context: ValidationContext::Empty,
                 emitted_states: vec![EmittedState(height, new_any_client_state)],
-            }
-            .into(),
+            },
             prove: true,
         })
     }
@@ -241,9 +240,8 @@ impl MockLightClient {
                     state_id: gen_state_id(client_state, latest_consensus_state)?,
                 }],
                 context: ValidationContext::Empty,
-                client_message: Any::from(misbehaviour).into(),
-            }
-            .into(),
+                client_message: Any::from(misbehaviour),
+            },
         })
     }
 }
