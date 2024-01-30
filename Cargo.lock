@@ -813,7 +813,6 @@ dependencies = [
 name = "commitments"
 version = "0.1.0"
 dependencies = [
- "ahash 0.8.6",
  "alloy-sol-types",
  "crypto",
  "flex-error",
