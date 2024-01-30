@@ -131,7 +131,7 @@ sol! {
 impl EthABIEncoder for Message {
     fn ethabi_encode(self) -> Vec<u8> {
         EthABIHeaderedMessage {
-            header: self.header().as_ref().try_into().unwrap(),
+            header: self.header().into(),
             message: match self {
                 Message::UpdateClient(c) => c.ethabi_encode(),
                 Message::VerifyMembership(c) => c.ethabi_encode(),
@@ -142,7 +142,7 @@ impl EthABIEncoder for Message {
     }
 
     fn ethabi_decode(bz: &[u8]) -> Result<Self, Error> {
-        let eth_abi_message = EthABIHeaderedMessage::abi_decode(bz, true).unwrap();
+        let eth_abi_message = EthABIHeaderedMessage::abi_decode(bz, true)?;
         let (version, message_type) = {
             let header = &eth_abi_message.header;
             if header.len() != MESSAGE_HEADER_SIZE {
