@@ -48,7 +48,7 @@ impl ServiceCmd {
             Self::Start(cmd) => {
                 let addr = cmd.address.parse()?;
                 let enclave =
-                    enclave_loader.load(opts, cmd.enclave.path.as_ref(), cmd.enclave.debug)?;
+                    enclave_loader.load(opts, cmd.enclave.path.as_ref(), cmd.enclave.is_debug())?;
 
                 let mut rb = Builder::new_multi_thread();
                 let rb = if let Some(threads) = cmd.threads {

@@ -34,7 +34,7 @@ impl AttestationCmd {
                     bail!("home directory doesn't exist at {:?}", home);
                 }
                 run_ias_remote_attestation(
-                    enclave_loader.load(opts, cmd.enclave.path.as_ref(), cmd.enclave.debug)?,
+                    enclave_loader.load(opts, cmd.enclave.path.as_ref(), cmd.enclave.is_debug())?,
                     cmd,
                 )
             }
@@ -44,7 +44,7 @@ impl AttestationCmd {
                     bail!("home directory doesn't exist at {:?}", home);
                 }
                 run_simulate_remote_attestation(
-                    enclave_loader.load(opts, cmd.enclave.path.as_ref(), cmd.enclave.debug)?,
+                    enclave_loader.load(opts, cmd.enclave.path.as_ref(), cmd.enclave.is_debug())?,
                     cmd,
                 )
             }
