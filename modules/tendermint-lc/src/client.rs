@@ -26,15 +26,15 @@ use ibc::core::ics23_commitment::merkle::{apply_prefix, MerkleProof};
 use ibc::core::ics24_host::Path;
 use lcp_proto::ibc::core::commitment::v1::MerkleProof as RawMerkleProof;
 use light_client::commitments::{
-    CommitmentPrefix, EmittedState, MisbehaviourMessage, PrevState, TrustingPeriodContext,
-    UpdateClientMessage, ValidationContext, VerifyMembershipMessage,
+    CommitmentPrefix, EmittedState, MisbehaviourProxyMessage, PrevState, TrustingPeriodContext,
+    UpdateStateProxyMessage, ValidationContext, VerifyMembershipProxyMessage,
 };
 use light_client::types::{Any, ClientId, Height, Time};
 use light_client::{
     ibc::IBCContext, CreateClientResult, Error as LightClientError, HostClientReader, LightClient,
     LightClientRegistry, UpdateClientResult, VerifyMembershipResult,
 };
-use light_client::{SubmitMisbehaviourData, UpdateClientData, VerifyNonMembershipResult};
+use light_client::{SubmitMisbehaviourData, UpdateStateData, VerifyNonMembershipResult};
 use log::*;
 
 #[derive(Default)]
@@ -73,7 +73,7 @@ impl LightClient for TendermintLightClient {
 
         Ok(CreateClientResult {
             height,
-            message: UpdateClientMessage {
+            message: UpdateStateProxyMessage {
                 prev_height: None,
                 prev_state_id: None,
                 post_height: height,
@@ -134,7 +134,7 @@ impl LightClient for TendermintLightClient {
         })?;
 
         Ok(VerifyMembershipResult {
-            message: VerifyMembershipMessage::new(
+            message: VerifyMembershipProxyMessage::new(
                 prefix.into_vec(),
                 path.to_string(),
                 Some(value.keccak256()),
@@ -175,7 +175,7 @@ impl LightClient for TendermintLightClient {
         })?;
 
         Ok(VerifyNonMembershipResult {
-            message: VerifyMembershipMessage::new(
+            message: VerifyMembershipProxyMessage::new(
                 prefix.into_vec(),
                 path.to_string(),
                 None,
@@ -227,7 +227,7 @@ impl TendermintLightClient {
         ctx: &dyn HostClientReader,
         client_id: ClientId,
         header: Header,
-    ) -> Result<UpdateClientData, LightClientError> {
+    ) -> Result<UpdateStateData, LightClientError> {
         // Read client state from the host chain store.
         let client_state: ClientState = ctx.client_state(&client_id)?.try_into()?;
 
@@ -320,11 +320,11 @@ impl TendermintLightClient {
             canonicalize_state(&new_client_state),
             new_consensus_state.clone(),
         )?;
-        Ok(UpdateClientData {
+        Ok(UpdateStateData {
             new_any_client_state: new_client_state.into(),
             new_any_consensus_state: new_consensus_state.into(),
             height,
-            message: UpdateClientMessage {
+            message: UpdateStateProxyMessage {
                 prev_height: Some(header.trusted_height.into()),
                 prev_state_id: Some(prev_state_id),
                 post_height: height,
@@ -389,7 +389,7 @@ impl TendermintLightClient {
 
         Ok(SubmitMisbehaviourData {
             new_any_client_state: new_client_state.into(),
-            message: MisbehaviourMessage {
+            message: MisbehaviourProxyMessage {
                 prev_states,
                 context: ValidationContext::Empty,
                 client_message: Any::from(misbehaviour),

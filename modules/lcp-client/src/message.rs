@@ -2,16 +2,12 @@ use crate::errors::Error;
 use crate::prelude::*;
 use attestation_report::EndorsedAttestationVerificationReport;
 use crypto::Address;
-use light_client::commitments::{
-    Message as ELCMessage, StateID, UpdateClientMessage as ELCUpdateClientMessage,
-    ValidationContext,
-};
+use light_client::commitments::ProxyMessage;
 use light_client::types::proto::ibc::lightclients::lcp::v1::{
     RegisterEnclaveKeyMessage as RawRegisterEnclaveKeyMessage,
     UpdateClientMessage as RawUpdateClientMessage,
 };
-use light_client::types::proto::protobuf::Protobuf;
-use light_client::types::{Any, Height, Time};
+use light_client::types::{proto::protobuf::Protobuf, Any};
 use serde::{Deserialize, Serialize};
 
 pub const LCP_REGISTER_ENCLAVE_KEY_MESSAGE_TYPE_URL: &str =
@@ -90,7 +86,7 @@ impl From<RegisterEnclaveKeyMessage> for RawRegisterEnclaveKeyMessage {
 pub struct UpdateClientMessage {
     pub signer: Address,
     pub signature: Vec<u8>,
-    pub elc_message: ELCUpdateClientMessage,
+    pub proxy_message: ProxyMessage,
 }
 
 impl Protobuf<RawUpdateClientMessage> for UpdateClientMessage {}
@@ -101,7 +97,7 @@ impl TryFrom<RawUpdateClientMessage> for UpdateClientMessage {
         Ok(UpdateClientMessage {
             signer: Address::try_from(value.signer.as_slice())?,
             signature: value.signature,
-            elc_message: ELCMessage::from_bytes(&value.elc_message)?.try_into()?,
+            proxy_message: ProxyMessage::from_bytes(&value.proxy_message)?,
         })
     }
 }
@@ -109,69 +105,9 @@ impl TryFrom<RawUpdateClientMessage> for UpdateClientMessage {
 impl From<UpdateClientMessage> for RawUpdateClientMessage {
     fn from(value: UpdateClientMessage) -> Self {
         RawUpdateClientMessage {
-            elc_message: Into::<ELCMessage>::into(value.elc_message).to_bytes(),
+            proxy_message: Into::<ProxyMessage>::into(value.proxy_message).to_bytes(),
             signer: value.signer.into(),
             signature: value.signature,
-        }
-    }
-}
-
-impl ELCMessageReader for UpdateClientMessage {
-    fn signer(&self) -> Address {
-        self.signer
-    }
-
-    fn elc_message(&self) -> &ELCUpdateClientMessage {
-        &self.elc_message
-    }
-}
-
-pub trait ELCMessageReader {
-    fn signer(&self) -> Address;
-
-    fn elc_message(&self) -> &ELCUpdateClientMessage;
-
-    fn elc_message_bytes(&self) -> Vec<u8> {
-        ELCMessage::from(self.elc_message().clone()).to_bytes()
-    }
-
-    fn height(&self) -> Height {
-        self.elc_message().post_height
-    }
-
-    fn prev_height(&self) -> Option<Height> {
-        self.elc_message().prev_height
-    }
-
-    fn prev_state_id(&self) -> Option<StateID> {
-        self.elc_message().prev_state_id
-    }
-
-    fn state_id(&self) -> StateID {
-        self.elc_message().post_state_id
-    }
-
-    fn timestamp(&self) -> Time {
-        self.elc_message().timestamp
-    }
-
-    fn context(&self) -> &ValidationContext {
-        &self.elc_message().context
-    }
-}
-
-impl ClientMessage {
-    pub fn get_height(&self) -> Option<Height> {
-        match self {
-            ClientMessage::UpdateClient(h) => Some(h.height()),
-            _ => None,
-        }
-    }
-
-    pub fn get_timestamp(&self) -> Option<Time> {
-        match self {
-            ClientMessage::UpdateClient(h) => Some(h.timestamp()),
-            _ => None,
         }
     }
 }

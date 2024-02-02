@@ -4,7 +4,7 @@ use context::Context;
 use crypto::{EnclavePublicKey, Signer, Verifier};
 use ecall_commands::{AggregateMessagesInput, AggregateMessagesResponse, LightClientResponse};
 use light_client::{
-    commitments::{self, prove_commitment, Message, UpdateClientMessage},
+    commitments::{self, prove_commitment, ProxyMessage, UpdateStateProxyMessage},
     HostContext, LightClientResolver,
 };
 use store::KVStore;
@@ -32,18 +32,18 @@ pub fn aggregate_messages<R: LightClientResolver, S: KVStore, K: Signer>(
     let messages = input
         .messages
         .into_iter()
-        .map(|c| Message::from_bytes(&c)?.try_into())
+        .map(|m| ProxyMessage::from_bytes(&m)?.try_into())
         .collect::<Result<Vec<_>, _>>()?
         .into_iter()
         .zip(input.signatures.iter())
-        .map(|(c, s)| -> Result<_, Error> {
-            verify_commitment(&pk, &c, s)?;
-            c.context.validate(ctx.host_timestamp())?;
-            Ok(c)
+        .map(|(m, s)| -> Result<_, Error> {
+            verify_message(&pk, &m, s)?;
+            m.context.validate(ctx.host_timestamp())?;
+            Ok(m)
         })
         .collect::<Result<Vec<_>, _>>()?;
 
-    let message = Message::from(commitments::aggregate_messages(messages)?);
+    let message = ProxyMessage::from(commitments::aggregate_messages(messages)?);
     let proof = prove_commitment(ek, input.signer, message)?;
 
     Ok(LightClientResponse::AggregateMessages(
@@ -51,12 +51,12 @@ pub fn aggregate_messages<R: LightClientResolver, S: KVStore, K: Signer>(
     ))
 }
 
-fn verify_commitment(
+fn verify_message(
     verifier: &EnclavePublicKey,
-    commitment: &UpdateClientMessage,
+    message: &UpdateStateProxyMessage,
     signature: &[u8],
 ) -> Result<(), Error> {
-    let message_bytes = Message::UpdateClient(commitment.clone()).to_bytes();
+    let message_bytes = ProxyMessage::UpdateState(message.clone()).to_bytes();
     verifier
         .verify(&message_bytes, signature)
         .map_err(Error::crypto)?;

@@ -11,13 +11,13 @@ use ibc::core::ics02_client::header::Header as Ics02Header;
 use ibc::mock::client_state::{client_type, MockClientState, MOCK_CLIENT_STATE_TYPE_URL};
 use ibc::mock::consensus_state::MockConsensusState;
 use light_client::commitments::{
-    gen_state_id_from_any, EmittedState, MisbehaviourMessage, PrevState, UpdateClientMessage,
-    ValidationContext,
+    gen_state_id_from_any, EmittedState, MisbehaviourProxyMessage, PrevState,
+    UpdateStateProxyMessage, ValidationContext,
 };
 use light_client::types::{Any, ClientId, Height, Time};
 use light_client::{
     ibc::IBCContext, CreateClientResult, Error as LightClientError, HostClientReader, LightClient,
-    LightClientRegistry, SubmitMisbehaviourData, UpdateClientData, UpdateClientResult,
+    LightClientRegistry, SubmitMisbehaviourData, UpdateClientResult, UpdateStateData,
     VerifyMembershipResult, VerifyNonMembershipResult,
 };
 
@@ -53,7 +53,7 @@ impl LightClient for MockLightClient {
         let timestamp: Time = consensus_state.timestamp().into();
         Ok(CreateClientResult {
             height,
-            message: UpdateClientMessage {
+            message: UpdateStateProxyMessage {
                 prev_height: None,
                 prev_state_id: None,
                 post_state_id: state_id,
@@ -116,7 +116,7 @@ impl MockLightClient {
         ctx: &dyn HostClientReader,
         client_id: ClientId,
         header: Header,
-    ) -> Result<UpdateClientData, LightClientError> {
+    ) -> Result<UpdateStateData, LightClientError> {
         // Read client state from the host chain store.
         let client_state: ClientState = ctx.client_state(&client_id)?.try_into()?;
 
@@ -174,11 +174,11 @@ impl MockLightClient {
         let post_state_id = gen_state_id(new_client_state.clone(), new_consensus_state.clone())?;
         let new_any_client_state = Any::try_from(new_client_state).unwrap();
 
-        Ok(UpdateClientData {
+        Ok(UpdateStateData {
             new_any_client_state: new_any_client_state.clone(),
             new_any_consensus_state: Any::try_from(new_consensus_state).unwrap(),
             height,
-            message: UpdateClientMessage {
+            message: UpdateStateProxyMessage {
                 prev_height: Some(latest_height.into()),
                 prev_state_id: Some(prev_state_id),
                 post_height: height,
@@ -197,7 +197,8 @@ impl MockLightClient {
         client_id: ClientId,
         misbehaviour: Misbehaviour,
     ) -> Result<SubmitMisbehaviourData, LightClientError> {
-        assert_eq!(client_id.as_str(), misbehaviour.client_id.as_str());
+        // WARNING: misbehaviour of ibc-rs's mock client has a bug where the client_id is set to `07-tendermint-0` when decoding from `Any`.
+        // assert_eq!(client_id, misbehaviour.client_id());
 
         // Read client state from the host chain store.
         let client_state: ClientState = ctx.client_state(&client_id)?.try_into()?;
@@ -234,7 +235,7 @@ impl MockLightClient {
 
         Ok(SubmitMisbehaviourData {
             new_any_client_state: Any::try_from(new_client_state).unwrap(),
-            message: MisbehaviourMessage {
+            message: MisbehaviourProxyMessage {
                 prev_states: vec![PrevState {
                     height: latest_height.into(),
                     state_id: gen_state_id(client_state, latest_consensus_state)?,

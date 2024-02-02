@@ -4,7 +4,7 @@ use crate::prelude::*;
 use context::Context;
 use crypto::Signer;
 use ecall_commands::{LightClientResponse, UpdateClientInput, UpdateClientResponse};
-use light_client::commitments::{prove_commitment, CommitmentProof, EmittedState, Message};
+use light_client::commitments::{prove_commitment, CommitmentProof, EmittedState, ProxyMessage};
 use light_client::{ClientKeeper, LightClientResolver, UpdateClientResult};
 use store::KVStore;
 
@@ -18,7 +18,7 @@ pub fn update_client<R: LightClientResolver, S: KVStore, K: Signer>(
     let ek = ctx.get_enclave_key();
     match lc.update_client(ctx, input.client_id.clone(), input.any_header.into())? {
         UpdateClientResult::UpdateClient(mut data) => {
-            let message: Message = {
+            let message: ProxyMessage = {
                 if input.include_state && data.message.emitted_states.is_empty() {
                     data.message.emitted_states =
                         vec![EmittedState(data.height, data.new_any_client_state.clone())];

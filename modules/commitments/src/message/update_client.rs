@@ -9,7 +9,7 @@ use prost::Message;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct UpdateClientMessage {
+pub struct UpdateStateProxyMessage {
     pub prev_height: Option<Height>,
     pub prev_state_id: Option<StateID>,
     pub post_height: Height,
@@ -33,7 +33,7 @@ impl Display for EmittedState {
     }
 }
 
-impl UpdateClientMessage {
+impl UpdateStateProxyMessage {
     pub fn validate(&self) -> Result<(), Error> {
         if self.prev_height.is_none() != self.prev_state_id.is_none() {
             return Err(Error::invalid_prev_state_and_height());
@@ -68,7 +68,7 @@ impl UpdateClientMessage {
     }
 }
 
-impl Display for UpdateClientMessage {
+impl Display for UpdateStateProxyMessage {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(
             f,
@@ -86,8 +86,8 @@ impl Display for UpdateClientMessage {
 
 /// Aggregate a list of messages into a single message
 pub fn aggregate_messages(
-    messages: Vec<UpdateClientMessage>,
-) -> Result<UpdateClientMessage, Error> {
+    messages: Vec<UpdateStateProxyMessage>,
+) -> Result<UpdateStateProxyMessage, Error> {
     if messages.is_empty() {
         return Err(Error::message_aggregation_failed(
             "cannot aggregate empty messages".to_string(),
@@ -102,7 +102,7 @@ pub fn aggregate_messages(
 }
 
 sol! {
-    struct EthABIUpdateClientMessage {
+    struct EthABIUpdateStateProxyMessage {
         EthABIHeight prev_height;
         bytes32 prev_state_id;
         EthABIHeight post_height;
@@ -113,8 +113,8 @@ sol! {
     }
 }
 
-impl From<UpdateClientMessage> for EthABIUpdateClientMessage {
-    fn from(msg: UpdateClientMessage) -> Self {
+impl From<UpdateStateProxyMessage> for EthABIUpdateStateProxyMessage {
+    fn from(msg: UpdateStateProxyMessage) -> Self {
         Self {
             prev_height: msg.prev_height.into(),
             prev_state_id: B256::from_slice(
@@ -133,9 +133,9 @@ impl From<UpdateClientMessage> for EthABIUpdateClientMessage {
     }
 }
 
-impl TryFrom<EthABIUpdateClientMessage> for UpdateClientMessage {
+impl TryFrom<EthABIUpdateStateProxyMessage> for UpdateStateProxyMessage {
     type Error = Error;
-    fn try_from(msg: EthABIUpdateClientMessage) -> Result<Self, Self::Error> {
+    fn try_from(msg: EthABIUpdateStateProxyMessage) -> Result<Self, Self::Error> {
         Ok(Self {
             prev_height: msg.prev_height.into(),
             prev_state_id: (!msg.prev_state_id.is_zero())
@@ -153,13 +153,13 @@ impl TryFrom<EthABIUpdateClientMessage> for UpdateClientMessage {
     }
 }
 
-impl EthABIEncoder for UpdateClientMessage {
+impl EthABIEncoder for UpdateStateProxyMessage {
     fn ethabi_encode(self) -> Vec<u8> {
-        Into::<EthABIUpdateClientMessage>::into(self).abi_encode()
+        Into::<EthABIUpdateStateProxyMessage>::into(self).abi_encode()
     }
 
     fn ethabi_decode(bz: &[u8]) -> Result<Self, Error> {
-        EthABIUpdateClientMessage::abi_decode(bz, true)?.try_into()
+        EthABIUpdateStateProxyMessage::abi_decode(bz, true)?.try_into()
     }
 }
 
@@ -172,7 +172,7 @@ mod tests {
     #[test]
     fn test_update_client_message_aggregation() {
         {
-            let msg0 = UpdateClientMessage {
+            let msg0 = UpdateStateProxyMessage {
                 prev_height: Some(Height::new(1, 1)),
                 prev_state_id: Some(StateID::from([1u8; 32])),
                 post_height: Height::new(2, 2),
@@ -181,7 +181,7 @@ mod tests {
                 context: ValidationContext::default(),
                 emitted_states: vec![],
             };
-            let msg1 = UpdateClientMessage {
+            let msg1 = UpdateStateProxyMessage {
                 prev_height: Some(Height::new(2, 2)),
                 prev_state_id: Some(StateID::from([2u8; 32])),
                 post_height: Height::new(3, 3),
@@ -190,7 +190,7 @@ mod tests {
                 context: ValidationContext::default(),
                 emitted_states: vec![],
             };
-            let expected = UpdateClientMessage {
+            let expected = UpdateStateProxyMessage {
                 prev_height: Some(Height::new(1, 1)),
                 prev_state_id: Some(StateID::from([1u8; 32])),
                 post_height: Height::new(3, 3),
@@ -202,7 +202,7 @@ mod tests {
             assert_eq!(aggregate_messages(vec![msg0, msg1]).unwrap(), expected);
         }
         {
-            let msg0 = UpdateClientMessage {
+            let msg0 = UpdateStateProxyMessage {
                 prev_height: Some(Height::new(1, 1)),
                 prev_state_id: Some(StateID::from([1u8; 32])),
                 post_height: Height::new(2, 2),
@@ -214,7 +214,7 @@ mod tests {
                     Any::new("/foo".to_string(), vec![1u8; 32]),
                 )],
             };
-            let msg1 = UpdateClientMessage {
+            let msg1 = UpdateStateProxyMessage {
                 prev_height: Some(Height::new(2, 2)),
                 prev_state_id: Some(StateID::from([2u8; 32])),
                 post_height: Height::new(3, 3),
@@ -226,7 +226,7 @@ mod tests {
                     Any::new("/bar".to_string(), vec![2u8; 32]),
                 )],
             };
-            let expected = UpdateClientMessage {
+            let expected = UpdateStateProxyMessage {
                 prev_height: Some(Height::new(1, 1)),
                 prev_state_id: Some(StateID::from([1u8; 32])),
                 post_height: Height::new(3, 3),
@@ -248,7 +248,7 @@ mod tests {
         }
         {
             // trusting period aggregation
-            let msg0 = UpdateClientMessage {
+            let msg0 = UpdateStateProxyMessage {
                 prev_height: Some(Height::new(1, 1)),
                 prev_state_id: Some(StateID::from([1u8; 32])),
                 post_height: Height::new(2, 2),
@@ -263,7 +263,7 @@ mod tests {
                 .into(),
                 emitted_states: vec![],
             };
-            let msg1 = UpdateClientMessage {
+            let msg1 = UpdateStateProxyMessage {
                 prev_height: Some(Height::new(2, 2)),
                 prev_state_id: Some(StateID::from([2u8; 32])),
                 post_height: Height::new(3, 3),
@@ -278,7 +278,7 @@ mod tests {
                 .into(),
                 emitted_states: vec![],
             };
-            let expected = UpdateClientMessage {
+            let expected = UpdateStateProxyMessage {
                 prev_height: Some(Height::new(1, 1)),
                 prev_state_id: Some(StateID::from([1u8; 32])),
                 post_height: Height::new(3, 3),
@@ -297,7 +297,7 @@ mod tests {
         }
         {
             // invalid prev_state_id
-            let msg0 = UpdateClientMessage {
+            let msg0 = UpdateStateProxyMessage {
                 prev_height: Some(Height::new(1, 1)),
                 prev_state_id: Some(StateID::from([1u8; 32])),
                 post_height: Height::new(2, 2),
@@ -306,7 +306,7 @@ mod tests {
                 context: ValidationContext::default(),
                 emitted_states: vec![],
             };
-            let msg1 = UpdateClientMessage {
+            let msg1 = UpdateStateProxyMessage {
                 prev_height: Some(Height::new(2, 2)),
                 prev_state_id: Some(StateID::from([3u8; 32])),
                 post_height: Height::new(3, 3),
@@ -319,7 +319,7 @@ mod tests {
         }
         {
             // invalid prev_height
-            let msg0 = UpdateClientMessage {
+            let msg0 = UpdateStateProxyMessage {
                 prev_height: Some(Height::new(1, 1)),
                 prev_state_id: Some(StateID::from([1u8; 32])),
                 post_height: Height::new(2, 2),
@@ -328,7 +328,7 @@ mod tests {
                 context: ValidationContext::default(),
                 emitted_states: vec![],
             };
-            let msg1 = UpdateClientMessage {
+            let msg1 = UpdateStateProxyMessage {
                 prev_height: Some(Height::new(3, 3)),
                 prev_state_id: Some(StateID::from([2u8; 32])),
                 post_height: Height::new(3, 3),
@@ -345,7 +345,7 @@ mod tests {
         }
         {
             // single message
-            let msg0 = UpdateClientMessage {
+            let msg0 = UpdateStateProxyMessage {
                 prev_height: Some(Height::new(1, 1)),
                 prev_state_id: Some(StateID::from([1u8; 32])),
                 post_height: Height::new(2, 2),
@@ -358,7 +358,7 @@ mod tests {
         }
         {
             // three messages
-            let msg0 = UpdateClientMessage {
+            let msg0 = UpdateStateProxyMessage {
                 prev_height: Some(Height::new(1, 1)),
                 prev_state_id: Some(StateID::from([1u8; 32])),
                 post_height: Height::new(2, 2),
@@ -367,7 +367,7 @@ mod tests {
                 context: ValidationContext::default(),
                 emitted_states: vec![],
             };
-            let msg1 = UpdateClientMessage {
+            let msg1 = UpdateStateProxyMessage {
                 prev_height: Some(Height::new(2, 2)),
                 prev_state_id: Some(StateID::from([2u8; 32])),
                 post_height: Height::new(3, 3),
@@ -376,7 +376,7 @@ mod tests {
                 context: ValidationContext::default(),
                 emitted_states: vec![],
             };
-            let msg2 = UpdateClientMessage {
+            let msg2 = UpdateStateProxyMessage {
                 prev_height: Some(Height::new(3, 3)),
                 prev_state_id: Some(StateID::from([3u8; 32])),
                 post_height: Height::new(4, 4),
@@ -385,7 +385,7 @@ mod tests {
                 context: ValidationContext::default(),
                 emitted_states: vec![],
             };
-            let expected = UpdateClientMessage {
+            let expected = UpdateStateProxyMessage {
                 prev_height: Some(Height::new(1, 1)),
                 prev_state_id: Some(StateID::from([1u8; 32])),
                 post_height: Height::new(4, 4),

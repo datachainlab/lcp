@@ -20,7 +20,7 @@ mod prelude {
 }
 
 pub use client::{register_implementations, MockLightClient};
-pub use message::Header;
+pub use message::{Header, Misbehaviour};
 pub use state::{ClientState, ConsensusState};
 
 mod client;

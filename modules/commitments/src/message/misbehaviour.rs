@@ -6,7 +6,7 @@ use prost::Message;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct MisbehaviourMessage {
+pub struct MisbehaviourProxyMessage {
     pub prev_states: Vec<PrevState>,
     pub context: ValidationContext,
     pub client_message: Any,
@@ -18,7 +18,7 @@ pub struct PrevState {
     pub state_id: StateID,
 }
 
-impl MisbehaviourMessage {
+impl MisbehaviourProxyMessage {
     pub fn validate(&self) -> Result<(), Error> {
         if self.prev_states.is_empty() {
             return Err(Error::empty_prev_states());
@@ -27,7 +27,7 @@ impl MisbehaviourMessage {
     }
 }
 
-impl Display for MisbehaviourMessage {
+impl Display for MisbehaviourProxyMessage {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(
             f,
@@ -43,15 +43,15 @@ sol! {
         bytes32 state_id;
     }
 
-    struct EthABIMisbehaviourMessage {
+    struct EthABIMisbehaviourProxyMessage {
         EthABIPrevState[] prev_states;
         bytes context;
         bytes client_message;
     }
 }
 
-impl From<MisbehaviourMessage> for EthABIMisbehaviourMessage {
-    fn from(msg: MisbehaviourMessage) -> Self {
+impl From<MisbehaviourProxyMessage> for EthABIMisbehaviourProxyMessage {
+    fn from(msg: MisbehaviourProxyMessage) -> Self {
         Self {
             prev_states: msg
                 .prev_states
@@ -67,10 +67,10 @@ impl From<MisbehaviourMessage> for EthABIMisbehaviourMessage {
     }
 }
 
-impl TryFrom<EthABIMisbehaviourMessage> for MisbehaviourMessage {
+impl TryFrom<EthABIMisbehaviourProxyMessage> for MisbehaviourProxyMessage {
     type Error = Error;
 
-    fn try_from(msg: EthABIMisbehaviourMessage) -> Result<Self, Self::Error> {
+    fn try_from(msg: EthABIMisbehaviourProxyMessage) -> Result<Self, Self::Error> {
         Ok(Self {
             prev_states: msg
                 .prev_states
@@ -87,12 +87,12 @@ impl TryFrom<EthABIMisbehaviourMessage> for MisbehaviourMessage {
     }
 }
 
-impl EthABIEncoder for MisbehaviourMessage {
+impl EthABIEncoder for MisbehaviourProxyMessage {
     fn ethabi_encode(self) -> Vec<u8> {
-        Into::<EthABIMisbehaviourMessage>::into(self).abi_encode()
+        Into::<EthABIMisbehaviourProxyMessage>::into(self).abi_encode()
     }
 
     fn ethabi_decode(bz: &[u8]) -> Result<Self, Error> {
-        EthABIMisbehaviourMessage::abi_decode(bz, true)?.try_into()
+        EthABIMisbehaviourProxyMessage::abi_decode(bz, true)?.try_into()
     }
 }

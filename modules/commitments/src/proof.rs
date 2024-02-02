@@ -1,4 +1,4 @@
-use crate::{encoder::EthABIEncoder, prelude::*, Error, Message};
+use crate::{encoder::EthABIEncoder, prelude::*, Error, ProxyMessage};
 use alloy_sol_types::{private::Address as SolAddress, sol, SolValue};
 use crypto::Address;
 use serde::{Deserialize, Serialize};
@@ -31,8 +31,8 @@ impl CommitmentProof {
         !self.signature.is_empty()
     }
 
-    pub fn message(&self) -> Result<Message, Error> {
-        Message::from_bytes(&self.message)
+    pub fn message(&self) -> Result<ProxyMessage, Error> {
+        ProxyMessage::from_bytes(&self.message)
     }
 }
 

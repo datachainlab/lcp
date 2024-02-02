@@ -1,6 +1,6 @@
-pub use self::misbehaviour::{MisbehaviourMessage, PrevState};
-pub use self::update_client::{aggregate_messages, EmittedState, UpdateClientMessage};
-pub use self::verify_membership::{CommitmentPrefix, VerifyMembershipMessage};
+pub use self::misbehaviour::{MisbehaviourProxyMessage, PrevState};
+pub use self::update_client::{aggregate_messages, EmittedState, UpdateStateProxyMessage};
+pub use self::verify_membership::{CommitmentPrefix, VerifyMembershipProxyMessage};
 use crate::encoder::EthABIEncoder;
 use crate::prelude::*;
 use crate::Error;
@@ -14,18 +14,18 @@ mod verify_membership;
 pub const MESSAGE_SCHEMA_VERSION: u16 = 1;
 pub const MESSAGE_HEADER_SIZE: usize = 32;
 
-pub const MESSAGE_TYPE_UPDATE_CLIENT: u16 = 1;
+pub const MESSAGE_TYPE_UPDATE_STATE: u16 = 1;
 pub const MESSAGE_TYPE_STATE: u16 = 2;
 pub const MESSAGE_TYPE_MISBEHAVIOUR: u16 = 3;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub enum Message {
-    UpdateClient(UpdateClientMessage),
-    VerifyMembership(VerifyMembershipMessage),
-    Misbehaviour(MisbehaviourMessage),
+pub enum ProxyMessage {
+    UpdateState(UpdateStateProxyMessage),
+    VerifyMembership(VerifyMembershipProxyMessage),
+    Misbehaviour(MisbehaviourProxyMessage),
 }
 
-impl Message {
+impl ProxyMessage {
     pub fn to_bytes(self) -> Vec<u8> {
         self.ethabi_encode()
     }
@@ -47,49 +47,49 @@ impl Message {
 
     pub fn message_type(&self) -> u16 {
         match self {
-            Message::UpdateClient(_) => MESSAGE_TYPE_UPDATE_CLIENT,
-            Message::VerifyMembership(_) => MESSAGE_TYPE_STATE,
-            Message::Misbehaviour(_) => MESSAGE_TYPE_MISBEHAVIOUR,
+            Self::UpdateState(_) => MESSAGE_TYPE_UPDATE_STATE,
+            Self::VerifyMembership(_) => MESSAGE_TYPE_STATE,
+            Self::Misbehaviour(_) => MESSAGE_TYPE_MISBEHAVIOUR,
         }
     }
 
     pub fn validate(&self) -> Result<(), Error> {
         match self {
-            Message::UpdateClient(c) => c.validate(),
-            Message::VerifyMembership(c) => c.validate(),
-            Message::Misbehaviour(c) => c.validate(),
+            Self::UpdateState(c) => c.validate(),
+            Self::VerifyMembership(c) => c.validate(),
+            Self::Misbehaviour(c) => c.validate(),
         }
     }
 }
 
-impl Display for Message {
+impl Display for ProxyMessage {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
-            Message::UpdateClient(c) => write!(f, "{}", c),
-            Message::VerifyMembership(c) => write!(f, "{}", c),
-            Message::Misbehaviour(c) => write!(f, "{}", c),
+            Self::UpdateState(c) => write!(f, "{}", c),
+            Self::VerifyMembership(c) => write!(f, "{}", c),
+            Self::Misbehaviour(c) => write!(f, "{}", c),
         }
     }
 }
 
-impl TryFrom<Message> for UpdateClientMessage {
+impl TryFrom<ProxyMessage> for UpdateStateProxyMessage {
     type Error = Error;
-    fn try_from(value: Message) -> Result<Self, Self::Error> {
+    fn try_from(value: ProxyMessage) -> Result<Self, Self::Error> {
         match value {
-            Message::UpdateClient(m) => Ok(m),
+            ProxyMessage::UpdateState(m) => Ok(m),
             _ => Err(Error::unexpected_message_type(
-                MESSAGE_TYPE_UPDATE_CLIENT,
+                MESSAGE_TYPE_UPDATE_STATE,
                 value.message_type(),
             )),
         }
     }
 }
 
-impl TryFrom<Message> for VerifyMembershipMessage {
+impl TryFrom<ProxyMessage> for VerifyMembershipProxyMessage {
     type Error = Error;
-    fn try_from(value: Message) -> Result<Self, Self::Error> {
+    fn try_from(value: ProxyMessage) -> Result<Self, Self::Error> {
         match value {
-            Message::VerifyMembership(m) => Ok(m),
+            ProxyMessage::VerifyMembership(m) => Ok(m),
             _ => Err(Error::unexpected_message_type(
                 MESSAGE_TYPE_STATE,
                 value.message_type(),
@@ -98,11 +98,11 @@ impl TryFrom<Message> for VerifyMembershipMessage {
     }
 }
 
-impl TryFrom<Message> for MisbehaviourMessage {
+impl TryFrom<ProxyMessage> for MisbehaviourProxyMessage {
     type Error = Error;
-    fn try_from(value: Message) -> Result<Self, Self::Error> {
+    fn try_from(value: ProxyMessage) -> Result<Self, Self::Error> {
         match value {
-            Message::Misbehaviour(m) => Ok(m),
+            ProxyMessage::Misbehaviour(m) => Ok(m),
             _ => Err(Error::unexpected_message_type(
                 MESSAGE_TYPE_MISBEHAVIOUR,
                 value.message_type(),
@@ -111,21 +111,21 @@ impl TryFrom<Message> for MisbehaviourMessage {
     }
 }
 
-impl From<UpdateClientMessage> for Message {
-    fn from(value: UpdateClientMessage) -> Self {
-        Message::UpdateClient(value)
+impl From<UpdateStateProxyMessage> for ProxyMessage {
+    fn from(value: UpdateStateProxyMessage) -> Self {
+        ProxyMessage::UpdateState(value)
     }
 }
 
-impl From<VerifyMembershipMessage> for Message {
-    fn from(value: VerifyMembershipMessage) -> Self {
-        Message::VerifyMembership(value)
+impl From<VerifyMembershipProxyMessage> for ProxyMessage {
+    fn from(value: VerifyMembershipProxyMessage) -> Self {
+        ProxyMessage::VerifyMembership(value)
     }
 }
 
-impl From<MisbehaviourMessage> for Message {
-    fn from(value: MisbehaviourMessage) -> Self {
-        Message::Misbehaviour(value)
+impl From<MisbehaviourProxyMessage> for ProxyMessage {
+    fn from(value: MisbehaviourProxyMessage) -> Self {
+        ProxyMessage::Misbehaviour(value)
     }
 }
 
@@ -136,14 +136,14 @@ sol! {
     }
 }
 
-impl EthABIEncoder for Message {
+impl EthABIEncoder for ProxyMessage {
     fn ethabi_encode(self) -> Vec<u8> {
         EthABIHeaderedMessage {
             header: self.header().into(),
             message: match self {
-                Message::UpdateClient(c) => c.ethabi_encode(),
-                Message::VerifyMembership(c) => c.ethabi_encode(),
-                Message::Misbehaviour(c) => c.ethabi_encode(),
+                Self::UpdateState(c) => c.ethabi_encode(),
+                Self::VerifyMembership(c) => c.ethabi_encode(),
+                Self::Misbehaviour(c) => c.ethabi_encode(),
             },
         }
         .abi_encode()
@@ -177,8 +177,13 @@ impl EthABIEncoder for Message {
         }
         let message = eth_abi_message.message;
         match message_type {
-            MESSAGE_TYPE_UPDATE_CLIENT => Ok(UpdateClientMessage::ethabi_decode(&message)?.into()),
-            MESSAGE_TYPE_STATE => Ok(VerifyMembershipMessage::ethabi_decode(&message)?.into()),
+            MESSAGE_TYPE_UPDATE_STATE => {
+                Ok(UpdateStateProxyMessage::ethabi_decode(&message)?.into())
+            }
+            MESSAGE_TYPE_STATE => Ok(VerifyMembershipProxyMessage::ethabi_decode(&message)?.into()),
+            MESSAGE_TYPE_MISBEHAVIOUR => {
+                Ok(MisbehaviourProxyMessage::ethabi_decode(&message)?.into())
+            }
             _ => Err(Error::invalid_abi(format!(
                 "invalid message type: {}",
                 message_type
@@ -203,16 +208,16 @@ mod tests {
     }
 
     fn test_update_client_message(
-        c1: UpdateClientMessage,
+        c1: UpdateStateProxyMessage,
         proof_signer: Address,
         proof_signature: Vec<u8>,
     ) {
         let v = c1.clone().ethabi_encode();
-        let c2 = UpdateClientMessage::ethabi_decode(&v).unwrap();
+        let c2 = UpdateStateProxyMessage::ethabi_decode(&v).unwrap();
         assert_eq!(c1, c2);
 
         let p1 = CommitmentProof {
-            message: Message::from(c1).to_bytes(),
+            message: ProxyMessage::from(c1).to_bytes(),
             signer: proof_signer,
             signature: proof_signature.to_vec(),
         };
@@ -234,7 +239,7 @@ mod tests {
             proof_signer in any::<[u8; 20]>(),
             proof_signature in any::<[u8; 65]>()
         ) {
-            let c1 = UpdateClientMessage {
+            let c1 = UpdateStateProxyMessage {
                 prev_height,
                 prev_state_id,
                 post_height,
@@ -263,7 +268,7 @@ mod tests {
             untrusted_header_timestamp in ..=MAX_UNIX_TIMESTAMP_NANOS,
             trusted_state_timestamp in ..=MAX_UNIX_TIMESTAMP_NANOS
         ) {
-            let c1 = UpdateClientMessage {
+            let c1 = UpdateStateProxyMessage {
                 prev_height,
                 prev_state_id,
                 post_height,
@@ -292,7 +297,7 @@ mod tests {
             proof_signer in any::<[u8; 20]>(),
             proof_signature in any::<[u8; 65]>()
         ) {
-            let c1 = VerifyMembershipMessage {
+            let c1 = VerifyMembershipProxyMessage {
                 prefix,
                 path,
                 value,
@@ -300,11 +305,11 @@ mod tests {
                 state_id,
             };
             let v = c1.clone().ethabi_encode();
-            let c2 = VerifyMembershipMessage::ethabi_decode(&v).unwrap();
+            let c2 = VerifyMembershipProxyMessage::ethabi_decode(&v).unwrap();
             assert_eq!(c1, c2);
 
             let p1 = CommitmentProof {
-                message: Message::from(c1).to_bytes(),
+                message: ProxyMessage::from(c1).to_bytes(),
                 signer: Address(proof_signer),
                 signature: proof_signature.to_vec(),
             };

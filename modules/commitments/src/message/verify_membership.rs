@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 pub type CommitmentPrefix = Vec<u8>;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct VerifyMembershipMessage {
+pub struct VerifyMembershipProxyMessage {
     pub prefix: CommitmentPrefix,
     pub path: String,
     pub value: Option<[u8; 32]>,
@@ -17,7 +17,7 @@ pub struct VerifyMembershipMessage {
     pub state_id: StateID,
 }
 
-impl Display for VerifyMembershipMessage {
+impl Display for VerifyMembershipProxyMessage {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(
             f,
@@ -32,7 +32,7 @@ impl Display for VerifyMembershipMessage {
 }
 
 sol! {
-    struct EthABIVerifyMembershipMessage {
+    struct EthABIVerifyMembershipProxyMessage {
         bytes prefix;
         bytes path;
         bytes32 value;
@@ -41,8 +41,8 @@ sol! {
     }
 }
 
-impl From<VerifyMembershipMessage> for EthABIVerifyMembershipMessage {
-    fn from(msg: VerifyMembershipMessage) -> Self {
+impl From<VerifyMembershipProxyMessage> for EthABIVerifyMembershipProxyMessage {
+    fn from(msg: VerifyMembershipProxyMessage) -> Self {
         Self {
             prefix: msg.prefix,
             path: msg.path.into_bytes(),
@@ -53,9 +53,9 @@ impl From<VerifyMembershipMessage> for EthABIVerifyMembershipMessage {
     }
 }
 
-impl TryFrom<EthABIVerifyMembershipMessage> for VerifyMembershipMessage {
+impl TryFrom<EthABIVerifyMembershipProxyMessage> for VerifyMembershipProxyMessage {
     type Error = Error;
-    fn try_from(msg: EthABIVerifyMembershipMessage) -> Result<Self, Self::Error> {
+    fn try_from(msg: EthABIVerifyMembershipProxyMessage) -> Result<Self, Self::Error> {
         Ok(Self {
             prefix: msg.prefix,
             path: String::from_utf8(msg.path)?,
@@ -66,7 +66,7 @@ impl TryFrom<EthABIVerifyMembershipMessage> for VerifyMembershipMessage {
     }
 }
 
-impl VerifyMembershipMessage {
+impl VerifyMembershipProxyMessage {
     pub fn new(
         prefix: CommitmentPrefix,
         path: String,
@@ -97,12 +97,12 @@ impl VerifyMembershipMessage {
     }
 }
 
-impl EthABIEncoder for VerifyMembershipMessage {
+impl EthABIEncoder for VerifyMembershipProxyMessage {
     fn ethabi_encode(self) -> Vec<u8> {
-        Into::<EthABIVerifyMembershipMessage>::into(self).abi_encode()
+        Into::<EthABIVerifyMembershipProxyMessage>::into(self).abi_encode()
     }
 
     fn ethabi_decode(bz: &[u8]) -> Result<Self, Error> {
-        EthABIVerifyMembershipMessage::abi_decode(bz, true)?.try_into()
+        EthABIVerifyMembershipProxyMessage::abi_decode(bz, true)?.try_into()
     }
 }

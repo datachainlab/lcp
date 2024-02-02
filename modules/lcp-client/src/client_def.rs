@@ -1,13 +1,12 @@
 use crate::client_state::ClientState;
 use crate::consensus_state::ConsensusState;
 use crate::errors::Error;
-use crate::message::{
-    ClientMessage, ELCMessageReader, RegisterEnclaveKeyMessage, UpdateClientMessage,
-};
+use crate::message::{ClientMessage, RegisterEnclaveKeyMessage};
 use attestation_report::EndorsedAttestationVerificationReport;
 use crypto::{verify_signature_address, Address, Keccak256};
 use light_client::commitments::{
-    CommitmentPrefix, CommitmentProof, EthABIEncoder, VerifyMembershipMessage,
+    CommitmentPrefix, CommitmentProof, EthABIEncoder, MisbehaviourProxyMessage, ProxyMessage,
+    UpdateStateProxyMessage, VerifyMembershipProxyMessage,
 };
 use light_client::types::{ClientId, Height, Time};
 use light_client::{ClientKeeper, ClientReader, HostClientKeeper, HostClientReader};
@@ -48,7 +47,7 @@ impl LCPClient {
     }
 
     // verify_client_message verifies a client message
-    pub fn update_state(
+    pub fn update_client(
         &self,
         ctx: &mut dyn HostClientKeeper,
         client_id: ClientId,
@@ -56,57 +55,81 @@ impl LCPClient {
     ) -> Result<(), Error> {
         let client_state = ctx.client_state(&client_id)?.try_into()?;
         match message {
-            ClientMessage::UpdateClient(header) => {
-                self.update_client(ctx, client_id, client_state, header)
-            }
-            ClientMessage::RegisterEnclaveKey(header) => {
-                self.register_enclave_key(ctx, client_id, client_state, header)
+            ClientMessage::UpdateClient(msg) => match msg.proxy_message {
+                ProxyMessage::UpdateState(pmsg) => self.update_state(
+                    ctx,
+                    client_id,
+                    client_state,
+                    pmsg,
+                    msg.signer,
+                    msg.signature,
+                ),
+                ProxyMessage::Misbehaviour(pmsg) => self.submit_misbehaviour(
+                    ctx,
+                    client_id,
+                    client_state,
+                    pmsg,
+                    msg.signer,
+                    msg.signature,
+                ),
+                _ => Err(Error::unexpected_header_type(format!("{:?}", msg))),
+            },
+            ClientMessage::RegisterEnclaveKey(msg) => {
+                self.register_enclave_key(ctx, client_id, client_state, msg)
             }
         }
     }
 
-    fn update_client(
+    fn update_state(
         &self,
         ctx: &mut dyn HostClientKeeper,
         client_id: ClientId,
         client_state: ClientState,
-        message: UpdateClientMessage,
+        message: UpdateStateProxyMessage,
+        signer: Address,
+        signature: Vec<u8>,
     ) -> Result<(), Error> {
+        message.validate()?;
         // TODO return an error instead of assertion
+
+        assert!(!client_state.frozen);
 
         if client_state.latest_height.is_zero() {
             // if the client state's latest height is zero, the commitment's new_state must be non-nil
-            assert!(!message.elc_message.emitted_states.is_empty());
+            assert!(!message.emitted_states.is_empty());
         } else {
             // if the client state's latest height is non-zero, the commitment's prev_* must be non-nil
-            assert!(message.prev_height().is_some() && message.prev_state_id().is_some());
+            assert!(message.prev_height.is_some() && message.prev_state_id.is_some());
             // check if the previous consensus state exists in the store
             let prev_consensus_state: ConsensusState = ctx
-                .consensus_state(&client_id, &message.prev_height().unwrap())?
+                .consensus_state(&client_id, &message.prev_height.unwrap())?
                 .try_into()?;
-            assert!(prev_consensus_state.state_id == message.prev_state_id().unwrap());
+            assert!(prev_consensus_state.state_id == message.prev_state_id.unwrap());
         }
 
         // check if the specified signer exists in the client state
-        assert!(self.contains_enclave_key(ctx, &client_id, message.signer()));
+        assert!(self.contains_enclave_key(ctx, &client_id, signer));
 
         // check if the `header.signer` matches the commitment prover
-        let signer =
-            verify_signature_address(&message.elc_message_bytes(), &message.signature).unwrap();
-        assert!(message.signer() == signer);
+        let signer2 = verify_signature_address(
+            ProxyMessage::from(message.clone()).to_bytes().as_slice(),
+            &signature,
+        )
+        .unwrap();
+        assert!(signer == signer2);
 
         // check if proxy's validation context matches our's context
-        message.context().validate(ctx.host_timestamp())?;
+        message.context.validate(ctx.host_timestamp())?;
 
         // create a new state
         let new_client_state = client_state.with_header(&message);
         let new_consensus_state = ConsensusState {
-            state_id: message.state_id(),
-            timestamp: message.timestamp(),
+            state_id: message.post_state_id,
+            timestamp: message.timestamp,
         };
 
         ctx.store_any_client_state(client_id.clone(), new_client_state.into())?;
-        ctx.store_any_consensus_state(client_id, message.height(), new_consensus_state.into())?;
+        ctx.store_any_consensus_state(client_id, message.post_height, new_consensus_state.into())?;
         Ok(())
     }
 
@@ -131,6 +154,45 @@ impl LCPClient {
         Ok(())
     }
 
+    fn submit_misbehaviour(
+        &self,
+        ctx: &mut dyn HostClientKeeper,
+        client_id: ClientId,
+        client_state: ClientState,
+        message: MisbehaviourProxyMessage,
+        signer: Address,
+        signature: Vec<u8>,
+    ) -> Result<(), Error> {
+        message.validate()?;
+
+        assert!(!client_state.frozen);
+
+        for state in message.prev_states.iter() {
+            // check if the previous consensus state exists in the store
+            let prev_consensus_state: ConsensusState =
+                ctx.consensus_state(&client_id, &state.height)?.try_into()?;
+            assert!(prev_consensus_state.state_id == state.state_id);
+        }
+
+        // check if the specified signer exists in the client state
+        assert!(self.contains_enclave_key(ctx, &client_id, signer));
+
+        // check if proxy's validation context matches our's context
+        message.context.validate(ctx.host_timestamp())?;
+
+        // check if the `header.signer` matches the commitment prover
+        let signer2 = verify_signature_address(
+            ProxyMessage::from(message).to_bytes().as_slice(),
+            &signature,
+        )?;
+        assert!(signer == signer2);
+
+        let new_client_state = client_state.with_frozen();
+        ctx.store_any_client_state(client_id, new_client_state.into())?;
+
+        Ok(())
+    }
+
     /// verify_membership is a generic proof verification method which verifies a proof of the existence of a value at a given path at the specified height.
     pub fn verify_membership(
         &self,
@@ -146,7 +208,7 @@ impl LCPClient {
 
         // convert `proof` to CommitmentProof
         let commitment_proof = CommitmentProof::ethabi_decode(proof.as_slice()).unwrap();
-        let msg: VerifyMembershipMessage = commitment_proof.message()?.try_into()?;
+        let msg: VerifyMembershipProxyMessage = commitment_proof.message()?.try_into()?;
 
         // check if `.prefix` matches the counterparty connection's prefix
         assert!(msg.prefix == prefix);
@@ -260,6 +322,7 @@ fn enclave_key_path(client_id: &ClientId, key: Address) -> Vec<u8> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::message::UpdateClientMessage;
     use alloc::rc::Rc;
     use alloc::sync::Arc;
     use attestation_report::AttestationVerificationReport;
@@ -271,6 +334,7 @@ mod tests {
     use ibc::{
         mock::{
             client_state::MockClientState, consensus_state::MockConsensusState, header::MockHeader,
+            misbehaviour::Misbehaviour as MockMisbehaviour,
         },
         Height as ICS02Height,
     };
@@ -297,9 +361,10 @@ mod tests {
         let lcp_client_id = {
             let expired_at = (Time::now() + Duration::from_secs(60)).unwrap();
             let initial_client_state = ClientState {
-                latest_height: Height::zero(),
                 mr_enclave: [0u8; 32].to_vec(),
                 key_expiration: Duration::from_secs(60 * 60 * 24 * 7),
+                frozen: false,
+                latest_height: Height::zero(),
             };
             let initial_consensus_state = ConsensusState {
                 state_id: Default::default(),
@@ -328,7 +393,7 @@ mod tests {
             let header = ClientMessage::RegisterEnclaveKey(RegisterEnclaveKeyMessage(
                 generate_dummy_eavr(&ek.get_pubkey()),
             ));
-            let res = lcp_client.update_state(&mut ctx, lcp_client_id.clone(), header);
+            let res = lcp_client.update_client(&mut ctx, lcp_client_id.clone(), header);
             assert!(res.is_ok(), "res={:?}", res);
         }
 
@@ -366,7 +431,7 @@ mod tests {
         let proof1 = {
             let header = MockHeader::new(ICS02Height::new(0, 2).unwrap());
 
-            let mut ctx = Context::new(registry.clone(), lcp_store, &ek);
+            let mut ctx = Context::new(registry.clone(), lcp_store.clone(), &ek);
             ctx.set_timestamp(Time::now());
             let res = mock_client.update_client(
                 &ctx,
@@ -396,7 +461,7 @@ mod tests {
 
             ctx.store_any_client_state(upstream_client_id.clone(), client_state)
                 .unwrap();
-            ctx.store_any_consensus_state(upstream_client_id, height, consensus_state)
+            ctx.store_any_consensus_state(upstream_client_id.clone(), height, consensus_state)
                 .unwrap();
             res.unwrap()
         };
@@ -404,14 +469,58 @@ mod tests {
         // 5. on the downstream side, updates LCP Light Client's state with the message from the ELC
         {
             let header = ClientMessage::UpdateClient(UpdateClientMessage {
-                elc_message: proof1.message().unwrap().try_into().unwrap(),
+                proxy_message: proof1.message().unwrap(),
                 signer: proof1.signer,
                 signature: proof1.signature,
             });
-            let mut ctx = Context::new(registry.clone(), ibc_store, &ek);
+            let mut ctx = Context::new(registry.clone(), ibc_store.clone(), &ek);
             ctx.set_timestamp((Time::now() + Duration::from_secs(60)).unwrap());
 
-            let res = lcp_client.update_state(&mut ctx, lcp_client_id, header);
+            let res = lcp_client.update_client(&mut ctx, lcp_client_id.clone(), header);
+            assert!(res.is_ok(), "res={:?}", res);
+        }
+
+        // 6. on the upstream side, updates the Light Client state with a misbehaviour
+        let misbehaviour_proof = {
+            let mut ctx = Context::new(registry.clone(), lcp_store, &ek);
+            ctx.set_timestamp(Time::now());
+
+            let mock_misbehaviour = MockMisbehaviour {
+                client_id: upstream_client_id.clone().into(),
+                header1: MockHeader::new(ICS02Height::new(0, 3).unwrap()),
+                header2: MockHeader::new(ICS02Height::new(0, 3).unwrap()),
+            };
+            let res = mock_client
+                .update_client(
+                    &ctx,
+                    upstream_client_id,
+                    mock_lc::Misbehaviour::from(mock_misbehaviour).into(),
+                )
+                .unwrap();
+            let data = match res {
+                UpdateClientResult::SubmitMisbehaviour(data) => data,
+                _ => unreachable!(),
+            };
+            let res = prove_commitment(
+                ctx.get_enclave_key(),
+                ctx.get_enclave_key().pubkey().unwrap().as_address(),
+                data.message.into(),
+            );
+            assert!(res.is_ok(), "res={:?}", res);
+            res.unwrap()
+        };
+
+        // 7. on the downstream side, updates LCP Light Client's state with the message from the ELC
+        {
+            let header = ClientMessage::UpdateClient(UpdateClientMessage {
+                proxy_message: misbehaviour_proof.message().unwrap(),
+                signer: misbehaviour_proof.signer,
+                signature: misbehaviour_proof.signature,
+            });
+            let mut ctx = Context::new(registry, ibc_store, &ek);
+            ctx.set_timestamp((Time::now() + Duration::from_secs(60)).unwrap());
+
+            let res = lcp_client.update_client(&mut ctx, lcp_client_id, header);
             assert!(res.is_ok(), "res={:?}", res);
         }
     }
