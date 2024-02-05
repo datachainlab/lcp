@@ -1,6 +1,6 @@
 use crate::{prelude::*, Env};
 use alloc::sync::Arc;
-use enclave_store::EnclaveStore;
+use host_api::store::EnclaveStore;
 use light_client::{LightClient, LightClientResolver, MapLightClientRegistry};
 use store::{KVStore, TxId};
 
