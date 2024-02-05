@@ -71,8 +71,8 @@ pub struct CreateClientResult {
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum UpdateClientResult {
-    UpdateClient(UpdateStateData),
-    SubmitMisbehaviour(SubmitMisbehaviourData),
+    UpdateState(UpdateStateData),
+    Misbehaviour(MisbehaviourData),
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -90,7 +90,7 @@ pub struct UpdateStateData {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct SubmitMisbehaviourData {
+pub struct MisbehaviourData {
     /// updated client state
     pub new_any_client_state: Any,
     /// message represents a state transition of the client
@@ -99,13 +99,13 @@ pub struct SubmitMisbehaviourData {
 
 impl From<UpdateStateData> for UpdateClientResult {
     fn from(event: UpdateStateData) -> Self {
-        UpdateClientResult::UpdateClient(event)
+        UpdateClientResult::UpdateState(event)
     }
 }
 
-impl From<SubmitMisbehaviourData> for UpdateClientResult {
-    fn from(event: SubmitMisbehaviourData) -> Self {
-        UpdateClientResult::SubmitMisbehaviour(event)
+impl From<MisbehaviourData> for UpdateClientResult {
+    fn from(event: MisbehaviourData) -> Self {
+        UpdateClientResult::Misbehaviour(event)
     }
 }
 

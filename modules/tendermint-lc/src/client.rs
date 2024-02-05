@@ -34,7 +34,7 @@ use light_client::{
     ibc::IBCContext, CreateClientResult, Error as LightClientError, HostClientReader, LightClient,
     LightClientRegistry, UpdateClientResult, VerifyMembershipResult,
 };
-use light_client::{SubmitMisbehaviourData, UpdateStateData, VerifyNonMembershipResult};
+use light_client::{MisbehaviourData, UpdateStateData, VerifyNonMembershipResult};
 use log::*;
 
 #[derive(Default)]
@@ -348,7 +348,7 @@ impl TendermintLightClient {
         ctx: &dyn HostClientReader,
         client_id: ClientId,
         misbehaviour: Misbehaviour,
-    ) -> Result<SubmitMisbehaviourData, LightClientError> {
+    ) -> Result<MisbehaviourData, LightClientError> {
         // Read client state from the host chain store.
         let client_state: ClientState = ctx.client_state(&client_id)?.try_into()?;
 
@@ -387,7 +387,7 @@ impl TendermintLightClient {
             ],
         )?;
 
-        Ok(SubmitMisbehaviourData {
+        Ok(MisbehaviourData {
             new_any_client_state: new_client_state.into(),
             message: MisbehaviourProxyMessage {
                 prev_states,

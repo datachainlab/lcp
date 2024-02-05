@@ -441,8 +441,8 @@ mod tests {
             assert!(res.is_ok(), "res={:?}", res);
 
             let res = match res.unwrap() {
-                UpdateClientResult::UpdateClient(res) => res,
-                _ => unreachable!(),
+                UpdateClientResult::UpdateState(res) => res,
+                _ => panic!("unexpected result"),
             };
             let (client_state, consensus_state, height) = {
                 (
@@ -498,7 +498,7 @@ mod tests {
                 )
                 .unwrap();
             let data = match res {
-                UpdateClientResult::SubmitMisbehaviour(data) => data,
+                UpdateClientResult::Misbehaviour(data) => data,
                 _ => unreachable!(),
             };
             let res = prove_commitment(

@@ -17,7 +17,7 @@ use light_client::commitments::{
 use light_client::types::{Any, ClientId, Height, Time};
 use light_client::{
     ibc::IBCContext, CreateClientResult, Error as LightClientError, HostClientReader, LightClient,
-    LightClientRegistry, SubmitMisbehaviourData, UpdateClientResult, UpdateStateData,
+    LightClientRegistry, MisbehaviourData, UpdateClientResult, UpdateStateData,
     VerifyMembershipResult, VerifyNonMembershipResult,
 };
 
@@ -196,7 +196,7 @@ impl MockLightClient {
         ctx: &dyn HostClientReader,
         client_id: ClientId,
         misbehaviour: Misbehaviour,
-    ) -> Result<SubmitMisbehaviourData, LightClientError> {
+    ) -> Result<MisbehaviourData, LightClientError> {
         // WARNING: misbehaviour of ibc-rs's mock client has a bug where the client_id is set to `07-tendermint-0` when decoding from `Any`.
         // assert_eq!(client_id, misbehaviour.client_id());
 
@@ -233,7 +233,7 @@ impl MockLightClient {
             *downcast_client_state::<MockClientState>(new_client_state.as_ref()).unwrap(),
         );
 
-        Ok(SubmitMisbehaviourData {
+        Ok(MisbehaviourData {
             new_any_client_state: Any::try_from(new_client_state).unwrap(),
             message: MisbehaviourProxyMessage {
                 prev_states: vec![PrevState {

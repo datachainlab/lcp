@@ -1,5 +1,5 @@
 pub use self::misbehaviour::{MisbehaviourProxyMessage, PrevState};
-pub use self::update_client::{aggregate_messages, EmittedState, UpdateStateProxyMessage};
+pub use self::update_state::{aggregate_messages, EmittedState, UpdateStateProxyMessage};
 pub use self::verify_membership::{CommitmentPrefix, VerifyMembershipProxyMessage};
 use crate::encoder::EthABIEncoder;
 use crate::prelude::*;
@@ -8,7 +8,7 @@ use alloy_sol_types::{sol, SolValue};
 use core::fmt::Display;
 use serde::{Deserialize, Serialize};
 mod misbehaviour;
-mod update_client;
+mod update_state;
 mod verify_membership;
 
 pub const MESSAGE_SCHEMA_VERSION: u16 = 1;
@@ -262,12 +262,12 @@ mod tests {
             post_state_id in any::<[u8; 32]>().prop_map(StateID::from),
             emitted_states in any::<Vec<((u64, u64), (String, Vec<u8>))>>(),
             timestamp in ..=MAX_UNIX_TIMESTAMP_NANOS,
-            proof_signer in any::<[u8; 20]>(),
-            proof_signature in any::<[u8; 65]>(),
             trusting_period in ..=MAX_UNIX_TIMESTAMP_NANOS,
             clock_drift in ..=MAX_UNIX_TIMESTAMP_NANOS,
             untrusted_header_timestamp in ..=MAX_UNIX_TIMESTAMP_NANOS,
-            trusted_state_timestamp in ..=MAX_UNIX_TIMESTAMP_NANOS
+            trusted_state_timestamp in ..=MAX_UNIX_TIMESTAMP_NANOS,
+            proof_signer in any::<[u8; 20]>(),
+            proof_signature in any::<[u8; 65]>(),
         ) {
             let c1 = UpdateStateProxyMessage {
                 prev_height,
