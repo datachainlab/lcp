@@ -22,6 +22,7 @@ mod prelude {
 pub use crate::errors::{Error, Result};
 pub use crate::store::{KVStore, TxId};
 
+pub mod cache;
 mod errors;
 #[cfg(feature = "std")]
 pub mod host;

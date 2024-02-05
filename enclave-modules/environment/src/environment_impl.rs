@@ -1,6 +1,6 @@
 use crate::{prelude::*, Env};
 use alloc::sync::Arc;
-use enclave_store::EnclaveStore;
+use host_api::store::new_enclave_store;
 use light_client::{LightClient, LightClientResolver, MapLightClientRegistry};
 use store::{KVStore, TxId};
 
@@ -24,7 +24,7 @@ impl LightClientResolver for Environment {
 
 impl Env for Environment {
     fn new_store(&self, tx_id: TxId) -> Box<dyn KVStore> {
-        Box::new(EnclaveStore::new(tx_id))
+        new_enclave_store(tx_id)
     }
 
     fn get_lc_registry(&self) -> Arc<dyn LightClientResolver> {

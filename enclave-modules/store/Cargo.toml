@@ -1,8 +1,0 @@
-[package]
-name = "enclave-store"
-version = "0.1.0"
-edition = "2021"
-
-[dependencies]
-host-api = { path = "../host-api" }
-store = { path = "../../modules/store", default-features = false }

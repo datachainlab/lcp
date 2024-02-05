@@ -535,7 +535,7 @@ dependencies = [
 name = "enclave-environment"
 version = "0.1.0"
 dependencies = [
- "enclave-store",
+ "host-api",
  "light-client",
  "store",
 ]
@@ -578,14 +578,6 @@ dependencies = [
  "once_cell",
  "sgx_tstd",
  "sgx_types",
-]
-
-[[package]]
-name = "enclave-store"
-version = "0.1.0"
-dependencies = [
- "host-api",
- "store",
 ]
 
 [[package]]
