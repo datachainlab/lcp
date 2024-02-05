@@ -50,6 +50,27 @@ sol! {
     }
 }
 
+impl Display for EthABIPrevState {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(
+            f,
+            "EthABIPrevState(height_revision_number: {} height_revision_height: {} state_id: 0x{})",
+            self.height.revision_number, self.height.revision_height, self.state_id
+        )
+    }
+}
+
+impl Display for EthABIMisbehaviourProxyMessage {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(
+            f,
+            "EthABIMisbehaviourProxyMessage(prev_states: [{}], context: 0x{}, client_message: 0x{})",
+            self.prev_states.iter().map(|v| v.to_string()).collect::<Vec<_>>().join(", "), 
+            hex::encode(&self.context), hex::encode(&self.client_message)
+        )
+    }
+}
+
 impl From<MisbehaviourProxyMessage> for EthABIMisbehaviourProxyMessage {
     fn from(msg: MisbehaviourProxyMessage) -> Self {
         Self {
