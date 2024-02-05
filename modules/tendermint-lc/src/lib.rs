@@ -26,3 +26,4 @@ pub mod client;
 pub mod errors;
 pub mod message;
 pub mod state;
+mod verifier;

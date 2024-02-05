@@ -2,6 +2,7 @@ use crate::errors::Error;
 use crate::message::{ClientMessage, Header, Misbehaviour};
 use crate::prelude::*;
 use crate::state::{canonicalize_state, gen_state_id, ClientState, ConsensusState};
+use crate::verifier::check_header_and_update_state;
 use core::str::FromStr;
 use crypto::Keccak256;
 use ibc::clients::ics07_tendermint::client_state::{
@@ -288,17 +289,17 @@ impl TendermintLightClient {
         let UpdatedState {
             client_state: new_client_state,
             consensus_state: new_consensus_state,
-        } = client_state
-            .check_header_and_update_state(
-                &IBCContext::<TendermintClientState, TendermintConsensusState>::new(ctx),
-                client_id.into(),
-                Any::from(header.clone()).into(),
-            )
-            .map_err(|e| {
-                Error::ics02(ICS02Error::HeaderVerificationFailure {
-                    reason: e.to_string(),
-                })
-            })?;
+        } = check_header_and_update_state(
+            &client_state,
+            &IBCContext::<TendermintClientState, TendermintConsensusState>::new(ctx),
+            client_id.into(),
+            Any::from(header.clone()).into(),
+        )
+        .map_err(|e| {
+            Error::ics02(ICS02Error::HeaderVerificationFailure {
+                reason: e.to_string(),
+            })
+        })?;
 
         let new_client_state = ClientState(
             downcast_client_state::<TendermintClientState>(new_client_state.as_ref())
