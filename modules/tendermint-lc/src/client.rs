@@ -36,6 +36,7 @@ use light_client::{
     LightClientRegistry, UpdateClientResult, VerifyMembershipResult,
 };
 use light_client::{MisbehaviourData, UpdateStateData, VerifyNonMembershipResult};
+#[allow(unused_imports)]
 use log::*;
 
 #[derive(Default)]
@@ -235,37 +236,6 @@ impl TendermintLightClient {
         if client_state.is_frozen() {
             return Err(Error::ics02(ICS02Error::ClientFrozen {
                 client_id: client_id.into(),
-            })
-            .into());
-        }
-
-        // Read consensus state from the host chain store.
-        let latest_consensus_state: ConsensusState = ctx
-            .consensus_state(&client_id, &client_state.latest_height().into())
-            .map_err(|_| {
-                Error::ics02(ICS02Error::ConsensusStateNotFound {
-                    client_id: client_id.clone().into(),
-                    height: client_state.latest_height(),
-                })
-            })?
-            .try_into()?;
-
-        debug!("latest consensus state: {:?}", latest_consensus_state);
-
-        let now = ctx.host_timestamp();
-        let duration = now
-            .duration_since(latest_consensus_state.timestamp().into_tm_time().unwrap())
-            .map_err(|_| {
-                Error::ics02(ICS02Error::InvalidConsensusStateTimestamp {
-                    time1: latest_consensus_state.timestamp(),
-                    time2: now.into(),
-                })
-            })?;
-
-        if client_state.expired(duration) {
-            return Err(Error::ics02(ICS02Error::HeaderNotWithinTrustPeriod {
-                latest_time: latest_consensus_state.timestamp(),
-                update_time: header.timestamp(),
             })
             .into());
         }
