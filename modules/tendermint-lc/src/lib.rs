@@ -1,3 +1,4 @@
+#![allow(clippy::large_enum_variant)]
 #![no_std]
 extern crate alloc;
 
@@ -23,5 +24,5 @@ pub use client::{register_implementations, TendermintLightClient};
 
 pub mod client;
 pub mod errors;
-pub mod header;
+pub mod message;
 pub mod state;

@@ -1,5 +1,5 @@
 use crate::errors::Error;
-use crate::header::Header;
+use crate::message::{ClientMessage, Header, Misbehaviour};
 use crate::prelude::*;
 use crate::state::{gen_state_id, ClientState, ConsensusState};
 use ibc::core::ics02_client::client_state::{
@@ -11,13 +11,14 @@ use ibc::core::ics02_client::header::Header as Ics02Header;
 use ibc::mock::client_state::{client_type, MockClientState, MOCK_CLIENT_STATE_TYPE_URL};
 use ibc::mock::consensus_state::MockConsensusState;
 use light_client::commitments::{
-    gen_state_id_from_any, EmittedState, UpdateClientMessage, ValidationContext,
+    gen_state_id_from_any, EmittedState, MisbehaviourProxyMessage, PrevState,
+    UpdateStateProxyMessage, ValidationContext,
 };
 use light_client::types::{Any, ClientId, Height, Time};
-use light_client::VerifyNonMembershipResult;
 use light_client::{
     ibc::IBCContext, CreateClientResult, Error as LightClientError, HostClientReader, LightClient,
-    LightClientRegistry, UpdateClientResult, VerifyMembershipResult,
+    LightClientRegistry, MisbehaviourData, UpdateClientResult, UpdateStateData,
+    VerifyMembershipResult, VerifyNonMembershipResult,
 };
 
 #[derive(Default)]
@@ -52,7 +53,7 @@ impl LightClient for MockLightClient {
         let timestamp: Time = consensus_state.timestamp().into();
         Ok(CreateClientResult {
             height,
-            message: UpdateClientMessage {
+            message: UpdateStateProxyMessage {
                 prev_height: None,
                 prev_state_id: None,
                 post_state_id: state_id,
@@ -70,10 +71,52 @@ impl LightClient for MockLightClient {
         &self,
         ctx: &dyn HostClientReader,
         client_id: ClientId,
-        any_header: Any,
+        any_client_message: Any,
     ) -> Result<UpdateClientResult, LightClientError> {
-        let header = Header::try_from(any_header.clone())?;
+        let client_message = ClientMessage::try_from(any_client_message)?;
+        match client_message {
+            ClientMessage::Header(header) => Ok(self.update_state(ctx, client_id, header)?.into()),
+            ClientMessage::Misbehaviour(misbehaviour) => Ok(self
+                .submit_misbehaviour(ctx, client_id, misbehaviour)?
+                .into()),
+        }
+    }
 
+    #[allow(unused_variables)]
+    fn verify_membership(
+        &self,
+        ctx: &dyn HostClientReader,
+        client_id: ClientId,
+        prefix: Vec<u8>,
+        path: String,
+        value: Vec<u8>,
+        proof_height: Height,
+        proof: Vec<u8>,
+    ) -> Result<VerifyMembershipResult, LightClientError> {
+        todo!()
+    }
+
+    #[allow(unused_variables)]
+    fn verify_non_membership(
+        &self,
+        ctx: &dyn HostClientReader,
+        client_id: ClientId,
+        prefix: Vec<u8>,
+        path: String,
+        proof_height: Height,
+        proof: Vec<u8>,
+    ) -> Result<VerifyNonMembershipResult, LightClientError> {
+        todo!()
+    }
+}
+
+impl MockLightClient {
+    fn update_state(
+        &self,
+        ctx: &dyn HostClientReader,
+        client_id: ClientId,
+        header: Header,
+    ) -> Result<UpdateStateData, LightClientError> {
         // Read client state from the host chain store.
         let client_state: ClientState = ctx.client_state(&client_id)?.try_into()?;
 
@@ -110,7 +153,7 @@ impl LightClient for MockLightClient {
             .check_header_and_update_state(
                 &IBCContext::<MockClientState, MockConsensusState>::new(ctx),
                 client_id.into(),
-                any_header.into(),
+                Any::from(header).into(),
             )
             .map_err(|e| {
                 Error::ics02(ICS02Error::HeaderVerificationFailure {
@@ -131,11 +174,11 @@ impl LightClient for MockLightClient {
         let post_state_id = gen_state_id(new_client_state.clone(), new_consensus_state.clone())?;
         let new_any_client_state = Any::try_from(new_client_state).unwrap();
 
-        Ok(UpdateClientResult {
+        Ok(UpdateStateData {
             new_any_client_state: new_any_client_state.clone(),
             new_any_consensus_state: Any::try_from(new_consensus_state).unwrap(),
             height,
-            message: UpdateClientMessage {
+            message: UpdateStateProxyMessage {
                 prev_height: Some(latest_height.into()),
                 prev_state_id: Some(prev_state_id),
                 post_height: height,
@@ -143,37 +186,64 @@ impl LightClient for MockLightClient {
                 timestamp: header_timestamp,
                 context: ValidationContext::Empty,
                 emitted_states: vec![EmittedState(height, new_any_client_state)],
-            }
-            .into(),
+            },
             prove: true,
         })
     }
 
-    #[allow(unused_variables)]
-    fn verify_membership(
+    fn submit_misbehaviour(
         &self,
         ctx: &dyn HostClientReader,
         client_id: ClientId,
-        prefix: Vec<u8>,
-        path: String,
-        value: Vec<u8>,
-        proof_height: Height,
-        proof: Vec<u8>,
-    ) -> Result<VerifyMembershipResult, LightClientError> {
-        todo!()
-    }
+        misbehaviour: Misbehaviour,
+    ) -> Result<MisbehaviourData, LightClientError> {
+        // WARNING: misbehaviour of ibc-rs's mock client has a bug where the client_id is set to `07-tendermint-0` when decoding from `Any`.
+        // assert_eq!(client_id, misbehaviour.client_id());
 
-    #[allow(unused_variables)]
-    fn verify_non_membership(
-        &self,
-        ctx: &dyn HostClientReader,
-        client_id: ClientId,
-        prefix: Vec<u8>,
-        path: String,
-        proof_height: Height,
-        proof: Vec<u8>,
-    ) -> Result<VerifyNonMembershipResult, LightClientError> {
-        todo!()
+        // Read client state from the host chain store.
+        let client_state: ClientState = ctx.client_state(&client_id)?.try_into()?;
+        let latest_height = client_state.latest_height();
+        if client_state.is_frozen() {
+            return Err(Error::ics02(ICS02Error::ClientFrozen {
+                client_id: client_id.into(),
+            })
+            .into());
+        }
+
+        // Read consensus state from the host chain store.
+        let latest_consensus_state: ConsensusState = ctx
+            .consensus_state(&client_id, &latest_height.into())
+            .map_err(|_| {
+                Error::ics02(ICS02Error::ConsensusStateNotFound {
+                    client_id: client_id.clone().into(),
+                    height: latest_height,
+                })
+            })?
+            .try_into()?;
+
+        let new_client_state = client_state
+            .check_misbehaviour_and_update_state(
+                &IBCContext::<MockClientState, MockConsensusState>::new(ctx),
+                client_id.into(),
+                Any::from(misbehaviour.clone()).into(),
+            )
+            .unwrap();
+
+        let new_client_state = ClientState(
+            *downcast_client_state::<MockClientState>(new_client_state.as_ref()).unwrap(),
+        );
+
+        Ok(MisbehaviourData {
+            new_any_client_state: Any::try_from(new_client_state).unwrap(),
+            message: MisbehaviourProxyMessage {
+                prev_states: vec![PrevState {
+                    height: latest_height.into(),
+                    state_id: gen_state_id(client_state, latest_consensus_state)?,
+                }],
+                context: ValidationContext::Empty,
+                client_message: Any::from(misbehaviour),
+            },
+        })
     }
 }
 

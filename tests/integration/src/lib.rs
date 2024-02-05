@@ -10,7 +10,7 @@ mod tests {
     use super::*;
     use crate::relayer::Relayer;
     use anyhow::{anyhow, bail};
-    use commitments::UpdateClientMessage;
+    use commitments::UpdateStateProxyMessage;
     use ecall_commands::{
         AggregateMessagesInput, CommitmentProofPair, GenerateEnclaveKeyInput, InitClientInput,
         UpdateClientInput, VerifyMembershipInput,
@@ -183,7 +183,7 @@ mod tests {
             info!("update_client's result is {:?}", res);
             assert!(res.0.is_proven());
 
-            let msg: UpdateClientMessage = res.0.message().unwrap().try_into()?;
+            let msg: UpdateStateProxyMessage = res.0.message().unwrap().try_into()?;
             assert!(msg.prev_height == Some(Height::from(last_height)));
             assert!(msg.post_height == Height::from(post_height));
             assert!(msg.emitted_states.len() == 1);
@@ -243,7 +243,7 @@ mod tests {
                 signer,
                 current_timestamp: Time::now().add(Duration::from_secs(10))?,
             })?;
-            let msg: UpdateClientMessage = res.0.message().unwrap().try_into()?;
+            let msg: UpdateStateProxyMessage = res.0.message().unwrap().try_into()?;
             assert!(msg.prev_height == Some(Height::from(last_height)));
             assert!(msg.post_height == Height::from(lh));
             assert!(msg.emitted_states.is_empty());

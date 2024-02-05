@@ -5,7 +5,7 @@ use crate::light_client::{
 use context::Context;
 use crypto::NopSigner;
 use ecall_commands::{
-    CommandContext, CommandResult, LightClientCommand, LightClientExecuteCommand,
+    CommandContext, CommandResponse, LightClientCommand, LightClientExecuteCommand,
     LightClientQueryCommand,
 };
 use enclave_environment::Env;
@@ -14,7 +14,7 @@ pub fn dispatch<E: Env>(
     env: E,
     cctx: CommandContext,
     command: LightClientCommand,
-) -> Result<CommandResult, Error> {
+) -> Result<CommandResponse, Error> {
     let res = match command {
         LightClientCommand::Execute(cmd) => {
             use LightClientExecuteCommand::*;
@@ -40,5 +40,5 @@ pub fn dispatch<E: Env>(
             }
         }
     };
-    Ok(CommandResult::LightClient(res))
+    Ok(CommandResponse::LightClient(res))
 }

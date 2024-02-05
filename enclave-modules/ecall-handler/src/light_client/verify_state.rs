@@ -3,8 +3,8 @@ use crate::light_client::Error;
 use context::Context;
 use crypto::Signer;
 use ecall_commands::{
-    LightClientResult, VerifyMembershipInput, VerifyMembershipResult, VerifyNonMembershipInput,
-    VerifyNonMembershipResult,
+    LightClientResponse, VerifyMembershipInput, VerifyMembershipResponse, VerifyNonMembershipInput,
+    VerifyNonMembershipResponse,
 };
 use light_client::commitments::prove_commitment;
 use light_client::LightClientResolver;
@@ -13,7 +13,7 @@ use store::KVStore;
 pub fn verify_membership<R: LightClientResolver, S: KVStore, K: Signer>(
     ctx: &mut Context<R, S, K>,
     input: VerifyMembershipInput,
-) -> Result<LightClientResult, Error> {
+) -> Result<LightClientResponse, Error> {
     let ek = ctx.get_enclave_key();
     let lc = get_light_client_by_client_id(ctx, &input.client_id)?;
 
@@ -27,15 +27,15 @@ pub fn verify_membership<R: LightClientResolver, S: KVStore, K: Signer>(
         input.proof.1,
     )?;
 
-    Ok(LightClientResult::VerifyMembership(VerifyMembershipResult(
-        prove_commitment(ek, input.signer, res.message)?,
-    )))
+    Ok(LightClientResponse::VerifyMembership(
+        VerifyMembershipResponse(prove_commitment(ek, input.signer, res.message.into())?),
+    ))
 }
 
 pub fn verify_non_membership<R: LightClientResolver, S: KVStore, K: Signer>(
     ctx: &mut Context<R, S, K>,
     input: VerifyNonMembershipInput,
-) -> Result<LightClientResult, Error> {
+) -> Result<LightClientResponse, Error> {
     let ek = ctx.get_enclave_key();
     let lc = get_light_client_by_client_id(ctx, &input.client_id)?;
 
@@ -48,7 +48,7 @@ pub fn verify_non_membership<R: LightClientResolver, S: KVStore, K: Signer>(
         input.proof.1,
     )?;
 
-    Ok(LightClientResult::VerifyNonMembership(
-        VerifyNonMembershipResult(prove_commitment(ek, input.signer, res.message)?),
+    Ok(LightClientResponse::VerifyNonMembership(
+        VerifyNonMembershipResponse(prove_commitment(ek, input.signer, res.message.into())?),
     ))
 }

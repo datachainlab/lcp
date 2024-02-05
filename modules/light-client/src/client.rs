@@ -1,8 +1,11 @@
-use crate::commitments::{CommitmentPrefix, Message};
+use crate::commitments::{CommitmentPrefix, ProxyMessage};
 use crate::context::HostClientReader;
 use crate::errors::Error;
 use crate::prelude::*;
 use crate::types::{Any, ClientId, Height};
+use commitments::{
+    MisbehaviourProxyMessage, UpdateStateProxyMessage, VerifyMembershipProxyMessage,
+};
 
 #[allow(clippy::too_many_arguments)]
 pub trait LightClient {
@@ -29,7 +32,7 @@ pub trait LightClient {
         &self,
         ctx: &dyn HostClientReader,
         client_id: ClientId,
-        any_header: Any,
+        client_message: Any,
     ) -> Result<UpdateClientResult, Error>;
 
     /// verify_membership is a generic proof verification method which verifies a proof of the existence of a value at a given path at the specified height.
@@ -61,13 +64,19 @@ pub struct CreateClientResult {
     /// height corresponding to the updated state
     pub height: Height,
     /// message represents a state transition of the client
-    pub message: Message,
+    pub message: ProxyMessage,
     /// if true, sign the commitment with Enclave Key
     pub prove: bool,
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct UpdateClientResult {
+pub enum UpdateClientResult {
+    UpdateState(UpdateStateData),
+    Misbehaviour(MisbehaviourData),
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct UpdateStateData {
     /// updated client state
     pub new_any_client_state: Any,
     /// updated consensus state
@@ -75,19 +84,39 @@ pub struct UpdateClientResult {
     /// height corresponding to the updated state
     pub height: Height,
     /// message represents a state transition of the client
-    pub message: Message,
+    pub message: UpdateStateProxyMessage,
     /// if true, sign the commitment with Enclave Key
     pub prove: bool,
 }
 
 #[derive(Clone, Debug, PartialEq)]
+pub struct MisbehaviourData {
+    /// updated client state
+    pub new_any_client_state: Any,
+    /// message represents a state transition of the client
+    pub message: MisbehaviourProxyMessage,
+}
+
+impl From<UpdateStateData> for UpdateClientResult {
+    fn from(event: UpdateStateData) -> Self {
+        UpdateClientResult::UpdateState(event)
+    }
+}
+
+impl From<MisbehaviourData> for UpdateClientResult {
+    fn from(event: MisbehaviourData) -> Self {
+        UpdateClientResult::Misbehaviour(event)
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
 pub struct VerifyMembershipResult {
     /// message represents a result of the state verification
-    pub message: Message,
+    pub message: VerifyMembershipProxyMessage,
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct VerifyNonMembershipResult {
     /// message represents a result of the state verification
-    pub message: Message,
+    pub message: VerifyMembershipProxyMessage,
 }

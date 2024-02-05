@@ -1,8 +1,8 @@
 use crate::message::EmittedState;
 use crate::prelude::*;
 use crate::Error;
-use lcp_types::Any;
-use lcp_types::Height;
+use alloy_sol_types::sol;
+use lcp_types::{Any, Height};
 use prost::Message;
 
 pub trait EthABIEncoder {
@@ -12,18 +12,27 @@ pub trait EthABIEncoder {
         Self: Sized;
 }
 
-/// the height is encoded as a tuple of 2 elements: (u64, u64)
-pub(crate) struct EthABIHeight(ethabi::Uint, ethabi::Uint);
+sol! {
+    struct EthABIHeight {
+        uint64 revision_number;
+        uint64 revision_height;
+    }
+
+    struct EthABIEmittedState {
+        EthABIHeight height;
+        bytes state;
+    }
+}
 
 impl EthABIHeight {
     pub fn is_zero(&self) -> bool {
-        self.0 == 0.into() && self.1 == 0.into()
+        self.revision_number == 0 && self.revision_height == 0
     }
 }
 
 impl From<EthABIHeight> for Height {
     fn from(value: EthABIHeight) -> Self {
-        Height::new(value.0.as_u64(), value.1.as_u64())
+        Self::new(value.revision_number, value.revision_height)
     }
 }
 
@@ -37,19 +46,12 @@ impl From<EthABIHeight> for Option<Height> {
     }
 }
 
-impl From<EthABIHeight> for Vec<ethabi::Token> {
-    fn from(value: EthABIHeight) -> Self {
-        use ethabi::Token;
-        vec![Token::Uint(value.0), Token::Uint(value.1)]
-    }
-}
-
 impl From<Height> for EthABIHeight {
     fn from(value: Height) -> Self {
-        Self(
-            value.revision_number().into(),
-            value.revision_height().into(),
-        )
+        Self {
+            revision_number: value.revision_number(),
+            revision_height: value.revision_height(),
+        }
     }
 }
 
@@ -59,57 +61,18 @@ impl From<Option<Height>> for EthABIHeight {
     }
 }
 
-impl TryFrom<Vec<ethabi::Token>> for EthABIHeight {
-    type Error = Error;
-    fn try_from(value: Vec<ethabi::Token>) -> Result<Self, Self::Error> {
-        if value.len() != 2 {
-            return Err(Error::invalid_abi(format!(
-                "invalid height tuple length: {}",
-                value.len()
-            )));
-        }
-        let mut values = value.into_iter();
-        let revision_number = values.next().unwrap().into_uint().unwrap();
-        let revision_height = values.next().unwrap().into_uint().unwrap();
-        Ok(Self(revision_number, revision_height))
-    }
-}
-
-/// the height is encoded as a tuple of 2 elements: ((u64, u64), bytes)
-pub(crate) struct EthABIEmittedState(EthABIHeight, ethabi::Bytes);
-
 impl From<EmittedState> for EthABIEmittedState {
     fn from(value: EmittedState) -> Self {
-        Self(value.0.into(), value.1.encode_to_vec())
+        Self {
+            height: value.0.into(),
+            state: value.1.encode_to_vec(),
+        }
     }
 }
 
 impl TryFrom<EthABIEmittedState> for EmittedState {
     type Error = Error;
     fn try_from(value: EthABIEmittedState) -> Result<Self, Self::Error> {
-        Ok(Self(value.0.into(), Any::try_from(value.1)?))
-    }
-}
-
-impl From<EthABIEmittedState> for Vec<ethabi::Token> {
-    fn from(value: EthABIEmittedState) -> Self {
-        use ethabi::Token;
-        vec![Token::Tuple(value.0.into()), Token::Bytes(value.1)]
-    }
-}
-
-impl TryFrom<Vec<ethabi::Token>> for EthABIEmittedState {
-    type Error = Error;
-    fn try_from(value: Vec<ethabi::Token>) -> Result<Self, Self::Error> {
-        if value.len() != 2 {
-            return Err(Error::invalid_abi(format!(
-                "invalid emitted state tuple length: {}",
-                value.len()
-            )));
-        }
-        let mut values = value.into_iter();
-        let height = values.next().unwrap().into_tuple().unwrap().try_into()?;
-        let state_id = values.next().unwrap().into_bytes().unwrap();
-        Ok(Self(height, state_id))
+        Ok(Self(value.height.into(), Any::try_from(value.state)?))
     }
 }

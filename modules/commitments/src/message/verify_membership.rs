@@ -1,7 +1,7 @@
-use super::bytes_to_bytes32;
 use crate::encoder::{EthABIEncoder, EthABIHeight};
 use crate::prelude::*;
 use crate::{Error, StateID};
+use alloy_sol_types::{private::B256, sol, SolValue};
 use core::fmt::Display;
 use lcp_types::Height;
 use serde::{Deserialize, Serialize};
@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 pub type CommitmentPrefix = Vec<u8>;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct VerifyMembershipMessage {
+pub struct VerifyMembershipProxyMessage {
     pub prefix: CommitmentPrefix,
     pub path: String,
     pub value: Option<[u8; 32]>,
@@ -17,7 +17,7 @@ pub struct VerifyMembershipMessage {
     pub state_id: StateID,
 }
 
-impl Display for VerifyMembershipMessage {
+impl Display for VerifyMembershipProxyMessage {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(
             f,
@@ -31,84 +31,42 @@ impl Display for VerifyMembershipMessage {
     }
 }
 
-pub(crate) struct EthABIVerifyMembershipMessage {
-    prefix: ethabi::Bytes,        // bytes
-    path: ethabi::Bytes,          // bytes
-    value: ethabi::FixedBytes,    // bytes32
-    height: EthABIHeight,         // (uint64, uint64)
-    state_id: ethabi::FixedBytes, // bytes32
-}
-
-impl EthABIVerifyMembershipMessage {
-    pub fn encode(self) -> Vec<u8> {
-        use ethabi::Token;
-        ethabi::encode(&[Token::Tuple(vec![
-            Token::Bytes(self.prefix),
-            Token::Bytes(self.path),
-            Token::FixedBytes(self.value),
-            Token::Tuple(self.height.into()),
-            Token::FixedBytes(self.state_id),
-        ])])
-    }
-
-    pub fn decode(bz: &[u8]) -> Result<Self, Error> {
-        use ethabi::ParamType;
-        let tuple = ethabi::decode(
-            &[ParamType::Tuple(vec![
-                ParamType::Bytes,
-                ParamType::Bytes,
-                ParamType::FixedBytes(32),
-                ParamType::Tuple(vec![ParamType::Uint(64), ParamType::Uint(64)]),
-                ParamType::FixedBytes(32),
-            ])],
-            bz,
-        )?
-        .into_iter()
-        .next()
-        .unwrap()
-        .into_tuple()
-        .unwrap();
-
-        // if the decoding is successful, the length of the tuple should be 5
-        assert!(tuple.len() == 5);
-        let mut values = tuple.into_iter();
-        Ok(Self {
-            prefix: values.next().unwrap().into_bytes().unwrap(),
-            path: values.next().unwrap().into_bytes().unwrap().to_vec(),
-            value: values.next().unwrap().into_fixed_bytes().unwrap(),
-            height: values.next().unwrap().into_tuple().unwrap().try_into()?,
-            state_id: values.next().unwrap().into_fixed_bytes().unwrap(),
-        })
+sol! {
+    struct EthABIVerifyMembershipProxyMessage {
+        bytes prefix;
+        bytes path;
+        bytes32 value;
+        EthABIHeight height;
+        bytes32 state_id;
     }
 }
 
-impl From<VerifyMembershipMessage> for EthABIVerifyMembershipMessage {
-    fn from(value: VerifyMembershipMessage) -> Self {
-        use ethabi::*;
+impl From<VerifyMembershipProxyMessage> for EthABIVerifyMembershipProxyMessage {
+    fn from(msg: VerifyMembershipProxyMessage) -> Self {
         Self {
-            prefix: value.prefix,
-            path: Bytes::from(value.path),
-            value: FixedBytes::from(value.value.unwrap_or_default()),
-            height: EthABIHeight::from(value.height),
-            state_id: value.state_id.to_vec(),
+            prefix: msg.prefix,
+            path: msg.path.into_bytes(),
+            value: B256::from_slice(msg.value.unwrap_or_default().as_slice()),
+            height: EthABIHeight::from(msg.height),
+            state_id: B256::from_slice(&msg.state_id.to_vec()),
         }
     }
 }
 
-impl TryFrom<EthABIVerifyMembershipMessage> for VerifyMembershipMessage {
+impl TryFrom<EthABIVerifyMembershipProxyMessage> for VerifyMembershipProxyMessage {
     type Error = Error;
-    fn try_from(value: EthABIVerifyMembershipMessage) -> Result<Self, Self::Error> {
+    fn try_from(msg: EthABIVerifyMembershipProxyMessage) -> Result<Self, Self::Error> {
         Ok(Self {
-            prefix: value.prefix,
-            path: String::from_utf8(value.path)?,
-            value: bytes_to_bytes32(value.value)?,
-            height: value.height.into(),
-            state_id: value.state_id.as_slice().try_into()?,
+            prefix: msg.prefix,
+            path: String::from_utf8(msg.path)?,
+            value: (!msg.value.is_zero()).then_some(msg.value.0),
+            height: msg.height.into(),
+            state_id: msg.state_id.as_slice().try_into()?,
         })
     }
 }
 
-impl VerifyMembershipMessage {
+impl VerifyMembershipProxyMessage {
     pub fn new(
         prefix: CommitmentPrefix,
         path: String,
@@ -124,14 +82,27 @@ impl VerifyMembershipMessage {
             state_id,
         }
     }
+
+    pub fn validate(&self) -> Result<(), Error> {
+        if self.path.is_empty() {
+            return Err(Error::empty_path());
+        }
+        if self.height.is_zero() {
+            return Err(Error::zero_height());
+        }
+        if self.state_id.is_zero() {
+            return Err(Error::zero_state_id());
+        }
+        Ok(())
+    }
 }
 
-impl EthABIEncoder for VerifyMembershipMessage {
+impl EthABIEncoder for VerifyMembershipProxyMessage {
     fn ethabi_encode(self) -> Vec<u8> {
-        Into::<EthABIVerifyMembershipMessage>::into(self).encode()
+        Into::<EthABIVerifyMembershipProxyMessage>::into(self).abi_encode()
     }
 
     fn ethabi_decode(bz: &[u8]) -> Result<Self, Error> {
-        EthABIVerifyMembershipMessage::decode(bz).and_then(|v| v.try_into())
+        EthABIVerifyMembershipProxyMessage::abi_decode(bz, true)?.try_into()
     }
 }

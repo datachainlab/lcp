@@ -12,12 +12,8 @@ define_error! {
         |_| {"StringFromUtf8"},
 
         EthAbiDecode
-        {
-            descr: String
-        }
-        |e| {
-            format_args!("ethabi decode error: descr={}", e.descr)
-        },
+        [TraceError<alloy_sol_types::Error>]
+        |_| {"ethabi decode error"},
 
         InvalidAbi
         {
@@ -111,8 +107,31 @@ define_error! {
             format_args!("context aggregation failed: descr={}", e.descr)
         },
 
-        LcpType
+        EmptyPath
         {}
+        |_| {"empty path"},
+
+        ZeroHeight
+        {}
+        |_| {"zero height"},
+
+        ZeroStateId
+        {}
+        |_| {"zero stateID"},
+
+        InvalidPrevStateAndHeight
+        {}
+        |_| {"prev_height and prev_state_id must be both None or both Some"},
+
+        EmptyPrevStates
+        {}
+        |_| {"empty prev_states in misbehaviour message"},
+
+        ProtoDecodeError
+        [TraceError<prost::DecodeError>]
+        |_| {"proto decode error"},
+
+        LcpType
         [lcp_types::TypeError]
         |_| {"Type"},
 
@@ -148,9 +167,9 @@ impl From<lcp_types::TimeError> for Error {
     }
 }
 
-impl From<ethabi::Error> for Error {
-    fn from(value: ethabi::Error) -> Self {
-        Error::eth_abi_decode(format!("{:?}", value))
+impl From<alloy_sol_types::Error> for Error {
+    fn from(value: alloy_sol_types::Error) -> Self {
+        Error::eth_abi_decode(value)
     }
 }
 
