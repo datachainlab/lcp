@@ -416,8 +416,7 @@ impl TendermintLightClient {
                     })
                 })?
                 .try_into()?;
-            let prev_state_id =
-                gen_state_id(canonicalize_state(client_state), consensus_state.clone())?;
+            let prev_state_id = gen_state_id(canonicalize_state(client_state), consensus_state)?;
             prev_states.push(PrevState {
                 height,
                 state_id: prev_state_id,
