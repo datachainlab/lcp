@@ -348,7 +348,7 @@ impl TendermintLightClient {
                 .clone(),
         );
 
-        let prev_states = self.make_prev_states(
+        let (prev_states, trusted_consensus_state_timestamps) = self.make_prev_states(
             ctx,
             &client_id,
             &client_state,
@@ -357,12 +357,29 @@ impl TendermintLightClient {
                 misbehaviour.header2().trusted_height.into(),
             ],
         )?;
-
+        let lc_opts = client_state.as_light_client_options().unwrap();
         Ok(MisbehaviourData {
             new_any_client_state: new_client_state.into(),
             message: MisbehaviourProxyMessage {
                 prev_states,
-                context: ValidationContext::Empty,
+                context: TrustingPeriodContext::new(
+                    lc_opts.trusting_period,
+                    lc_opts.clock_drift,
+                    misbehaviour.header1().timestamp().into(),
+                    trusted_consensus_state_timestamps[0],
+                )
+                .aggregate(TrustingPeriodContext::new(
+                    lc_opts.trusting_period,
+                    lc_opts.clock_drift,
+                    misbehaviour.header2().timestamp().into(),
+                    trusted_consensus_state_timestamps[1],
+                ))
+                .map_err(|e| {
+                    Error::ics02(ICS02Error::ClientSpecific {
+                        description: e.to_string(),
+                    })
+                })?
+                .into(),
                 client_message: Any::from(misbehaviour),
             },
         })
@@ -374,8 +391,9 @@ impl TendermintLightClient {
         client_id: &ClientId,
         client_state: &ClientState,
         heights: Vec<Height>,
-    ) -> Result<Vec<PrevState>, LightClientError> {
+    ) -> Result<(Vec<PrevState>, Vec<Time>), LightClientError> {
         let mut prev_states = Vec::new();
+        let mut timestamps = Vec::new();
         for height in heights {
             let ibc_height = height.try_into().map_err(Error::ics02)?;
             let consensus_state: ConsensusState = ctx
@@ -387,13 +405,15 @@ impl TendermintLightClient {
                     })
                 })?
                 .try_into()?;
+            let timestamp = consensus_state.timestamp().into();
             let prev_state_id = gen_state_id(canonicalize_state(client_state), consensus_state)?;
             prev_states.push(PrevState {
                 height,
                 state_id: prev_state_id,
             });
+            timestamps.push(timestamp);
         }
-        Ok(prev_states)
+        Ok((prev_states, timestamps))
     }
 }
 

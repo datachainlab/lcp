@@ -48,32 +48,7 @@ impl ValidationContext {
             (Self::Empty, Self::TrustingPeriod(ctx)) => Ok(Self::TrustingPeriod(ctx)),
             (Self::TrustingPeriod(ctx), Self::Empty) => Ok(Self::TrustingPeriod(ctx)),
             (Self::TrustingPeriod(ctx1), Self::TrustingPeriod(ctx2)) => {
-                if ctx1.trusting_period != ctx2.trusting_period {
-                    return Err(Error::context_aggregation_failed(format!(
-                        "trusting_period mismatch: ctx1={:?} ctx2={:?}",
-                        ctx1.trusting_period, ctx2.trusting_period,
-                    )));
-                }
-                if ctx1.clock_drift != ctx2.clock_drift {
-                    return Err(Error::context_aggregation_failed(format!(
-                        "clock_drift mismatch: ctx1={:?} ctx2={:?}",
-                        ctx1.clock_drift, ctx2.clock_drift
-                    )));
-                }
-                Ok(Self::TrustingPeriod(TrustingPeriodContext::new(
-                    ctx1.trusting_period,
-                    ctx1.clock_drift,
-                    if ctx1.untrusted_header_timestamp > ctx2.untrusted_header_timestamp {
-                        ctx1.untrusted_header_timestamp
-                    } else {
-                        ctx2.untrusted_header_timestamp
-                    },
-                    if ctx1.trusted_state_timestamp < ctx2.trusted_state_timestamp {
-                        ctx1.trusted_state_timestamp
-                    } else {
-                        ctx2.trusted_state_timestamp
-                    },
-                )))
+                Ok(Self::TrustingPeriod(ctx1.aggregate(ctx2)?))
             }
         }
     }
@@ -208,6 +183,38 @@ impl TrustingPeriodContext {
         )?;
 
         Ok(())
+    }
+
+    pub fn aggregate(self, other: Self) -> Result<Self, Error> {
+        if self.trusting_period != other.trusting_period {
+            return Err(Error::context_aggregation_failed(format!(
+                "trusting_period mismatch: self={:?} other={:?}",
+                self.trusting_period, other.trusting_period,
+            )));
+        }
+        if self.clock_drift != other.clock_drift {
+            return Err(Error::context_aggregation_failed(format!(
+                "clock_drift mismatch: self={:?} other={:?}",
+                self.clock_drift, other.clock_drift
+            )));
+        }
+        Ok(Self {
+            trusting_period: self.trusting_period,
+            clock_drift: self.clock_drift,
+            untrusted_header_timestamp: if self.untrusted_header_timestamp
+                > other.untrusted_header_timestamp
+            {
+                self.untrusted_header_timestamp
+            } else {
+                other.untrusted_header_timestamp
+            },
+            trusted_state_timestamp: if self.trusted_state_timestamp < other.trusted_state_timestamp
+            {
+                self.trusted_state_timestamp
+            } else {
+                other.trusted_state_timestamp
+            },
+        })
     }
 
     fn ensure_within_trust_period(
