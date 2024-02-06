@@ -1859,6 +1859,7 @@ dependencies = [
  "light-client",
  "log 0.4.17",
  "serde",
+ "tendermint-light-client-verifier",
 ]
 
 [[package]]

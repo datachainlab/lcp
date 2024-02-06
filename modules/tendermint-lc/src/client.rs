@@ -2,6 +2,7 @@ use crate::errors::Error;
 use crate::message::{ClientMessage, Header, Misbehaviour};
 use crate::prelude::*;
 use crate::state::{canonicalize_state, gen_state_id, ClientState, ConsensusState};
+use crate::verifier::check_header_and_update_state;
 use core::str::FromStr;
 use crypto::Keccak256;
 use ibc::clients::ics07_tendermint::client_state::{
@@ -35,6 +36,7 @@ use light_client::{
     LightClientRegistry, UpdateClientResult, VerifyMembershipResult,
 };
 use light_client::{MisbehaviourData, UpdateStateData, VerifyNonMembershipResult};
+#[allow(unused_imports)]
 use log::*;
 
 #[derive(Default)]
@@ -238,37 +240,6 @@ impl TendermintLightClient {
             .into());
         }
 
-        // Read consensus state from the host chain store.
-        let latest_consensus_state: ConsensusState = ctx
-            .consensus_state(&client_id, &client_state.latest_height().into())
-            .map_err(|_| {
-                Error::ics02(ICS02Error::ConsensusStateNotFound {
-                    client_id: client_id.clone().into(),
-                    height: client_state.latest_height(),
-                })
-            })?
-            .try_into()?;
-
-        debug!("latest consensus state: {:?}", latest_consensus_state);
-
-        let now = ctx.host_timestamp();
-        let duration = now
-            .duration_since(latest_consensus_state.timestamp().into_tm_time().unwrap())
-            .map_err(|_| {
-                Error::ics02(ICS02Error::InvalidConsensusStateTimestamp {
-                    time1: latest_consensus_state.timestamp(),
-                    time2: now.into(),
-                })
-            })?;
-
-        if client_state.expired(duration) {
-            return Err(Error::ics02(ICS02Error::HeaderNotWithinTrustPeriod {
-                latest_time: latest_consensus_state.timestamp(),
-                update_time: header.timestamp(),
-            })
-            .into());
-        }
-
         let height = header.height().into();
         let header_timestamp: Time = header.timestamp().into();
 
@@ -288,17 +259,17 @@ impl TendermintLightClient {
         let UpdatedState {
             client_state: new_client_state,
             consensus_state: new_consensus_state,
-        } = client_state
-            .check_header_and_update_state(
-                &IBCContext::<TendermintClientState, TendermintConsensusState>::new(ctx),
-                client_id.into(),
-                Any::from(header.clone()).into(),
-            )
-            .map_err(|e| {
-                Error::ics02(ICS02Error::HeaderVerificationFailure {
-                    reason: e.to_string(),
-                })
-            })?;
+        } = check_header_and_update_state(
+            &client_state,
+            &IBCContext::<TendermintClientState, TendermintConsensusState>::new(ctx),
+            client_id.into(),
+            Any::from(header.clone()).into(),
+        )
+        .map_err(|e| {
+            Error::ics02(ICS02Error::HeaderVerificationFailure {
+                reason: e.to_string(),
+            })
+        })?;
 
         let new_client_state = ClientState(
             downcast_client_state::<TendermintClientState>(new_client_state.as_ref())

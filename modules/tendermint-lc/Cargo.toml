@@ -8,6 +8,7 @@ ibc = { version = "0.29.0", default-features = false, features = ["serde"] }
 serde = { version = "1.0.184", default-features = false, features = ["alloc"] }
 log = { version = "0.4.8", default-features = false }
 flex-error = { version = "0.4.4", default-features = false }
+tendermint-light-client-verifier = { version = "0.29", features = ["rust-crypto"], default-features = false }
 
 light-client = { path = "../light-client", default-features = false, features = ["ibc"] }
 lcp-proto = { path = "../../proto", default-features = false }
