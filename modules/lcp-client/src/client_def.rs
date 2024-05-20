@@ -1,25 +1,50 @@
 use crate::client_state::ClientState;
 use crate::consensus_state::ConsensusState;
 use crate::errors::Error;
-use crate::message::{ClientMessage, RegisterEnclaveKeyMessage};
+use crate::message::{ClientMessage, CommitmentProofs, RegisterEnclaveKeyMessage};
 use attestation_report::EndorsedAttestationVerificationReport;
 use crypto::{verify_signature_address, Address, Keccak256};
+use hex_literal::hex;
 use light_client::commitments::{
-    CommitmentPrefix, CommitmentProof, EthABIEncoder, MisbehaviourProxyMessage, ProxyMessage,
+    CommitmentPrefix, EthABIEncoder, MisbehaviourProxyMessage, ProxyMessage,
     UpdateStateProxyMessage, VerifyMembershipProxyMessage,
 };
 use light_client::types::{ClientId, Height, Time};
-use light_client::{ClientKeeper, ClientReader, HostClientKeeper, HostClientReader};
+use light_client::{HostClientKeeper, HostClientReader};
+use tiny_keccak::Keccak;
 
 pub const LCP_CLIENT_TYPE: &str = "0000-lcp";
+
+pub const DOMAIN_SEPARATOR_REGISTER_ENCLAVE_KEY: [u8; 32] =
+    hex!("e33d217bff42bc015bf037be8386bf5055ec6019e58e8c5e89b5c74b8225fa6a");
 
 /// LCPClient is a PoC implementation of LCP Client
 /// This is aimed to testing purposes only for now
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct LCPClient;
 
+#[derive(Debug, Clone, PartialEq, Eq, serde::Deserialize, serde::Serialize)]
+struct EKOperatorInfo {
+    expired_at: u64,
+    operator: Address,
+}
+
+impl EKOperatorInfo {
+    fn new(expired_at: u64, operator: Address) -> Self {
+        Self {
+            expired_at,
+            operator,
+        }
+    }
+}
+
 #[allow(clippy::too_many_arguments)]
 impl LCPClient {
+    /// client_type returns the client type
+    pub fn client_type(&self) -> String {
+        LCP_CLIENT_TYPE.to_owned()
+    }
+
     /// initialse initialises a client state with an initial client state and consensus state
     pub fn initialise(
         &self,
@@ -34,6 +59,20 @@ impl LCPClient {
         assert!(client_state.latest_height.is_zero());
         // mr_enclave length must be 32
         assert!(client_state.mr_enclave.len() == 32);
+        // operators_threshold_denominator and operators_threshold_numerator must not be 0
+        assert!(
+            client_state.operators.len() == 0
+                || client_state.operators_threshold_denominator != 0
+                    && client_state.operators_threshold_numerator != 0
+        );
+        // operators_threshold_numerator must be less than or equal to operators_threshold_denominator
+        assert!(
+            client_state.operators_threshold_numerator
+                <= client_state.operators_threshold_denominator
+        );
+        // operators_nonce must be 0
+        assert!(client_state.operators_nonce == 0);
+
         // An initial consensus state must be empty
         assert!(consensus_state.is_empty());
 
@@ -56,22 +95,12 @@ impl LCPClient {
         let client_state = ctx.client_state(&client_id)?.try_into()?;
         match message {
             ClientMessage::UpdateClient(msg) => match msg.proxy_message {
-                ProxyMessage::UpdateState(pmsg) => self.update_state(
-                    ctx,
-                    client_id,
-                    client_state,
-                    pmsg,
-                    msg.signer,
-                    msg.signature,
-                ),
-                ProxyMessage::Misbehaviour(pmsg) => self.submit_misbehaviour(
-                    ctx,
-                    client_id,
-                    client_state,
-                    pmsg,
-                    msg.signer,
-                    msg.signature,
-                ),
+                ProxyMessage::UpdateState(pmsg) => {
+                    self.update_state(ctx, client_id, client_state, pmsg, msg.signatures)
+                }
+                ProxyMessage::Misbehaviour(pmsg) => {
+                    self.submit_misbehaviour(ctx, client_id, client_state, pmsg, msg.signatures)
+                }
                 _ => Err(Error::unexpected_header_type(format!("{:?}", msg))),
             },
             ClientMessage::RegisterEnclaveKey(msg) => {
@@ -86,8 +115,7 @@ impl LCPClient {
         client_id: ClientId,
         client_state: ClientState,
         message: UpdateStateProxyMessage,
-        signer: Address,
-        signature: Vec<u8>,
+        signatures: Vec<Vec<u8>>,
     ) -> Result<(), Error> {
         message.validate()?;
         // TODO return an error instead of assertion
@@ -107,16 +135,13 @@ impl LCPClient {
             assert!(prev_consensus_state.state_id == message.prev_state_id.unwrap());
         }
 
-        // check if the specified signer exists in the client state
-        assert!(self.contains_enclave_key(ctx, &client_id, signer));
-
-        // check if the `header.signer` matches the commitment prover
-        let signer2 = verify_signature_address(
+        self.verify_operator_proofs(
+            ctx,
+            &client_id,
+            &client_state,
             ProxyMessage::from(message.clone()).to_bytes().as_slice(),
-            &signature,
-        )
-        .unwrap();
-        assert!(signer == signer2);
+            signatures,
+        )?;
 
         // check if proxy's validation context matches our's context
         message.context.validate(ctx.host_timestamp())?;
@@ -142,14 +167,19 @@ impl LCPClient {
     ) -> Result<(), Error> {
         // TODO return an error instead of assertion
 
-        let eavr = message.0;
-        let (key, attestation_time) = verify_report(ctx.host_timestamp(), &client_state, &eavr)?;
+        let (ek, attestation_time) =
+            verify_report(ctx.host_timestamp(), &client_state, &message.report)?;
 
-        self.add_enclave_key(
+        let commitment = compute_eip712_register_enclave_key(&message.report.avr);
+        let operator = verify_signature_address(&commitment, &message.operator_signature)?;
+        self.set_enclave_operator_info(
             ctx,
             &client_id,
-            key,
-            (attestation_time + client_state.key_expiration)?.as_unix_timestamp_secs(),
+            ek,
+            EKOperatorInfo::new(
+                (attestation_time + client_state.key_expiration)?.as_unix_timestamp_secs(),
+                operator,
+            ),
         );
         Ok(())
     }
@@ -160,8 +190,7 @@ impl LCPClient {
         client_id: ClientId,
         client_state: ClientState,
         message: MisbehaviourProxyMessage,
-        signer: Address,
-        signature: Vec<u8>,
+        signatures: Vec<Vec<u8>>,
     ) -> Result<(), Error> {
         message.validate()?;
 
@@ -174,18 +203,10 @@ impl LCPClient {
             assert!(prev_consensus_state.state_id == state.state_id);
         }
 
-        // check if the specified signer exists in the client state
-        assert!(self.contains_enclave_key(ctx, &client_id, signer));
-
         // check if proxy's validation context matches our's context
         message.context.validate(ctx.host_timestamp())?;
-
-        // check if the `header.signer` matches the commitment prover
-        let signer2 = verify_signature_address(
-            ProxyMessage::from(message).to_bytes().as_slice(),
-            &signature,
-        )?;
-        assert!(signer == signer2);
+        let sign_bytes = ProxyMessage::from(message).to_bytes();
+        self.verify_operator_proofs(ctx, &client_id, &client_state, &sign_bytes, signatures)?;
 
         let new_client_state = client_state.with_frozen();
         ctx.store_any_client_state(client_id, new_client_state.into())?;
@@ -207,8 +228,8 @@ impl LCPClient {
         // TODO return an error instead of assertion
 
         // convert `proof` to CommitmentProof
-        let commitment_proof = CommitmentProof::ethabi_decode(proof.as_slice()).unwrap();
-        let msg: VerifyMembershipProxyMessage = commitment_proof.message()?.try_into()?;
+        let commitment_proofs = CommitmentProofs::ethabi_decode(proof.as_slice()).unwrap();
+        let msg: VerifyMembershipProxyMessage = commitment_proofs.message()?.try_into()?;
 
         // check if `.prefix` matches the counterparty connection's prefix
         assert!(msg.prefix == prefix);
@@ -225,56 +246,133 @@ impl LCPClient {
             ConsensusState::try_from(ctx.consensus_state(&client_id, &proof_height)?)?;
         assert!(consensus_state.state_id == msg.state_id);
 
-        // check if the `commitment_proof.signer` matches the commitment prover
-        let signer =
-            verify_signature_address(&commitment_proof.message, &commitment_proof.signature)?;
-        assert!(commitment_proof.signer == signer);
+        let client_state = ClientState::try_from(ctx.client_state(&client_id)?)?;
 
-        // check if the specified signer is not expired and exists in the client state
-        assert!(self.is_active_enclave_key(ctx, &client_id, signer));
+        self.verify_operator_proofs(
+            ctx,
+            &client_id,
+            &client_state,
+            &commitment_proofs.message,
+            commitment_proofs.signatures,
+        )?;
 
         Ok(())
     }
 
-    pub fn client_type(&self) -> String {
-        LCP_CLIENT_TYPE.to_owned()
-    }
-
-    fn contains_enclave_key<T: ClientReader + ?Sized>(
+    fn verify_operator_proofs<T: HostClientReader + ?Sized>(
         &self,
         ctx: &T,
         client_id: &ClientId,
-        key: Address,
+        client_state: &ClientState,
+        sign_bytes: &[u8],
+        signatures: Vec<Vec<u8>>,
+    ) -> Result<(), Error> {
+        if client_state.operators.len() == 0 {
+            assert!(signatures.len() == 1);
+            let ek = verify_signature_address(sign_bytes, &signatures[0])?;
+            assert!(self.is_active_enclave_key(ctx, client_id, ek));
+        } else {
+            let mut success = 0u64;
+            for (signature, operator) in signatures
+                .into_iter()
+                .zip(client_state.operators.clone().into_iter())
+                .filter(|(sig, _)| sig.len() > 0)
+            {
+                // check if the `header.signer` matches the commitment prover
+                let ek = verify_signature_address(sign_bytes, &signature)?;
+                // check if the specified signer exists in the client state
+                assert!(
+                    self.is_active_enclave_key_and_check_operator(ctx, &client_id, ek, operator)
+                );
+                success += 1;
+            }
+            assert!(
+                success * client_state.operators_threshold_denominator
+                    >= client_state.operators_threshold_numerator
+                        * client_state.operators.len() as u64
+            );
+        }
+        Ok(())
+    }
+
+    fn is_active_enclave_key_and_check_operator<T: HostClientReader + ?Sized>(
+        &self,
+        ctx: &T,
+        client_id: &ClientId,
+        ek: Address,
+        operator: Address,
     ) -> bool {
-        ctx.get(enclave_key_path(client_id, key).as_slice())
-            .is_some()
+        let info = match self.get_enclave_operator_info(ctx, client_id, ek) {
+            Some(info) => info,
+            None => return false,
+        };
+        assert!(info.operator == operator);
+        ctx.host_timestamp().as_unix_timestamp_secs() < info.expired_at
     }
 
     fn is_active_enclave_key<T: HostClientReader + ?Sized>(
         &self,
         ctx: &T,
         client_id: &ClientId,
-        key: Address,
+        ek: Address,
     ) -> bool {
-        let expired_at = match ctx.get(enclave_key_path(client_id, key).as_slice()) {
-            Some(bz) => u64::from_be_bytes(bz.as_slice().try_into().unwrap()),
+        let info = match self.get_enclave_operator_info(ctx, client_id, ek) {
+            Some(info) => info,
             None => return false,
         };
-        ctx.host_timestamp().as_unix_timestamp_secs() < expired_at
+        ctx.host_timestamp().as_unix_timestamp_secs() < info.expired_at
     }
 
-    fn add_enclave_key<T: ClientKeeper + ?Sized>(
+    fn set_enclave_operator_info<T: HostClientKeeper + ?Sized>(
         &self,
         ctx: &mut T,
         client_id: &ClientId,
-        key: Address,
-        expired_at: u64,
+        ek: Address,
+        info: EKOperatorInfo,
     ) {
-        ctx.set(
-            enclave_key_path(client_id, key),
-            expired_at.to_be_bytes().to_vec(),
-        );
+        match self.get_enclave_operator_info(ctx, client_id, ek) {
+            Some(v) => {
+                assert!(v.expired_at == info.expired_at && v.operator == info.operator);
+            }
+            None => {
+                ctx.set(
+                    enclave_key_path(client_id, ek),
+                    serde_json::to_string(&info).unwrap().into_bytes(),
+                );
+            }
+        }
     }
+
+    fn get_enclave_operator_info<T: HostClientReader + ?Sized>(
+        &self,
+        ctx: &T,
+        client_id: &ClientId,
+        ek: Address,
+    ) -> Option<EKOperatorInfo> {
+        let info = ctx.get(enclave_key_path(client_id, ek).as_slice())?;
+        Some(serde_json::from_slice(info.as_slice()).unwrap())
+    }
+}
+
+pub fn compute_eip712_register_enclave_key(avr: &str) -> Vec<u8> {
+    // 0x1901 | DOMAIN_SEPARATOR_REGISTER_ENCLAVE_KEY | keccak256(keccak256("RegisterEnclaveKey(string avr)") | keccak256(avr))
+    let type_hash = {
+        let mut h = Keccak::new_keccak256();
+        h.update(&keccak256(b"RegisterEnclaveKey(string avr)"));
+        h.update(&keccak256(avr.as_bytes()));
+        let mut result = [0u8; 32];
+        h.finalize(result.as_mut());
+        result
+    };
+    [0x19, 0x01]
+        .into_iter()
+        .chain(DOMAIN_SEPARATOR_REGISTER_ENCLAVE_KEY.into_iter())
+        .chain(type_hash.into_iter())
+        .collect()
+}
+
+pub fn compute_eip712_register_enclave_key_hash(avr: &str) -> [u8; 32] {
+    keccak256(&compute_eip712_register_enclave_key(avr))
 }
 
 // verify_report
@@ -313,10 +411,18 @@ fn verify_report(
     Ok((quote.get_enclave_key_address()?, quote.attestation_time))
 }
 
-fn enclave_key_path(client_id: &ClientId, key: Address) -> Vec<u8> {
-    format!("clients/{}/aux/enclave_keys/{}", client_id, key)
+fn enclave_key_path(client_id: &ClientId, ek: Address) -> Vec<u8> {
+    format!("clients/{}/aux/enclave_keys/{}", client_id, ek)
         .as_bytes()
         .to_vec()
+}
+
+fn keccak256(bz: &[u8]) -> [u8; 32] {
+    let mut keccak = Keccak::new_keccak256();
+    let mut result = [0u8; 32];
+    keccak.update(bz);
+    keccak.finalize(result.as_mut());
+    result
 }
 
 #[cfg(test)]
@@ -330,7 +436,7 @@ mod tests {
     use core::cell::RefCell;
     use core::str::FromStr;
     use core::time::Duration;
-    use crypto::{EnclaveKey, EnclavePublicKey};
+    use crypto::{EnclaveKey, EnclavePublicKey, Signer};
     use ibc::{
         mock::{
             client_state::MockClientState, consensus_state::MockConsensusState, header::MockHeader,
@@ -339,10 +445,18 @@ mod tests {
         Height as ICS02Height,
     };
     use light_client::{commitments::prove_commitment, UpdateClientResult};
-    use light_client::{LightClient, LightClientResolver, MapLightClientRegistry};
+    use light_client::{ClientKeeper, LightClient, LightClientResolver, MapLightClientRegistry};
     use mock_lc::MockLightClient;
     use sgx_types::{sgx_quote_t, sgx_report_body_t};
     use store::memory::MemStore;
+
+    #[test]
+    fn test_compute_eip712_register_enclave_key() {
+        let avr = "{}";
+        let expected = hex!("8f91cceaa6275e6fbe0f8b586a24cb050b882cb8d59c4995d5143755401400d8");
+        let got = compute_eip712_register_enclave_key_hash(avr);
+        assert_eq!(got, expected);
+    }
 
     #[test]
     fn test_client() {
@@ -352,6 +466,10 @@ mod tests {
         let lcp_store = Rc::new(RefCell::new(MemStore::default()));
         // ibc_store is a store to keeps downstream's state
         let ibc_store = Rc::new(RefCell::new(MemStore::default()));
+
+        // pseudo operator key
+        type OperatorKey = EnclaveKey;
+        let op_key = OperatorKey::new().unwrap();
 
         let registry = build_lc_registry();
         let lcp_client = LCPClient::default();
@@ -365,6 +483,7 @@ mod tests {
                 key_expiration: Duration::from_secs(60 * 60 * 24 * 7),
                 frozen: false,
                 latest_height: Height::zero(),
+                ..Default::default()
             };
             let initial_consensus_state = ConsensusState {
                 state_id: Default::default(),
@@ -390,9 +509,14 @@ mod tests {
         {
             let mut ctx = Context::new(registry.clone(), ibc_store.clone(), &ek);
             ctx.set_timestamp(Time::now());
-            let header = ClientMessage::RegisterEnclaveKey(RegisterEnclaveKeyMessage(
-                generate_dummy_eavr(&ek.get_pubkey()),
-            ));
+            let report = generate_dummy_eavr(&ek.get_pubkey());
+            let operator_signature = op_key
+                .sign(compute_eip712_register_enclave_key(report.avr.as_str()).as_slice())
+                .unwrap();
+            let header = ClientMessage::RegisterEnclaveKey(RegisterEnclaveKeyMessage {
+                report,
+                operator_signature,
+            });
             let res = lcp_client.update_client(&mut ctx, lcp_client_id.clone(), header);
             assert!(res.is_ok(), "res={:?}", res);
         }
@@ -452,11 +576,7 @@ mod tests {
                 )
             };
 
-            let res = prove_commitment(
-                ctx.get_enclave_key(),
-                ctx.get_enclave_key().pubkey().unwrap().as_address(),
-                res.message.into(),
-            );
+            let res = prove_commitment(ctx.get_enclave_key(), res.message.into());
             assert!(res.is_ok(), "res={:?}", res);
 
             ctx.store_any_client_state(upstream_client_id.clone(), client_state)
@@ -470,8 +590,7 @@ mod tests {
         {
             let header = ClientMessage::UpdateClient(UpdateClientMessage {
                 proxy_message: proof1.message().unwrap(),
-                signer: proof1.signer,
-                signature: proof1.signature,
+                signatures: vec![proof1.signature],
             });
             let mut ctx = Context::new(registry.clone(), ibc_store.clone(), &ek);
             ctx.set_timestamp((Time::now() + Duration::from_secs(60)).unwrap());
@@ -501,11 +620,7 @@ mod tests {
                 UpdateClientResult::Misbehaviour(data) => data,
                 _ => unreachable!(),
             };
-            let res = prove_commitment(
-                ctx.get_enclave_key(),
-                ctx.get_enclave_key().pubkey().unwrap().as_address(),
-                data.message.into(),
-            );
+            let res = prove_commitment(ctx.get_enclave_key(), data.message.into());
             assert!(res.is_ok(), "res={:?}", res);
             res.unwrap()
         };
@@ -514,8 +629,7 @@ mod tests {
         {
             let header = ClientMessage::UpdateClient(UpdateClientMessage {
                 proxy_message: misbehaviour_proof.message().unwrap(),
-                signer: misbehaviour_proof.signer,
-                signature: misbehaviour_proof.signature,
+                signatures: vec![misbehaviour_proof.signature],
             });
             let mut ctx = Context::new(registry, ibc_store, &ek);
             ctx.set_timestamp((Time::now() + Duration::from_secs(60)).unwrap());

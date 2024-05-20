@@ -200,7 +200,6 @@ mod tests {
         message::verify_membership::CommitmentPrefix, CommitmentProof, StateID,
         TrustingPeriodContext,
     };
-    use crypto::Address;
     use lcp_types::{nanos_to_duration, Any, Height, Time, MAX_UNIX_TIMESTAMP_NANOS};
     use proptest::prelude::*;
 
@@ -208,18 +207,13 @@ mod tests {
         Height::new(tuple.0, tuple.1)
     }
 
-    fn test_update_client_message(
-        c1: UpdateStateProxyMessage,
-        proof_signer: Address,
-        proof_signature: Vec<u8>,
-    ) {
+    fn test_update_client_message(c1: UpdateStateProxyMessage, proof_signature: Vec<u8>) {
         let v = c1.clone().ethabi_encode();
         let c2 = UpdateStateProxyMessage::ethabi_decode(&v).unwrap();
         assert_eq!(c1, c2);
 
         let p1 = CommitmentProof {
             message: ProxyMessage::from(c1).to_bytes(),
-            signer: proof_signer,
             signature: proof_signature.to_vec(),
         };
         // TODO uncomment this line when we want to generate the test data
@@ -237,7 +231,6 @@ mod tests {
             post_state_id in any::<[u8; 32]>().prop_map(StateID::from),
             emitted_states in any::<Vec<((u64, u64), (String, Vec<u8>))>>(),
             timestamp in ..=MAX_UNIX_TIMESTAMP_NANOS,
-            proof_signer in any::<[u8; 20]>(),
             proof_signature in any::<[u8; 65]>()
         ) {
             let c1 = UpdateStateProxyMessage {
@@ -251,7 +244,7 @@ mod tests {
                 timestamp: Time::from_unix_timestamp_nanos(timestamp).unwrap(),
                 context: Default::default(),
             };
-            test_update_client_message(c1, Address(proof_signer), proof_signature.to_vec());
+            test_update_client_message(c1, proof_signature.to_vec());
         }
 
         #[test]
@@ -266,7 +259,6 @@ mod tests {
             clock_drift in ..=MAX_UNIX_TIMESTAMP_NANOS,
             untrusted_header_timestamp in ..=MAX_UNIX_TIMESTAMP_NANOS,
             trusted_state_timestamp in ..=MAX_UNIX_TIMESTAMP_NANOS,
-            proof_signer in any::<[u8; 20]>(),
             proof_signature in any::<[u8; 65]>(),
         ) {
             let c1 = UpdateStateProxyMessage {
@@ -285,7 +277,7 @@ mod tests {
                     Time::from_unix_timestamp_nanos(trusted_state_timestamp).unwrap(),
                 ).into(),
             };
-            test_update_client_message(c1, Address(proof_signer), proof_signature.to_vec());
+            test_update_client_message(c1, proof_signature.to_vec());
         }
 
         #[test]
@@ -295,7 +287,6 @@ mod tests {
             value in any::<Option<[u8; 32]>>(),
             height in any::<(u64, u64)>().prop_map(height_from_tuple),
             state_id in any::<[u8; 32]>().prop_map(StateID::from),
-            proof_signer in any::<[u8; 20]>(),
             proof_signature in any::<[u8; 65]>()
         ) {
             let c1 = VerifyMembershipProxyMessage {
@@ -311,7 +302,6 @@ mod tests {
 
             let p1 = CommitmentProof {
                 message: ProxyMessage::from(c1).to_bytes(),
-                signer: Address(proof_signer),
                 signature: proof_signature.to_vec(),
             };
             let p2 = CommitmentProof::ethabi_decode(&p1.clone().ethabi_encode()).unwrap();

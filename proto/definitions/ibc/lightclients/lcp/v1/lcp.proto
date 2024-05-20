@@ -9,14 +9,20 @@ option (gogoproto.goproto_getters_all) = false;
 
 message UpdateClientMessage {
   bytes proxy_message = 1;
-  bytes signer = 2;
-  bytes signature = 3;
+  repeated bytes signatures = 2;
 }
 
 message RegisterEnclaveKeyMessage {
   string report = 1;
   bytes signature = 2;
   bytes signing_cert = 3;
+  bytes operator_signature = 4;
+}
+
+message UpdateOperatorsMessage {
+  uint64 nonce = 1;
+  repeated bytes new_operators = 2;
+  repeated bytes signatures = 3;
 }
 
 message ClientState {
@@ -28,6 +34,10 @@ message ClientState {
   repeated string allowed_quote_statuses = 5;
   // e.g. INTEL-SA-XXXXX
   repeated string allowed_advisory_ids = 6;
+  repeated bytes operators = 7;
+  uint64 operators_nonce = 8;
+  uint64 operators_threshold_numerator = 9;
+  uint64 operators_threshold_denominator = 10;
 }
 
 message ConsensusState {

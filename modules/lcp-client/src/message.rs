@@ -1,8 +1,8 @@
 use crate::errors::Error;
 use crate::prelude::*;
+use alloy_sol_types::{sol, SolValue};
 use attestation_report::EndorsedAttestationVerificationReport;
-use crypto::Address;
-use light_client::commitments::ProxyMessage;
+use light_client::commitments::{Error as CommitmentError, EthABIEncoder, ProxyMessage};
 use light_client::types::proto::ibc::lightclients::lcp::v1::{
     RegisterEnclaveKeyMessage as RawRegisterEnclaveKeyMessage,
     UpdateClientMessage as RawUpdateClientMessage,
@@ -55,37 +55,41 @@ impl From<ClientMessage> for Any {
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
-pub struct RegisterEnclaveKeyMessage(pub EndorsedAttestationVerificationReport);
+pub struct RegisterEnclaveKeyMessage {
+    pub report: EndorsedAttestationVerificationReport,
+    pub operator_signature: Vec<u8>,
+}
 
 impl Protobuf<RawRegisterEnclaveKeyMessage> for RegisterEnclaveKeyMessage {}
 
 impl TryFrom<RawRegisterEnclaveKeyMessage> for RegisterEnclaveKeyMessage {
     type Error = Error;
     fn try_from(value: RawRegisterEnclaveKeyMessage) -> Result<Self, Self::Error> {
-        Ok(RegisterEnclaveKeyMessage(
-            EndorsedAttestationVerificationReport {
+        Ok(RegisterEnclaveKeyMessage {
+            report: EndorsedAttestationVerificationReport {
                 avr: value.report,
                 signature: value.signature,
                 signing_cert: value.signing_cert,
             },
-        ))
+            operator_signature: value.operator_signature,
+        })
     }
 }
 
 impl From<RegisterEnclaveKeyMessage> for RawRegisterEnclaveKeyMessage {
     fn from(value: RegisterEnclaveKeyMessage) -> Self {
         RawRegisterEnclaveKeyMessage {
-            report: (&value.0.avr).try_into().unwrap(),
-            signature: value.0.signature,
-            signing_cert: value.0.signing_cert,
+            report: (&value.report.avr).try_into().unwrap(),
+            signature: value.report.signature,
+            signing_cert: value.report.signing_cert,
+            operator_signature: value.operator_signature,
         }
     }
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub struct UpdateClientMessage {
-    pub signer: Address,
-    pub signature: Vec<u8>,
+    pub signatures: Vec<Vec<u8>>,
     pub proxy_message: ProxyMessage,
 }
 
@@ -95,8 +99,7 @@ impl TryFrom<RawUpdateClientMessage> for UpdateClientMessage {
     type Error = Error;
     fn try_from(value: RawUpdateClientMessage) -> Result<Self, Self::Error> {
         Ok(UpdateClientMessage {
-            signer: Address::try_from(value.signer.as_slice())?,
-            signature: value.signature,
+            signatures: value.signatures,
             proxy_message: ProxyMessage::from_bytes(&value.proxy_message)?,
         })
     }
@@ -106,8 +109,54 @@ impl From<UpdateClientMessage> for RawUpdateClientMessage {
     fn from(value: UpdateClientMessage) -> Self {
         RawUpdateClientMessage {
             proxy_message: Into::<ProxyMessage>::into(value.proxy_message).to_bytes(),
-            signer: value.signer.into(),
-            signature: value.signature,
+            signatures: value.signatures,
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Default, Serialize, Deserialize)]
+pub struct CommitmentProofs {
+    pub message: Vec<u8>,
+    pub signatures: Vec<Vec<u8>>,
+}
+
+impl CommitmentProofs {
+    pub fn message(&self) -> Result<ProxyMessage, CommitmentError> {
+        ProxyMessage::from_bytes(&self.message)
+    }
+}
+
+sol! {
+    struct EthABICommitmentProofs {
+        bytes message;
+        bytes[] signatures;
+    }
+}
+
+impl EthABIEncoder for CommitmentProofs {
+    fn ethabi_encode(self) -> Vec<u8> {
+        Into::<EthABICommitmentProofs>::into(self).abi_encode()
+    }
+
+    fn ethabi_decode(bz: &[u8]) -> Result<Self, CommitmentError> {
+        Ok(EthABICommitmentProofs::abi_decode(bz, true).unwrap().into())
+    }
+}
+
+impl From<EthABICommitmentProofs> for CommitmentProofs {
+    fn from(value: EthABICommitmentProofs) -> Self {
+        Self {
+            message: value.message,
+            signatures: value.signatures,
+        }
+    }
+}
+
+impl From<CommitmentProofs> for EthABICommitmentProofs {
+    fn from(value: CommitmentProofs) -> Self {
+        Self {
+            message: value.message,
+            signatures: value.signatures,
         }
     }
 }

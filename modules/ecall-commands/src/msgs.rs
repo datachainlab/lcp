@@ -118,7 +118,6 @@ impl From<InitClientResponse> for MsgCreateClientResponse {
     fn from(res: InitClientResponse) -> Self {
         Self {
             message: res.proof.message,
-            signer: res.proof.signer.into(),
             signature: res.proof.signature,
         }
     }
@@ -128,7 +127,6 @@ impl From<UpdateClientResponse> for MsgUpdateClientResponse {
     fn from(res: UpdateClientResponse) -> Self {
         Self {
             message: res.0.message,
-            signer: res.0.signer.into(),
             signature: res.0.signature,
         }
     }
@@ -138,7 +136,6 @@ impl From<AggregateMessagesResponse> for MsgAggregateMessagesResponse {
     fn from(res: AggregateMessagesResponse) -> Self {
         Self {
             message: res.0.message,
-            signer: res.0.signer.into(),
             signature: res.0.signature,
         }
     }
@@ -148,7 +145,6 @@ impl From<VerifyMembershipResponse> for MsgVerifyMembershipResponse {
     fn from(res: VerifyMembershipResponse) -> Self {
         Self {
             message: res.0.message,
-            signer: res.0.signer.to_vec(),
             signature: res.0.signature,
         }
     }
@@ -158,7 +154,6 @@ impl From<VerifyNonMembershipResponse> for MsgVerifyNonMembershipResponse {
     fn from(res: VerifyNonMembershipResponse) -> Self {
         Self {
             message: res.0.message,
-            signer: res.0.signer.to_vec(),
             signature: res.0.signature,
         }
     }
