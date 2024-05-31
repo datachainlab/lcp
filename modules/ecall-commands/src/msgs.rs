@@ -23,6 +23,7 @@ impl TryFrom<MsgCreateClient> for InitClientInput {
             .ok_or_else(|| Error::invalid_argument("consensus_state must be non-nil".into()))?
             .into();
         Ok(Self {
+            client_id: msg.client_id,
             any_client_state,
             any_consensus_state,
             current_timestamp: Time::now(),
@@ -116,7 +117,6 @@ impl TryFrom<MsgQueryClientRequest> for QueryClientInput {
 impl From<InitClientResponse> for MsgCreateClientResponse {
     fn from(res: InitClientResponse) -> Self {
         Self {
-            client_id: res.client_id.to_string(),
             message: res.proof.message,
             signer: res.proof.signer.into(),
             signature: res.proof.signature,

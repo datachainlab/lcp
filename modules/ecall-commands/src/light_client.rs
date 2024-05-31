@@ -41,6 +41,7 @@ impl EnclaveKeySelector for LightClientCommand {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct InitClientInput {
+    pub client_id: String,
     pub any_client_state: Any,
     pub any_consensus_state: Any,
     pub current_timestamp: Time,
@@ -105,7 +106,6 @@ pub enum LightClientResponse {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct InitClientResponse {
-    pub client_id: ClientId,
     pub proof: CommitmentProof,
 }
 

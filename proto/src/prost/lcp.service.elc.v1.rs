@@ -266,19 +266,21 @@ pub mod query_server {
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct MsgCreateClient {
+    #[prost(string, tag = "1")]
+    pub client_id: ::prost::alloc::string::String,
     /// light client state
-    #[prost(message, optional, tag = "1")]
+    #[prost(message, optional, tag = "2")]
     pub client_state: ::core::option::Option<
         super::super::super::super::google::protobuf::Any,
     >,
     /// consensus state associated with the client that corresponds to a given
     /// height.
-    #[prost(message, optional, tag = "2")]
+    #[prost(message, optional, tag = "3")]
     pub consensus_state: ::core::option::Option<
         super::super::super::super::google::protobuf::Any,
     >,
     /// enclave key for signing
-    #[prost(bytes = "vec", tag = "3")]
+    #[prost(bytes = "vec", tag = "4")]
     pub signer: ::prost::alloc::vec::Vec<u8>,
 }
 /// MsgCreateClientResponse defines the Msg/CreateClient response type.
@@ -286,13 +288,11 @@ pub struct MsgCreateClient {
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct MsgCreateClientResponse {
-    #[prost(string, tag = "1")]
-    pub client_id: ::prost::alloc::string::String,
-    #[prost(bytes = "vec", tag = "2")]
+    #[prost(bytes = "vec", tag = "1")]
     pub message: ::prost::alloc::vec::Vec<u8>,
-    #[prost(bytes = "vec", tag = "3")]
+    #[prost(bytes = "vec", tag = "2")]
     pub signer: ::prost::alloc::vec::Vec<u8>,
-    #[prost(bytes = "vec", tag = "4")]
+    #[prost(bytes = "vec", tag = "3")]
     pub signature: ::prost::alloc::vec::Vec<u8>,
 }
 /// MsgUpdateClient defines an sdk.Msg to update a IBC client state using

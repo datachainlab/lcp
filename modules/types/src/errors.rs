@@ -46,6 +46,26 @@ define_error! {
             |_| {
                 "identifier cannot be empty"
             },
+        ClientIdInvalidFormat
+            { id: String }
+            |e| {
+                format_args!("identifier `{}` must be in the format `{{client_type}}-{{counter}}`", e.id)
+            },
+        ClientIdInvalidClientType
+            { id: String, client_type: String }
+            |e| {
+                format_args!("identifier `{}` must have client type `{}`", e.id, e.client_type)
+            },
+        ClientIdInvalidCounter
+            { id: String }
+            |e| {
+                format_args!("identifier `{}` must have a valid counter", e.id)
+            },
+        ClientIdInvalidCounterParseIntError
+            { id: String, e: core::num::ParseIntError }
+            |e| {
+                format_args!("identifier `{}` counter parse error: {}", e.id, e.e)
+            },
         MrenclaveBytesConversion
             {
                 bz: Vec<u8>,
