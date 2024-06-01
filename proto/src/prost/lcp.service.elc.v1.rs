@@ -9,14 +9,17 @@ pub struct QueryClientRequest {
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct QueryClientResponse {
+    /// if false, the client_state and consensus_state fields will be empty
+    #[prost(bool, tag = "1")]
+    pub found: bool,
     /// light client state
-    #[prost(message, optional, tag = "1")]
+    #[prost(message, optional, tag = "2")]
     pub client_state: ::core::option::Option<
         super::super::super::super::google::protobuf::Any,
     >,
     /// consensus state associated with the client that corresponds to a given
     /// height.
-    #[prost(message, optional, tag = "2")]
+    #[prost(message, optional, tag = "3")]
     pub consensus_state: ::core::option::Option<
         super::super::super::super::google::protobuf::Any,
     >,

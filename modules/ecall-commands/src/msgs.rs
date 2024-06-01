@@ -167,8 +167,9 @@ impl From<VerifyNonMembershipResponse> for MsgVerifyNonMembershipResponse {
 impl From<QueryClientResponse> for MsgQueryClientResponse {
     fn from(res: QueryClientResponse) -> Self {
         Self {
-            client_state: Some(res.any_client_state.into()),
-            consensus_state: Some(res.any_consensus_state.into()),
+            found: res.found,
+            client_state: res.any_client_state.map(Into::into),
+            consensus_state: res.any_consensus_state.map(Into::into),
         }
     }
 }

@@ -123,6 +123,7 @@ pub struct VerifyNonMembershipResponse(pub CommitmentProof);
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct QueryClientResponse {
-    pub any_client_state: Any,
-    pub any_consensus_state: Any,
+    pub found: bool,
+    pub any_client_state: Option<Any>,
+    pub any_consensus_state: Option<Any>,
 }
