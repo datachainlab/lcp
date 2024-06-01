@@ -6,7 +6,7 @@ use crypto::Signer;
 use ecall_commands::{InitClientInput, InitClientResponse, LightClientResponse};
 use lcp_types::{Any, ClientId};
 use light_client::commitments::{prove_commitment, CommitmentProof};
-use light_client::{ClientKeeper, LightClientResolver};
+use light_client::{ClientKeeper, ClientReader, LightClientResolver};
 use store::KVStore;
 
 pub fn init_client<R: LightClientResolver, S: KVStore, K: Signer>(
@@ -23,6 +23,10 @@ pub fn init_client<R: LightClientResolver, S: KVStore, K: Signer>(
     let client_type = lc.client_type();
     let client_id = ClientId::from_str(&input.client_id)?;
     client_id.validate(&client_type)?;
+
+    if ctx.client_exists(&client_id) {
+        return Err(Error::client_already_exists(client_id.to_string()));
+    }
     ctx.store_client_type(client_id.clone(), client_type)?;
     ctx.store_any_client_state(client_id.clone(), any_client_state)?;
     ctx.store_any_consensus_state(client_id.clone(), res.height, any_consensus_state)?;

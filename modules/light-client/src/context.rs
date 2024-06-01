@@ -12,6 +12,12 @@ pub trait HostContext {
 }
 
 pub trait ClientReader: KVStore {
+    /// Returns `true` if the client exists in the store.
+    fn client_exists(&self, client_id: &ClientId) -> bool {
+        self.get(format!("{}", ClientTypePath::new(client_id)).as_bytes())
+            .is_some()
+    }
+
     /// Returns the ClientType for the given identifier `client_id`.
     fn client_type(&self, client_id: &ClientId) -> Result<String, Error> {
         let value = self.get(format!("{}", ClientTypePath::new(client_id)).as_bytes());
