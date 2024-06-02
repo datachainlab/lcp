@@ -11,10 +11,11 @@ use store::transaction::CommitStore;
 
 pub trait EnclaveProtoAPI<S: CommitStore>: EnclaveCommandAPI<S> {
     fn proto_create_client(&self, msg: MsgCreateClient) -> Result<MsgCreateClientResponse> {
+        let client_id = msg.client_id.clone();
         let res = self.init_client(msg.try_into()?)?;
         info!(
             "create_client: client_id={} message={{{}}}",
-            res.client_id,
+            client_id,
             res.proof.message()?
         );
         Ok(res.into())

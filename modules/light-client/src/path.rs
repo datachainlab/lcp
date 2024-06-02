@@ -1,8 +1,6 @@
 use crate::types::{ClientId, Height};
 use derive_more::Display;
 
-pub static NEXT_CLIENT_SEQUENCE: &str = "nextClientSequence";
-
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Display)]
 #[display(fmt = "clients/{_0}/clientType")]
 pub struct ClientTypePath(pub ClientId);

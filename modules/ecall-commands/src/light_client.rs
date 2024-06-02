@@ -41,6 +41,7 @@ impl EnclaveKeySelector for LightClientCommand {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct InitClientInput {
+    pub client_id: String,
     pub any_client_state: Any,
     pub any_consensus_state: Any,
     pub current_timestamp: Time,
@@ -105,7 +106,6 @@ pub enum LightClientResponse {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct InitClientResponse {
-    pub client_id: ClientId,
     pub proof: CommitmentProof,
 }
 
@@ -123,6 +123,7 @@ pub struct VerifyNonMembershipResponse(pub CommitmentProof);
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct QueryClientResponse {
-    pub any_client_state: Any,
-    pub any_consensus_state: Any,
+    pub found: bool,
+    pub any_client_state: Option<Any>,
+    pub any_consensus_state: Option<Any>,
 }

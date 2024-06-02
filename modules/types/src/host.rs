@@ -29,6 +29,35 @@ impl ClientId {
     pub fn as_bytes(&self) -> &[u8] {
         self.0.as_bytes()
     }
+
+    /// Validate the client identifier
+    pub fn validate(&self, client_type: &str) -> Result<(), TypeError> {
+        validate_client_identifier(self.0.as_str())?;
+        self.0.rfind('-').map_or(
+            Err(TypeError::client_id_invalid_format(self.0.clone())),
+            |pos| {
+                let (client_type_, prefixed_counter) = self.0.split_at(pos);
+                if client_type_ != client_type {
+                    return Err(TypeError::client_id_invalid_client_type(
+                        self.0.clone(),
+                        client_type.to_string(),
+                    ));
+                }
+                match prefixed_counter.strip_prefix('-') {
+                    None => Err(TypeError::client_id_invalid_counter(self.0.clone())),
+                    Some(counter) if counter.starts_with('0') && counter.len() > 1 => {
+                        Err(TypeError::client_id_invalid_counter(self.0.clone()))
+                    }
+                    Some(counter) => {
+                        counter.parse::<u64>().map_err(|e| {
+                            TypeError::client_id_invalid_counter_parse_int_error(self.0.clone(), e)
+                        })?;
+                        Ok(())
+                    }
+                }
+            },
+        )
+    }
 }
 
 /// This implementation provides a `to_string` method.
@@ -115,4 +144,47 @@ fn validate_identifier(id: &str, min: usize, max: usize) -> Result<(), TypeError
 
     // All good!
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_valid_client_id() {
+        let cases = vec![
+            ("testclient", "testclient-0"),
+            ("testclient", "testclient-1"),
+            ("testclient", "testclient-10"),
+            ("07-tendermint", "07-tendermint-0"),
+            ("07-tendermint", "07-tendermint-1"),
+            ("07-tendermint", "07-tendermint-10"),
+            ("testclient", "testclient-12345678901234567890"),
+        ];
+        for (i, (client_type, c)) in cases.iter().enumerate() {
+            let cl = ClientId::from_str(c).unwrap();
+            let res = cl.validate(client_type);
+            assert!(res.is_ok(), "case: {}, error: {:?}", i, res);
+        }
+    }
+
+    #[test]
+    fn test_invalid_client_id() {
+        let cases = vec![
+            ("testclient", "testclient"),
+            ("testclient", "testclient1"),
+            ("07-tendermint", "07-tendermint"),
+            ("07-tendermint", "07-tendermint0"),
+            ("07-tendermint", "07-tendermint1"),
+            ("07-tendermint", "07-tendermint-01"),
+            ("client", "client-0"),
+            ("", ""),
+            ("", "07-tendermint"),
+            ("testclient", "testclient-123456789012345678901"),
+        ];
+        for (i, (client_type, c)) in cases.iter().enumerate() {
+            let res = ClientId::from_str(c).and_then(|cl| cl.validate(client_type));
+            assert!(res.is_err(), "case: {}, error: {:?}", i, res);
+        }
+    }
 }

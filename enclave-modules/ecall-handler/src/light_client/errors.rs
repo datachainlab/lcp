@@ -15,6 +15,14 @@ define_error! {
         SealedEnclaveKeyNotFound
         |_| { "Sealed EnclaveKey not found" },
 
+        ClientAlreadyExists
+        {
+            client_id: String
+        }
+        |e| {
+            format_args!("client already exists: client_id={}", e.client_id)
+        },
+
         LightClient
         [light_client::Error]
         |_| { "LightClient error" },

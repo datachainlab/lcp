@@ -24,9 +24,11 @@ message QueryClientResponse {
   option (gogoproto.equal)           = false;
   option (gogoproto.goproto_getters) = false;
 
+  // if false, the client_state and consensus_state fields will be empty
+  bool found = 1;
   // light client state
-  google.protobuf.Any client_state = 1 [(gogoproto.moretags) = "yaml:\"client_state\""];
+  google.protobuf.Any client_state = 2 [(gogoproto.moretags) = "yaml:\"client_state\""];
   // consensus state associated with the client that corresponds to a given
   // height.
-  google.protobuf.Any consensus_state = 2 [(gogoproto.moretags) = "yaml:\"consensus_state\""];
+  google.protobuf.Any consensus_state = 3 [(gogoproto.moretags) = "yaml:\"consensus_state\""];
 }

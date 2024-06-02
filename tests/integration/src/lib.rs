@@ -34,7 +34,7 @@ mod tests {
     };
     use keymanager::EnclaveKeyManager;
     use lcp_proto::protobuf::Protobuf;
-    use lcp_types::{Height, Time};
+    use lcp_types::{ClientId, Height, Time};
     use log::*;
     use std::sync::{Arc, RwLock};
     use std::{ops::Add, str::FromStr, time::Duration};
@@ -157,16 +157,17 @@ mod tests {
                 initial_height, client_state, consensus_state
             );
 
+            let client_id = "07-tendermint-0".to_string();
             let res = enclave.init_client(InitClientInput {
+                client_id: client_id.clone(),
                 any_client_state: client_state,
                 any_consensus_state: consensus_state,
                 current_timestamp: Time::now(),
                 signer,
             })?;
             assert!(!res.proof.is_proven());
-            let client_id = res.client_id;
 
-            (client_id, initial_height)
+            (ClientId::from_str(&client_id)?, initial_height)
         };
         info!("generated client: id={} height={}", client_id, last_height);
 

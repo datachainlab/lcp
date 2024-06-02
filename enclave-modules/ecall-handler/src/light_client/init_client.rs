@@ -21,12 +21,15 @@ pub fn init_client<R: LightClientResolver, S: KVStore, K: Signer>(
     let ek = ctx.get_enclave_key();
     let res = lc.create_client(ctx, any_client_state.clone(), any_consensus_state.clone())?;
     let client_type = lc.client_type();
-    let client_id = gen_client_id(client_type.clone(), ctx.client_counter()?)?;
+    let client_id = ClientId::from_str(&input.client_id)?;
+    client_id.validate(&client_type)?;
 
+    if ctx.client_exists(&client_id) {
+        return Err(Error::client_already_exists(client_id.to_string()));
+    }
     ctx.store_client_type(client_id.clone(), client_type)?;
     ctx.store_any_client_state(client_id.clone(), any_client_state)?;
     ctx.store_any_consensus_state(client_id.clone(), res.height, any_consensus_state)?;
-    ctx.increase_client_counter();
 
     let proof = if res.prove {
         prove_commitment(ek, input.signer, res.message)?
@@ -34,11 +37,6 @@ pub fn init_client<R: LightClientResolver, S: KVStore, K: Signer>(
         CommitmentProof::new_with_no_signature(res.message.to_bytes())
     };
     Ok(LightClientResponse::InitClient(InitClientResponse {
-        client_id,
         proof,
     }))
-}
-
-fn gen_client_id(client_type: String, counter: u64) -> Result<ClientId, Error> {
-    Ok(ClientId::from_str(&format!("{}-{}", client_type, counter))?)
 }

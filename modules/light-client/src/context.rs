@@ -1,7 +1,7 @@
 use crate::types::{Any, ClientId, Height, Time};
 use crate::{
     errors::Error,
-    path::{ClientConsensusStatePath, ClientStatePath, ClientTypePath, NEXT_CLIENT_SEQUENCE},
+    path::{ClientConsensusStatePath, ClientStatePath, ClientTypePath},
     prelude::*,
 };
 use store::KVStore;
@@ -12,6 +12,12 @@ pub trait HostContext {
 }
 
 pub trait ClientReader: KVStore {
+    /// Returns `true` if the client exists in the store.
+    fn client_exists(&self, client_id: &ClientId) -> bool {
+        self.get(format!("{}", ClientTypePath::new(client_id)).as_bytes())
+            .is_some()
+    }
+
     /// Returns the ClientType for the given identifier `client_id`.
     fn client_type(&self, client_id: &ClientId) -> Result<String, Error> {
         let value = self.get(format!("{}", ClientTypePath::new(client_id)).as_bytes());
@@ -54,19 +60,6 @@ pub trait ClientReader: KVStore {
                 .0,
         )
     }
-
-    /// Returns a natural number, counting how many clients have been created thus far.
-    /// The value of this counter should increase only via method `ClientKeeper::increase_client_counter`.
-    fn client_counter(&self) -> Result<u64, Error> {
-        match self.get(NEXT_CLIENT_SEQUENCE.as_bytes()) {
-            Some(bz) => {
-                let mut b: [u8; 8] = Default::default();
-                b.copy_from_slice(&bz);
-                Ok(u64::from_be_bytes(b))
-            }
-            None => Ok(0),
-        }
-    }
 }
 
 pub trait ClientKeeper: ClientReader {
@@ -105,17 +98,6 @@ pub trait ClientKeeper: ClientReader {
         let path = ClientConsensusStatePath::new(&client_id, &height);
         self.set(format!("{}", path).into_bytes(), bz);
         Ok(())
-    }
-
-    /// Called upon client creation.
-    /// Increases the counter which keeps track of how many clients have been created.
-    /// Should never fail.
-    fn increase_client_counter(&mut self) {
-        let next_counter = <Self as ClientReader>::client_counter(self).unwrap() + 1;
-        self.set(
-            NEXT_CLIENT_SEQUENCE.as_bytes().to_vec(),
-            next_counter.to_be_bytes().to_vec(),
-        );
     }
 }
 
