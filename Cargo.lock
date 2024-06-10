@@ -2537,6 +2537,7 @@ dependencies = [
  "anyhow",
  "attestation-report",
  "commitments",
+ "crypto",
  "ecall-commands",
  "enclave-api",
  "env_logger",
