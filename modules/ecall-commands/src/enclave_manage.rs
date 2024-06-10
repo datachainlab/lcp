@@ -28,6 +28,7 @@ pub struct GenerateEnclaveKeyInput;
 #[derive(Serialize, Deserialize, Debug)]
 pub struct IASRemoteAttestationInput {
     pub target_enclave_key: Address,
+    pub operator: Option<Address>,
     pub spid: Vec<u8>,
     pub ias_key: Vec<u8>,
 }
@@ -48,6 +49,7 @@ impl IASRemoteAttestationInput {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct SimulateRemoteAttestationInput {
     pub target_enclave_key: Address,
+    pub operator: Option<Address>,
     pub advisory_ids: Vec<String>,
     pub isv_enclave_quote_status: String,
 }

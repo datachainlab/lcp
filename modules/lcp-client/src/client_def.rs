@@ -2,7 +2,7 @@ use crate::client_state::ClientState;
 use crate::consensus_state::ConsensusState;
 use crate::errors::Error;
 use crate::message::{ClientMessage, CommitmentProofs, RegisterEnclaveKeyMessage};
-use attestation_report::EndorsedAttestationVerificationReport;
+use attestation_report::{EndorsedAttestationVerificationReport, ReportData};
 use crypto::{verify_signature_address, Address, Keccak256};
 use hex_literal::hex;
 use light_client::commitments::{
@@ -167,15 +167,18 @@ impl LCPClient {
     ) -> Result<(), Error> {
         // TODO return an error instead of assertion
 
-        let (ek, attestation_time) =
+        let (report_data, attestation_time) =
             verify_report(ctx.host_timestamp(), &client_state, &message.report)?;
 
         let commitment = compute_eip712_register_enclave_key(&message.report.avr);
         let operator = verify_signature_address(&commitment, &message.operator_signature)?;
+        let expected_operator = report_data.operator();
+        // check if the operator matches the expected operator in the report data
+        assert!(expected_operator.is_zero() || operator == expected_operator);
         self.set_enclave_operator_info(
             ctx,
             &client_id,
-            ek,
+            report_data.enclave_key(),
             EKOperatorInfo::new(
                 (attestation_time + client_state.key_expiration)?.as_unix_timestamp_secs(),
                 operator,
@@ -382,7 +385,7 @@ fn verify_report(
     current_timestamp: Time,
     client_state: &ClientState,
     eavr: &EndorsedAttestationVerificationReport,
-) -> Result<(Address, Time), Error> {
+) -> Result<(ReportData, Time), Error> {
     // verify AVR with Intel SGX Attestation Report Signing CA
     // NOTE: This verification is skipped in tests because the CA is not available in the test environment
     #[cfg(not(test))]
@@ -408,7 +411,9 @@ fn verify_report(
         ));
     }
 
-    Ok((quote.get_enclave_key_address()?, quote.attestation_time))
+    let report_data = quote.report_data();
+    report_data.validate()?;
+    Ok((report_data, quote.attestation_time))
 }
 
 fn enclave_key_path(client_id: &ClientId, ek: Address) -> Vec<u8> {
@@ -431,7 +436,7 @@ mod tests {
     use crate::message::UpdateClientMessage;
     use alloc::rc::Rc;
     use alloc::sync::Arc;
-    use attestation_report::AttestationVerificationReport;
+    use attestation_report::{AttestationVerificationReport, ReportData};
     use context::Context;
     use core::cell::RefCell;
     use core::str::FromStr;
@@ -648,7 +653,7 @@ mod tests {
         let quote = sgx_quote_t {
             version: 4,
             report_body: sgx_report_body_t {
-                report_data: key.as_report_data(),
+                report_data: ReportData::new(key.as_address(), None).into(),
                 ..Default::default()
             },
             ..Default::default()

@@ -1,12 +1,75 @@
 use crate::errors::Error;
 use crate::prelude::*;
 use chrono::prelude::DateTime;
-use core::fmt::Debug;
+use core::fmt::{Debug, Display, Error as FmtError};
 use crypto::Address;
 use lcp_types::Time;
 use serde::{Deserialize, Serialize};
-use sgx_types::{metadata::metadata_t, sgx_measurement_t, sgx_quote_t};
+use sgx_types::{metadata::metadata_t, sgx_measurement_t, sgx_quote_t, sgx_report_data_t};
 use tendermint::Time as TmTime;
+
+pub const REPORT_DATA_V1: u8 = 1;
+
+/// ReportData is a 64-byte value that is embedded in the Quote
+/// | version: 1 byte | enclave key: 20 bytes | operator: 20 bytes | nonce: 22 bytes |
+#[derive(Debug, Clone, PartialEq)]
+pub struct ReportData([u8; 64]);
+
+impl ReportData {
+    pub fn new(ek: Address, operator: Option<Address>) -> Self {
+        let mut data: ReportData = Default::default();
+        data.0[0] = REPORT_DATA_V1;
+        data.0[1..21].copy_from_slice(ek.0.as_ref());
+        if let Some(operator) = operator {
+            data.0[21..41].copy_from_slice(operator.0.as_ref());
+        }
+        data
+    }
+
+    pub fn enclave_key(&self) -> Address {
+        // Unwrap is safe because the size of the slice is 20
+        Address::try_from(&self.0[1..21]).unwrap()
+    }
+
+    pub fn operator(&self) -> Address {
+        // Unwrap is safe because the size of the slice is 20
+        Address::try_from(&self.0[21..41]).unwrap()
+    }
+
+    pub fn validate(&self) -> Result<(), Error> {
+        if self.0[0] != REPORT_DATA_V1 {
+            return Err(Error::unexpected_report_data_version(
+                REPORT_DATA_V1,
+                self.0[0],
+            ));
+        }
+        Ok(())
+    }
+}
+
+impl Default for ReportData {
+    fn default() -> Self {
+        ReportData([0; 64])
+    }
+}
+
+impl Display for ReportData {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> Result<(), FmtError> {
+        write!(f, "ReportData(0x{})", hex::encode(&self.0))
+    }
+}
+
+impl From<ReportData> for sgx_report_data_t {
+    fn from(data: ReportData) -> Self {
+        sgx_report_data_t { d: data.0 }
+    }
+}
+
+impl From<sgx_report_data_t> for ReportData {
+    fn from(data: sgx_report_data_t) -> Self {
+        ReportData(data.d)
+    }
+}
 
 /// AttestationReport can be endorsed by either the Intel Attestation Service
 /// using EPID or Data Center Attestation
@@ -119,13 +182,8 @@ pub struct Quote {
 }
 
 impl Quote {
-    pub fn get_enclave_key_address(&self) -> Result<Address, Error> {
-        let data = self.raw.report_body.report_data.d;
-        if data.len() < 20 {
-            Err(Error::invalid_report_data_size(data.len()))
-        } else {
-            Ok(Address::try_from(&data[..20])?)
-        }
+    pub fn report_data(&self) -> ReportData {
+        self.raw.report_body.report_data.into()
     }
 
     pub fn get_mrenclave(&self) -> sgx_measurement_t {

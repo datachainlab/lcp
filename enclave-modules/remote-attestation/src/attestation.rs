@@ -15,8 +15,7 @@ use sgx_tstd::{
     net::TcpStream,
     sync::Arc,
 };
-use sgx_types::{c_int, sgx_spid_t};
-use sgx_types::{sgx_quote_nonce_t, sgx_quote_sign_type_t, sgx_report_data_t};
+use sgx_types::{c_int, sgx_quote_nonce_t, sgx_quote_sign_type_t, sgx_report_data_t, sgx_spid_t};
 
 pub const REPORT_DATA_SIZE: usize = 32;
 

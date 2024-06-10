@@ -7,6 +7,7 @@ use clap::Parser;
 use crypto::Address;
 use ecall_commands::IASRemoteAttestationInput;
 use enclave_api::{Enclave, EnclaveCommandAPI, EnclaveProtoAPI};
+use log::info;
 use store::transaction::CommitStore;
 
 /// `attestation` subcommand
@@ -63,6 +64,22 @@ pub struct IASRemoteAttestation {
         help = "An enclave key attested by Remote Attestation"
     )]
     pub enclave_key: String,
+    /// An operator address to perform `registerEnclaveKey` transaction on-chain
+    #[clap(
+        long = "operator",
+        help = "An operator address to perform `registerEnclaveKey` transaction on-chain"
+    )]
+    pub operator: Option<String>,
+}
+
+impl IASRemoteAttestation {
+    fn get_operator(&self) -> Result<Option<Address>> {
+        if let Some(operator) = &self.operator {
+            Ok(Some(Address::from_hex_string(operator)?))
+        } else {
+            Ok(None)
+        }
+    }
 }
 
 fn run_ias_remote_attestation<E: EnclaveCommandAPI<S>, S: CommitStore>(
@@ -74,10 +91,18 @@ fn run_ias_remote_attestation<E: EnclaveCommandAPI<S>, S: CommitStore>(
     let target_enclave_key = Address::from_hex_string(&cmd.enclave_key)?;
     match enclave.ias_remote_attestation(IASRemoteAttestationInput {
         target_enclave_key,
+        operator: cmd.get_operator()?,
         spid: spid.as_bytes().to_vec(),
         ias_key: ias_key.as_bytes().to_vec(),
     }) {
-        Ok(_) => Ok(()),
+        Ok(res) => {
+            info!("AVR: {:?}", res.report.avr);
+            info!(
+                "report_data: {}",
+                res.report.get_avr()?.parse_quote()?.report_data()
+            );
+            Ok(())
+        }
         Err(e) => bail!("failed to perform IAS Remote Attestation: {:?}!", e),
     }
 }
@@ -95,6 +120,13 @@ pub struct SimulateRemoteAttestation {
         help = "An enclave key attested by Remote Attestation"
     )]
     pub enclave_key: String,
+
+    /// An operator address to perform `registerEnclaveKey` transaction on-chain
+    #[clap(
+        long = "operator",
+        help = "An operator address to perform `registerEnclaveKey` transaction on-chain"
+    )]
+    pub operator: Option<String>,
 
     /// Path to a der-encoded file that contains X.509 certificate
     #[clap(
@@ -133,6 +165,16 @@ pub struct SimulateRemoteAttestation {
         help = "Quote status to include in the report"
     )]
     pub isv_enclave_quote_status: String,
+}
+
+impl SimulateRemoteAttestation {
+    fn get_operator(&self) -> Result<Option<Address>> {
+        if let Some(operator) = &self.operator {
+            Ok(Some(Address::from_hex_string(operator)?))
+        } else {
+            Ok(None)
+        }
+    }
 }
 
 #[cfg(feature = "sgx-sw")]
@@ -187,13 +229,18 @@ fn run_simulate_remote_attestation<E: EnclaveCommandAPI<S>, S: CommitStore>(
     match enclave.simulate_remote_attestation(
         ecall_commands::SimulateRemoteAttestationInput {
             target_enclave_key,
+            operator: cmd.get_operator()?,
             advisory_ids: cmd.advisory_ids.clone(),
             isv_enclave_quote_status: cmd.isv_enclave_quote_status.clone(),
         },
         signing_key,
         signing_cert,
     ) {
-        Ok(_) => Ok(()),
+        Ok(res) => {
+            info!("AVR: {:?}", res.avr);
+            info!("report_data: {}", res.avr.parse_quote()?.report_data());
+            Ok(())
+        }
         Err(e) => bail!("failed to simulate Remote Attestation: {:?}!", e),
     }
 }

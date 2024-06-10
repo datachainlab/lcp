@@ -14,6 +14,15 @@ define_error! {
             format_args!("unexpected attestation report version: expected={} actual={}", e.expected, e.actual)
         },
 
+        UnexpectedReportDataVersion
+        {
+            expected: u8,
+            actual: u8
+        }
+        |e| {
+            format_args!("unexpected report data version: expected={} actual={}", e.expected, e.actual)
+        },
+
         InvalidReportDataSize
         {
             size: usize

@@ -134,6 +134,7 @@ mod tests {
             let _ = match enclave.simulate_remote_attestation(
                 ecall_commands::SimulateRemoteAttestationInput {
                     target_enclave_key: signer,
+                    operator: None,
                     advisory_ids: vec![],
                     isv_enclave_quote_status: "OK".to_string(),
                 },
