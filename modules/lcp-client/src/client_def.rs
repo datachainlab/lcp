@@ -61,7 +61,7 @@ impl LCPClient {
         assert!(client_state.mr_enclave.len() == 32);
         // operators_threshold_denominator and operators_threshold_numerator must not be 0
         assert!(
-            client_state.operators.len() == 0
+            client_state.operators.is_empty()
                 || client_state.operators_threshold_denominator != 0
                     && client_state.operators_threshold_numerator != 0
         );
@@ -270,7 +270,7 @@ impl LCPClient {
         sign_bytes: &[u8],
         signatures: Vec<Vec<u8>>,
     ) -> Result<(), Error> {
-        if client_state.operators.len() == 0 {
+        if client_state.operators.is_empty() {
             assert!(signatures.len() == 1);
             let ek = verify_signature_address(sign_bytes, &signatures[0])?;
             assert!(self.is_active_enclave_key(ctx, client_id, ek));
@@ -279,14 +279,12 @@ impl LCPClient {
             for (signature, operator) in signatures
                 .into_iter()
                 .zip(client_state.operators.clone().into_iter())
-                .filter(|(sig, _)| sig.len() > 0)
+                .filter(|(sig, _)| !sig.is_empty())
             {
                 // check if the `header.signer` matches the commitment prover
                 let ek = verify_signature_address(sign_bytes, &signature)?;
                 // check if the specified signer exists in the client state
-                assert!(
-                    self.is_active_enclave_key_and_check_operator(ctx, &client_id, ek, operator)
-                );
+                assert!(self.is_active_enclave_key_and_check_operator(ctx, client_id, ek, operator));
                 success += 1;
             }
             assert!(
