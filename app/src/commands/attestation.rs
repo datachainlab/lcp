@@ -167,6 +167,7 @@ pub struct SimulateRemoteAttestation {
     pub isv_enclave_quote_status: String,
 }
 
+#[cfg(feature = "sgx-sw")]
 impl SimulateRemoteAttestation {
     fn get_operator(&self) -> Result<Option<Address>> {
         if let Some(operator) = &self.operator {

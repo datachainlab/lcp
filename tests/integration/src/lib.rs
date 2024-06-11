@@ -129,7 +129,7 @@ mod tests {
                         bail!("IAS Remote Attestation Failed {:?}!", e);
                     }
                 };
-            let report_data = res.report.get_avr()?.parse_quote()?.report_data();
+            let report_data = res.get_avr()?.parse_quote()?.report_data();
             assert_eq!(report_data.enclave_key(), signer);
             assert_eq!(report_data.operator(), operator);
             let res =
@@ -144,7 +144,7 @@ mod tests {
                         bail!("IAS Remote Attestation Failed {:?}!", e);
                     }
                 };
-            let report_data = res.report.get_avr()?.parse_quote()?.report_data();
+            let report_data = res.get_avr()?.parse_quote()?.report_data();
             assert_eq!(report_data.enclave_key(), signer);
             assert!(report_data.operator().is_zero());
         }
