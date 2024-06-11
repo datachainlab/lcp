@@ -55,7 +55,7 @@ impl Default for ReportData {
 
 impl Display for ReportData {
     fn fmt(&self, f: &mut core::fmt::Formatter) -> Result<(), FmtError> {
-        write!(f, "ReportData(0x{})", hex::encode(&self.0))
+        write!(f, "0x{}", hex::encode(&self.0))
     }
 }
 

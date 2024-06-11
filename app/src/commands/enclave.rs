@@ -104,9 +104,11 @@ fn run_list_keys<E: EnclaveCommandAPI<S>, S: CommitStore>(
         match eki.avr {
             Some(eavr) => {
                 let avr = eavr.get_avr()?;
+                let report_data = avr.parse_quote()?.report_data();
                 list_json.push(json! {{
                     "address": eki.address.to_hex_string(),
                     "attested": true,
+                    "report_data": report_data.to_string(),
                     "isv_enclave_quote_status": avr.isv_enclave_quote_status,
                     "advisory_ids": avr.advisory_ids,
                     "attested_at": avr.timestamp
