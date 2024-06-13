@@ -25,7 +25,11 @@ pub struct UpdateOperatorsMessage {
     pub nonce: u64,
     #[prost(bytes = "vec", repeated, tag = "2")]
     pub new_operators: ::prost::alloc::vec::Vec<::prost::alloc::vec::Vec<u8>>,
-    #[prost(bytes = "vec", repeated, tag = "3")]
+    #[prost(uint64, tag = "3")]
+    pub new_operators_threshold_numerator: u64,
+    #[prost(uint64, tag = "4")]
+    pub new_operators_threshold_denominator: u64,
+    #[prost(bytes = "vec", repeated, tag = "5")]
     pub signatures: ::prost::alloc::vec::Vec<::prost::alloc::vec::Vec<u8>>,
 }
 #[allow(clippy::derive_partial_eq_without_eq)]

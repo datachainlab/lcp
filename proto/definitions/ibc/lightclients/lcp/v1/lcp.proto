@@ -22,7 +22,9 @@ message RegisterEnclaveKeyMessage {
 message UpdateOperatorsMessage {
   uint64 nonce = 1;
   repeated bytes new_operators = 2;
-  repeated bytes signatures = 3;
+  uint64 new_operators_threshold_numerator = 3;
+  uint64 new_operators_threshold_denominator = 4;
+  repeated bytes signatures = 5;
 }
 
 message ClientState {
