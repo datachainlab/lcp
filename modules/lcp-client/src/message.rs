@@ -57,7 +57,7 @@ impl From<ClientMessage> for Any {
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub struct RegisterEnclaveKeyMessage {
     pub report: EndorsedAttestationVerificationReport,
-    pub operator_signature: Vec<u8>,
+    pub operator_signature: Option<Vec<u8>>,
 }
 
 impl Protobuf<RawRegisterEnclaveKeyMessage> for RegisterEnclaveKeyMessage {}
@@ -71,7 +71,8 @@ impl TryFrom<RawRegisterEnclaveKeyMessage> for RegisterEnclaveKeyMessage {
                 signature: value.signature,
                 signing_cert: value.signing_cert,
             },
-            operator_signature: value.operator_signature,
+            operator_signature: (!value.operator_signature.is_empty())
+                .then_some(value.operator_signature),
         })
     }
 }
@@ -82,7 +83,7 @@ impl From<RegisterEnclaveKeyMessage> for RawRegisterEnclaveKeyMessage {
             report: (&value.report.avr).try_into().unwrap(),
             signature: value.report.signature,
             signing_cert: value.report.signing_cert,
-            operator_signature: value.operator_signature,
+            operator_signature: value.operator_signature.unwrap_or_default(),
         }
     }
 }

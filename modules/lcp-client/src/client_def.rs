@@ -170,8 +170,14 @@ impl LCPClient {
         let (report_data, attestation_time) =
             verify_report(ctx.host_timestamp(), &client_state, &message.report)?;
 
-        let commitment = compute_eip712_register_enclave_key(&message.report.avr);
-        let operator = verify_signature_address(&commitment, &message.operator_signature)?;
+        let operator = if let Some(operator_signature) = message.operator_signature {
+            verify_signature_address(
+                compute_eip712_register_enclave_key(&message.report.avr).as_ref(),
+                operator_signature.as_ref(),
+            )?
+        } else {
+            Default::default()
+        };
         let expected_operator = report_data.operator();
         // check if the operator matches the expected operator in the report data
         assert!(expected_operator.is_zero() || operator == expected_operator);
@@ -518,7 +524,7 @@ mod tests {
                 .unwrap();
             let header = ClientMessage::RegisterEnclaveKey(RegisterEnclaveKeyMessage {
                 report,
-                operator_signature,
+                operator_signature: Some(operator_signature),
             });
             let res = lcp_client.update_client(&mut ctx, lcp_client_id.clone(), header);
             assert!(res.is_ok(), "res={:?}", res);
