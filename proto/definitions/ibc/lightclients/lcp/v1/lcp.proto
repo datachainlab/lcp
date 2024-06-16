@@ -13,7 +13,7 @@ message UpdateClientMessage {
 }
 
 message RegisterEnclaveKeyMessage {
-  string report = 1;
+  bytes report = 1;
   bytes signature = 2;
   bytes signing_cert = 3;
   bytes operator_signature = 4;

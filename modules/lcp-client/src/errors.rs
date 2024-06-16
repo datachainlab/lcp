@@ -58,7 +58,11 @@ define_error! {
 
         IbcProto
         [TraceError<light_client::types::proto::protobuf::Error>]
-        |_| { "IBCProto error" }
+        |_| { "IBCProto error" },
+
+        StringFromUtf8Error
+        [TraceError<alloc::string::FromUtf8Error>]
+        |_| { "FromUtf8 error" },
     }
 }
 
@@ -89,5 +93,11 @@ impl From<light_client::Error> for Error {
 impl From<light_client::commitments::Error> for Error {
     fn from(value: light_client::commitments::Error) -> Self {
         Self::commitment_proof(value)
+    }
+}
+
+impl From<alloc::string::FromUtf8Error> for Error {
+    fn from(value: alloc::string::FromUtf8Error) -> Self {
+        Self::string_from_utf8_error(value)
     }
 }

@@ -71,7 +71,7 @@ pub fn verify_report(
     report_cert
         .verify_signature(
             &webpki::RSA_PKCS1_2048_8192_SHA256,
-            report.avr.as_bytes(),
+            report.avr.as_ref(),
             &report.signature,
         )
         .map_err(|e| Error::web_pki(e.to_string()))?;

@@ -67,7 +67,7 @@ impl TryFrom<RawRegisterEnclaveKeyMessage> for RegisterEnclaveKeyMessage {
     fn try_from(value: RawRegisterEnclaveKeyMessage) -> Result<Self, Self::Error> {
         Ok(RegisterEnclaveKeyMessage {
             report: EndorsedAttestationVerificationReport {
-                avr: value.report,
+                avr: String::from_utf8(value.report)?,
                 signature: value.signature,
                 signing_cert: value.signing_cert,
             },
@@ -80,7 +80,7 @@ impl TryFrom<RawRegisterEnclaveKeyMessage> for RegisterEnclaveKeyMessage {
 impl From<RegisterEnclaveKeyMessage> for RawRegisterEnclaveKeyMessage {
     fn from(value: RegisterEnclaveKeyMessage) -> Self {
         RawRegisterEnclaveKeyMessage {
-            report: (&value.report.avr).try_into().unwrap(),
+            report: value.report.avr.into_bytes(),
             signature: value.report.signature,
             signing_cert: value.report.signing_cert,
             operator_signature: value.operator_signature.unwrap_or_default(),

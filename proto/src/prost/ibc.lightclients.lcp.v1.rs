@@ -9,8 +9,8 @@ pub struct UpdateClientMessage {
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct RegisterEnclaveKeyMessage {
-    #[prost(string, tag = "1")]
-    pub report: ::prost::alloc::string::String,
+    #[prost(bytes = "vec", tag = "1")]
+    pub report: ::prost::alloc::vec::Vec<u8>,
     #[prost(bytes = "vec", tag = "2")]
     pub signature: ::prost::alloc::vec::Vec<u8>,
     #[prost(bytes = "vec", tag = "3")]

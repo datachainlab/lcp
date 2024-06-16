@@ -88,7 +88,7 @@ pub struct EndorsedAttestationVerificationReport {
 
 impl EndorsedAttestationVerificationReport {
     pub fn get_avr(&self) -> Result<AttestationVerificationReport, Error> {
-        serde_json::from_slice(self.avr.as_bytes()).map_err(Error::serde_json)
+        serde_json::from_slice(self.avr.as_ref()).map_err(Error::serde_json)
     }
 }
 
