@@ -4,6 +4,7 @@ use crate::errors::Error;
 use crate::message::{
     ClientMessage, CommitmentProofs, RegisterEnclaveKeyMessage, UpdateOperatorsMessage,
 };
+use alloy_sol_types::{sol, SolValue};
 use attestation_report::{EndorsedAttestationVerificationReport, ReportData};
 use crypto::{verify_signature_address, Address, Keccak256};
 use hex_literal::hex;
@@ -22,9 +23,9 @@ pub const LCP_CLIENT_TYPE: &str = "0000-lcp";
 ///         keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract,bytes32 salt)"),
 ///         keccak256("LCPClient"),
 ///         keccak256("1"),
-///         0,
+///         uint256(0),
 ///         address(0),
-///         0
+///         bytes32(0) // salt
 ///     )
 /// )
 pub const LCP_CLIENT_DOMAIN_SEPARATOR: [u8; 32] =
@@ -460,23 +461,37 @@ pub fn compute_eip712_update_operators(
     threshold_numerator: u64,
     threshold_denominator: u64,
 ) -> Vec<u8> {
+    sol! {
+        struct EIP712UpdateOperator {
+            bytes32 typeHash;
+            bytes32 clientIdHash;
+            uint64 nonce;
+            bytes32 newOperatorsHash;
+            uint64 thresholdNumerator;
+            uint64 thresholdDenominator;
+        }
+    }
     // 0x1901 | DOMAIN_SEPARATOR_UPDATE_OPERATORS | keccak256(keccak256("UpdateOperators(string clientId,uint64 nonce,address[] newOperators,uint64 thresholdNumerator,uint64 thresholdDenominator)") | keccak256(client_id) | nonce | keccak256(new_operators) | threshold_numerator | threshold_denominator)
     let type_hash = {
+        let eip712_update_operator = EIP712UpdateOperator {
+            typeHash: keccak256(b"UpdateOperators(string clientId,uint64 nonce,address[] newOperators,uint64 thresholdNumerator,uint64 thresholdDenominator)").into(),
+            clientIdHash: keccak256(client_id.as_bytes()).into(),
+            nonce,
+            newOperatorsHash: keccak256(
+                new_operators
+                    .iter()
+                    .fold(Vec::new(), |mut acc, x| {
+                        acc.extend_from_slice([0u8; 12].as_ref());
+                        acc.extend_from_slice(x.0.as_ref());
+                        acc
+                    }).as_ref(),
+            ).into(),
+            thresholdNumerator: threshold_numerator,
+            thresholdDenominator: threshold_denominator,
+        };
         let mut h = Keccak::new_keccak256();
-        h.update(&keccak256(b"UpdateOperators(string clientId,uint64 nonce,address[] newOperators,uint64 thresholdNumerator,uint64 thresholdDenominator)"));
-        h.update(&keccak256(client_id.as_bytes()));
-        h.update(&nonce.to_be_bytes());
-        h.update(&keccak256(
-            new_operators
-                .iter()
-                .fold(Vec::new(), |mut acc, x| {
-                    acc.extend_from_slice(x.0.as_ref());
-                    acc
-                })
-                .as_ref(),
-        ));
-        h.update(&threshold_numerator.to_be_bytes());
-        h.update(&threshold_denominator.to_be_bytes());
+        let bz = eip712_update_operator.abi_encode();
+        h.update(&bz);
         let mut result = [0u8; 32];
         h.finalize(result.as_mut());
         result
@@ -586,6 +601,25 @@ mod tests {
         let avr = "{}";
         let expected = hex!("2ab70eb55dea90c4d477a7e668812653ca37c079036e92e31d4d092bcacf61cb");
         let got = compute_eip712_register_enclave_key_hash(avr);
+        assert_eq!(got, expected);
+    }
+
+    #[test]
+    fn test_compute_eip712_update_operators() {
+        let client_id = ClientId::from_str("lcp-client-0").unwrap();
+        let nonce = 1;
+        let new_operators =
+            vec![Address::from_hex_string("0xcb96F8d6C2d543102184d679D7829b39434E4EEc").unwrap()];
+        let threshold_numerator = 1;
+        let threshold_denominator = 1;
+        let expected = hex!("19017fd21c2453e80741907e7ff11fd62ae1daa34c6fc0c2eced821f1c1d3fe88a4cd9ff770a728b1198fc341496b4aca7383efe5836cf011691da8008d5232e3a24");
+        let got = compute_eip712_update_operators(
+            client_id,
+            nonce,
+            new_operators,
+            threshold_numerator,
+            threshold_denominator,
+        );
         assert_eq!(got, expected);
     }
 
