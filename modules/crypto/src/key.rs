@@ -10,7 +10,7 @@ use libsecp256k1::{
 };
 use serde::{Deserialize, Serialize};
 use serde_big_array::BigArray;
-use sgx_types::{sgx_report_data_t, sgx_sealed_data_t};
+use sgx_types::sgx_sealed_data_t;
 use tiny_keccak::Keccak;
 
 #[derive(Default)]
@@ -115,12 +115,6 @@ impl EnclavePublicKey {
         self.0.serialize_compressed()
     }
 
-    pub fn as_report_data(&self) -> sgx_report_data_t {
-        let mut report_data = sgx_report_data_t::default();
-        report_data.d[..20].copy_from_slice(&self.as_address().0);
-        report_data
-    }
-
     pub fn as_address(&self) -> Address {
         let pubkey = &self.0.serialize()[1..];
         let mut addr: Address = Default::default();
@@ -142,6 +136,9 @@ impl Address {
     pub fn from_hex_string(s: &str) -> Result<Self, Error> {
         let bz = hex::decode(s.strip_prefix("0x").unwrap_or(s))?;
         Address::try_from(bz.as_slice())
+    }
+    pub fn is_zero(&self) -> bool {
+        self.0 == [0u8; 20]
     }
 }
 

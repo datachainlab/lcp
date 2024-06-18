@@ -294,8 +294,6 @@ pub struct MsgCreateClientResponse {
     #[prost(bytes = "vec", tag = "1")]
     pub message: ::prost::alloc::vec::Vec<u8>,
     #[prost(bytes = "vec", tag = "2")]
-    pub signer: ::prost::alloc::vec::Vec<u8>,
-    #[prost(bytes = "vec", tag = "3")]
     pub signature: ::prost::alloc::vec::Vec<u8>,
 }
 /// MsgUpdateClient defines an sdk.Msg to update a IBC client state using
@@ -327,8 +325,6 @@ pub struct MsgUpdateClientResponse {
     #[prost(bytes = "vec", tag = "1")]
     pub message: ::prost::alloc::vec::Vec<u8>,
     #[prost(bytes = "vec", tag = "2")]
-    pub signer: ::prost::alloc::vec::Vec<u8>,
-    #[prost(bytes = "vec", tag = "3")]
     pub signature: ::prost::alloc::vec::Vec<u8>,
 }
 #[derive(::serde::Serialize, ::serde::Deserialize)]
@@ -349,8 +345,6 @@ pub struct MsgAggregateMessagesResponse {
     #[prost(bytes = "vec", tag = "1")]
     pub message: ::prost::alloc::vec::Vec<u8>,
     #[prost(bytes = "vec", tag = "2")]
-    pub signer: ::prost::alloc::vec::Vec<u8>,
-    #[prost(bytes = "vec", tag = "3")]
     pub signature: ::prost::alloc::vec::Vec<u8>,
 }
 #[derive(::serde::Serialize, ::serde::Deserialize)]
@@ -382,8 +376,6 @@ pub struct MsgVerifyMembershipResponse {
     #[prost(bytes = "vec", tag = "1")]
     pub message: ::prost::alloc::vec::Vec<u8>,
     #[prost(bytes = "vec", tag = "2")]
-    pub signer: ::prost::alloc::vec::Vec<u8>,
-    #[prost(bytes = "vec", tag = "3")]
     pub signature: ::prost::alloc::vec::Vec<u8>,
 }
 #[derive(::serde::Serialize, ::serde::Deserialize)]
@@ -413,8 +405,6 @@ pub struct MsgVerifyNonMembershipResponse {
     #[prost(bytes = "vec", tag = "1")]
     pub message: ::prost::alloc::vec::Vec<u8>,
     #[prost(bytes = "vec", tag = "2")]
-    pub signer: ::prost::alloc::vec::Vec<u8>,
-    #[prost(bytes = "vec", tag = "3")]
     pub signature: ::prost::alloc::vec::Vec<u8>,
 }
 /// Generated client implementations.

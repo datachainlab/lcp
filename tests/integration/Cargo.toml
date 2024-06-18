@@ -28,6 +28,7 @@ host = { path = "../../modules/host" }
 host-environment = { path = "../../modules/host-environment" }
 store = { path = "../../modules/store" }
 commitments = { path = "../../modules/commitments" }
+crypto = { path = "../../modules/crypto" }
 ocall-handler = { path = "../../modules/ocall-handler" }
 enclave-api = { path = "../../modules/enclave-api" }
 ecall-commands = { path = "../../modules/ecall-commands" }

@@ -32,7 +32,7 @@ pub fn init_client<R: LightClientResolver, S: KVStore, K: Signer>(
     ctx.store_any_consensus_state(client_id.clone(), res.height, any_consensus_state)?;
 
     let proof = if res.prove {
-        prove_commitment(ek, input.signer, res.message)?
+        prove_commitment(ek, res.message)?
     } else {
         CommitmentProof::new_with_no_signature(res.message.to_bytes())
     };

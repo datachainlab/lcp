@@ -1,28 +1,21 @@
 use crate::{encoder::EthABIEncoder, prelude::*, Error, ProxyMessage};
-use alloy_sol_types::{private::Address as SolAddress, sol, SolValue};
-use crypto::Address;
+use alloy_sol_types::{sol, SolValue};
 use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Default, Serialize, Deserialize)]
 pub struct CommitmentProof {
     pub message: Vec<u8>,
-    pub signer: Address,
     pub signature: Vec<u8>,
 }
 
 impl CommitmentProof {
-    pub fn new(message: Vec<u8>, signer: Address, signature: Vec<u8>) -> Self {
-        Self {
-            message,
-            signer,
-            signature,
-        }
+    pub fn new(message: Vec<u8>, signature: Vec<u8>) -> Self {
+        Self { message, signature }
     }
 
     pub fn new_with_no_signature(message: Vec<u8>) -> Self {
         Self {
             message,
-            signer: Default::default(),
             signature: Default::default(),
         }
     }
@@ -49,7 +42,6 @@ impl EthABIEncoder for CommitmentProof {
 sol! {
     struct EthABICommitmentProof {
         bytes message;
-        address signer;
         bytes signature;
     }
 }
@@ -58,7 +50,6 @@ impl From<EthABICommitmentProof> for CommitmentProof {
     fn from(value: EthABICommitmentProof) -> Self {
         Self {
             message: value.message,
-            signer: Address(*value.signer.0),
             signature: value.signature,
         }
     }
@@ -68,7 +59,6 @@ impl From<CommitmentProof> for EthABICommitmentProof {
     fn from(value: CommitmentProof) -> Self {
         Self {
             message: value.message,
-            signer: SolAddress::from(value.signer.0),
             signature: value.signature,
         }
     }

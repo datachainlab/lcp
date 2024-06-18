@@ -22,7 +22,9 @@ mod prelude {
 pub use errors::Error;
 mod errors;
 
-pub use report::{AttestationVerificationReport, EndorsedAttestationVerificationReport, Quote};
+pub use report::{
+    AttestationVerificationReport, EndorsedAttestationVerificationReport, Quote, ReportData,
+};
 mod report;
 
 #[cfg(any(feature = "std", feature = "sgx"))]

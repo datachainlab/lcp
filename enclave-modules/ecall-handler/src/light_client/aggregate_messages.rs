@@ -44,7 +44,7 @@ pub fn aggregate_messages<R: LightClientResolver, S: KVStore, K: Signer>(
         .collect::<Result<Vec<_>, _>>()?;
 
     let message = ProxyMessage::from(commitments::aggregate_messages(messages)?);
-    let proof = prove_commitment(ek, input.signer, message)?;
+    let proof = prove_commitment(ek, message)?;
 
     Ok(LightClientResponse::AggregateMessages(
         AggregateMessagesResponse(proof),

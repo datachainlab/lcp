@@ -103,4 +103,4 @@ pub trait ClientKeeper: ClientReader {
 
 pub trait HostClientReader: HostContext + ClientReader {}
 
-pub trait HostClientKeeper: HostContext + ClientKeeper {}
+pub trait HostClientKeeper: HostClientReader + HostContext + ClientKeeper {}

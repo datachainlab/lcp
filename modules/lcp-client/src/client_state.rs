@@ -1,6 +1,7 @@
 use crate::errors::Error;
 use crate::prelude::*;
 use core::time::Duration;
+use crypto::Address;
 use light_client::commitments::UpdateStateProxyMessage;
 use light_client::types::proto::{
     ibc::{
@@ -15,12 +16,16 @@ use serde::{Deserialize, Serialize};
 
 pub const LCP_CLIENT_STATE_TYPE_URL: &str = "/ibc.lightclients.lcp.v1.ClientState";
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub struct ClientState {
     pub mr_enclave: Vec<u8>,
     pub key_expiration: Duration,
     pub latest_height: Height,
     pub frozen: bool,
+    pub operators: Vec<Address>,
+    pub operators_nonce: u64,
+    pub operators_threshold_numerator: u64,
+    pub operators_threshold_denominator: u64,
 }
 
 impl ClientState {
@@ -33,6 +38,20 @@ impl ClientState {
 
     pub fn with_frozen(mut self) -> Self {
         self.frozen = true;
+        self
+    }
+
+    pub fn with_operators(
+        mut self,
+        operators: Vec<Address>,
+        nonce: u64,
+        threshold_numerator: u64,
+        threshold_denominator: u64,
+    ) -> Self {
+        self.operators = operators;
+        self.operators_nonce = nonce;
+        self.operators_threshold_numerator = threshold_numerator;
+        self.operators_threshold_denominator = threshold_denominator;
         self
     }
 }
@@ -49,6 +68,10 @@ impl From<ClientState> for RawClientState {
             }),
             allowed_quote_statuses: Default::default(),
             allowed_advisory_ids: Default::default(),
+            operators: Default::default(),
+            operators_nonce: 0,
+            operators_threshold_numerator: 0,
+            operators_threshold_denominator: 0,
         }
     }
 }
@@ -63,6 +86,14 @@ impl TryFrom<RawClientState> for ClientState {
             key_expiration: Duration::from_secs(raw.key_expiration),
             frozen: raw.frozen,
             latest_height: Height::new(height.revision_number, height.revision_height),
+            operators: raw
+                .operators
+                .into_iter()
+                .map(|addr| Address::try_from(addr.as_slice()))
+                .collect::<Result<_, _>>()?,
+            operators_nonce: raw.operators_nonce,
+            operators_threshold_numerator: raw.operators_threshold_numerator,
+            operators_threshold_denominator: raw.operators_threshold_denominator,
         })
     }
 }

@@ -34,7 +34,7 @@ pub fn update_client<R: LightClientResolver, S: KVStore, K: Signer>(
             )?;
 
             let proof = if data.prove {
-                prove_commitment(ek, input.signer, message)?
+                prove_commitment(ek, message)?
             } else {
                 CommitmentProof::new_with_no_signature(message.to_bytes())
             };
@@ -45,7 +45,7 @@ pub fn update_client<R: LightClientResolver, S: KVStore, K: Signer>(
         UpdateClientResult::Misbehaviour(data) => {
             ctx.store_any_client_state(input.client_id, data.new_any_client_state)?;
 
-            let proof = prove_commitment(ek, input.signer, data.message.into())?;
+            let proof = prove_commitment(ek, data.message.into())?;
             Ok(LightClientResponse::UpdateClient(UpdateClientResponse(
                 proof,
             )))
