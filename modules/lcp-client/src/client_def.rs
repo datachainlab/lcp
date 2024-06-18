@@ -1,7 +1,9 @@
 use crate::client_state::ClientState;
 use crate::consensus_state::ConsensusState;
 use crate::errors::Error;
-use crate::message::{ClientMessage, CommitmentProofs, RegisterEnclaveKeyMessage};
+use crate::message::{
+    ClientMessage, CommitmentProofs, RegisterEnclaveKeyMessage, UpdateOperatorsMessage,
+};
 use attestation_report::{EndorsedAttestationVerificationReport, ReportData};
 use crypto::{verify_signature_address, Address, Keccak256};
 use hex_literal::hex;
@@ -15,8 +17,18 @@ use tiny_keccak::Keccak;
 
 pub const LCP_CLIENT_TYPE: &str = "0000-lcp";
 
-pub const DOMAIN_SEPARATOR_REGISTER_ENCLAVE_KEY: [u8; 32] =
-    hex!("e33d217bff42bc015bf037be8386bf5055ec6019e58e8c5e89b5c74b8225fa6a");
+/// keccak256(
+///     abi.encode(
+///         keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract,bytes32 salt)"),
+///         keccak256("LCPClient"),
+///         keccak256("1"),
+///         0,
+///         address(0),
+///         0
+///     )
+/// )
+pub const LCP_CLIENT_DOMAIN_SEPARATOR: [u8; 32] =
+    hex!("7fd21c2453e80741907e7ff11fd62ae1daa34c6fc0c2eced821f1c1d3fe88a4c");
 
 /// LCPClient is a PoC implementation of LCP Client
 /// This is aimed to testing purposes only for now
@@ -65,6 +77,10 @@ impl LCPClient {
                 || client_state.operators_threshold_denominator != 0
                     && client_state.operators_threshold_numerator != 0
         );
+        // check if the operators order is sorted
+        client_state.operators.windows(2).for_each(|pair| {
+            assert!(pair[0].0 < pair[1].0);
+        });
         // operators_threshold_numerator must be less than or equal to operators_threshold_denominator
         assert!(
             client_state.operators_threshold_numerator
@@ -106,6 +122,9 @@ impl LCPClient {
             ClientMessage::RegisterEnclaveKey(msg) => {
                 self.register_enclave_key(ctx, client_id, client_state, msg)
             }
+            ClientMessage::UpdateOperators(msg) => {
+                self.update_operators(ctx, client_id, client_state, msg)
+            }
         }
     }
 
@@ -135,7 +154,7 @@ impl LCPClient {
             assert!(prev_consensus_state.state_id == message.prev_state_id.unwrap());
         }
 
-        self.verify_operator_proofs(
+        self.verify_ek_signatures(
             ctx,
             &client_id,
             &client_state,
@@ -167,6 +186,8 @@ impl LCPClient {
     ) -> Result<(), Error> {
         // TODO return an error instead of assertion
 
+        assert!(!client_state.frozen);
+
         let (report_data, attestation_time) =
             verify_report(ctx.host_timestamp(), &client_state, &message.report)?;
 
@@ -193,6 +214,56 @@ impl LCPClient {
         Ok(())
     }
 
+    fn update_operators(
+        &self,
+        ctx: &mut dyn HostClientKeeper,
+        client_id: ClientId,
+        client_state: ClientState,
+        message: UpdateOperatorsMessage,
+    ) -> Result<(), Error> {
+        // TODO return an error instead of assertion
+
+        assert!(!client_state.frozen);
+
+        assert_eq!(message.nonce, client_state.operators_nonce + 1);
+
+        let sign_bytes = compute_eip712_update_operators(
+            client_id.clone(),
+            message.nonce,
+            message.new_operators.clone(),
+            message.new_operators_threshold_numerator,
+            message.new_operators_threshold_denominator,
+        );
+
+        let mut success = 0u64;
+        for (op, sig) in client_state
+            .operators
+            .clone()
+            .into_iter()
+            .zip(message.signatures.iter())
+            .filter(|(_, sig)| !sig.is_empty())
+        {
+            // check if the operator's signature is valid
+            let operator = verify_signature_address(sign_bytes.as_ref(), sig.as_ref())?;
+            assert_eq!(op, operator);
+            success += 1;
+        }
+        assert!(
+            success * client_state.operators_threshold_denominator
+                >= message.new_operators_threshold_numerator * client_state.operators.len() as u64
+        );
+
+        let new_client_state = client_state.with_operators(
+            message.new_operators,
+            message.nonce,
+            message.new_operators_threshold_numerator,
+            message.new_operators_threshold_denominator,
+        );
+        ctx.store_any_client_state(client_id, new_client_state.into())?;
+
+        Ok(())
+    }
+
     fn submit_misbehaviour(
         &self,
         ctx: &mut dyn HostClientKeeper,
@@ -215,7 +286,7 @@ impl LCPClient {
         // check if proxy's validation context matches our's context
         message.context.validate(ctx.host_timestamp())?;
         let sign_bytes = ProxyMessage::from(message).to_bytes();
-        self.verify_operator_proofs(ctx, &client_id, &client_state, &sign_bytes, signatures)?;
+        self.verify_ek_signatures(ctx, &client_id, &client_state, &sign_bytes, signatures)?;
 
         let new_client_state = client_state.with_frozen();
         ctx.store_any_client_state(client_id, new_client_state.into())?;
@@ -257,7 +328,7 @@ impl LCPClient {
 
         let client_state = ClientState::try_from(ctx.client_state(&client_id)?)?;
 
-        self.verify_operator_proofs(
+        self.verify_ek_signatures(
             ctx,
             &client_id,
             &client_state,
@@ -268,7 +339,7 @@ impl LCPClient {
         Ok(())
     }
 
-    fn verify_operator_proofs<T: HostClientReader + ?Sized>(
+    fn verify_ek_signatures<T: HostClientReader + ?Sized>(
         &self,
         ctx: &T,
         client_id: &ClientId,
@@ -373,13 +444,64 @@ pub fn compute_eip712_register_enclave_key(avr: &str) -> Vec<u8> {
     };
     [0x19, 0x01]
         .into_iter()
-        .chain(DOMAIN_SEPARATOR_REGISTER_ENCLAVE_KEY.into_iter())
+        .chain(LCP_CLIENT_DOMAIN_SEPARATOR.into_iter())
         .chain(type_hash.into_iter())
         .collect()
 }
 
 pub fn compute_eip712_register_enclave_key_hash(avr: &str) -> [u8; 32] {
     keccak256(&compute_eip712_register_enclave_key(avr))
+}
+
+pub fn compute_eip712_update_operators(
+    client_id: ClientId,
+    nonce: u64,
+    new_operators: Vec<Address>,
+    threshold_numerator: u64,
+    threshold_denominator: u64,
+) -> Vec<u8> {
+    // 0x1901 | DOMAIN_SEPARATOR_UPDATE_OPERATORS | keccak256(keccak256("UpdateOperators(string clientId,uint64 nonce,address[] newOperators,uint64 thresholdNumerator,uint64 thresholdDenominator)") | keccak256(client_id) | nonce | keccak256(new_operators) | threshold_numerator | threshold_denominator)
+    let type_hash = {
+        let mut h = Keccak::new_keccak256();
+        h.update(&keccak256(b"UpdateOperators(string clientId,uint64 nonce,address[] newOperators,uint64 thresholdNumerator,uint64 thresholdDenominator)"));
+        h.update(&keccak256(client_id.as_bytes()));
+        h.update(&nonce.to_be_bytes());
+        h.update(&keccak256(
+            new_operators
+                .iter()
+                .fold(Vec::new(), |mut acc, x| {
+                    acc.extend_from_slice(x.0.as_ref());
+                    acc
+                })
+                .as_ref(),
+        ));
+        h.update(&threshold_numerator.to_be_bytes());
+        h.update(&threshold_denominator.to_be_bytes());
+        let mut result = [0u8; 32];
+        h.finalize(result.as_mut());
+        result
+    };
+    [0x19, 0x01]
+        .into_iter()
+        .chain(LCP_CLIENT_DOMAIN_SEPARATOR.into_iter())
+        .chain(type_hash.into_iter())
+        .collect()
+}
+
+pub fn compute_eip712_update_operators_hash(
+    client_id: ClientId,
+    nonce: u64,
+    new_operators: Vec<Address>,
+    threshold_numerator: u64,
+    threshold_denominator: u64,
+) -> [u8; 32] {
+    keccak256(&compute_eip712_update_operators(
+        client_id,
+        nonce,
+        new_operators,
+        threshold_numerator,
+        threshold_denominator,
+    ))
 }
 
 // verify_report
@@ -462,7 +584,7 @@ mod tests {
     #[test]
     fn test_compute_eip712_register_enclave_key() {
         let avr = "{}";
-        let expected = hex!("8f91cceaa6275e6fbe0f8b586a24cb050b882cb8d59c4995d5143755401400d8");
+        let expected = hex!("2ab70eb55dea90c4d477a7e668812653ca37c079036e92e31d4d092bcacf61cb");
         let got = compute_eip712_register_enclave_key_hash(avr);
         assert_eq!(got, expected);
     }

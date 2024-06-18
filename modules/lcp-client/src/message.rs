@@ -2,10 +2,12 @@ use crate::errors::Error;
 use crate::prelude::*;
 use alloy_sol_types::{sol, SolValue};
 use attestation_report::EndorsedAttestationVerificationReport;
+use crypto::Address;
 use light_client::commitments::{Error as CommitmentError, EthABIEncoder, ProxyMessage};
 use light_client::types::proto::ibc::lightclients::lcp::v1::{
     RegisterEnclaveKeyMessage as RawRegisterEnclaveKeyMessage,
     UpdateClientMessage as RawUpdateClientMessage,
+    UpdateOperatorsMessage as RawUpdateOperatorsMessage,
 };
 use light_client::types::{proto::protobuf::Protobuf, Any};
 use serde::{Deserialize, Serialize};
@@ -13,12 +15,15 @@ use serde::{Deserialize, Serialize};
 pub const LCP_REGISTER_ENCLAVE_KEY_MESSAGE_TYPE_URL: &str =
     "/ibc.lightclients.lcp.v1.RegisterEnclaveKeyMessage";
 pub const LCP_UPDATE_CLIENT_MESSAGE_TYPE_URL: &str = "/ibc.lightclients.lcp.v1.UpdateClientMessage";
+pub const LCP_UPDATE_OPERATORS_MESSAGE_TYPE_URL: &str =
+    "/ibc.lightclients.lcp.v1.UpdateOperatorsMessage";
 
 #[allow(clippy::large_enum_variant)]
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub enum ClientMessage {
     RegisterEnclaveKey(RegisterEnclaveKeyMessage),
     UpdateClient(UpdateClientMessage),
+    UpdateOperators(UpdateOperatorsMessage),
 }
 
 impl Protobuf<Any> for ClientMessage {}
@@ -34,6 +39,9 @@ impl TryFrom<Any> for ClientMessage {
             LCP_UPDATE_CLIENT_MESSAGE_TYPE_URL => Ok(ClientMessage::UpdateClient(
                 UpdateClientMessage::decode_vec(&raw.value).map_err(Error::ibc_proto)?,
             )),
+            LCP_UPDATE_OPERATORS_MESSAGE_TYPE_URL => Ok(ClientMessage::UpdateOperators(
+                UpdateOperatorsMessage::decode_vec(&raw.value).map_err(Error::ibc_proto)?,
+            )),
             type_url => Err(Error::unexpected_header_type(type_url.to_owned())),
         }
     }
@@ -48,6 +56,10 @@ impl From<ClientMessage> for Any {
             ),
             ClientMessage::UpdateClient(h) => Any::new(
                 LCP_UPDATE_CLIENT_MESSAGE_TYPE_URL.to_string(),
+                h.encode_vec().unwrap(),
+            ),
+            ClientMessage::UpdateOperators(h) => Any::new(
+                LCP_UPDATE_OPERATORS_MESSAGE_TYPE_URL.to_string(),
                 h.encode_vec().unwrap(),
             ),
         }
@@ -110,6 +122,50 @@ impl From<UpdateClientMessage> for RawUpdateClientMessage {
     fn from(value: UpdateClientMessage) -> Self {
         RawUpdateClientMessage {
             proxy_message: Into::<ProxyMessage>::into(value.proxy_message).to_bytes(),
+            signatures: value.signatures,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+pub struct UpdateOperatorsMessage {
+    pub nonce: u64,
+    pub new_operators: Vec<Address>,
+    pub new_operators_threshold_numerator: u64,
+    pub new_operators_threshold_denominator: u64,
+    pub signatures: Vec<Vec<u8>>,
+}
+
+impl Protobuf<RawUpdateOperatorsMessage> for UpdateOperatorsMessage {}
+
+impl TryFrom<RawUpdateOperatorsMessage> for UpdateOperatorsMessage {
+    type Error = Error;
+    fn try_from(value: RawUpdateOperatorsMessage) -> Result<Self, Self::Error> {
+        Ok(UpdateOperatorsMessage {
+            nonce: value.nonce,
+            new_operators: value
+                .new_operators
+                .iter()
+                .map(|op| Address::try_from(op.as_slice()))
+                .collect::<Result<_, _>>()?,
+            new_operators_threshold_numerator: value.new_operators_threshold_numerator,
+            new_operators_threshold_denominator: value.new_operators_threshold_denominator,
+            signatures: value.signatures,
+        })
+    }
+}
+
+impl From<UpdateOperatorsMessage> for RawUpdateOperatorsMessage {
+    fn from(value: UpdateOperatorsMessage) -> Self {
+        RawUpdateOperatorsMessage {
+            nonce: value.nonce,
+            new_operators: value
+                .new_operators
+                .into_iter()
+                .map(|op| op.to_vec())
+                .collect(),
+            new_operators_threshold_numerator: value.new_operators_threshold_numerator,
+            new_operators_threshold_denominator: value.new_operators_threshold_denominator,
             signatures: value.signatures,
         }
     }

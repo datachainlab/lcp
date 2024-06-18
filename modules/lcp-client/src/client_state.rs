@@ -40,6 +40,20 @@ impl ClientState {
         self.frozen = true;
         self
     }
+
+    pub fn with_operators(
+        mut self,
+        operators: Vec<Address>,
+        nonce: u64,
+        threshold_numerator: u64,
+        threshold_denominator: u64,
+    ) -> Self {
+        self.operators = operators;
+        self.operators_nonce = nonce;
+        self.operators_threshold_numerator = threshold_numerator;
+        self.operators_threshold_denominator = threshold_denominator;
+        self
+    }
 }
 
 impl From<ClientState> for RawClientState {
