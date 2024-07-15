@@ -17,7 +17,10 @@ pub fn init_client<R: LightClientResolver, S: KVStore, K: Signer>(
 
     let any_client_state: Any = input.any_client_state.into();
     let any_consensus_state: Any = input.any_consensus_state.into();
-    let lc = ctx.get_light_client(&any_client_state.type_url).unwrap();
+    let lc = match ctx.get_light_client(&any_client_state.type_url) {
+        Some(lc) => lc,
+        None => return Err(Error::invalid_argument(any_client_state.type_url.clone())),
+    };
     let ek = ctx.get_enclave_key();
     let res = lc.create_client(ctx, any_client_state.clone(), any_consensus_state.clone())?;
     let client_type = lc.client_type();
