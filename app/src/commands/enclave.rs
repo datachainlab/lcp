@@ -95,10 +95,6 @@ fn run_list_keys<E: EnclaveCommandAPI<S>, S: CommitStore>(
     } else {
         km.all_keys()?
     };
-    if list.is_empty() {
-        return Err(anyhow!("no enclave keys found"));
-    }
-
     let mut list_json = Vec::new();
     for eki in list {
         match eki.avr {
