@@ -23,5 +23,4 @@ pub use errors::Error;
 pub mod api;
 mod errors;
 mod ffi;
-pub mod remote_attestation;
 pub mod store;

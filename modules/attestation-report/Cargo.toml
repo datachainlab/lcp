@@ -16,9 +16,7 @@ hex = { version = "0.4", default-features = false, features = ["alloc"] }
 base64 = { git = "https://github.com/marshallpierce/rust-base64", default-features = false, features = ["alloc"] }
 
 pem = { version = "2.0", default-features = false }
-rustls_sgx = { package = "rustls", git = "https://github.com/mesalock-linux/rustls", branch = "mesalock_sgx", optional = true }
 rustls     = { version = "0.19", optional = true }
-webpki_sgx = { package = "webpki", git = "https://github.com/mesalock-linux/webpki", branch = "mesalock_sgx", optional = true }
 webpki     = { version = "0.21", optional = true }
 
 [features]
@@ -29,7 +27,4 @@ std = [
     "flex-error/std",
     "serde_json/preserve_order"
 ]
-sgx = [
-    "rustls_sgx",
-    "webpki_sgx"
-]
+sgx = []

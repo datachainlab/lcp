@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 sgx_types = { rev = "v1.1.6", git = "https://github.com/apache/incubator-teaclave-sgx-sdk" }
+sgx_tse = { rev = "v1.1.6", git = "https://github.com/apache/incubator-teaclave-sgx-sdk" }
 hex = { version = "0.4", default-features = false, features = ["alloc"] }
 flex-error = { version = "0.4.4", default-features = false }
 
@@ -21,7 +22,6 @@ store = { path = "../../modules/store", default-features = false }
 
 [features]
 sgx-sw = [
-    "ecall-commands/sgx-sw",
     "enclave-remote-attestation/sgx-sw"
 ]
 production = [

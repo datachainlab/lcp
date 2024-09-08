@@ -1,3 +1,4 @@
+#![feature(generic_const_exprs)]
 #![allow(clippy::large_enum_variant)]
 #![cfg_attr(not(feature = "std"), no_std)]
 extern crate alloc;
@@ -23,11 +24,9 @@ mod prelude {
 pub use commands::{Command, CommandContext, CommandResponse, ECallCommand};
 use crypto::Address;
 pub use enclave_manage::{
-    EnclaveManageCommand, EnclaveManageResponse, GenerateEnclaveKeyInput,
-    GenerateEnclaveKeyResponse, IASRemoteAttestationInput, IASRemoteAttestationResponse,
+    CreateReportInput, CreateReportResponse, EnclaveManageCommand, EnclaveManageResponse,
+    GenerateEnclaveKeyInput, GenerateEnclaveKeyResponse,
 };
-#[cfg(feature = "sgx-sw")]
-pub use enclave_manage::{SimulateRemoteAttestationInput, SimulateRemoteAttestationResponse};
 pub use errors::InputValidationError;
 pub use light_client::{
     AggregateMessagesInput, AggregateMessagesResponse, CommitmentProofPair, InitClientInput,
@@ -41,6 +40,8 @@ mod commands;
 mod enclave_manage;
 mod errors;
 mod light_client;
+mod transmuter;
+
 #[cfg(feature = "std")]
 pub mod msgs;
 

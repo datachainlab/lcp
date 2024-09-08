@@ -29,6 +29,5 @@ std = [
 rocksdb = ["store/rocksdbstore"]
 sgx-sw = [
     "rsa",
-    "sha2",
-    "ecall-commands/sgx-sw"
+    "sha2"
 ]

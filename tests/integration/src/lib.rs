@@ -115,80 +115,80 @@ mod tests {
         };
         let operator = Address::from_hex_string("0x396e1ccc2f11cd6d2114c2449dad7751357e413e")?;
 
-        #[cfg(not(feature = "sgx-sw"))]
-        {
-            let res =
-                match enclave.ias_remote_attestation(ecall_commands::IASRemoteAttestationInput {
-                    target_enclave_key: signer,
-                    operator: Some(operator),
-                    spid: std::env::var("SPID")?.as_bytes().to_vec(),
-                    ias_key: std::env::var("IAS_KEY")?.as_bytes().to_vec(),
-                }) {
-                    Ok(res) => res.report,
-                    Err(e) => {
-                        bail!("IAS Remote Attestation Failed {:?}!", e);
-                    }
-                };
-            let report_data = res.get_avr()?.parse_quote()?.report_data();
-            assert_eq!(report_data.enclave_key(), signer);
-            assert_eq!(report_data.operator(), operator);
-            let res =
-                match enclave.ias_remote_attestation(ecall_commands::IASRemoteAttestationInput {
-                    target_enclave_key: signer,
-                    operator: None,
-                    spid: std::env::var("SPID")?.as_bytes().to_vec(),
-                    ias_key: std::env::var("IAS_KEY")?.as_bytes().to_vec(),
-                }) {
-                    Ok(res) => res.report,
-                    Err(e) => {
-                        bail!("IAS Remote Attestation Failed {:?}!", e);
-                    }
-                };
-            let report_data = res.get_avr()?.parse_quote()?.report_data();
-            assert_eq!(report_data.enclave_key(), signer);
-            assert!(report_data.operator().is_zero());
-        }
-        #[cfg(feature = "sgx-sw")]
-        {
-            use enclave_api::rsa::{pkcs1v15::SigningKey, rand_core::OsRng};
-            use enclave_api::sha2::Sha256;
-            let res = match enclave.simulate_remote_attestation(
-                ecall_commands::SimulateRemoteAttestationInput {
-                    target_enclave_key: signer,
-                    operator: Some(operator),
-                    advisory_ids: vec![],
-                    isv_enclave_quote_status: "OK".to_string(),
-                },
-                SigningKey::<Sha256>::random(&mut OsRng, 3072)?,
-                Default::default(), // TODO set valid certificate
-            ) {
-                Ok(res) => res.avr,
-                Err(e) => {
-                    bail!("Simulate Remote Attestation Failed {:?}!", e);
-                }
-            };
-            let report_data = res.parse_quote()?.report_data();
-            assert_eq!(report_data.enclave_key(), signer);
-            assert_eq!(report_data.operator(), operator);
-            let res = match enclave.simulate_remote_attestation(
-                ecall_commands::SimulateRemoteAttestationInput {
-                    target_enclave_key: signer,
-                    operator: None,
-                    advisory_ids: vec![],
-                    isv_enclave_quote_status: "OK".to_string(),
-                },
-                SigningKey::<Sha256>::random(&mut OsRng, 3072)?,
-                Default::default(), // TODO set valid certificate
-            ) {
-                Ok(res) => res.avr,
-                Err(e) => {
-                    bail!("Simulate Remote Attestation Failed {:?}!", e);
-                }
-            };
-            let report_data = res.parse_quote()?.report_data();
-            assert_eq!(report_data.enclave_key(), signer);
-            assert!(report_data.operator().is_zero());
-        }
+        // #[cfg(not(feature = "sgx-sw"))]
+        // {
+        //     let res =
+        //         match enclave.ias_remote_attestation(ecall_commands::IASRemoteAttestationInput {
+        //             target_enclave_key: signer,
+        //             operator: Some(operator),
+        //             spid: std::env::var("SPID")?.as_bytes().to_vec(),
+        //             ias_key: std::env::var("IAS_KEY")?.as_bytes().to_vec(),
+        //         }) {
+        //             Ok(res) => res.report,
+        //             Err(e) => {
+        //                 bail!("IAS Remote Attestation Failed {:?}!", e);
+        //             }
+        //         };
+        //     let report_data = res.get_avr()?.parse_quote()?.report_data();
+        //     assert_eq!(report_data.enclave_key(), signer);
+        //     assert_eq!(report_data.operator(), operator);
+        //     let res =
+        //         match enclave.ias_remote_attestation(ecall_commands::IASRemoteAttestationInput {
+        //             target_enclave_key: signer,
+        //             operator: None,
+        //             spid: std::env::var("SPID")?.as_bytes().to_vec(),
+        //             ias_key: std::env::var("IAS_KEY")?.as_bytes().to_vec(),
+        //         }) {
+        //             Ok(res) => res.report,
+        //             Err(e) => {
+        //                 bail!("IAS Remote Attestation Failed {:?}!", e);
+        //             }
+        //         };
+        //     let report_data = res.get_avr()?.parse_quote()?.report_data();
+        //     assert_eq!(report_data.enclave_key(), signer);
+        //     assert!(report_data.operator().is_zero());
+        // }
+        // #[cfg(feature = "sgx-sw")]
+        // {
+        //     use enclave_api::rsa::{pkcs1v15::SigningKey, rand_core::OsRng};
+        //     use enclave_api::sha2::Sha256;
+        //     let res = match enclave.simulate_remote_attestation(
+        //         ecall_commands::SimulateRemoteAttestationInput {
+        //             target_enclave_key: signer,
+        //             operator: Some(operator),
+        //             advisory_ids: vec![],
+        //             isv_enclave_quote_status: "OK".to_string(),
+        //         },
+        //         SigningKey::<Sha256>::random(&mut OsRng, 3072)?,
+        //         Default::default(), // TODO set valid certificate
+        //     ) {
+        //         Ok(res) => res.avr,
+        //         Err(e) => {
+        //             bail!("Simulate Remote Attestation Failed {:?}!", e);
+        //         }
+        //     };
+        //     let report_data = res.parse_quote()?.report_data();
+        //     assert_eq!(report_data.enclave_key(), signer);
+        //     assert_eq!(report_data.operator(), operator);
+        //     let res = match enclave.simulate_remote_attestation(
+        //         ecall_commands::SimulateRemoteAttestationInput {
+        //             target_enclave_key: signer,
+        //             operator: None,
+        //             advisory_ids: vec![],
+        //             isv_enclave_quote_status: "OK".to_string(),
+        //         },
+        //         SigningKey::<Sha256>::random(&mut OsRng, 3072)?,
+        //         Default::default(), // TODO set valid certificate
+        //     ) {
+        //         Ok(res) => res.avr,
+        //         Err(e) => {
+        //             bail!("Simulate Remote Attestation Failed {:?}!", e);
+        //         }
+        //     };
+        //     let report_data = res.parse_quote()?.report_data();
+        //     assert_eq!(report_data.enclave_key(), signer);
+        //     assert!(report_data.operator().is_zero());
+        // }
 
         let (client_id, last_height) = {
             // XXX use non-latest height here

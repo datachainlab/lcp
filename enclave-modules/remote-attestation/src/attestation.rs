@@ -150,230 +150,230 @@ pub fn create_attestation_report(
     })
 }
 
-pub fn get_sigrl_from_intel(fd: c_int, gid: u32, ias_key: &[u8]) -> Vec<u8> {
-    trace!("get_sigrl_from_intel fd = {:?}", fd);
-    let config = make_ias_client_config();
-    let ias_key = String::from_utf8_lossy(ias_key).trim_end().to_owned();
+// pub fn get_sigrl_from_intel(fd: c_int, gid: u32, ias_key: &[u8]) -> Vec<u8> {
+//     trace!("get_sigrl_from_intel fd = {:?}", fd);
+//     let config = make_ias_client_config();
+//     let ias_key = String::from_utf8_lossy(ias_key).trim_end().to_owned();
 
-    let req = format!("GET {}{:08x} HTTP/1.1\r\nHOST: {}\r\nOcp-Apim-Subscription-Key: {}\r\nConnection: Close\r\n\r\n",
-                      SIGRL_SUFFIX,
-                      gid,
-                      IAS_HOSTNAME,
-                      ias_key);
+//     let req = format!("GET {}{:08x} HTTP/1.1\r\nHOST: {}\r\nOcp-Apim-Subscription-Key: {}\r\nConnection: Close\r\n\r\n",
+//                       SIGRL_SUFFIX,
+//                       gid,
+//                       IAS_HOSTNAME,
+//                       ias_key);
 
-    trace!("get_sigrl_from_intel: {}", req);
+//     trace!("get_sigrl_from_intel: {}", req);
 
-    let dns_name = webpki::DNSNameRef::try_from_ascii_str(IAS_HOSTNAME).unwrap();
-    let mut sess = rustls::ClientSession::new(&Arc::new(config), dns_name);
-    let mut sock = TcpStream::new(fd).unwrap();
-    let mut tls = rustls::Stream::new(&mut sess, &mut sock);
+//     let dns_name = webpki::DNSNameRef::try_from_ascii_str(IAS_HOSTNAME).unwrap();
+//     let mut sess = rustls::ClientSession::new(&Arc::new(config), dns_name);
+//     let mut sock = TcpStream::new(fd).unwrap();
+//     let mut tls = rustls::Stream::new(&mut sess, &mut sock);
 
-    let _result = tls.write(req.as_bytes());
-    let mut plaintext = Vec::new();
+//     let _result = tls.write(req.as_bytes());
+//     let mut plaintext = Vec::new();
 
-    info!("write complete");
+//     info!("write complete");
 
-    match tls.read_to_end(&mut plaintext) {
-        Ok(_) => (),
-        Err(e) => {
-            warn!("get_sigrl_from_intel tls.read_to_end: {:?}", e);
-            panic!("Communication error with IAS");
-        }
-    }
-    info!("read_to_end complete");
-    let resp_string = String::from_utf8(plaintext.clone()).unwrap();
+//     match tls.read_to_end(&mut plaintext) {
+//         Ok(_) => (),
+//         Err(e) => {
+//             warn!("get_sigrl_from_intel tls.read_to_end: {:?}", e);
+//             panic!("Communication error with IAS");
+//         }
+//     }
+//     info!("read_to_end complete");
+//     let resp_string = String::from_utf8(plaintext.clone()).unwrap();
 
-    trace!("{}", resp_string);
+//     trace!("{}", resp_string);
 
-    // resp_string
+//     // resp_string
 
-    parse_response_sigrl(&plaintext)
-}
+//     parse_response_sigrl(&plaintext)
+// }
 
-// TODO: support pse
-pub fn get_report_from_intel(
-    fd: c_int,
-    quote: Vec<u8>,
-    ias_key: &[u8],
-) -> (String, Vec<u8>, Vec<u8>) {
-    trace!("get_report_from_intel fd = {:?}", fd);
-    let config = make_ias_client_config();
-    let encoded_quote = base64::encode(&quote[..]);
-    let encoded_json = format!("{{\"isvEnclaveQuote\":\"{}\"}}\r\n", encoded_quote);
-    let ias_key = String::from_utf8_lossy(ias_key).trim_end().to_owned();
+// // TODO: support pse
+// pub fn get_report_from_intel(
+//     fd: c_int,
+//     quote: Vec<u8>,
+//     ias_key: &[u8],
+// ) -> (String, Vec<u8>, Vec<u8>) {
+//     trace!("get_report_from_intel fd = {:?}", fd);
+//     let config = make_ias_client_config();
+//     let encoded_quote = base64::encode(&quote[..]);
+//     let encoded_json = format!("{{\"isvEnclaveQuote\":\"{}\"}}\r\n", encoded_quote);
+//     let ias_key = String::from_utf8_lossy(ias_key).trim_end().to_owned();
 
-    let req = format!("POST {} HTTP/1.1\r\nHOST: {}\r\nOcp-Apim-Subscription-Key:{}\r\nContent-Length:{}\r\nContent-Type: application/json\r\nConnection: close\r\n\r\n{}",
-                      REPORT_SUFFIX,
-                      IAS_HOSTNAME,
-                      ias_key,
-                      encoded_json.len(),
-                      encoded_json);
+//     let req = format!("POST {} HTTP/1.1\r\nHOST: {}\r\nOcp-Apim-Subscription-Key:{}\r\nContent-Length:{}\r\nContent-Type: application/json\r\nConnection: close\r\n\r\n{}",
+//                       REPORT_SUFFIX,
+//                       IAS_HOSTNAME,
+//                       ias_key,
+//                       encoded_json.len(),
+//                       encoded_json);
 
-    trace!("{}", req);
-    let dns_name = webpki::DNSNameRef::try_from_ascii_str(IAS_HOSTNAME).unwrap();
-    let mut sess = rustls::ClientSession::new(&Arc::new(config), dns_name);
-    let mut sock = TcpStream::new(fd).unwrap();
-    let mut tls = rustls::Stream::new(&mut sess, &mut sock);
+//     trace!("{}", req);
+//     let dns_name = webpki::DNSNameRef::try_from_ascii_str(IAS_HOSTNAME).unwrap();
+//     let mut sess = rustls::ClientSession::new(&Arc::new(config), dns_name);
+//     let mut sock = TcpStream::new(fd).unwrap();
+//     let mut tls = rustls::Stream::new(&mut sess, &mut sock);
 
-    let _result = tls.write(req.as_bytes());
-    let mut plaintext = Vec::new();
+//     let _result = tls.write(req.as_bytes());
+//     let mut plaintext = Vec::new();
 
-    info!("write complete");
+//     info!("write complete");
 
-    tls.read_to_end(&mut plaintext).unwrap();
-    info!("read_to_end complete");
-    let resp_string = String::from_utf8(plaintext.clone()).unwrap();
+//     tls.read_to_end(&mut plaintext).unwrap();
+//     info!("read_to_end complete");
+//     let resp_string = String::from_utf8(plaintext.clone()).unwrap();
 
-    trace!("resp_string = {}", resp_string);
+//     trace!("resp_string = {}", resp_string);
 
-    let (attn_report, sig, cert) = parse_response_attn_report(&plaintext);
+//     let (attn_report, sig, cert) = parse_response_attn_report(&plaintext);
 
-    (attn_report, sig, cert)
-}
+//     (attn_report, sig, cert)
+// }
 
-fn parse_response_attn_report(resp: &[u8]) -> (String, Vec<u8>, Vec<u8>) {
-    trace!("parse_response_attn_report");
-    let mut headers = [httparse::EMPTY_HEADER; 16];
-    let mut respp = httparse::Response::new(&mut headers);
-    let result = respp.parse(resp);
-    trace!("parse result {:?}", result);
+// fn parse_response_attn_report(resp: &[u8]) -> (String, Vec<u8>, Vec<u8>) {
+//     trace!("parse_response_attn_report");
+//     let mut headers = [httparse::EMPTY_HEADER; 16];
+//     let mut respp = httparse::Response::new(&mut headers);
+//     let result = respp.parse(resp);
+//     trace!("parse result {:?}", result);
 
-    let msg: &'static str;
+//     let msg: &'static str;
 
-    match respp.code {
-        Some(200) => msg = "OK Operation Successful",
-        Some(401) => msg = "Unauthorized Failed to authenticate or authorize request.",
-        Some(404) => msg = "Not Found GID does not refer to a valid EPID group ID.",
-        Some(500) => msg = "Internal error occurred",
-        Some(503) => {
-            msg = "Service is currently not able to process the request (due to
-            a temporary overloading or maintenance). This is a
-            temporary state – the same request can be repeated after
-            some time. "
-        }
-        _ => {
-            warn!("DBG:{}", respp.code.unwrap());
-            msg = "Unknown error occured"
-        }
-    }
+//     match respp.code {
+//         Some(200) => msg = "OK Operation Successful",
+//         Some(401) => msg = "Unauthorized Failed to authenticate or authorize request.",
+//         Some(404) => msg = "Not Found GID does not refer to a valid EPID group ID.",
+//         Some(500) => msg = "Internal error occurred",
+//         Some(503) => {
+//             msg = "Service is currently not able to process the request (due to
+//             a temporary overloading or maintenance). This is a
+//             temporary state – the same request can be repeated after
+//             some time. "
+//         }
+//         _ => {
+//             warn!("DBG:{}", respp.code.unwrap());
+//             msg = "Unknown error occured"
+//         }
+//     }
 
-    info!("{}", msg);
-    let mut len_num: u32 = 0;
+//     info!("{}", msg);
+//     let mut len_num: u32 = 0;
 
-    let mut sig = String::new();
-    let mut cert = String::new();
-    let mut attn_report = String::new();
+//     let mut sig = String::new();
+//     let mut cert = String::new();
+//     let mut attn_report = String::new();
 
-    for i in 0..respp.headers.len() {
-        let h = respp.headers[i];
-        match h.name {
-            "Content-Length" => {
-                let len_str = String::from_utf8(h.value.to_vec()).unwrap();
-                len_num = len_str.parse::<u32>().unwrap();
-                trace!("content length = {}", len_num);
-            }
-            "X-IASReport-Signature" => sig = str::from_utf8(h.value).unwrap().to_string(),
-            "X-IASReport-Signing-Certificate" => {
-                cert = str::from_utf8(h.value).unwrap().to_string()
-            }
-            _ => (),
-        }
-    }
+//     for i in 0..respp.headers.len() {
+//         let h = respp.headers[i];
+//         match h.name {
+//             "Content-Length" => {
+//                 let len_str = String::from_utf8(h.value.to_vec()).unwrap();
+//                 len_num = len_str.parse::<u32>().unwrap();
+//                 trace!("content length = {}", len_num);
+//             }
+//             "X-IASReport-Signature" => sig = str::from_utf8(h.value).unwrap().to_string(),
+//             "X-IASReport-Signing-Certificate" => {
+//                 cert = str::from_utf8(h.value).unwrap().to_string()
+//             }
+//             _ => (),
+//         }
+//     }
 
-    // Remove %0A from cert, and only obtain the signing cert
-    cert = cert.replace("%0A", "");
-    cert = percent_decode(cert);
+//     // Remove %0A from cert, and only obtain the signing cert
+//     cert = cert.replace("%0A", "");
+//     cert = percent_decode(cert);
 
-    let v: Vec<&str> = cert.split("-----").collect();
-    let sig_cert = v[2].to_string();
+//     let v: Vec<&str> = cert.split("-----").collect();
+//     let sig_cert = v[2].to_string();
 
-    if len_num != 0 {
-        let header_len = result.unwrap().unwrap();
-        let resp_body = &resp[header_len..];
-        attn_report = str::from_utf8(resp_body).unwrap().to_string();
-        info!("Attestation report: {}", attn_report);
-    }
+//     if len_num != 0 {
+//         let header_len = result.unwrap().unwrap();
+//         let resp_body = &resp[header_len..];
+//         attn_report = str::from_utf8(resp_body).unwrap().to_string();
+//         info!("Attestation report: {}", attn_report);
+//     }
 
-    let sig_bytes = base64::decode(&sig).unwrap();
-    let sig_cert_bytes = base64::decode(&sig_cert).unwrap();
-    // len_num == 0
-    (attn_report, sig_bytes, sig_cert_bytes)
-}
+//     let sig_bytes = base64::decode(&sig).unwrap();
+//     let sig_cert_bytes = base64::decode(&sig_cert).unwrap();
+//     // len_num == 0
+//     (attn_report, sig_bytes, sig_cert_bytes)
+// }
 
-fn parse_response_sigrl(resp: &[u8]) -> Vec<u8> {
-    trace!("parse_response_sigrl");
-    let mut headers = [httparse::EMPTY_HEADER; 16];
-    let mut respp = httparse::Response::new(&mut headers);
-    let result = respp.parse(resp);
-    trace!("parse result {:?}", result);
-    trace!("parse response{:?}", respp);
+// fn parse_response_sigrl(resp: &[u8]) -> Vec<u8> {
+//     trace!("parse_response_sigrl");
+//     let mut headers = [httparse::EMPTY_HEADER; 16];
+//     let mut respp = httparse::Response::new(&mut headers);
+//     let result = respp.parse(resp);
+//     trace!("parse result {:?}", result);
+//     trace!("parse response{:?}", respp);
 
-    let msg: &'static str;
+//     let msg: &'static str;
 
-    match respp.code {
-        Some(200) => msg = "OK Operation Successful",
-        Some(401) => msg = "Unauthorized Failed to authenticate or authorize request.",
-        Some(404) => msg = "Not Found GID does not refer to a valid EPID group ID.",
-        Some(500) => msg = "Internal error occurred",
-        Some(503) => {
-            msg = "Service is currently not able to process the request (due to
-            a temporary overloading or maintenance). This is a
-            temporary state – the same request can be repeated after
-            some time. "
-        }
-        _ => msg = "Unknown error occured",
-    }
+//     match respp.code {
+//         Some(200) => msg = "OK Operation Successful",
+//         Some(401) => msg = "Unauthorized Failed to authenticate or authorize request.",
+//         Some(404) => msg = "Not Found GID does not refer to a valid EPID group ID.",
+//         Some(500) => msg = "Internal error occurred",
+//         Some(503) => {
+//             msg = "Service is currently not able to process the request (due to
+//             a temporary overloading or maintenance). This is a
+//             temporary state – the same request can be repeated after
+//             some time. "
+//         }
+//         _ => msg = "Unknown error occured",
+//     }
 
-    info!("{}", msg);
-    let mut len_num: u32 = 0;
+//     info!("{}", msg);
+//     let mut len_num: u32 = 0;
 
-    for i in 0..respp.headers.len() {
-        let h = respp.headers[i];
-        if h.name == "content-length" {
-            let len_str = String::from_utf8(h.value.to_vec()).unwrap();
-            len_num = len_str.parse::<u32>().unwrap();
-            trace!("content length = {}", len_num);
-        }
-    }
+//     for i in 0..respp.headers.len() {
+//         let h = respp.headers[i];
+//         if h.name == "content-length" {
+//             let len_str = String::from_utf8(h.value.to_vec()).unwrap();
+//             len_num = len_str.parse::<u32>().unwrap();
+//             trace!("content length = {}", len_num);
+//         }
+//     }
 
-    if len_num != 0 {
-        let header_len = result.unwrap().unwrap();
-        let resp_body = &resp[header_len..];
-        trace!("Base64-encoded SigRL: {:?}", resp_body);
+//     if len_num != 0 {
+//         let header_len = result.unwrap().unwrap();
+//         let resp_body = &resp[header_len..];
+//         trace!("Base64-encoded SigRL: {:?}", resp_body);
 
-        return base64::decode(str::from_utf8(resp_body).unwrap()).unwrap();
-    }
+//         return base64::decode(str::from_utf8(resp_body).unwrap()).unwrap();
+//     }
 
-    // len_num == 0
-    Vec::new()
-}
+//     // len_num == 0
+//     Vec::new()
+// }
 
-pub fn make_ias_client_config() -> rustls::ClientConfig {
-    let mut config = rustls::ClientConfig::new();
+// pub fn make_ias_client_config() -> rustls::ClientConfig {
+//     let mut config = rustls::ClientConfig::new();
 
-    config
-        .root_store
-        .add_server_trust_anchors(&webpki_roots::TLS_SERVER_ROOTS);
+//     config
+//         .root_store
+//         .add_server_trust_anchors(&webpki_roots::TLS_SERVER_ROOTS);
 
-    config
-}
+//     config
+// }
 
-pub(crate) fn as_u32_le(array: &[u8; 4]) -> u32 {
-    ((array[0] as u32) << 0)
-        + ((array[1] as u32) << 8)
-        + ((array[2] as u32) << 16)
-        + ((array[3] as u32) << 24)
-}
+// pub(crate) fn as_u32_le(array: &[u8; 4]) -> u32 {
+//     ((array[0] as u32) << 0)
+//         + ((array[1] as u32) << 8)
+//         + ((array[2] as u32) << 16)
+//         + ((array[3] as u32) << 24)
+// }
 
-fn percent_decode(orig: String) -> String {
-    let v: Vec<&str> = orig.split("%").collect();
-    let mut ret = String::new();
-    ret.push_str(v[0]);
-    if v.len() > 1 {
-        for s in v[1..].iter() {
-            ret.push(u8::from_str_radix(&s[0..2], 16).unwrap() as char);
-            ret.push_str(&s[2..]);
-        }
-    }
-    ret
-}
+// fn percent_decode(orig: String) -> String {
+//     let v: Vec<&str> = orig.split("%").collect();
+//     let mut ret = String::new();
+//     ret.push_str(v[0]);
+//     if v.len() > 1 {
+//         for s in v[1..].iter() {
+//             ret.push(u8::from_str_radix(&s[0..2], 16).unwrap() as char);
+//             ret.push_str(&s[2..]);
+//         }
+//     }
+//     ret
+// }

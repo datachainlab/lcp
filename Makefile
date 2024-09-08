@@ -218,7 +218,7 @@ test:
 
 .PHONY: integration-test
 integration-test: $(Signed_RustEnclave_Name) bin/gaiad
-	@PATH=${PATH}:$(CURDIR)/bin cargo test $(CARGO_TARGET) --package integration-test $(APP_CARGO_FEATURES)
+	cargo test $(CARGO_TARGET) --package integration-test $(APP_CARGO_FEATURES)
 
 .PHONY: test-nodes
 test-setup-nodes: bin/gaiad

@@ -8,9 +8,10 @@ define_error! {
         SgxError
         {
             status: sgx_status_t,
+            descr: String
         }
         |e| {
-            format_args!("SGX error: status={:?}", e.status)
+            format_args!("SGX error: status={:?}, descr={}", e.status, e.descr)
         },
 
         EnclaveKeyNotFound

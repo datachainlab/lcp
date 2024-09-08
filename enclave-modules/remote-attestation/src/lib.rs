@@ -21,21 +21,5 @@ mod prelude {
 
 pub use errors::Error;
 
-pub mod attestation;
 mod errors;
 pub mod report;
-
-#[cfg(feature = "sgx-sw")]
-pub mod simulate;
-
-pub const IAS_HOSTNAME: &str = "api.trustedservices.intel.com";
-
-#[cfg(feature = "production")]
-pub const SIGRL_SUFFIX: &str = "/sgx/attestation/v4/sigrl/";
-#[cfg(not(feature = "production"))]
-pub const SIGRL_SUFFIX: &str = "/sgx/dev/attestation/v4/sigrl/";
-
-#[cfg(feature = "production")]
-pub const REPORT_SUFFIX: &str = "/sgx/attestation/v4/report";
-#[cfg(not(feature = "production"))]
-pub const REPORT_SUFFIX: &str = "/sgx/dev/attestation/v4/report";

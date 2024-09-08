@@ -5,9 +5,9 @@ use crate::{
 use anyhow::{bail, Result};
 use clap::Parser;
 use crypto::Address;
-use ecall_commands::IASRemoteAttestationInput;
 use enclave_api::{Enclave, EnclaveCommandAPI, EnclaveProtoAPI};
 use log::info;
+use remote_attestation::{ias, ias_simulation, IASMode};
 use store::transaction::CommitStore;
 
 /// `attestation` subcommand
@@ -89,18 +89,23 @@ fn run_ias_remote_attestation<E: EnclaveCommandAPI<S>, S: CommitStore>(
     let spid = std::env::var("SPID")?;
     let ias_key = std::env::var("IAS_KEY")?;
     let target_enclave_key = Address::from_hex_string(&cmd.enclave_key)?;
-    match enclave.ias_remote_attestation(IASRemoteAttestationInput {
+    match ias::run_ias_ra(
+        &enclave,
         target_enclave_key,
-        operator: cmd.get_operator()?,
-        spid: spid.as_bytes().to_vec(),
-        ias_key: ias_key.as_bytes().to_vec(),
-    }) {
+        cmd.get_operator()?,
+        IASMode::Development,
+        spid,
+        ias_key,
+    ) {
         Ok(res) => {
-            info!("AVR: {:?}", res.report.avr);
+            info!("AVR: {:?}", res.avr);
             info!(
                 "report_data: {}",
-                res.report.get_avr()?.parse_quote()?.report_data()
+                res.get_avr()?.parse_quote()?.report_data()
             );
+            enclave
+                .get_key_manager()
+                .save_avr(target_enclave_key, res)?;
             Ok(())
         }
         Err(e) => bail!("failed to perform IAS Remote Attestation: {:?}!", e),
@@ -227,19 +232,24 @@ fn run_simulate_remote_attestation<E: EnclaveCommandAPI<S>, S: CommitStore>(
     }
 
     let target_enclave_key = Address::from_hex_string(&cmd.enclave_key)?;
-    match enclave.simulate_remote_attestation(
-        ecall_commands::SimulateRemoteAttestationInput {
-            target_enclave_key,
-            operator: cmd.get_operator()?,
-            advisory_ids: cmd.advisory_ids.clone(),
-            isv_enclave_quote_status: cmd.isv_enclave_quote_status.clone(),
-        },
+    match ias_simulation::run_ias_ra_simulation(
+        &enclave,
+        target_enclave_key,
+        cmd.get_operator()?,
+        cmd.advisory_ids.clone(),
+        cmd.isv_enclave_quote_status.clone(),
         signing_key,
         signing_cert,
     ) {
         Ok(res) => {
             info!("AVR: {:?}", res.avr);
-            info!("report_data: {}", res.avr.parse_quote()?.report_data());
+            info!(
+                "report_data: {}",
+                res.get_avr()?.parse_quote()?.report_data()
+            );
+            enclave
+                .get_key_manager()
+                .save_avr(target_enclave_key, res)?;
             Ok(())
         }
         Err(e) => bail!("failed to simulate Remote Attestation: {:?}!", e),

@@ -27,7 +27,7 @@ pub use report::{
 };
 mod report;
 
-#[cfg(any(feature = "std", feature = "sgx"))]
+#[cfg(feature = "std")]
 pub use verification::verify_report;
-#[cfg(any(feature = "std", feature = "sgx"))]
+#[cfg(feature = "std")]
 mod verification;
