@@ -21,7 +21,9 @@ mod prelude {
 pub use ecalls::{ecall_execute_command, set_environment};
 pub use enclave_environment::{Environment, MapLightClientRegistry};
 /// re-export
-pub use sgx_tstd;
+pub use sgx_no_tstd;
+pub use sgx_trts;
+pub use sgx_types;
 
 mod ecalls;
 mod errors;
@@ -29,9 +31,9 @@ mod errors;
 #[macro_export]
 macro_rules! setup_runtime {
     ($func:block) => {
-        use $crate::sgx_tstd::cfg_if;
+        use $crate::sgx_types::cfg_if;
 
-        $crate::sgx_tstd::global_ctors_object! {_init, _init_func = {
+        $crate::sgx_trts::global_ctors_object! {_init, _init_func = {
             $crate::set_environment((|| { $func })()).unwrap()
         }}
 
