@@ -1,7 +1,5 @@
 enclave
 {
-    include "sgx_quote.h"
-
     trusted
     {
         public sgx_status_t ecall_execute_command(
