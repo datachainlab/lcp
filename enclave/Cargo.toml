@@ -10,12 +10,6 @@ crate-type = ["staticlib"]
 
 [features]
 default = []
-production = [
-    "enclave-runtime/production"
-]
-sgx-sw = [
-    "enclave-runtime/sgx-sw"
-]
 
 [dependencies]
 log = { version = "0.4.8", default-features = false }

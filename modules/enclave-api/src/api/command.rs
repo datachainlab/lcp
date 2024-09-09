@@ -31,6 +31,7 @@ pub trait EnclaveCommandAPI<S: CommitStore>: EnclavePrimitiveAPI<S> {
         Ok(res)
     }
 
+    /// create_report creates a report for the given target_info
     fn create_report(&self, input: CreateReportInput) -> Result<CreateReportResponse> {
         match self.execute_command(
             Command::EnclaveManage(EnclaveManageCommand::CreateReport(input)),
@@ -40,56 +41,6 @@ pub trait EnclaveCommandAPI<S: CommitStore>: EnclavePrimitiveAPI<S> {
             _ => unreachable!(),
         }
     }
-
-    // /// ias_remote_attestation performs Remote Attestation with IAS(Intel Attestation Service)
-    // fn ias_remote_attestation(
-    //     &self,
-    //     input: IASRemoteAttestationInput,
-    // ) -> Result<IASRemoteAttestationResponse> {
-    //     let target_enclave_key = input.target_enclave_key;
-    //     let res = match self.execute_command(
-    //         Command::EnclaveManage(EnclaveManageCommand::IASRemoteAttestation(input)),
-    //         None,
-    //     )? {
-    //         CommandResponse::EnclaveManage(EnclaveManageResponse::IASRemoteAttestation(res)) => res,
-    //         _ => unreachable!(),
-    //     };
-    //     self.get_key_manager()
-    //         .save_avr(target_enclave_key, res.report.clone())?;
-    //     Ok(res)
-    // }
-
-    // /// simulate_remote_attestation simulates Remote Attestation
-    // #[cfg(feature = "sgx-sw")]
-    // fn simulate_remote_attestation(
-    //     &self,
-    //     input: ecall_commands::SimulateRemoteAttestationInput,
-    //     signing_key: rsa::pkcs1v15::SigningKey<sha2::Sha256>,
-    //     signing_cert: Vec<u8>,
-    // ) -> Result<ecall_commands::SimulateRemoteAttestationResponse> {
-    //     use attestation_report::EndorsedAttestationVerificationReport;
-    //     use rsa::signature::{SignatureEncoding, Signer};
-
-    //     let target_enclave_key = input.target_enclave_key;
-    //     let res = match self.execute_command(
-    //         Command::EnclaveManage(EnclaveManageCommand::SimulateRemoteAttestation(input)),
-    //         None,
-    //     )? {
-    //         CommandResponse::EnclaveManage(EnclaveManageResponse::SimulateRemoteAttestation(
-    //             res,
-    //         )) => res,
-    //         _ => unreachable!(),
-    //     };
-    //     let avr_json = res.avr.to_canonical_json().unwrap();
-    //     let signature = signing_key.sign(avr_json.as_bytes()).to_vec();
-    //     let eavr = EndorsedAttestationVerificationReport {
-    //         avr: avr_json,
-    //         signature,
-    //         signing_cert,
-    //     };
-    //     self.get_key_manager().save_avr(target_enclave_key, eavr)?;
-    //     Ok(res)
-    // }
 
     /// init_client initializes an ELC instance with given states
     fn init_client(&self, input: InitClientInput) -> Result<InitClientResponse> {
@@ -119,6 +70,7 @@ pub trait EnclaveCommandAPI<S: CommitStore>: EnclavePrimitiveAPI<S> {
         }
     }
 
+    /// aggregate_messages aggregates the messages and proofs into a single message and proof
     fn aggregate_messages(
         &self,
         input: AggregateMessagesInput,

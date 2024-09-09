@@ -25,10 +25,6 @@ define_error! {
         [attestation_report::Error]
         |_| { "AttestationReport error" },
 
-        RemoteAttestation
-        [enclave_remote_attestation::Error]
-        |_| { "RemoteAttestation error" },
-
         EcallCommand
         [ecall_commands::InputValidationError]
         |_| { "EcallCommand input validation error" },
@@ -36,12 +32,6 @@ define_error! {
         Time
         [lcp_types::TimeError]
         |_| { "Time error" }
-    }
-}
-
-impl From<enclave_remote_attestation::Error> for Error {
-    fn from(err: enclave_remote_attestation::Error) -> Self {
-        Error::remote_attestation(err)
     }
 }
 

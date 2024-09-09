@@ -9,7 +9,6 @@ sgx_tse = { rev = "v1.1.6", git = "https://github.com/apache/incubator-teaclave-
 hex = { version = "0.4", default-features = false, features = ["alloc"] }
 flex-error = { version = "0.4.4", default-features = false }
 
-enclave-remote-attestation = { path = "../remote-attestation" }
 crypto = { path = "../../modules/crypto", default-features = false, features = ["sgx"] }
 attestation-report = { path = "../../modules/attestation-report", default-features = false, features = ["sgx"] }
 context = { path = "../../modules/context", default-features = false }
@@ -19,11 +18,3 @@ lcp-types = { path = "../../modules/types", default-features = false }
 ecall-commands = { path = "../../modules/ecall-commands", default-features = false }
 light-client = { path = "../../modules/light-client", default-features = false }
 store = { path = "../../modules/store", default-features = false }
-
-[features]
-sgx-sw = [
-    "enclave-remote-attestation/sgx-sw"
-]
-production = [
-    "enclave-remote-attestation/production"
-]

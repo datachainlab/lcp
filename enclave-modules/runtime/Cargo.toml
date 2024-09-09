@@ -16,11 +16,3 @@ enclave-utils = { path = "../utils" }
 ecall-handler = { path = "../ecall-handler" }
 enclave-environment = { path = "../environment" }
 ecall-commands = { path = "../../modules/ecall-commands", default-features = false }
-
-[features]
-sgx-sw = [
-    "ecall-handler/sgx-sw"
-]
-production = [
-    "ecall-handler/production"
-]

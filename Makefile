@@ -61,7 +61,7 @@ else
 	SGX_ENCLAVE_CONFIG = "enclave/Enclave.config.xml"
 	SGX_SIGN_KEY = "enclave/Enclave_private.pem"
 	ifneq ($(SGX_MODE), HW)
-		ENCLAVE_CARGO_FEATURES = --features=default,sgx-sw
+		ENCLAVE_CARGO_FEATURES = --features=default
 		APP_CARGO_FEATURES     = --features=default,sgx-sw
 	endif
 endif

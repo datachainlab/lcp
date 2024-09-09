@@ -7,7 +7,7 @@ use clap::Parser;
 use crypto::Address;
 use enclave_api::{Enclave, EnclaveCommandAPI, EnclaveProtoAPI};
 use log::info;
-use remote_attestation::{ias, ias_simulation, IASMode};
+use remote_attestation::{ias, IASMode};
 use store::transaction::CommitStore;
 
 /// `attestation` subcommand
@@ -232,7 +232,7 @@ fn run_simulate_remote_attestation<E: EnclaveCommandAPI<S>, S: CommitStore>(
     }
 
     let target_enclave_key = Address::from_hex_string(&cmd.enclave_key)?;
-    match ias_simulation::run_ias_ra_simulation(
+    match remote_attestation::ias_simulation::run_ias_ra_simulation(
         &enclave,
         target_enclave_key,
         cmd.get_operator()?,

@@ -31,7 +31,6 @@ exclude = [
     "enclave-modules/environment",
     "enclave-modules/store",
     "enclave-modules/utils",
-    "enclave-modules/remote-attestation",
     "enclave-modules/host-api",
     "enclave-modules/ecall-handler",
     "proto-compiler"
