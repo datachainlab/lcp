@@ -71,11 +71,7 @@ pub struct IASRemoteAttestation {
     )]
     pub operator: Option<String>,
     /// IAS mode
-    #[clap(
-        long = "development",
-        default_value = "false",
-        help = "Use IAS development mode(default: false)"
-    )]
+    #[clap(long = "development", help = "Use IAS development mode")]
     pub is_dev: bool,
 }
 

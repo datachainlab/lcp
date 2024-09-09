@@ -8,6 +8,7 @@ use sgx_types::{
     sgx_quote_sign_type_t, sgx_quote_t, sgx_report_t, sgx_spid_t, sgx_status_t, sgx_target_info_t,
 };
 use sha2::{Digest, Sha256};
+use std::fmt::Display;
 use std::io::{Read, Write};
 use std::net::{SocketAddr, TcpStream};
 use std::ptr;
@@ -22,6 +23,15 @@ pub const SGX_QUOTE_SIGN_TYPE: sgx_quote_sign_type_t =
 pub enum IASMode {
     Development,
     Production,
+}
+
+impl Display for IASMode {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            IASMode::Development => write!(f, "Development"),
+            IASMode::Production => write!(f, "Production"),
+        }
+    }
 }
 
 impl IASMode {
@@ -127,6 +137,7 @@ pub(crate) fn get_quote(
 }
 
 pub(crate) fn get_sigrl_from_intel(mode: IASMode, gid: [u8; 4], ias_key: &str) -> Vec<u8> {
+    info!("using IAS mode: {}", mode);
     let config = make_ias_client_config();
     let req = format!("GET {}{:08x} HTTP/1.1\r\nHOST: {}\r\nOcp-Apim-Subscription-Key: {}\r\nConnection: Close\r\n\r\n",
         mode.get_sigrl_suffix(),
@@ -166,6 +177,7 @@ pub(crate) fn get_report_from_intel(
     quote: Vec<u8>,
     ias_key: &str,
 ) -> Result<EndorsedAttestationVerificationReport, Error> {
+    info!("using IAS mode: {}", mode);
     let config = make_ias_client_config();
     let encoded_quote = Base64Std.encode(&quote[..]);
     let encoded_json = format!("{{\"isvEnclaveQuote\":\"{}\"}}\r\n", encoded_quote);
