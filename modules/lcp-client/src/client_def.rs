@@ -6,7 +6,6 @@ use crate::message::{
 };
 use alloy_sol_types::{sol, SolValue};
 use attestation_report::{EndorsedAttestationVerificationReport, ReportData};
-use base64::{engine::general_purpose::STANDARD as Base64Std, Engine};
 use crypto::{verify_signature_address, Address, Keccak256};
 use hex_literal::hex;
 use light_client::commitments::{
@@ -581,6 +580,7 @@ mod tests {
     use alloc::rc::Rc;
     use alloc::sync::Arc;
     use attestation_report::{AttestationVerificationReport, ReportData};
+    use base64::{engine::general_purpose::STANDARD as Base64Std, Engine};
     use context::Context;
     use core::cell::RefCell;
     use core::str::FromStr;
