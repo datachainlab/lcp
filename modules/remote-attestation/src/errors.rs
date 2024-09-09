@@ -17,6 +17,27 @@ define_error! {
         [attestation_report::Error]
         |_| { "AttestationReport error" },
 
+        UnexpectedIasReportResponse {
+            descr: String
+        }
+        |e| {
+            format_args!("UnexpectedIASReportResponse error: {}", e.descr)
+        },
+
+        UnexpectedSigrlResponse {
+            descr: String
+        }
+        |e| {
+            format_args!("UnexpectedSigrlResponse error: {}", e.descr)
+        },
+
+        UnexpectedIasReportCertificateResponse {
+            descr: String
+        }
+        |e| {
+            format_args!("UnexpectedIASReportCertificateResponse error: {}", e.descr)
+        },
+
         UnexpectedReport {
             descr: String
         }

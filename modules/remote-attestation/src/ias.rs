@@ -28,7 +28,7 @@ pub fn run_ias_ra<E: EnclaveCommandAPI<S>, S: CommitStore>(
         .unwrap();
 
     // Now sigrl is the revocation list, a vec<u8>
-    let sigrl = get_sigrl_from_intel(mode, epid_group_id, &ias_key);
+    let sigrl = get_sigrl_from_intel(mode, epid_group_id, &ias_key)?;
     let (quote, qe_report) = get_quote(sigrl, report, SGX_QUOTE_SIGN_TYPE, spid)?;
     validate_qe_report(&target_info, &qe_report)?;
 

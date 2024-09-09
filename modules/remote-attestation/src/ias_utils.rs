@@ -136,7 +136,11 @@ pub(crate) fn get_quote(
     Ok((quote, qe_report))
 }
 
-pub(crate) fn get_sigrl_from_intel(mode: IASMode, gid: [u8; 4], ias_key: &str) -> Vec<u8> {
+pub(crate) fn get_sigrl_from_intel(
+    mode: IASMode,
+    gid: [u8; 4],
+    ias_key: &str,
+) -> Result<Vec<u8>, Error> {
     info!("using IAS mode: {}", mode);
     let config = make_ias_client_config();
     let req = format!("GET {}{:08x} HTTP/1.1\r\nHOST: {}\r\nOcp-Apim-Subscription-Key: {}\r\nConnection: Close\r\n\r\n",
@@ -231,30 +235,19 @@ fn parse_response_attn_report(resp: &[u8]) -> Result<EndorsedAttestationVerifica
     let mut respp = httparse::Response::new(&mut headers);
     let result = respp.parse(resp);
     trace!("parse result {:?}", result);
-    let msg = match respp.code {
-        Some(200) => "OK Operation Successful",
-        Some(401) => "Unauthorized Failed to authenticate or authorize request.",
-        Some(404) => "Not Found GID does not refer to a valid EPID group ID.",
-        Some(500) => "Internal error occurred",
-        Some(503) => {
-            "Service is currently not able to process the request (due to
-            a temporary overloading or maintenance). This is a
-            temporary state – the same request can be repeated after
-            some time. "
-        }
-        _ => {
-            warn!("DBG:{}", respp.code.unwrap());
-            "Unknown error occured"
-        }
-    };
+    match respp.code {
+        Some(200) => info!("OK Operation Successful"),
+        Some(401) => return Err(Error::unexpected_ias_report_response("Unauthorized Failed to authenticate or authorize request".to_string())),
+        Some(404) => return Err(Error::unexpected_ias_report_response("Not Found GID does not refer to a valid EPID group ID".to_string())),
+        Some(500) => return Err(Error::unexpected_ias_report_response("Internal error occurred".to_string())),
+        Some(503) => return Err(Error::unexpected_ias_report_response("Service is currently not able to process the request (due to a temporary overloading or maintenance). This is a temporary state – the same request can be repeated after some time.".to_string())),
+        _ => return Err(Error::unexpected_ias_report_response(format!("Unknown error occured: {:?}", respp.code))),
+    }
 
-    info!("{}", msg);
     let mut len_num: u32 = 0;
-
     let mut sig = String::new();
     let mut cert = String::new();
     let mut attn_report = String::new();
-
     for i in 0..respp.headers.len() {
         let h = respp.headers[i];
         match h.name {
@@ -276,6 +269,11 @@ fn parse_response_attn_report(resp: &[u8]) -> Result<EndorsedAttestationVerifica
     cert = percent_decode(cert);
 
     let v: Vec<&str> = cert.split("-----").collect();
+    if v.len() < 3 {
+        return Err(Error::unexpected_ias_report_certificate_response(
+            "Invalid signing certificate".to_string(),
+        ));
+    }
     let sig_cert = v[2].to_string();
 
     if len_num != 0 {
@@ -294,7 +292,7 @@ fn parse_response_attn_report(resp: &[u8]) -> Result<EndorsedAttestationVerifica
     })
 }
 
-fn parse_response_sigrl(resp: &[u8]) -> Vec<u8> {
+fn parse_response_sigrl(resp: &[u8]) -> Result<Vec<u8>, Error> {
     trace!("parse_response_sigrl");
     let mut headers = [httparse::EMPTY_HEADER; 16];
     let mut respp = httparse::Response::new(&mut headers);
@@ -302,23 +300,16 @@ fn parse_response_sigrl(resp: &[u8]) -> Vec<u8> {
     trace!("parse result {:?}", result);
     trace!("parse response{:?}", respp);
 
-    let msg = match respp.code {
-        Some(200) => "OK Operation Successful",
-        Some(401) => "Unauthorized Failed to authenticate or authorize request.",
-        Some(404) => "Not Found GID does not refer to a valid EPID group ID.",
-        Some(500) => "Internal error occurred",
-        Some(503) => {
-            "Service is currently not able to process the request (due to
-            a temporary overloading or maintenance). This is a
-            temporary state – the same request can be repeated after
-            some time. "
-        }
-        _ => "Unknown error occured",
-    };
+    match respp.code {
+        Some(200) => info!("OK Operation Successful"),
+        Some(401) => return Err(Error::unexpected_sigrl_response("Unauthorized Failed to authenticate or authorize request".to_string())),
+        Some(404) => return Err(Error::unexpected_sigrl_response("Not Found GID does not refer to a valid EPID group ID".to_string())),
+        Some(500) => return Err(Error::unexpected_sigrl_response("Internal error occurred".to_string())),
+        Some(503) => return Err(Error::unexpected_sigrl_response("Service is currently not able to process the request (due to a temporary overloading or maintenance). This is a temporary state – the same request can be repeated after some time.".to_string())),
+        _ => return Err(Error::unexpected_sigrl_response(format!("Unknown error occured: {:?}", respp.code))),
+    }
 
-    info!("{}", msg);
     let mut len_num: u32 = 0;
-
     for i in 0..respp.headers.len() {
         let h = respp.headers[i];
         if h.name == "content-length" {
@@ -333,11 +324,10 @@ fn parse_response_sigrl(resp: &[u8]) -> Vec<u8> {
         let resp_body = &resp[header_len..];
         trace!("Base64-encoded SigRL: {:?}", resp_body);
 
-        return Base64Std.decode(resp_body).unwrap();
+        Ok(Base64Std.decode(resp_body).unwrap())
+    } else {
+        Ok(Vec::new())
     }
-
-    // len_num == 0
-    Vec::new()
 }
 
 fn make_ias_client_config() -> rustls::ClientConfig {
