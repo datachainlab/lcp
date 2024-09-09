@@ -10,12 +10,13 @@ use sgx_types::{
 use sha2::{Digest, Sha256};
 use std::fmt::Display;
 use std::io::{Read, Write};
-use std::net::{SocketAddr, TcpStream};
+use std::net::{SocketAddr, TcpStream, ToSocketAddrs};
 use std::ptr;
 use std::str;
 use std::sync::Arc;
 
 pub const IAS_HOSTNAME: &str = "api.trustedservices.intel.com";
+pub const IAS_HTTPS_PORT: u16 = 443;
 pub const SGX_QUOTE_SIGN_TYPE: sgx_quote_sign_type_t =
     sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE;
 
@@ -151,9 +152,11 @@ pub(crate) fn get_sigrl_from_intel(
 
     trace!("get_sigrl_from_intel: {}", req);
 
-    let dns_name = webpki::DNSNameRef::try_from_ascii_str(IAS_HOSTNAME).unwrap();
+    let dns_name = webpki::DNSNameRef::try_from_ascii_str(IAS_HOSTNAME)
+        .map_err(Error::invalid_dns_name_error)?;
     let mut sess = rustls::ClientSession::new(&Arc::new(config), dns_name);
-    let mut sock = TcpStream::connect(lookup_ipv4(IAS_HOSTNAME, 443)).unwrap();
+    let mut sock = TcpStream::connect(lookup_ipv4(IAS_HOSTNAME, IAS_HTTPS_PORT)?)
+        .map_err(|e| Error::io_error(e, "failed to connect to IAS server".to_string()))?;
     let mut tls = rustls::Stream::new(&mut sess, &mut sock);
 
     let _result = tls.write(req.as_bytes());
@@ -161,18 +164,9 @@ pub(crate) fn get_sigrl_from_intel(
 
     info!("write complete");
 
-    match tls.read_to_end(&mut plaintext) {
-        Ok(_) => (),
-        Err(e) => {
-            warn!("get_sigrl_from_intel tls.read_to_end: {:?}", e);
-            panic!("Communication error with IAS");
-        }
-    }
+    tls.read_to_end(&mut plaintext)
+        .map_err(|e| Error::io_error(e, "failed to read response from IAS server".to_string()))?;
     info!("read_to_end complete");
-    let resp_string = String::from_utf8(plaintext.clone()).unwrap();
-
-    trace!("{}", resp_string);
-
     parse_response_sigrl(&plaintext)
 }
 
@@ -194,9 +188,11 @@ pub(crate) fn get_report_from_intel(
                       encoded_json);
 
     trace!("{}", req);
-    let dns_name = webpki::DNSNameRef::try_from_ascii_str(IAS_HOSTNAME).unwrap();
+    let dns_name = webpki::DNSNameRef::try_from_ascii_str(IAS_HOSTNAME)
+        .map_err(Error::invalid_dns_name_error)?;
     let mut sess = rustls::ClientSession::new(&Arc::new(config), dns_name);
-    let mut sock = TcpStream::connect(lookup_ipv4(IAS_HOSTNAME, 443)).unwrap();
+    let mut sock = TcpStream::connect(lookup_ipv4(IAS_HOSTNAME, IAS_HTTPS_PORT)?)
+        .map_err(|e| Error::io_error(e, "Failed to connect to IAS server".to_string()))?;
     let mut tls = rustls::Stream::new(&mut sess, &mut sock);
 
     let _result = tls.write(req.as_bytes());
@@ -204,11 +200,9 @@ pub(crate) fn get_report_from_intel(
 
     info!("write complete");
 
-    tls.read_to_end(&mut plaintext).unwrap();
+    tls.read_to_end(&mut plaintext)
+        .map_err(|e| Error::io_error(e, "failed to read response from IAS server".to_string()))?;
     info!("read_to_end complete");
-    let resp_string = String::from_utf8(plaintext.clone()).unwrap();
-
-    trace!("resp_string = {}", resp_string);
 
     parse_response_attn_report(&plaintext)
 }
@@ -237,11 +231,11 @@ fn parse_response_attn_report(resp: &[u8]) -> Result<EndorsedAttestationVerifica
     trace!("parse result {:?}", result);
     match respp.code {
         Some(200) => info!("OK Operation Successful"),
-        Some(401) => return Err(Error::unexpected_ias_report_response("Unauthorized Failed to authenticate or authorize request".to_string())),
-        Some(404) => return Err(Error::unexpected_ias_report_response("Not Found GID does not refer to a valid EPID group ID".to_string())),
-        Some(500) => return Err(Error::unexpected_ias_report_response("Internal error occurred".to_string())),
-        Some(503) => return Err(Error::unexpected_ias_report_response("Service is currently not able to process the request (due to a temporary overloading or maintenance). This is a temporary state – the same request can be repeated after some time.".to_string())),
-        _ => return Err(Error::unexpected_ias_report_response(format!("Unknown error occured: {:?}", respp.code))),
+        Some(401) => return Err(Error::unexpected_ias_report_response("unauthorized Failed to authenticate or authorize request".to_string())),
+        Some(404) => return Err(Error::unexpected_ias_report_response("not Found GID does not refer to a valid EPID group ID".to_string())),
+        Some(500) => return Err(Error::unexpected_ias_report_response("internal error occurred".to_string())),
+        Some(503) => return Err(Error::unexpected_ias_report_response("service is currently not able to process the request (due to a temporary overloading or maintenance). This is a temporary state – the same request can be repeated after some time.".to_string())),
+        _ => return Err(Error::unexpected_ias_report_response(format!("unknown error occured: {:?}", respp.code))),
     }
 
     let mut len_num: u32 = 0;
@@ -252,39 +246,65 @@ fn parse_response_attn_report(resp: &[u8]) -> Result<EndorsedAttestationVerifica
         let h = respp.headers[i];
         match h.name {
             "Content-Length" => {
-                let len_str = String::from_utf8(h.value.to_vec()).unwrap();
-                len_num = len_str.parse::<u32>().unwrap();
+                let len_str = str::from_utf8(h.value).map_err(|e| {
+                    Error::invalid_utf8_bytes(h.value.to_vec(), e, h.name.to_string())
+                })?;
+                len_num = len_str.parse::<u32>().map_err(|e| {
+                    Error::invalid_u32_string(len_str.to_string(), e, h.name.to_string())
+                })?;
                 trace!("content length = {}", len_num);
             }
-            "X-IASReport-Signature" => sig = str::from_utf8(h.value).unwrap().to_string(),
+            "X-IASReport-Signature" => {
+                sig = str::from_utf8(h.value)
+                    .map_err(|e| {
+                        Error::invalid_utf8_bytes(h.value.to_vec(), e, h.name.to_string())
+                    })?
+                    .to_string()
+            }
             "X-IASReport-Signing-Certificate" => {
-                cert = str::from_utf8(h.value).unwrap().to_string()
+                cert = str::from_utf8(h.value)
+                    .map_err(|e| {
+                        Error::invalid_utf8_bytes(h.value.to_vec(), e, h.name.to_string())
+                    })?
+                    .to_string()
             }
             _ => (),
         }
     }
 
     // Remove %0A from cert, and only obtain the signing cert
-    cert = cert.replace("%0A", "");
-    cert = percent_decode(cert);
+    cert = percent_decode(cert.replace("%0A", ""))?;
 
     let v: Vec<&str> = cert.split("-----").collect();
     if v.len() < 3 {
         return Err(Error::unexpected_ias_report_certificate_response(
-            "Invalid signing certificate".to_string(),
+            "invalid signing certificate".to_string(),
         ));
     }
     let sig_cert = v[2].to_string();
 
     if len_num != 0 {
-        let header_len = result.unwrap().unwrap();
+        let status = result.map_err(Error::http_parse_error)?;
+        let header_len = if status.is_complete() {
+            status.unwrap()
+        } else {
+            return Err(Error::http_parse_partial_status());
+        };
         let resp_body = &resp[header_len..];
-        attn_report = str::from_utf8(resp_body).unwrap().to_string();
+        attn_report = str::from_utf8(resp_body)
+            .map_err(|e| {
+                Error::invalid_utf8_bytes(resp_body.to_vec(), e, "Attestation Report".to_string())
+            })?
+            .to_string();
         info!("Attestation report: {}", attn_report);
     }
 
-    let signature = Base64Std.decode(&sig).unwrap();
-    let signing_cert = Base64Std.decode(&sig_cert).unwrap();
+    let signature = Base64Std
+        .decode(&sig)
+        .map_err(|e| Error::base64_decode(e, "Signature".to_string()))?;
+    let signing_cert = Base64Std
+        .decode(&sig_cert)
+        .map_err(|e| Error::base64_decode(e, "Signing Certificate".to_string()))?;
     Ok(EndorsedAttestationVerificationReport {
         avr: attn_report,
         signature,
@@ -302,29 +322,40 @@ fn parse_response_sigrl(resp: &[u8]) -> Result<Vec<u8>, Error> {
 
     match respp.code {
         Some(200) => info!("OK Operation Successful"),
-        Some(401) => return Err(Error::unexpected_sigrl_response("Unauthorized Failed to authenticate or authorize request".to_string())),
-        Some(404) => return Err(Error::unexpected_sigrl_response("Not Found GID does not refer to a valid EPID group ID".to_string())),
-        Some(500) => return Err(Error::unexpected_sigrl_response("Internal error occurred".to_string())),
-        Some(503) => return Err(Error::unexpected_sigrl_response("Service is currently not able to process the request (due to a temporary overloading or maintenance). This is a temporary state – the same request can be repeated after some time.".to_string())),
-        _ => return Err(Error::unexpected_sigrl_response(format!("Unknown error occured: {:?}", respp.code))),
+        Some(401) => return Err(Error::unexpected_sigrl_response("unauthorized Failed to authenticate or authorize request".to_string())),
+        Some(404) => return Err(Error::unexpected_sigrl_response("not Found GID does not refer to a valid EPID group ID".to_string())),
+        Some(500) => return Err(Error::unexpected_sigrl_response("internal error occurred".to_string())),
+        Some(503) => return Err(Error::unexpected_sigrl_response("service is currently not able to process the request (due to a temporary overloading or maintenance). This is a temporary state – the same request can be repeated after some time.".to_string())),
+        _ => return Err(Error::unexpected_sigrl_response(format!("unknown error occured: {:?}", respp.code))),
     }
 
     let mut len_num: u32 = 0;
     for i in 0..respp.headers.len() {
         let h = respp.headers[i];
         if h.name == "content-length" {
-            let len_str = String::from_utf8(h.value.to_vec()).unwrap();
-            len_num = len_str.parse::<u32>().unwrap();
+            let len_str = str::from_utf8(h.value).map_err(|e| {
+                Error::invalid_utf8_bytes(h.value.to_vec(), e, "Content-Length".to_string())
+            })?;
+            len_num = len_str.parse::<u32>().map_err(|e| {
+                Error::invalid_u32_string(len_str.to_string(), e, "Content-Length".to_string())
+            })?;
             trace!("content length = {}", len_num);
         }
     }
 
     if len_num != 0 {
-        let header_len = result.unwrap().unwrap();
+        let status = result.map_err(Error::http_parse_error)?;
+        let header_len = if status.is_complete() {
+            status.unwrap()
+        } else {
+            return Err(Error::http_parse_partial_status());
+        };
         let resp_body = &resp[header_len..];
         trace!("Base64-encoded SigRL: {:?}", resp_body);
 
-        Ok(Base64Std.decode(resp_body).unwrap())
+        Ok(Base64Std
+            .decode(resp_body)
+            .map_err(|e| Error::base64_decode(e, "SigRL".to_string()))?)
     } else {
         Ok(Vec::new())
     }
@@ -340,38 +371,50 @@ fn make_ias_client_config() -> rustls::ClientConfig {
     config
 }
 
-fn percent_decode(orig: String) -> String {
+fn percent_decode(orig: String) -> Result<String, Error> {
     let v: Vec<&str> = orig.split("%").collect();
     let mut ret = String::new();
     ret.push_str(v[0]);
     if v.len() > 1 {
         for s in v[1..].iter() {
-            ret.push(u8::from_str_radix(&s[0..2], 16).unwrap() as char);
+            ret.push(
+                u8::from_str_radix(&s[0..2], 16).map_err(|e| {
+                    Error::invalid_percent_decode(format!("failed to decode: {}", e))
+                })? as char,
+            );
             ret.push_str(&s[2..]);
         }
     }
-    ret
+    Ok(ret)
 }
 
-fn lookup_ipv4(host: &str, port: u16) -> SocketAddr {
-    use std::net::ToSocketAddrs;
-
-    let addrs = (host, port).to_socket_addrs().unwrap();
+fn lookup_ipv4(host: &str, port: u16) -> Result<SocketAddr, Error> {
+    let addrs = (host, port)
+        .to_socket_addrs()
+        .map_err(|_| Error::cannot_lookup_address(host.to_string(), port))?;
     for addr in addrs {
         if let SocketAddr::V4(_) = addr {
-            return addr;
+            return Ok(addr);
         }
     }
-
-    unreachable!("Cannot lookup address");
+    Err(Error::cannot_lookup_address(host.to_string(), port))
 }
 
-// CONTRACT: `hex` length must be 32
-pub(crate) fn decode_spid(hex: &str) -> sgx_spid_t {
+pub(crate) fn decode_spid(spid_str: &str) -> Result<sgx_spid_t, Error> {
+    let spid_str = spid_str.trim();
+    if spid_str.len() != 32 {
+        return Err(Error::invalid_spid(format!(
+            "invalid length: {}",
+            spid_str.len()
+        )));
+    }
+    let decoded_vec = match hex::decode(spid_str) {
+        Ok(v) => v,
+        Err(_) => {
+            return Err(Error::invalid_spid("failed to decode".to_string()));
+        }
+    };
     let mut spid = sgx_spid_t::default();
-    let hex = &hex.trim();
-    assert!(hex.len() == 32);
-    let decoded_vec = hex::decode(hex).unwrap();
     spid.id.copy_from_slice(&decoded_vec[..16]);
-    spid
+    Ok(spid)
 }

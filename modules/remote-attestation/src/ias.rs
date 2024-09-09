@@ -17,7 +17,7 @@ pub fn run_ias_ra<E: EnclaveCommandAPI<S>, S: CommitStore>(
     spid: String,
     ias_key: String,
 ) -> Result<EndorsedAttestationVerificationReport, Error> {
-    let spid = decode_spid(&spid);
+    let spid = decode_spid(&spid)?;
     let (target_info, epid_group_id) = init_quote()?;
     let CreateReportResponse { report } = enclave
         .create_report(CreateReportInput {
