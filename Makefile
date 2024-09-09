@@ -97,7 +97,6 @@ else
 	Service_Library_Name := sgx_tservice
 endif
 Crypto_Library_Name := sgx_tcrypto
-KeyExchange_Library_Name := sgx_tkey_exchange
 ProtectedFs_Library_Name := sgx_tprotected_fs
 
 RustEnclave_C_Files := $(wildcard ./enclave/*.c)
@@ -217,7 +216,7 @@ test:
 
 .PHONY: integration-test
 integration-test: $(Signed_RustEnclave_Name) bin/gaiad
-	cargo test $(CARGO_TARGET) --package integration-test $(APP_CARGO_FEATURES)
+	@PATH=${PATH}:$(CURDIR)/bin cargo test $(CARGO_TARGET) --package integration-test $(APP_CARGO_FEATURES)
 
 .PHONY: test-nodes
 test-setup-nodes: bin/gaiad
