@@ -7,8 +7,6 @@ fn main() {
     println!("cargo:rustc-link-search=native=./lib");
     println!("cargo:rustc-link-lib=static=Enclave_u");
     println!("cargo:rustc-link-search=native={}/lib64", sdk_dir);
-    println!("cargo:rustc-link-lib=static=sgx_uprotected_fs");
-    println!("cargo:rustc-link-lib=static=sgx_ukey_exchange");
 
     match sgx_mode.as_ref() {
         "SW" => {
