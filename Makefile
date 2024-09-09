@@ -55,7 +55,6 @@ ifeq ($(SGX_PRODUCTION), 1)
 	SGX_ENCLAVE_MODE = "Production Mode"
 	SGX_ENCLAVE_CONFIG = $(SGX_ENCLAVE_CONFIG)
 	SGX_SIGN_KEY = $(SGX_COMMERCIAL_KEY)
-	ENCLAVE_CARGO_FEATURES = --features=production
 else
 	SGX_ENCLAVE_MODE = "Development Mode"
 	SGX_ENCLAVE_CONFIG = "enclave/Enclave.config.xml"
