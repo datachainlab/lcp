@@ -70,6 +70,13 @@ pub struct IASRemoteAttestation {
         help = "An operator address to perform `registerEnclaveKey` transaction on-chain"
     )]
     pub operator: Option<String>,
+    /// IAS mode
+    #[clap(
+        long = "development",
+        default_value = "false",
+        help = "Use IAS development mode(default: false)"
+    )]
+    pub is_dev: bool,
 }
 
 impl IASRemoteAttestation {
@@ -93,7 +100,11 @@ fn run_ias_remote_attestation<E: EnclaveCommandAPI<S>, S: CommitStore>(
         &enclave,
         target_enclave_key,
         cmd.get_operator()?,
-        IASMode::Development,
+        if cmd.is_dev {
+            IASMode::Development
+        } else {
+            IASMode::Production
+        },
         spid,
         ias_key,
     ) {
