@@ -80,7 +80,7 @@ impl From<ConsensusState> for Any {
 // canonicalize_state canonicalizes some fields of specified client state
 // target fields: latest_height, frozen_height
 pub fn canonicalize_state(client_state: &ClientState) -> ClientState {
-    let raw_state: RawTmClientState = client_state.0.clone().try_into().unwrap();
+    let raw_state: RawTmClientState = client_state.0.clone().into();
     let opt = client_state.as_light_client_options().unwrap();
     #[allow(deprecated)]
     let tm = TendermintClientState::new(
@@ -109,7 +109,7 @@ pub fn gen_state_id(
     consensus_state: ConsensusState,
 ) -> Result<StateID, Error> {
     Ok(gen_state_id_from_any(
-        &client_state.try_into().unwrap(),
-        &consensus_state.try_into().unwrap(),
+        &client_state.into(),
+        &consensus_state.into(),
     )?)
 }

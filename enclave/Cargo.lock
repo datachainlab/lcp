@@ -432,7 +432,6 @@ checksum = "c9b0705efd4599c15a38151f4721f7bc388306f61084d3bfd50bd07fbca5cb60"
 name = "ecall-commands"
 version = "0.1.0"
 dependencies = [
- "attestation-report",
  "commitments",
  "crypto",
  "flex-error",
@@ -453,7 +452,6 @@ dependencies = [
  "ecall-commands",
  "enclave-environment",
  "flex-error",
- "hex",
  "lcp-types",
  "light-client",
  "sgx_tse",
@@ -494,7 +492,6 @@ name = "enclave"
 version = "0.1.0"
 dependencies = [
  "enclave-runtime",
- "log",
  "tendermint-lc",
 ]
 
@@ -995,8 +992,6 @@ name = "ocall-commands"
 version = "0.1.0"
 dependencies = [
  "serde",
- "serde_with",
- "sgx_types",
  "store",
 ]
 

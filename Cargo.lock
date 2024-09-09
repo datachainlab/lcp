@@ -1302,7 +1302,6 @@ checksum = "4f94fa09c2aeea5b8839e414b7b841bf429fd25b9c522116ac97ee87856d88b2"
 name = "ecall-commands"
 version = "0.1.0"
 dependencies = [
- "attestation-report",
  "commitments",
  "crypto",
  "flex-error",
@@ -3226,8 +3225,6 @@ name = "ocall-commands"
 version = "0.1.0"
 dependencies = [
  "serde",
- "serde_with",
- "sgx_types",
  "store",
 ]
 

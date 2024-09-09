@@ -29,7 +29,7 @@ impl<S: CommitStore> Enclave<S> {
             key_manager,
             store,
             sgx_enclave,
-            _marker: PhantomData::default(),
+            _marker: PhantomData,
         }
     }
 

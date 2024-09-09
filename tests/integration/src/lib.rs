@@ -9,7 +9,7 @@ mod types;
 mod tests {
     use super::*;
     use crate::relayer::Relayer;
-    use anyhow::{anyhow, bail};
+    use anyhow::bail;
     use commitments::UpdateStateProxyMessage;
     use crypto::Address;
     use ecall_commands::{
@@ -107,7 +107,7 @@ mod tests {
             info!("this test is running in HW mode");
         }
 
-        let signer = match enclave.generate_enclave_key(GenerateEnclaveKeyInput::default()) {
+        let signer = match enclave.generate_enclave_key(GenerateEnclaveKeyInput) {
             Ok(res) => res.pub_key.as_address(),
             Err(e) => {
                 bail!("failed to generate an enclave key: {:?}!", e);
@@ -122,7 +122,7 @@ mod tests {
                 enclave,
                 signer,
                 Some(operator),
-                remote_attestation::ias_utils::IASMode::Development,
+                remote_attestation::IASMode::Development,
                 std::env::var("SPID")?,
                 std::env::var("IAS_KEY")?,
             ) {
@@ -139,7 +139,7 @@ mod tests {
                 enclave,
                 signer,
                 None,
-                remote_attestation::ias_utils::IASMode::Development,
+                remote_attestation::IASMode::Development,
                 std::env::var("SPID")?,
                 std::env::var("IAS_KEY")?,
             ) {
@@ -154,9 +154,9 @@ mod tests {
         }
         #[cfg(feature = "sgx-sw")]
         {
+            use remote_attestation::ias_simulation::run_ias_ra_simulation;
             use remote_attestation::rsa::{pkcs1v15::SigningKey, rand_core::OsRng};
             use remote_attestation::sha2::Sha256;
-            use remote_attestation::ias_simulation::run_ias_ra_simulation;
             let res = match run_ias_ra_simulation(
                 enclave,
                 signer,
@@ -254,10 +254,7 @@ mod tests {
                 prefix: "ibc".into(),
                 path: Path::ChannelEnd(ChannelEndPath(port_id, channel_id)).to_string(),
                 value: res.0.encode_vec()?,
-                proof: CommitmentProofPair(
-                    res.2.try_into().map_err(|e| anyhow!("{:?}", e))?,
-                    merkle_proof_to_bytes(res.1)?,
-                ),
+                proof: CommitmentProofPair(res.2.into(), merkle_proof_to_bytes(res.1)?),
                 signer,
             })?;
         }

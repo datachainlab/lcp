@@ -12,9 +12,7 @@ crate-type = ["staticlib"]
 default = []
 
 [dependencies]
-log = { version = "0.4.8", default-features = false }
 enclave-runtime = { path = "../enclave-modules/runtime" }
-# simple_logger = { git = "https://github.com/bluele/rust-simple_logger", branch = "sgx", default-features = false, features = ["sgx"] }
 tendermint-lc = { path = "../modules/tendermint-lc", default-features = false }
 
 [patch."https://github.com/apache/teaclave-sgx-sdk.git"]

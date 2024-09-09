@@ -11,7 +11,6 @@ flex-error = { version = "0.4.4", default-features = false }
 
 commitments = { path = "../commitments", default-features = false }
 lcp-types = { path = "../types", default-features = false }
-attestation-report = { path = "../attestation-report", default-features = false }
 store = { path = "../store", default-features = false }
 crypto = { path = "../crypto", default-features = false }
 

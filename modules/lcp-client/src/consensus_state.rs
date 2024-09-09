@@ -47,8 +47,7 @@ impl Protobuf<Any> for ConsensusState {}
 
 impl From<ConsensusState> for Any {
     fn from(value: ConsensusState) -> Self {
-        let value =
-            RawConsensusState::try_from(value).expect("encoding to `Any` from `ConsensusState`");
+        let value = RawConsensusState::from(value);
         Any::new(
             LCP_CONSENSUS_STATE_TYPE_URL.to_string(),
             value.encode_to_vec(),

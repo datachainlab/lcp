@@ -12,6 +12,7 @@ use ibc::core::{
 use lcp_types::proto::google::protobuf::Any as ProtoAny;
 
 /// IBCContext is a context that implements ValidationContext from ibc-rs over elc's context
+///
 /// NOTE: Since elc provides only 02-client equivalent functions, it implements only a very limited functions of ValidationContext trait.
 pub struct IBCContext<'a, ClientState: Ics02ClientState, ConsensusState: Ics02ConsensusState> {
     parent: &'a dyn HostClientReader,
