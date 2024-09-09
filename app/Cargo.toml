@@ -35,7 +35,5 @@ git2 = "0.17"
 [features]
 default = []
 sgx-sw = [
-    "enclave-api/sgx-sw",
-    "service/sgx-sw",
     "remote-attestation/sgx-sw"
 ]

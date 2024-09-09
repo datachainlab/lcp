@@ -154,8 +154,8 @@ mod tests {
         }
         #[cfg(feature = "sgx-sw")]
         {
-            use enclave_api::rsa::{pkcs1v15::SigningKey, rand_core::OsRng};
-            use enclave_api::sha2::Sha256;
+            use remote_attestation::rsa::{pkcs1v15::SigningKey, rand_core::OsRng};
+            use remote_attestation::sha2::Sha256;
             use remote_attestation::ias_simulation::run_ias_ra_simulation;
             let res = match run_ias_ra_simulation(
                 enclave,

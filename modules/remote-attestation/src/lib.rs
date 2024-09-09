@@ -5,3 +5,6 @@ pub mod ias_simulation;
 mod ias_utils;
 
 pub use ias_utils::{IASMode, IAS_HOSTNAME};
+#[cfg(feature = "sgx-sw")]
+pub use rsa;
+pub use sha2;

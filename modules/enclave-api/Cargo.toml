@@ -9,8 +9,6 @@ sgx_urts = { rev = "v1.1.6", git = "https://github.com/apache/incubator-teaclave
 bincode = { version = "2.0.0-rc.3", default-features = false, features = ["serde", "alloc"] }
 log = "0.4.8"
 flex-error = { version = "0.4.4" }
-rsa = { version = "0.9.2", features = ["pem"], optional = true }
-sha2 = { version = "0.10.6", default-features = false, features = ["oid"], optional = true }
 
 lcp-types = { path = "../types" }
 commitments = { path = "../commitments" }
@@ -27,7 +25,3 @@ std = [
     "flex-error/std"
 ]
 rocksdb = ["store/rocksdbstore"]
-sgx-sw = [
-    "rsa",
-    "sha2"
-]

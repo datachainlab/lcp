@@ -1,5 +1,7 @@
 #![no_std]
 extern crate alloc;
+
+#[allow(unused_imports)]
 mod prelude {
     pub use core::prelude::v1::*;
 

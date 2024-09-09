@@ -16,7 +16,7 @@ pub const MAX_UNIX_TIMESTAMP_NANOS: u128 = 253_402_300_799_999_999_999;
 pub struct Time(TmTime);
 
 impl Time {
-    #[cfg(all(feature = "std", not(feature = "sgx")))]
+    #[cfg(feature = "std")]
     pub fn now() -> Self {
         use std::time::{SystemTime, UNIX_EPOCH};
         let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();

@@ -188,10 +188,10 @@ fn run_simulate_remote_attestation<E: EnclaveCommandAPI<S>, S: CommitStore>(
     enclave: E,
     cmd: &SimulateRemoteAttestation,
 ) -> Result<()> {
-    use enclave_api::rsa::{
+    use remote_attestation::rsa::{
         pkcs1v15::SigningKey, pkcs8::DecodePrivateKey, traits::PublicKeyParts, RsaPrivateKey,
     };
-    use enclave_api::sha2::Sha256;
+    use remote_attestation::sha2::Sha256;
     use std::fs;
 
     let pk = RsaPrivateKey::read_pkcs8_pem_file(&cmd.signing_key_path)?;

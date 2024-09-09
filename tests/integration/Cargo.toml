@@ -39,6 +39,5 @@ remote-attestation = { path = "../../modules/remote-attestation" }
 [features]
 default = []
 sgx-sw = [
-    "enclave-api/sgx-sw",
     "remote-attestation/sgx-sw"
 ]
