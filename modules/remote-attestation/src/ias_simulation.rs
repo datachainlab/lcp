@@ -1,6 +1,7 @@
 use crate::errors::Error;
 use crate::ias_utils::{get_quote, init_quote, validate_qe_report, SGX_QUOTE_SIGN_TYPE};
 use attestation_report::{AttestationVerificationReport, EndorsedAttestationVerificationReport};
+use base64::{engine::general_purpose::STANDARD as Base64Std, Engine};
 use crypto::Address;
 use ecall_commands::{CreateReportInput, CreateReportResponse};
 use enclave_api::EnclaveCommandAPI;
@@ -61,7 +62,7 @@ fn create_simulate_avr(
         advisory_ids,
         isv_enclave_quote_status,
         platform_info_blob: None,
-        isv_enclave_quote_body: base64::encode(&quote.as_slice()[..432]),
+        isv_enclave_quote_body: Base64Std.encode(&quote.as_slice()[..432]),
         ..Default::default()
     };
     let avr_json = avr.to_canonical_json().unwrap();

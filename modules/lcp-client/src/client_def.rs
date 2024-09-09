@@ -6,6 +6,7 @@ use crate::message::{
 };
 use alloy_sol_types::{sol, SolValue};
 use attestation_report::{EndorsedAttestationVerificationReport, ReportData};
+use base64::{engine::general_purpose::STANDARD as Base64Std, Engine};
 use crypto::{verify_signature_address, Address, Keccak256};
 use hex_literal::hex;
 use light_client::commitments::{
@@ -841,7 +842,7 @@ mod tests {
             // advisory_ids,
             // isv_enclave_quote_status,
             platform_info_blob: None,
-            isv_enclave_quote_body: base64::encode(&quote.as_slice()[..432]),
+            isv_enclave_quote_body: Base64Std.encode(&quote.as_slice()[..432]),
             ..Default::default()
         };
 

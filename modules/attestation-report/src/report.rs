@@ -1,5 +1,6 @@
 use crate::errors::Error;
 use crate::prelude::*;
+use base64::{engine::general_purpose::STANDARD as Base64Std, Engine};
 use chrono::prelude::DateTime;
 use core::fmt::{Debug, Display, Error as FmtError};
 use crypto::Address;
@@ -141,7 +142,9 @@ impl AttestationVerificationReport {
             ));
         }
 
-        let quote = base64::decode(&self.isv_enclave_quote_body).map_err(Error::base64)?;
+        let quote = Base64Std
+            .decode(&self.isv_enclave_quote_body)
+            .map_err(Error::base64)?;
         let sgx_quote: sgx_quote_t = unsafe { core::ptr::read(quote.as_ptr() as *const _) };
         Ok(Quote {
             raw: sgx_quote,
@@ -207,12 +210,14 @@ mod serde_base64 {
     use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
     pub fn serialize<S: Serializer>(v: &Vec<u8>, s: S) -> Result<S::Ok, S::Error> {
-        let base64 = base64::encode(v);
+        let base64 = Base64Std.encode(v);
         String::serialize(&base64, s)
     }
 
     pub fn deserialize<'de, D: Deserializer<'de>>(d: D) -> Result<Vec<u8>, D::Error> {
         let base64 = String::deserialize(d)?;
-        base64::decode(base64.as_bytes()).map_err(serde::de::Error::custom)
+        Base64Std
+            .decode(base64.as_bytes())
+            .map_err(serde::de::Error::custom)
     }
 }

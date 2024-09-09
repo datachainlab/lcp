@@ -1,5 +1,6 @@
 use crate::errors::Error;
 use attestation_report::EndorsedAttestationVerificationReport;
+use base64::{engine::general_purpose::STANDARD as Base64Std, Engine};
 use log::*;
 use rand::RngCore;
 use sgx_types::{
@@ -166,7 +167,7 @@ pub(crate) fn get_report_from_intel(
     ias_key: &str,
 ) -> Result<EndorsedAttestationVerificationReport, Error> {
     let config = make_ias_client_config();
-    let encoded_quote = base64::encode(&quote[..]);
+    let encoded_quote = Base64Std.encode(&quote[..]);
     let encoded_json = format!("{{\"isvEnclaveQuote\":\"{}\"}}\r\n", encoded_quote);
 
     let req = format!("POST {} HTTP/1.1\r\nHOST: {}\r\nOcp-Apim-Subscription-Key:{}\r\nContent-Length:{}\r\nContent-Type: application/json\r\nConnection: close\r\n\r\n{}",
@@ -272,8 +273,8 @@ fn parse_response_attn_report(resp: &[u8]) -> Result<EndorsedAttestationVerifica
         info!("Attestation report: {}", attn_report);
     }
 
-    let signature = base64::decode(&sig).unwrap();
-    let signing_cert = base64::decode(&sig_cert).unwrap();
+    let signature = Base64Std.decode(&sig).unwrap();
+    let signing_cert = Base64Std.decode(&sig_cert).unwrap();
     Ok(EndorsedAttestationVerificationReport {
         avr: attn_report,
         signature,
@@ -320,7 +321,7 @@ fn parse_response_sigrl(resp: &[u8]) -> Vec<u8> {
         let resp_body = &resp[header_len..];
         trace!("Base64-encoded SigRL: {:?}", resp_body);
 
-        return base64::decode(resp_body).unwrap();
+        return Base64Std.decode(resp_body).unwrap();
     }
 
     // len_num == 0
