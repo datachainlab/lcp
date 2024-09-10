@@ -27,11 +27,14 @@ impl Time {
         Time(TmTime::unix_epoch())
     }
 
+    pub fn from_unix_timestamp(secs: i64, nanos: u32) -> Result<Self, TimeError> {
+        let ut = TmTime::from_unix_timestamp(secs, nanos).map_err(TimeError::tendermint)?;
+        Ok(Time(ut))
+    }
+
     pub fn from_unix_timestamp_nanos(timestamp: u128) -> Result<Self, TimeError> {
         let d = nanos_to_duration(timestamp)?;
-        let ut = TmTime::from_unix_timestamp(d.as_secs().try_into()?, d.subsec_nanos())
-            .map_err(TimeError::tendermint)?;
-        Ok(Time(ut))
+        Self::from_unix_timestamp(d.as_secs().try_into()?, d.subsec_nanos())
     }
 
     pub fn as_unix_timestamp_secs(&self) -> u64 {

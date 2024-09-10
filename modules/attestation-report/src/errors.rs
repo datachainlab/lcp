@@ -56,6 +56,10 @@ define_error! {
         [TraceError<base64::DecodeError>]
         |_| { "base64 error" },
 
+        ChronoParse
+        [TraceError<chrono::ParseError>]
+        |_| { "chrono parse error" },
+
         TimeError
         [lcp_types::TimeError]
         |_| { "Time error" },
@@ -66,8 +70,20 @@ define_error! {
     }
 }
 
+impl From<chrono::ParseError> for Error {
+    fn from(value: chrono::ParseError) -> Self {
+        Self::chrono_parse(value)
+    }
+}
+
 impl From<crypto::Error> for Error {
     fn from(value: crypto::Error) -> Self {
         Self::crypto_error(value)
+    }
+}
+
+impl From<lcp_types::TimeError> for Error {
+    fn from(value: lcp_types::TimeError) -> Self {
+        Self::time_error(value)
     }
 }

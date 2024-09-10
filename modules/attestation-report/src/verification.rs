@@ -1,11 +1,6 @@
 use crate::prelude::*;
 use crate::{errors::Error, EndorsedAttestationVerificationReport};
-use lcp_types::Time;
-#[cfg(feature = "sgx")]
-use rustls_sgx as rustls;
-use tendermint::Time as TmTime;
-#[cfg(feature = "sgx")]
-use webpki_sgx as webpki;
+use lcp_types::{nanos_to_duration, Time};
 
 pub const IAS_REPORT_CA: &[u8] =
     include_bytes!("../../../enclave/Intel_SGX_Attestation_RootCA.pem");
@@ -29,15 +24,13 @@ pub fn verify_report(
     current_timestamp: Time,
     report: &EndorsedAttestationVerificationReport,
 ) -> Result<(), Error> {
-    let current_unix_timestamp = current_timestamp
-        .duration_since(TmTime::unix_epoch())
-        .unwrap();
     // NOTE: Currently, webpki::Time's constructor only accepts seconds as unix timestamp.
     // Therefore, the current time are rounded up conservatively.
-    let secs = if current_unix_timestamp.subsec_nanos() > 0 {
-        current_unix_timestamp.as_secs()
+    let duration = nanos_to_duration(current_timestamp.as_unix_timestamp_nanos())?;
+    let secs = if duration.subsec_nanos() > 0 {
+        duration.as_secs() + 1
     } else {
-        current_unix_timestamp.as_secs() + 1
+        duration.as_secs()
     };
     let now = webpki::Time::from_seconds_since_unix_epoch(secs);
     let root_ca_pem = pem::parse(IAS_REPORT_CA).expect("failed to parse pem bytes");

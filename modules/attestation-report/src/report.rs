@@ -7,7 +7,6 @@ use crypto::Address;
 use lcp_types::Time;
 use serde::{Deserialize, Serialize};
 use sgx_types::{metadata::metadata_t, sgx_measurement_t, sgx_quote_t, sgx_report_data_t};
-use tendermint::Time as TmTime;
 
 pub const REPORT_DATA_V1: u8 = 1;
 
@@ -124,14 +123,11 @@ pub struct AttestationVerificationReport {
 impl AttestationVerificationReport {
     pub fn attestation_time(&self) -> Result<Time, Error> {
         let time_fixed = self.timestamp.clone() + "+0000";
-        let dt = DateTime::parse_from_str(&time_fixed, "%Y-%m-%dT%H:%M:%S%.f%z").unwrap();
-
-        Ok(
-            TmTime::from_unix_timestamp(dt.timestamp(), dt.timestamp_subsec_nanos())
-                .map_err(lcp_types::TimeError::tendermint)
-                .map_err(Error::time_error)?
-                .into(),
-        )
+        let dt = DateTime::parse_from_str(&time_fixed, "%Y-%m-%dT%H:%M:%S%.f%z")?;
+        Ok(Time::from_unix_timestamp(
+            dt.timestamp(),
+            dt.timestamp_subsec_nanos(),
+        )?)
     }
 
     pub fn parse_quote(&self) -> Result<Quote, Error> {

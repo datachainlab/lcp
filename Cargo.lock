@@ -274,7 +274,6 @@ dependencies = [
  "serde",
  "serde_json",
  "sgx_types",
- "tendermint 0.29.0",
  "webpki 0.21.4",
 ]
 
