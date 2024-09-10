@@ -117,8 +117,6 @@ Signed_RustEnclave_Name := bin/enclave.signed.so
 
 ######## Test Settings ########
 
-DOCKER        ?= docker
-DOCKER_BUILD  ?= $(DOCKER) build --rm --no-cache --pull
 GAIAD_VERSION ?= v7.0.3
 
 ######## Targets ########
@@ -224,7 +222,3 @@ test-setup-nodes: bin/gaiad
 
 bin/gaiad:
 	curl -o ./bin/gaiad -LO https://github.com/cosmos/gaia/releases/download/$(GAIAD_VERSION)/gaiad-$(GAIAD_VERSION)-linux-amd64 && chmod +x ./bin/gaiad
-
-.PHONY: docker
-sgx-docker:
-	@cd rust-sgx-sdk/dockerfile && docker build --no-cache -t datachainlab/sgx-rust:2004-1.1.6 -f Dockerfile.2004.nightly .
