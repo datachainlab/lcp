@@ -9,7 +9,7 @@ sgx_tse = { rev = "v1.1.6", git = "https://github.com/apache/incubator-teaclave-
 flex-error = { version = "0.4.4", default-features = false }
 
 crypto = { path = "../../modules/crypto", default-features = false, features = ["sgx"] }
-attestation-report = { path = "../../modules/attestation-report", default-features = false, features = ["sgx"] }
+attestation-report = { path = "../../modules/attestation-report", default-features = false }
 context = { path = "../../modules/context", default-features = false }
 enclave-environment = { path = "../environment", default-features = false }
 

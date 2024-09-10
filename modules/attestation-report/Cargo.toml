@@ -26,4 +26,3 @@ std = [
     "flex-error/std",
     "serde_json/preserve_order"
 ]
-sgx = []
