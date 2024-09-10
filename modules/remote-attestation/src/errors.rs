@@ -130,5 +130,9 @@ define_error! {
         Time
         [lcp_types::TimeError]
         |_| { "Time error" },
+
+        EnclaveApi
+        [enclave_api::Error]
+        |_| { "EnclaveAPI error" },
     }
 }

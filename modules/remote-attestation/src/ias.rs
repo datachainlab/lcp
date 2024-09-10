@@ -25,7 +25,7 @@ pub fn run_ias_ra<E: EnclaveCommandAPI<S>, S: CommitStore>(
             target_enclave_key,
             operator,
         })
-        .unwrap();
+        .map_err(Error::enclave_api)?;
 
     // Now sigrl is the revocation list, a vec<u8>
     let sigrl = get_sigrl_from_intel(mode, epid_group_id, &ias_key)?;

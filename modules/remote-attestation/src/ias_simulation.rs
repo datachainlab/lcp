@@ -24,7 +24,7 @@ pub fn run_ias_ra_simulation<E: EnclaveCommandAPI<S>, S: CommitStore>(
             target_enclave_key,
             operator,
         })
-        .unwrap();
+        .map_err(Error::enclave_api)?;
 
     let (quote, qe_report) = get_quote(vec![], report, SGX_QUOTE_SIGN_TYPE, Default::default())?;
     validate_qe_report(&target_info, &qe_report)?;
