@@ -26,7 +26,8 @@ impl SealingKey for EnclaveKey {
 }
 
 fn seal_enclave_key(data: UnsealedEnclaveKey) -> Result<SealedEnclaveKey, Error> {
-    let sealed_data = SgxSealedData::<UnsealedEnclaveKey>::seal_data(Default::default(), &data)?;
+    let sealed_data = SgxSealedData::<UnsealedEnclaveKey>::seal_data(Default::default(), &data)
+        .map_err(|e| Error::sgx_error(e, "failed to seal enclave key".to_string()))?;
     let mut sek = SealedEnclaveKey([0; SEALED_DATA_32_USIZE]);
     let _ = unsafe {
         sealed_data.to_raw_sealed_data_t(
@@ -46,7 +47,10 @@ fn unseal_enclave_key(sek: &SealedEnclaveKey) -> Result<UnsealedEnclaveKey, Erro
         )
     }
     .ok_or_else(|| Error::failed_unseal("failed to unseal data".to_owned()))?;
-    Ok(*sealed.unseal_data()?.get_decrypt_txt())
+    Ok(*sealed
+        .unseal_data()
+        .map_err(|e| Error::sgx_error(e, "failed to unseal enclave key".to_string()))?
+        .get_decrypt_txt())
 }
 
 impl Signer for SealedEnclaveKey {

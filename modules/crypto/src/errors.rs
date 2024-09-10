@@ -9,9 +9,10 @@ define_error! {
         SgxError
         {
             status: sgx_status_t,
+            descr: String
         }
         |e| {
-            format_args!("SGX error: {:?}", e.status)
+            format_args!("SGX error: status={:?} descr={}", e.status, e.descr)
         },
 
         FailedSeal
@@ -75,12 +76,6 @@ define_error! {
         HexParseError
         [TraceError<hex::FromHexError>]
         |_| { "hex parse error" },
-    }
-}
-
-impl From<sgx_status_t> for Error {
-    fn from(value: sgx_status_t) -> Self {
-        Self::sgx_error(value)
     }
 }
 

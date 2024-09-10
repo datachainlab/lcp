@@ -115,7 +115,7 @@ fn run_ias_remote_attestation<E: EnclaveCommandAPI<S>, S: CommitStore>(
                 .save_avr(target_enclave_key, res)?;
             Ok(())
         }
-        Err(e) => bail!("failed to perform IAS Remote Attestation: {:?}!", e),
+        Err(e) => bail!("failed to perform IAS Remote Attestation: {}", e),
     }
 }
 
@@ -259,6 +259,6 @@ fn run_simulate_remote_attestation<E: EnclaveCommandAPI<S>, S: CommitStore>(
                 .save_avr(target_enclave_key, res)?;
             Ok(())
         }
-        Err(e) => bail!("failed to simulate Remote Attestation: {:?}!", e),
+        Err(e) => bail!("failed to simulate Remote Attestation: {}", e),
     }
 }
