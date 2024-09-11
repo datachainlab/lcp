@@ -20,8 +20,16 @@ The design of LCP is based on the following principles:
 
 For the details, please see here: https://docs.lcp.network
 
+## Supported light clients
+
+- [Cosmos/Tendermint](https://github.com/datachainlab/lcp/tree/main/modules/tendermint-lc)
+- [Ethereum](https://github.com/datachainlab/ethereum-elc)
+- [BNB Smart Chain](https://github.com/datachainlab/parlia-elc)
+- [Hyperledger Besu](https://github.com/datachainlab/besu-qbft-elc)
+
 ## Related repositories
 
 - https://github.com/datachainlab/lcp-go provides a Go implementation for LCP client and e2e tests between two tendermint chains using LCP
 - https://github.com/datachainlab/lcp-solidity provides a Solidity implementation for LCP client
-- https://github.com/datachainlab/cosmos-ethereum-ibc-lcp provies an IBC bridge demo between ethereum and tendermint chain
+- https://github.com/datachainlab/cosmos-ethereum-ibc-lcp provies an IBC bridge demo between ethereum and Cosmos chain
+- https://github.com/datachainlab/cosmos-bsc-ibc-lcp provides an IBC bridge demo between BNB Smart Chain and Cosmos chain
