@@ -122,7 +122,7 @@ mod tests {
                 enclave,
                 signer,
                 Some(operator),
-                remote_attestation::IASMode::Development,
+                remote_attestation::IASMode::Production,
                 std::env::var("SPID")?,
                 std::env::var("IAS_KEY")?,
             ) {
@@ -139,7 +139,7 @@ mod tests {
                 enclave,
                 signer,
                 None,
-                remote_attestation::IASMode::Development,
+                remote_attestation::IASMode::Production,
                 std::env::var("SPID")?,
                 std::env::var("IAS_KEY")?,
             ) {
@@ -168,7 +168,7 @@ mod tests {
             ) {
                 Ok(res) => res.get_avr()?,
                 Err(e) => {
-                    bail!("IAS Remote Attestation Failed {:?}!", e);
+                    bail!("Remote Attestation Simulation Failed {:?}!", e);
                 }
             };
             let report_data = res.parse_quote()?.report_data();
@@ -186,7 +186,7 @@ mod tests {
             ) {
                 Ok(res) => res.get_avr()?,
                 Err(e) => {
-                    bail!("IAS Remote Attestation Failed {:?}!", e);
+                    bail!("Remote Attestation Simulation Failed {:?}!", e);
                 }
             };
             let report_data = res.parse_quote()?.report_data();
