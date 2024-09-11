@@ -1,6 +1,3 @@
-######## Import SGX SDK ########
-include ImportRustSGXSDK.mk
-
 ######## SGX SDK Settings ########
 SGX_SDK ?= /opt/sgxsdk
 SGX_MODE ?= HW
@@ -9,7 +6,7 @@ SGX_DEBUG ?= 0
 SGX_PRERELEASE ?= 0
 SGX_PRODUCTION ?= 0
 
-include rust-sgx-sdk/buildenv.mk
+include buildenv.mk
 
 ifeq ($(shell getconf LONG_BIT), 32)
 	SGX_ARCH := x86
@@ -58,13 +55,12 @@ ifeq ($(SGX_PRODUCTION), 1)
 	SGX_ENCLAVE_MODE = "Production Mode"
 	SGX_ENCLAVE_CONFIG = $(SGX_ENCLAVE_CONFIG)
 	SGX_SIGN_KEY = $(SGX_COMMERCIAL_KEY)
-	ENCLAVE_CARGO_FEATURES = --features=production
 else
 	SGX_ENCLAVE_MODE = "Development Mode"
 	SGX_ENCLAVE_CONFIG = "enclave/Enclave.config.xml"
 	SGX_SIGN_KEY = "enclave/Enclave_private.pem"
 	ifneq ($(SGX_MODE), HW)
-		ENCLAVE_CARGO_FEATURES = --features=default,sgx-sw
+		ENCLAVE_CARGO_FEATURES = --features=default
 		APP_CARGO_FEATURES     = --features=default,sgx-sw
 	endif
 endif
@@ -73,8 +69,6 @@ endif
 
 CUSTOM_LIBRARY_PATH := ./lib
 CUSTOM_BIN_PATH := ./bin
-CUSTOM_EDL_PATH := ./rust-sgx-sdk/edl
-CUSTOM_COMMON_PATH := ./rust-sgx-sdk/common
 
 ######## EDL Settings ########
 
@@ -84,7 +78,7 @@ Enclave_EDL_Files := enclave/Enclave_t.c enclave/Enclave_t.h app/Enclave_u.c app
 
 App_Rust_Flags := $(CARGO_TARGET) $(APP_CARGO_FEATURES)
 App_SRC_Files := $(shell find app/ -type f -name '*.rs') $(shell find app/ -type f -name 'Cargo.toml')
-App_Include_Paths := -I ./app -I./include -I$(SGX_SDK)/include -I$(CUSTOM_EDL_PATH)
+App_Include_Paths := -I ./app -I./include -I$(SGX_SDK)/include
 App_C_Flags := $(SGX_COMMON_CFLAGS) -fPIC -Wno-attributes $(App_Include_Paths)
 
 App_Rust_Path := ./target/$(OUTPUT_PATH)
@@ -103,12 +97,11 @@ else
 	Service_Library_Name := sgx_tservice
 endif
 Crypto_Library_Name := sgx_tcrypto
-KeyExchange_Library_Name := sgx_tkey_exchange
 ProtectedFs_Library_Name := sgx_tprotected_fs
 
 RustEnclave_C_Files := $(wildcard ./enclave/*.c)
 RustEnclave_C_Objects := $(RustEnclave_C_Files:.c=.o)
-RustEnclave_Include_Paths := -I$(CUSTOM_COMMON_PATH)/inc -I$(CUSTOM_EDL_PATH) -I$(SGX_SDK)/include -I$(SGX_SDK)/include/tlibc -I$(SGX_SDK)/include/stlport -I$(SGX_SDK)/include/epid -I ./enclave -I./include
+RustEnclave_Include_Paths := -I$(SGX_SDK)/include -I$(SGX_SDK)/include/tlibc -I$(SGX_SDK)/include/stlport -I$(SGX_SDK)/include/epid -I ./enclave -I./include
 
 RustEnclave_Link_Libs := -L$(CUSTOM_LIBRARY_PATH) -lenclave
 RustEnclave_Compile_Flags := $(SGX_COMMON_CFLAGS) $(ENCLAVE_CFLAGS) $(RustEnclave_Include_Paths)
@@ -124,8 +117,6 @@ Signed_RustEnclave_Name := bin/enclave.signed.so
 
 ######## Test Settings ########
 
-DOCKER        ?= docker
-DOCKER_BUILD  ?= $(DOCKER) build --rm --no-cache --pull
 GAIAD_VERSION ?= v7.0.3
 
 ######## Targets ########
@@ -142,8 +133,8 @@ clean:
 ######## EDL Objects ########
 
 $(Enclave_EDL_Files): $(SGX_EDGER8R) enclave/Enclave.edl
-	$(SGX_EDGER8R) --trusted enclave/Enclave.edl --search-path $(SGX_SDK)/include --search-path $(CUSTOM_EDL_PATH) --trusted-dir enclave
-	$(SGX_EDGER8R) --untrusted enclave/Enclave.edl --search-path $(SGX_SDK)/include --search-path $(CUSTOM_EDL_PATH) --untrusted-dir app
+	$(SGX_EDGER8R) --trusted enclave/Enclave.edl --search-path $(SGX_SDK)/include --trusted-dir enclave
+	$(SGX_EDGER8R) --untrusted enclave/Enclave.edl --search-path $(SGX_SDK)/include --untrusted-dir app
 	@echo "GEN  =>  $(Enclave_EDL_Files)"
 
 ######## App Objects ########
@@ -231,7 +222,3 @@ test-setup-nodes: bin/gaiad
 
 bin/gaiad:
 	curl -o ./bin/gaiad -LO https://github.com/cosmos/gaia/releases/download/$(GAIAD_VERSION)/gaiad-$(GAIAD_VERSION)-linux-amd64 && chmod +x ./bin/gaiad
-
-.PHONY: docker
-sgx-docker:
-	@cd rust-sgx-sdk/dockerfile && docker build --no-cache -t datachainlab/sgx-rust:2004-1.1.6 -f Dockerfile.2004.nightly .

@@ -1,20 +1,12 @@
 #![no_std]
-#![allow(incomplete_features)]
 #![allow(clippy::large_enum_variant)]
-#![feature(generic_const_exprs)]
 extern crate alloc;
+pub use crate::log::LogCommand;
 pub use crate::store::{StoreCommand, StoreResult};
-pub use remote_attestation::{
-    GetIASSocketResult, GetQuoteInput, GetQuoteResult, GetReportAttestationStatusInput,
-    GetReportAttestationStatusResult, InitQuoteResult, RemoteAttestationCommand,
-    RemoteAttestationResult,
-};
-
-mod remote_attestation;
-mod store;
-mod transmuter;
-
 use serde::{Deserialize, Serialize};
+
+mod log;
+mod store;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct OCallCommand {
@@ -23,13 +15,13 @@ pub struct OCallCommand {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub enum Command {
-    RemoteAttestation(RemoteAttestationCommand),
+    Log(LogCommand),
     Store(StoreCommand),
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 pub enum CommandResult {
-    RemoteAttestation(RemoteAttestationResult),
+    Log,
     Store(StoreResult),
     CommandError(alloc::string::String),
 }

@@ -85,7 +85,7 @@ pub fn gen_state_id(
     consensus_state: ConsensusState,
 ) -> Result<StateID, Error> {
     Ok(gen_state_id_from_any(
-        &client_state.try_into().unwrap(),
-        &consensus_state.try_into().unwrap(),
+        &client_state.into(),
+        &consensus_state.into(),
     )?)
 }

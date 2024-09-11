@@ -9,8 +9,9 @@ pub const VALIDATION_CONTEXT_TYPE_EMPTY_EMPTY: u16 = 0;
 pub const VALIDATION_CONTEXT_TYPE_EMPTY_WITHIN_TRUSTING_PERIOD: u16 = 1;
 pub const VALIDATION_CONTEXT_HEADER_SIZE: usize = 32;
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ValidationContext {
+    #[default]
     Empty,
     TrustingPeriod(TrustingPeriodContext),
 }
@@ -112,12 +113,6 @@ sol! {
     struct EthABIValidationContext {
         bytes32 header;
         bytes context_bytes;
-    }
-}
-
-impl Default for ValidationContext {
-    fn default() -> Self {
-        ValidationContext::Empty
     }
 }
 

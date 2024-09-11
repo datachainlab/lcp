@@ -1,12 +1,12 @@
 use crate::errors::Error;
 use crate::prelude::*;
+use base64::{engine::general_purpose::STANDARD as Base64Std, Engine};
 use chrono::prelude::DateTime;
 use core::fmt::{Debug, Display, Error as FmtError};
 use crypto::Address;
 use lcp_types::Time;
 use serde::{Deserialize, Serialize};
 use sgx_types::{metadata::metadata_t, sgx_measurement_t, sgx_quote_t, sgx_report_data_t};
-use tendermint::Time as TmTime;
 
 pub const REPORT_DATA_V1: u8 = 1;
 
@@ -123,14 +123,11 @@ pub struct AttestationVerificationReport {
 impl AttestationVerificationReport {
     pub fn attestation_time(&self) -> Result<Time, Error> {
         let time_fixed = self.timestamp.clone() + "+0000";
-        let dt = DateTime::parse_from_str(&time_fixed, "%Y-%m-%dT%H:%M:%S%.f%z").unwrap();
-
-        Ok(
-            TmTime::from_unix_timestamp(dt.timestamp(), dt.timestamp_subsec_nanos())
-                .map_err(lcp_types::TimeError::tendermint)
-                .map_err(Error::time_error)?
-                .into(),
-        )
+        let dt = DateTime::parse_from_str(&time_fixed, "%Y-%m-%dT%H:%M:%S%.f%z")?;
+        Ok(Time::from_unix_timestamp(
+            dt.timestamp(),
+            dt.timestamp_subsec_nanos(),
+        )?)
     }
 
     pub fn parse_quote(&self) -> Result<Quote, Error> {
@@ -141,7 +138,9 @@ impl AttestationVerificationReport {
             ));
         }
 
-        let quote = base64::decode(&self.isv_enclave_quote_body).map_err(Error::base64)?;
+        let quote = Base64Std
+            .decode(&self.isv_enclave_quote_body)
+            .map_err(Error::base64)?;
         let sgx_quote: sgx_quote_t = unsafe { core::ptr::read(quote.as_ptr() as *const _) };
         Ok(Quote {
             raw: sgx_quote,
@@ -207,12 +206,14 @@ mod serde_base64 {
     use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
     pub fn serialize<S: Serializer>(v: &Vec<u8>, s: S) -> Result<S::Ok, S::Error> {
-        let base64 = base64::encode(v);
+        let base64 = Base64Std.encode(v);
         String::serialize(&base64, s)
     }
 
     pub fn deserialize<'de, D: Deserializer<'de>>(d: D) -> Result<Vec<u8>, D::Error> {
         let base64 = String::deserialize(d)?;
-        base64::decode(base64.as_bytes()).map_err(serde::de::Error::custom)
+        Base64Std
+            .decode(base64.as_bytes())
+            .map_err(serde::de::Error::custom)
     }
 }

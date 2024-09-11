@@ -286,6 +286,7 @@ impl<'a> KVStore for StoreTransaction<'a> {
 }
 
 /// ReadTransaction is a `read-only` transaction.
+///
 /// All read operations are performed based on a specific version of snapshot.
 /// All write operations are applied to the transaction's buffer, but they are never committed to the DB.
 pub struct ReadTransaction<'a> {
@@ -312,6 +313,7 @@ impl<'a> KVStore for ReadTransaction<'a> {
 }
 
 /// UpdateTransaction is a `writable` transaction
+///
 /// All read operations are performed based on a specific version of snapshot.
 /// All write operations are applied to the corresponding RocksDB's transaction
 #[self_referencing]
@@ -350,6 +352,7 @@ impl<'a> KVStore for UpdateTransaction<'a> {
 }
 
 /// ReadSnapshot is a `read-only` transaction.
+///
 /// All read operations are performed based on a specific version of snapshot.
 /// All write operations are applied to the transaction's buffer, but they are never committed to the DB.
 pub struct ReadSnapshot<'a> {
@@ -814,6 +817,7 @@ mod tests {
             }
             let ptr = &mut arr as *mut _ as *mut [TxRunner; S];
             let res = unsafe { ptr.read() };
+            #[allow(clippy::forget_non_drop)]
             core::mem::forget(arr);
             res
         };

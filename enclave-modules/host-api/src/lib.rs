@@ -1,5 +1,7 @@
 #![no_std]
 extern crate alloc;
+
+#[allow(unused_imports)]
 mod prelude {
     pub use core::prelude::v1::*;
 
@@ -19,9 +21,10 @@ mod prelude {
 }
 
 pub use errors::Error;
+/// re-export
+pub use ocall_commands;
 
 pub mod api;
 mod errors;
 mod ffi;
-pub mod remote_attestation;
 pub mod store;

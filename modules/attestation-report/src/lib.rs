@@ -1,6 +1,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 extern crate alloc;
 
+#[allow(unused_imports)]
 mod prelude {
     pub use core::prelude::v1::*;
 
@@ -27,7 +28,7 @@ pub use report::{
 };
 mod report;
 
-#[cfg(any(feature = "std", feature = "sgx"))]
+#[cfg(feature = "std")]
 pub use verification::verify_report;
-#[cfg(any(feature = "std", feature = "sgx"))]
+#[cfg(feature = "std")]
 mod verification;

@@ -8,9 +8,10 @@ define_error! {
         SgxError
         {
             status: sgx_status_t,
+            descr: String
         }
         |e| {
-            format_args!("SGX error: status={:?}", e.status)
+            format_args!("SGX error: status={:?}, descr={}", e.status, e.descr)
         },
 
         EnclaveKeyNotFound
@@ -24,10 +25,6 @@ define_error! {
         [attestation_report::Error]
         |_| { "AttestationReport error" },
 
-        RemoteAttestation
-        [enclave_remote_attestation::Error]
-        |_| { "RemoteAttestation error" },
-
         EcallCommand
         [ecall_commands::InputValidationError]
         |_| { "EcallCommand input validation error" },
@@ -35,12 +32,6 @@ define_error! {
         Time
         [lcp_types::TimeError]
         |_| { "Time error" }
-    }
-}
-
-impl From<enclave_remote_attestation::Error> for Error {
-    fn from(err: enclave_remote_attestation::Error) -> Self {
-        Error::remote_attestation(err)
     }
 }
 

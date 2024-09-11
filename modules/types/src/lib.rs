@@ -17,6 +17,7 @@ mod host;
 mod sgx;
 mod time;
 
+#[allow(unused_imports)]
 mod prelude {
     pub use core::prelude::v1::*;
 

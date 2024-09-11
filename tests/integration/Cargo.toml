@@ -34,10 +34,10 @@ enclave-api = { path = "../../modules/enclave-api" }
 ecall-commands = { path = "../../modules/ecall-commands" }
 attestation-report = { path = "../../modules/attestation-report" }
 keymanager = { path = "../../modules/keymanager" }
+remote-attestation = { path = "../../modules/remote-attestation" }
 
 [features]
 default = []
 sgx-sw = [
-    "enclave-api/sgx-sw",
-    "ecall-commands/sgx-sw"
+    "remote-attestation/sgx-sw"
 ]

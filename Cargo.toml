@@ -7,6 +7,7 @@ members = [
     "modules/types",
     "modules/ocall-handler",
     "modules/attestation-report",
+    "modules/remote-attestation",
     "modules/enclave-api",
     "modules/ecall-commands",
     "modules/ocall-commands",
@@ -30,25 +31,7 @@ exclude = [
     "enclave-modules/environment",
     "enclave-modules/store",
     "enclave-modules/utils",
-    "enclave-modules/remote-attestation",
     "enclave-modules/host-api",
     "enclave-modules/ecall-handler",
     "proto-compiler"
 ]
-
-[patch."https://github.com/apache/teaclave-sgx-sdk.git"]
-sgx_tstd = { rev = "v1.1.6", git = "https://github.com/apache/incubator-teaclave-sgx-sdk" }
-sgx_urts = { rev = "v1.1.6", git = "https://github.com/apache/incubator-teaclave-sgx-sdk" }
-sgx_tse = { rev = "v1.1.6", git = "https://github.com/apache/incubator-teaclave-sgx-sdk" }
-sgx_alloc = { rev = "v1.1.6", git = "https://github.com/apache/incubator-teaclave-sgx-sdk" }
-sgx_libc = { rev = "v1.1.6", git = "https://github.com/apache/incubator-teaclave-sgx-sdk" }
-sgx_serialize = { rev = "v1.1.6", git = "https://github.com/apache/incubator-teaclave-sgx-sdk" }
-sgx_serialize_derive = { rev = "v1.1.6", git = "https://github.com/apache/incubator-teaclave-sgx-sdk" }
-sgx_serialize_derive_internals = { rev = "v1.1.6", git = "https://github.com/apache/incubator-teaclave-sgx-sdk" }
-sgx_trts = { rev = "v1.1.6", git = "https://github.com/apache/incubator-teaclave-sgx-sdk" }
-sgx_types = { rev = "v1.1.6", git = "https://github.com/apache/incubator-teaclave-sgx-sdk" }
-sgx_tcrypto = { rev = "v1.1.6", git = "https://github.com/apache/incubator-teaclave-sgx-sdk" }
-sgx_tcrypto_helper = { rev = "v1.1.6", git = "https://github.com/apache/incubator-teaclave-sgx-sdk" }
-sgx_crypto_helper = { rev = "v1.1.6", git = "https://github.com/apache/incubator-teaclave-sgx-sdk" }
-sgx_rand = { rev = "v1.1.6", git = "https://github.com/apache/incubator-teaclave-sgx-sdk" }
-sgx_tseal = { rev = "v1.1.6", git = "https://github.com/apache/incubator-teaclave-sgx-sdk" }

@@ -172,11 +172,11 @@ impl MockLightClient {
 
         let prev_state_id = gen_state_id(client_state, latest_consensus_state)?;
         let post_state_id = gen_state_id(new_client_state.clone(), new_consensus_state.clone())?;
-        let new_any_client_state = Any::try_from(new_client_state).unwrap();
+        let new_any_client_state = Any::from(new_client_state);
 
         Ok(UpdateStateData {
             new_any_client_state: new_any_client_state.clone(),
-            new_any_consensus_state: Any::try_from(new_consensus_state).unwrap(),
+            new_any_consensus_state: Any::from(new_consensus_state),
             height,
             message: UpdateStateProxyMessage {
                 prev_height: Some(latest_height.into()),
@@ -234,7 +234,7 @@ impl MockLightClient {
         );
 
         Ok(MisbehaviourData {
-            new_any_client_state: Any::try_from(new_client_state).unwrap(),
+            new_any_client_state: Any::from(new_client_state),
             message: MisbehaviourProxyMessage {
                 prev_states: vec![PrevState {
                     height: latest_height.into(),

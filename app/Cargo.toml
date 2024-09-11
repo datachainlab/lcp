@@ -27,6 +27,7 @@ ecall-commands = { path = "../modules/ecall-commands" }
 crypto = { path = "../modules/crypto" }
 store = { path = "../modules/store", features = ["rocksdbstore"] }
 keymanager = { path = "../modules/keymanager" }
+remote-attestation = { path = "../modules/remote-attestation" }
 
 [build-dependencies]
 git2 = "0.17"
@@ -34,7 +35,5 @@ git2 = "0.17"
 [features]
 default = []
 sgx-sw = [
-    "enclave-api/sgx-sw",
-    "ecall-commands/sgx-sw",
-    "service/sgx-sw"
+    "remote-attestation/sgx-sw"
 ]

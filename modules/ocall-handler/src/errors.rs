@@ -16,12 +16,22 @@ define_error! {
 
         Store
         [store::Error]
-        |_| { "Store error" }
+        |_| { "Store error" },
+
+        Io
+        [TraceError<std::io::Error>]
+        |_| { "I/O error" },
     }
 }
 
 impl From<store::Error> for Error {
     fn from(err: store::Error) -> Self {
         Error::store(err)
+    }
+}
+
+impl From<std::io::Error> for Error {
+    fn from(err: std::io::Error) -> Self {
+        Error::io(err)
     }
 }

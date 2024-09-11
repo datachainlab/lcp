@@ -21,8 +21,7 @@ std = [
     "flex-error/std",
     "lcp-types/std",
     "commitments/std",
-    "store/std",
-    "ibc?/std",
+    "store/std"
 ]
 ibc = [
     "dep:ibc",

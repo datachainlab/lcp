@@ -9,7 +9,7 @@ mod types;
 mod tests {
     use super::*;
     use crate::relayer::Relayer;
-    use anyhow::{anyhow, bail};
+    use anyhow::bail;
     use commitments::UpdateStateProxyMessage;
     use crypto::Address;
     use ecall_commands::{
@@ -107,7 +107,7 @@ mod tests {
             info!("this test is running in HW mode");
         }
 
-        let signer = match enclave.generate_enclave_key(GenerateEnclaveKeyInput::default()) {
+        let signer = match enclave.generate_enclave_key(GenerateEnclaveKeyInput) {
             Ok(res) => res.pub_key.as_address(),
             Err(e) => {
                 bail!("failed to generate an enclave key: {:?}!", e);
@@ -117,72 +117,76 @@ mod tests {
 
         #[cfg(not(feature = "sgx-sw"))]
         {
-            let res =
-                match enclave.ias_remote_attestation(ecall_commands::IASRemoteAttestationInput {
-                    target_enclave_key: signer,
-                    operator: Some(operator),
-                    spid: std::env::var("SPID")?.as_bytes().to_vec(),
-                    ias_key: std::env::var("IAS_KEY")?.as_bytes().to_vec(),
-                }) {
-                    Ok(res) => res.report,
-                    Err(e) => {
-                        bail!("IAS Remote Attestation Failed {:?}!", e);
-                    }
-                };
+            use remote_attestation::ias::run_ias_ra;
+            let res = match run_ias_ra(
+                enclave,
+                signer,
+                Some(operator),
+                remote_attestation::IASMode::Production,
+                std::env::var("SPID")?,
+                std::env::var("IAS_KEY")?,
+            ) {
+                Ok(res) => res,
+                Err(e) => {
+                    bail!("IAS Remote Attestation Failed {:?}!", e);
+                }
+            };
             let report_data = res.get_avr()?.parse_quote()?.report_data();
             assert_eq!(report_data.enclave_key(), signer);
             assert_eq!(report_data.operator(), operator);
-            let res =
-                match enclave.ias_remote_attestation(ecall_commands::IASRemoteAttestationInput {
-                    target_enclave_key: signer,
-                    operator: None,
-                    spid: std::env::var("SPID")?.as_bytes().to_vec(),
-                    ias_key: std::env::var("IAS_KEY")?.as_bytes().to_vec(),
-                }) {
-                    Ok(res) => res.report,
-                    Err(e) => {
-                        bail!("IAS Remote Attestation Failed {:?}!", e);
-                    }
-                };
+
+            let res = match run_ias_ra(
+                enclave,
+                signer,
+                None,
+                remote_attestation::IASMode::Production,
+                std::env::var("SPID")?,
+                std::env::var("IAS_KEY")?,
+            ) {
+                Ok(res) => res,
+                Err(e) => {
+                    bail!("IAS Remote Attestation Failed {:?}!", e);
+                }
+            };
             let report_data = res.get_avr()?.parse_quote()?.report_data();
             assert_eq!(report_data.enclave_key(), signer);
             assert!(report_data.operator().is_zero());
         }
         #[cfg(feature = "sgx-sw")]
         {
-            use enclave_api::rsa::{pkcs1v15::SigningKey, rand_core::OsRng};
-            use enclave_api::sha2::Sha256;
-            let res = match enclave.simulate_remote_attestation(
-                ecall_commands::SimulateRemoteAttestationInput {
-                    target_enclave_key: signer,
-                    operator: Some(operator),
-                    advisory_ids: vec![],
-                    isv_enclave_quote_status: "OK".to_string(),
-                },
+            use remote_attestation::ias_simulation::run_ias_ra_simulation;
+            use remote_attestation::rsa::{pkcs1v15::SigningKey, rand_core::OsRng};
+            use remote_attestation::sha2::Sha256;
+            let res = match run_ias_ra_simulation(
+                enclave,
+                signer,
+                Some(operator),
+                vec![],
+                "OK".to_string(),
                 SigningKey::<Sha256>::random(&mut OsRng, 3072)?,
                 Default::default(), // TODO set valid certificate
             ) {
-                Ok(res) => res.avr,
+                Ok(res) => res.get_avr()?,
                 Err(e) => {
-                    bail!("Simulate Remote Attestation Failed {:?}!", e);
+                    bail!("Remote Attestation Simulation Failed {:?}!", e);
                 }
             };
             let report_data = res.parse_quote()?.report_data();
             assert_eq!(report_data.enclave_key(), signer);
             assert_eq!(report_data.operator(), operator);
-            let res = match enclave.simulate_remote_attestation(
-                ecall_commands::SimulateRemoteAttestationInput {
-                    target_enclave_key: signer,
-                    operator: None,
-                    advisory_ids: vec![],
-                    isv_enclave_quote_status: "OK".to_string(),
-                },
+
+            let res = match run_ias_ra_simulation(
+                enclave,
+                signer,
+                None,
+                vec![],
+                "OK".to_string(),
                 SigningKey::<Sha256>::random(&mut OsRng, 3072)?,
                 Default::default(), // TODO set valid certificate
             ) {
-                Ok(res) => res.avr,
+                Ok(res) => res.get_avr()?,
                 Err(e) => {
-                    bail!("Simulate Remote Attestation Failed {:?}!", e);
+                    bail!("Remote Attestation Simulation Failed {:?}!", e);
                 }
             };
             let report_data = res.parse_quote()?.report_data();
@@ -250,10 +254,7 @@ mod tests {
                 prefix: "ibc".into(),
                 path: Path::ChannelEnd(ChannelEndPath(port_id, channel_id)).to_string(),
                 value: res.0.encode_vec()?,
-                proof: CommitmentProofPair(
-                    res.2.try_into().map_err(|e| anyhow!("{:?}", e))?,
-                    merkle_proof_to_bytes(res.1)?,
-                ),
+                proof: CommitmentProofPair(res.2.into(), merkle_proof_to_bytes(res.1)?),
                 signer,
             })?;
         }

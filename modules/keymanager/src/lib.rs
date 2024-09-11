@@ -303,7 +303,7 @@ mod tests {
         assert_eq!(
             km.available_keys(mrenclave)
                 .unwrap()
-                .get(0)
+                .first()
                 .unwrap()
                 .address,
             address_0

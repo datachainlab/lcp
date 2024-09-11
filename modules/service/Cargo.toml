@@ -14,8 +14,3 @@ crypto = { path = "../crypto" }
 enclave-api = { path = "../enclave-api" }
 lcp-proto = { path = "../../proto", default-features = false, features = ["server"] }
 store = { path = "../store", default-features = false }
-
-[features]
-sgx-sw = [
-    "enclave-api/sgx-sw"
-]

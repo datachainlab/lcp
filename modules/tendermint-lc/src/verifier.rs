@@ -116,5 +116,5 @@ fn downcast_tm_consensus_state(cs: &dyn ConsensusState) -> Result<TmConsensusSta
         .ok_or_else(|| ClientError::ClientArgsTypeMismatch {
             client_type: client_type(),
         })
-        .map(Clone::clone)
+        .cloned()
 }

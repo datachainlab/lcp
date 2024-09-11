@@ -18,6 +18,8 @@ use tiny_keccak::Keccak;
 
 pub const LCP_CLIENT_TYPE: &str = "0000-lcp";
 
+/// EIP712 domain separator for LCPClient
+///
 /// keccak256(
 ///     abi.encode(
 ///         keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract,bytes32 salt)"),
@@ -445,8 +447,8 @@ pub fn compute_eip712_register_enclave_key(avr: &str) -> Vec<u8> {
     };
     [0x19, 0x01]
         .into_iter()
-        .chain(LCP_CLIENT_DOMAIN_SEPARATOR.into_iter())
-        .chain(type_hash.into_iter())
+        .chain(LCP_CLIENT_DOMAIN_SEPARATOR)
+        .chain(type_hash)
         .collect()
 }
 
@@ -498,8 +500,8 @@ pub fn compute_eip712_update_operators(
     };
     [0x19, 0x01]
         .into_iter()
-        .chain(LCP_CLIENT_DOMAIN_SEPARATOR.into_iter())
-        .chain(type_hash.into_iter())
+        .chain(LCP_CLIENT_DOMAIN_SEPARATOR)
+        .chain(type_hash)
         .collect()
 }
 
@@ -578,6 +580,7 @@ mod tests {
     use alloc::rc::Rc;
     use alloc::sync::Arc;
     use attestation_report::{AttestationVerificationReport, ReportData};
+    use base64::{engine::general_purpose::STANDARD as Base64Std, Engine};
     use context::Context;
     use core::cell::RefCell;
     use core::str::FromStr;
@@ -637,8 +640,6 @@ mod tests {
         let op_key = OperatorKey::new().unwrap();
 
         let registry = build_lc_registry();
-        let lcp_client = LCPClient::default();
-        let mock_client = MockLightClient::default();
 
         // 1. initializes Light Client for LCP on the downstream side
         let lcp_client_id = {
@@ -658,9 +659,9 @@ mod tests {
             let mut ctx = Context::new(registry.clone(), ibc_store.clone(), &ek);
             ctx.set_timestamp(Time::now());
 
-            let client_id = ClientId::from_str(&format!("{}-0", lcp_client.client_type())).unwrap();
+            let client_id = ClientId::from_str(&format!("{}-0", LCPClient.client_type())).unwrap();
 
-            let res = lcp_client.initialise(
+            let res = LCPClient.initialise(
                 &mut ctx,
                 client_id.clone(),
                 initial_client_state,
@@ -682,7 +683,7 @@ mod tests {
                 report,
                 operator_signature: Some(operator_signature),
             });
-            let res = lcp_client.update_client(&mut ctx, lcp_client_id.clone(), header);
+            let res = LCPClient.update_client(&mut ctx, lcp_client_id.clone(), header);
             assert!(res.is_ok(), "res={:?}", res);
         }
 
@@ -694,7 +695,7 @@ mod tests {
             let mut ctx = Context::new(registry.clone(), lcp_store.clone(), &ek);
             ctx.set_timestamp(Time::now());
 
-            let res = mock_client.create_client(
+            let res = MockLightClient.create_client(
                 &ctx,
                 client_state.clone().into(),
                 consensus_state.clone().into(),
@@ -702,8 +703,8 @@ mod tests {
             assert!(res.is_ok(), "res={:?}", res);
 
             let client_id =
-                ClientId::from_str(&format!("{}-0", mock_client.client_type())).unwrap();
-            ctx.store_client_type(client_id.clone(), mock_client.client_type())
+                ClientId::from_str(&format!("{}-0", MockLightClient.client_type())).unwrap();
+            ctx.store_client_type(client_id.clone(), MockLightClient.client_type())
                 .unwrap();
             ctx.store_any_client_state(client_id.clone(), client_state.into())
                 .unwrap();
@@ -722,7 +723,7 @@ mod tests {
 
             let mut ctx = Context::new(registry.clone(), lcp_store.clone(), &ek);
             ctx.set_timestamp(Time::now());
-            let res = mock_client.update_client(
+            let res = MockLightClient.update_client(
                 &ctx,
                 upstream_client_id.clone(),
                 mock_lc::Header::from(header).into(),
@@ -760,7 +761,7 @@ mod tests {
             let mut ctx = Context::new(registry.clone(), ibc_store.clone(), &ek);
             ctx.set_timestamp((Time::now() + Duration::from_secs(60)).unwrap());
 
-            let res = lcp_client.update_client(&mut ctx, lcp_client_id.clone(), header);
+            let res = LCPClient.update_client(&mut ctx, lcp_client_id.clone(), header);
             assert!(res.is_ok(), "res={:?}", res);
         }
 
@@ -774,7 +775,7 @@ mod tests {
                 header1: MockHeader::new(ICS02Height::new(0, 3).unwrap()),
                 header2: MockHeader::new(ICS02Height::new(0, 3).unwrap()),
             };
-            let res = mock_client
+            let res = MockLightClient
                 .update_client(
                     &ctx,
                     upstream_client_id,
@@ -799,11 +800,12 @@ mod tests {
             let mut ctx = Context::new(registry, ibc_store, &ek);
             ctx.set_timestamp((Time::now() + Duration::from_secs(60)).unwrap());
 
-            let res = lcp_client.update_client(&mut ctx, lcp_client_id, header);
+            let res = LCPClient.update_client(&mut ctx, lcp_client_id, header);
             assert!(res.is_ok(), "res={:?}", res);
         }
     }
 
+    #[allow(clippy::arc_with_non_send_sync)]
     fn build_lc_registry() -> Arc<dyn LightClientResolver> {
         let registry = MapLightClientRegistry::new();
         Arc::new(registry)
@@ -840,7 +842,7 @@ mod tests {
             // advisory_ids,
             // isv_enclave_quote_status,
             platform_info_blob: None,
-            isv_enclave_quote_body: base64::encode(&quote.as_slice()[..432]),
+            isv_enclave_quote_body: Base64Std.encode(&quote.as_slice()[..432]),
             ..Default::default()
         };
 

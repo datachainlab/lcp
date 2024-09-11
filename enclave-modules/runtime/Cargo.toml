@@ -5,22 +5,15 @@ edition = "2021"
 
 [dependencies]
 sgx_types = { rev = "v1.1.6", git = "https://github.com/apache/incubator-teaclave-sgx-sdk" }
-sgx_tstd = { rev = "v1.1.6", git = "https://github.com/apache/incubator-teaclave-sgx-sdk" }
+sgx_trts = { rev = "v1.1.6", git = "https://github.com/apache/incubator-teaclave-sgx-sdk" }
+sgx_alloc = { rev = "v1.1.6", git = "https://github.com/apache/incubator-teaclave-sgx-sdk" }
 log = { version = "0.4.8", default-features = false }
 bincode = { version = "2.0.0-rc.3", default-features = false, features = ["serde", "alloc"] }
 flex-error = { version = "0.4.4", default-features = false }
 once_cell = { version = "1.15.0", default-features = false, features = ["alloc"] }
 
 enclave-utils = { path = "../utils" }
+host-api = { path = "../host-api" }
 ecall-handler = { path = "../ecall-handler" }
 enclave-environment = { path = "../environment" }
 ecall-commands = { path = "../../modules/ecall-commands", default-features = false }
-
-[features]
-sgx-sw = [
-    "ecall-handler/sgx-sw",
-    "ecall-commands/sgx-sw"
-]
-production = [
-    "ecall-handler/production"
-]

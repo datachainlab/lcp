@@ -1,6 +1,6 @@
 pub use router::dispatch;
 
 mod errors;
-mod remote_attestation;
+mod log;
 mod router;
 mod store;

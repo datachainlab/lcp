@@ -102,7 +102,7 @@ impl Protobuf<Any> for ClientState {}
 
 impl From<ClientState> for Any {
     fn from(value: ClientState) -> Self {
-        let value = RawClientState::try_from(value).expect("encoding to `Any` from `ClientState`");
+        let value = RawClientState::from(value);
         Any::new(LCP_CLIENT_STATE_TYPE_URL.to_string(), value.encode_to_vec())
     }
 }
