@@ -514,9 +514,10 @@ dependencies = [
  "enclave-environment",
  "enclave-utils",
  "flex-error",
+ "host-api",
  "log",
  "once_cell",
- "sgx_no_tstd",
+ "sgx_alloc",
  "sgx_trts",
  "sgx_types",
 ]
@@ -1431,25 +1432,11 @@ version = "1.1.6"
 source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?rev=v1.1.6#c3d82372dff81e5bafb07f71bc8ad532d06b504e"
 
 [[package]]
-name = "sgx_build_helper"
-version = "1.1.6"
-source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?rev=v1.1.6#c3d82372dff81e5bafb07f71bc8ad532d06b504e"
-
-[[package]]
 name = "sgx_libc"
 version = "1.1.6"
 source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?rev=v1.1.6#c3d82372dff81e5bafb07f71bc8ad532d06b504e"
 dependencies = [
  "sgx_types",
-]
-
-[[package]]
-name = "sgx_no_tstd"
-version = "1.1.6"
-source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?rev=v1.1.6#c3d82372dff81e5bafb07f71bc8ad532d06b504e"
-dependencies = [
- "sgx_alloc",
- "sgx_build_helper",
 ]
 
 [[package]]

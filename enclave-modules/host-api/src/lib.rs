@@ -21,6 +21,8 @@ mod prelude {
 }
 
 pub use errors::Error;
+/// re-export
+pub use ocall_commands;
 
 pub mod api;
 mod errors;
