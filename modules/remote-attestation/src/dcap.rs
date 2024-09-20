@@ -4,7 +4,7 @@ use ecall_commands::{CreateReportInput, CreateReportResponse};
 use enclave_api::EnclaveCommandAPI;
 use sgx_types::{
     sgx_qe_get_quote, sgx_qe_get_quote_size, sgx_qe_get_target_info, sgx_quote3_error_t,
-    sgx_report_t, sgx_target_info_t,
+    sgx_report_t, sgx_target_info_t, tee_get_supplemental_data_version_and_size,
 };
 use store::transaction::CommitStore;
 
@@ -32,6 +32,12 @@ pub fn run_dcap_ra<E: EnclaveCommandAPI<S>, S: CommitStore>(
     let quote = rsgx_qe_get_quote(&report).unwrap();
     println!("Successfully get the quote: {:?}", quote);
 
+    let res = rsgx_tee_get_supplemental_data_version_and_size(&quote);
+    println!(
+        "Successfully get the supplemental data version and size: {:?}",
+        res
+    );
+
     Ok(())
 }
 
@@ -49,5 +55,24 @@ fn rsgx_qe_get_quote(app_report: &sgx_report_t) -> Result<Vec<u8>, sgx_quote3_er
             }
             err => Err(err),
         }
+    }
+}
+
+fn rsgx_tee_get_supplemental_data_version_and_size(
+    quote: &[u8],
+) -> Result<(u32, u32), sgx_quote3_error_t> {
+    let mut version = 0u32;
+    let mut data_size = 0u32;
+
+    match unsafe {
+        tee_get_supplemental_data_version_and_size(
+            quote.as_ptr(),
+            quote.len() as u32,
+            &mut version,
+            &mut data_size,
+        )
+    } {
+        sgx_quote3_error_t::SGX_QL_SUCCESS => Ok((version, data_size)),
+        error_code => Err(error_code),
     }
 }
