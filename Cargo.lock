@@ -410,6 +410,7 @@ dependencies = [
  "clang-sys",
  "lazy_static",
  "lazycell",
+ "log",
  "peeking_take_while",
  "prettyplease",
  "proc-macro2",
@@ -418,6 +419,7 @@ dependencies = [
  "rustc-hash",
  "shlex",
  "syn 2.0.32",
+ "which",
 ]
 
 [[package]]
@@ -1956,6 +1958,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "home"
+version = "0.5.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e3d1354bf6b7235cb4a0576c2619fd4ed18183f689b12b006a0ee7329eeff9a5"
+dependencies = [
+ "windows-sys 0.52.0",
+]
+
+[[package]]
 name = "host"
 version = "0.1.0"
 dependencies = [
@@ -2557,6 +2568,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "intel-tee-quote-verification-sys"
+version = "0.2.1"
+source = "git+https://github.com/intel/SGXDataCenterAttestationPrimitives?rev=dcap_1.21_reproducible#eff36080bc3b8186745796b1ff9f067036e21a3a"
+dependencies = [
+ "bindgen",
+]
+
+[[package]]
 name = "io-lifetimes"
 version = "1.0.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2896,6 +2915,12 @@ name = "linux-raw-sys"
 version = "0.3.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ef53942eb7bf7ff43a617b3e2c1c4a5ecf5944a7c1bc12d7ee39bbb15e5c1519"
+
+[[package]]
+name = "linux-raw-sys"
+version = "0.4.14"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "78b3ae25bc7c8c38cec158d1f2757ee79e9b3740fbc7ccf0e59e4b08d793fa89"
 
 [[package]]
 name = "lock_api"
@@ -3923,6 +3948,7 @@ dependencies = [
  "flex-error",
  "hex",
  "httparse",
+ "intel-tee-quote-verification-sys",
  "lcp-types",
  "log",
  "rand 0.8.5",
@@ -4169,7 +4195,20 @@ dependencies = [
  "errno",
  "io-lifetimes",
  "libc",
- "linux-raw-sys",
+ "linux-raw-sys 0.3.8",
+ "windows-sys 0.48.0",
+]
+
+[[package]]
+name = "rustix"
+version = "0.38.25"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "dc99bc2d4f1fed22595588a013687477aedf3cdcfb26558c559edb67b4d9b22e"
+dependencies = [
+ "bitflags 2.6.0",
+ "errno",
+ "libc",
+ "linux-raw-sys 0.4.14",
  "windows-sys 0.48.0",
 ]
 
@@ -5022,7 +5061,7 @@ dependencies = [
  "cfg-if 1.0.0",
  "fastrand",
  "redox_syscall 0.3.5",
- "rustix",
+ "rustix 0.37.20",
  "windows-sys 0.48.0",
 ]
 
@@ -6049,6 +6088,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b6c71e40d7d2c34a5106301fb632274ca37242cd0c9d3e64dbece371a40a2d87"
 dependencies = [
  "webpki 0.22.4",
+]
+
+[[package]]
+name = "which"
+version = "4.4.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "87ba24419a2078cd2b0f2ede2691b6c66d8e47836da3b6db8265ebad47afbfc7"
+dependencies = [
+ "either",
+ "home",
+ "once_cell",
+ "rustix 0.38.25",
 ]
 
 [[package]]
