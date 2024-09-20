@@ -1,7 +1,7 @@
 use crate::errors::Error;
 use crate::prelude::*;
 use alloy_sol_types::{sol, SolValue};
-use attestation_report::SignedAttestationVerificationReport;
+use attestation_report::IASSignedReport;
 use crypto::Address;
 use light_client::commitments::{Error as CommitmentError, EthABIEncoder, ProxyMessage};
 use light_client::types::proto::ibc::lightclients::lcp::v1::{
@@ -68,7 +68,7 @@ impl From<ClientMessage> for Any {
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub struct RegisterEnclaveKeyMessage {
-    pub report: SignedAttestationVerificationReport,
+    pub report: IASSignedReport,
     pub operator_signature: Option<Vec<u8>>,
 }
 
@@ -78,7 +78,7 @@ impl TryFrom<RawRegisterEnclaveKeyMessage> for RegisterEnclaveKeyMessage {
     type Error = Error;
     fn try_from(value: RawRegisterEnclaveKeyMessage) -> Result<Self, Self::Error> {
         Ok(RegisterEnclaveKeyMessage {
-            report: SignedAttestationVerificationReport {
+            report: IASSignedReport {
                 avr: String::from_utf8(value.report)?,
                 signature: value.signature,
                 signing_cert: value.signing_cert,
