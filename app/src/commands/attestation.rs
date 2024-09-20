@@ -2,13 +2,12 @@ use crate::{
     enclave::EnclaveLoader,
     opts::{EnclaveOpts, Opts},
 };
-use anyhow::{bail, Result};
+use anyhow::{anyhow, bail, Result};
 use clap::Parser;
 use crypto::Address;
 use enclave_api::{Enclave, EnclaveCommandAPI, EnclaveProtoAPI};
 use host::store::transaction::CommitStore;
-use log::info;
-use remote_attestation::{ias, IASMode};
+use remote_attestation::{dcap, ias, IASMode};
 
 /// `attestation` subcommand
 #[allow(clippy::upper_case_acronyms)]
@@ -16,8 +15,10 @@ use remote_attestation::{ias, IASMode};
 pub enum AttestationCmd {
     #[clap(display_order = 1, about = "Remote Attestation with IAS")]
     IAS(IASRemoteAttestation),
+    #[clap(display_order = 2, about = "Remote Attestation with DCAP")]
+    DCAP(DCAPRemoteAttestation),
     #[cfg(feature = "sgx-sw")]
-    #[clap(display_order = 2, about = "Simulate Remote Attestation")]
+    #[clap(display_order = 3, about = "Simulate Remote Attestation")]
     Simulate(SimulateRemoteAttestation),
 }
 
@@ -29,26 +30,23 @@ impl AttestationCmd {
         L: EnclaveLoader<S>,
     {
         let home = opts.get_home();
+        if !home.exists() {
+            bail!("home directory doesn't exist at {:?}", home);
+        }
         match self {
-            AttestationCmd::IAS(cmd) => {
-                if !home.exists() {
-                    bail!("home directory doesn't exist at {:?}", home);
-                }
-                run_ias_remote_attestation(
-                    enclave_loader.load(opts, cmd.enclave.path.as_ref(), cmd.enclave.is_debug())?,
-                    cmd,
-                )
-            }
+            AttestationCmd::IAS(cmd) => run_ias_remote_attestation(
+                enclave_loader.load(opts, cmd.enclave.path.as_ref(), cmd.enclave.is_debug())?,
+                cmd,
+            ),
+            AttestationCmd::DCAP(cmd) => run_dcap_remote_attestation(
+                enclave_loader.load(opts, cmd.enclave.path.as_ref(), cmd.enclave.is_debug())?,
+                cmd,
+            ),
             #[cfg(feature = "sgx-sw")]
-            AttestationCmd::Simulate(cmd) => {
-                if !home.exists() {
-                    bail!("home directory doesn't exist at {:?}", home);
-                }
-                run_simulate_remote_attestation(
-                    enclave_loader.load(opts, cmd.enclave.path.as_ref(), cmd.enclave.is_debug())?,
-                    cmd,
-                )
-            }
+            AttestationCmd::Simulate(cmd) => run_simulate_remote_attestation(
+                enclave_loader.load(opts, cmd.enclave.path.as_ref(), cmd.enclave.is_debug())?,
+                cmd,
+            ),
         }
     }
 }
@@ -76,8 +74,8 @@ fn run_ias_remote_attestation<E: EnclaveCommandAPI<S>, S: CommitStore>(
     let spid = std::env::var("SPID")?;
     let ias_key = std::env::var("IAS_KEY")?;
     let target_enclave_key = Address::from_hex_string(&cmd.enclave_key)?;
-    match ias::run_ias_ra(
-        &enclave,
+    ias::run_ias_ra(
+        enclave.get_key_manager(),
         target_enclave_key,
         if cmd.is_dev {
             IASMode::Development
@@ -86,20 +84,9 @@ fn run_ias_remote_attestation<E: EnclaveCommandAPI<S>, S: CommitStore>(
         },
         spid,
         ias_key,
-    ) {
-        Ok(res) => {
-            info!("AVR: {:?}", res.avr);
-            info!(
-                "report_data: {}",
-                res.get_avr()?.parse_quote()?.report_data()
-            );
-            enclave
-                .get_key_manager()
-                .save_avr(target_enclave_key, res)?;
-            Ok(())
-        }
-        Err(e) => bail!("failed to perform IAS Remote Attestation: {}", e),
-    }
+    )
+    .map_err(|e| anyhow!("failed to perform IAS Remote Attestation: {}", e))?;
+    Ok(())
 }
 
 #[cfg(feature = "sgx-sw")]
@@ -211,25 +198,38 @@ fn run_simulate_remote_attestation<E: EnclaveCommandAPI<S>, S: CommitStore>(
     }
 
     let target_enclave_key = Address::from_hex_string(&cmd.enclave_key)?;
-    match remote_attestation::ias_simulation::run_ias_ra_simulation(
-        &enclave,
+    remote_attestation::ias_simulation::run_ias_ra_simulation(
+        enclave.get_key_manager(),
         target_enclave_key,
         cmd.advisory_ids.clone(),
         cmd.isv_enclave_quote_status.clone(),
         signing_key,
         signing_cert,
-    ) {
-        Ok(res) => {
-            info!("AVR: {:?}", res.avr);
-            info!(
-                "report_data: {}",
-                res.get_avr()?.parse_quote()?.report_data()
-            );
-            enclave
-                .get_key_manager()
-                .save_avr(target_enclave_key, res)?;
-            Ok(())
-        }
-        Err(e) => bail!("failed to simulate Remote Attestation: {}", e),
-    }
+    )
+    .map_err(|e| anyhow!("failed to simulate Remote Attestation: {}", e))?;
+    Ok(())
+}
+
+#[derive(Clone, Debug, Parser, PartialEq)]
+pub struct DCAPRemoteAttestation {
+    /// Options for enclave
+    #[clap(flatten)]
+    pub enclave: EnclaveOpts,
+    /// An enclave key attested by Remote Attestation
+    #[clap(
+        long = "enclave_key",
+        help = "An enclave key attested by Remote Attestation"
+    )]
+    pub enclave_key: String,
+}
+
+fn run_dcap_remote_attestation<E: EnclaveCommandAPI<S>, S: CommitStore>(
+    enclave: E,
+    cmd: &DCAPRemoteAttestation,
+) -> Result<()> {
+    dcap::run_dcap_ra(
+        enclave.get_key_manager(),
+        Address::from_hex_string(&cmd.enclave_key)?,
+    )?;
+    Ok(())
 }

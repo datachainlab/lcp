@@ -16,7 +16,7 @@ mod tests {
         AggregateMessagesInput, CommitmentProofPair, GenerateEnclaveKeyInput, InitClientInput,
         UpdateClientInput, VerifyMembershipInput,
     };
-    use enclave_api::{Enclave, EnclaveCommandAPI};
+    use enclave_api::{Enclave, EnclaveCommandAPI, EnclaveInfo};
     use host_environment::Environment;
     use ibc::{
         core::{
@@ -79,7 +79,7 @@ mod tests {
             info!("this test is running in HW mode");
         }
 
-        let (target_info, _) = remote_attestation::init_quote()?;
+        let (target_info, _) = remote_attestation::init_quote(false)?;
         let operator = Address::from_hex_string("0x396e1ccc2f11cd6d2114c2449dad7751357e413e")?;
         let op_ek_addr = match enclave.generate_enclave_key(GenerateEnclaveKeyInput {
             operator: Some(operator),
@@ -104,7 +104,7 @@ mod tests {
         {
             use remote_attestation::ias::run_ias_ra;
             let res = match run_ias_ra(
-                enclave,
+                enclave.get_key_manager(),
                 op_ek_addr,
                 remote_attestation::IASMode::Production,
                 std::env::var("SPID")?,
@@ -120,7 +120,7 @@ mod tests {
             assert_eq!(report_data.operator(), operator);
 
             let res = match run_ias_ra(
-                enclave,
+                enclave.get_key_manager(),
                 ek_addr,
                 remote_attestation::IASMode::Production,
                 std::env::var("SPID")?,
@@ -142,7 +142,7 @@ mod tests {
             use remote_attestation::sha2::Sha256;
 
             let res = match run_ias_ra_simulation(
-                enclave,
+                enclave.get_key_manager(),
                 op_ek_addr,
                 vec![],
                 "OK".to_string(),
@@ -159,7 +159,7 @@ mod tests {
             assert_eq!(report_data.operator(), operator);
 
             let res = match run_ias_ra_simulation(
-                enclave,
+                enclave.get_key_manager(),
                 ek_addr,
                 vec![],
                 "OK".to_string(),
@@ -213,7 +213,7 @@ mod tests {
         enclave: &Enclave<store::memory::MemStore>,
     ) -> Result<(), anyhow::Error> {
         let operator = Address::from_hex_string("0x396e1ccc2f11cd6d2114c2449dad7751357e413e")?;
-        let (target_info, _) = remote_attestation::init_quote()?;
+        let (target_info, _) = remote_attestation::init_quote(false)?;
         let signer = match enclave.generate_enclave_key(GenerateEnclaveKeyInput {
             operator: Some(operator),
             target_info,

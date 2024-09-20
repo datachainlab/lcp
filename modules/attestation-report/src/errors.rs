@@ -40,14 +40,6 @@ define_error! {
             format_args!("Mrenclave mismatch error: expected={} actual={}", e.expected, e.actual)
         },
 
-        WebPki
-        {
-            descr: String
-        }
-        |e| {
-            format_args!("WebPKI error: descr={}", e.descr)
-        },
-
         SerdeJson
         [TraceError<serde_json::Error>]
         |_| { "serde_json error" },
@@ -59,6 +51,14 @@ define_error! {
         ChronoParse
         [TraceError<chrono::ParseError>]
         |_| { "chrono parse error" },
+
+        WebPki
+        {
+            descr: String
+        }
+        |e| {
+            format_args!("WebPKI error: descr={}", e.descr)
+        },
 
         TimeError
         [lcp_types::TimeError]

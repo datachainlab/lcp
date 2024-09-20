@@ -67,7 +67,8 @@ pub struct GenerateKey {
     hain"
     )]
     pub operator: Option<String>,
-    // TODO add target qe option
+    #[clap(long = "target_qe3", help = "Create a report for QE3 instead of QE")]
+    pub target_qe3: bool,
 }
 
 impl GenerateKey {
@@ -84,7 +85,7 @@ fn run_generate_key<E: EnclaveCommandAPI<S>, S: CommitStore>(
     enclave: E,
     input: &GenerateKey,
 ) -> Result<()> {
-    let (target_info, _) = remote_attestation::init_quote()?;
+    let (target_info, _) = remote_attestation::init_quote(input.target_qe3)?;
     let res = enclave
         .generate_enclave_key(GenerateEnclaveKeyInput {
             target_info,
@@ -120,9 +121,9 @@ fn run_list_keys<E: EnclaveCommandAPI<S>, S: CommitStore>(
     };
     let mut list_json = Vec::new();
     for eki in list {
-        match eki.signed_avr {
-            Some(signed_avr) => {
-                let avr = signed_avr.get_avr()?;
+        match eki.ias_report {
+            Some(ias_report) => {
+                let avr = ias_report.get_avr()?;
                 let report_data = avr.parse_quote()?.report_data();
                 list_json.push(json! {{
                     "address": eki.address.to_hex_string(),

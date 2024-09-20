@@ -216,7 +216,7 @@ TEST_ENCLAVE_CARGO_TEST=$(TEST_ENCLAVE_CARGO) test $(CARGO_TARGET)
 
 .PHONY: test
 test:
-	@cargo test $(CARGO_TARGET) --lib --workspace --exclude integration-test
+	@cargo test $(CARGO_TARGET) --workspace --exclude integration-test
 	@$(TEST_ENCLAVE_CARGO_TEST) -p ecall-handler
 	@$(TEST_ENCLAVE_CARGO_TEST) -p enclave-environment
 	@$(TEST_ENCLAVE_CARGO_TEST) -p host-api
@@ -225,7 +225,7 @@ test:
 
 .PHONY: integration-test
 integration-test: $(Signed_RustEnclave_Name) bin/gaiad
-	@PATH=${PATH}:$(CURDIR)/bin cargo test $(CARGO_TARGET) --package integration-test $(APP_CARGO_FEATURES)
+	cargo test $(CARGO_TARGET) --package integration-test $(APP_CARGO_FEATURES)
 
 .PHONY: test-nodes
 test-setup-nodes: bin/gaiad
