@@ -216,7 +216,7 @@ TEST_ENCLAVE_CARGO_TEST=$(TEST_ENCLAVE_CARGO) test $(CARGO_TARGET)
 
 .PHONY: test
 test:
-	@cargo test $(CARGO_TARGET) --lib --workspace --exclude integration-test
+	@cargo test $(CARGO_TARGET) --workspace --exclude integration-test
 	@$(TEST_ENCLAVE_CARGO_TEST) -p ecall-handler
 	@$(TEST_ENCLAVE_CARGO_TEST) -p enclave-environment
 	@$(TEST_ENCLAVE_CARGO_TEST) -p host-api

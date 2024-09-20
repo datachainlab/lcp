@@ -1,7 +1,7 @@
 pub mod errors;
 pub use crate::errors::Error;
 use anyhow::anyhow;
-use attestation_report::{ReportData, SignedAttestationVerificationReport};
+use attestation_report::{IASSignedReport, ReportData, VerifiableQuote};
 use crypto::{Address, SealedEnclaveKey};
 use lcp_types::{
     deserialize_bytes, proto::lcp::service::enclave::v1::EnclaveKeyInfo as ProtoEnclaveKeyInfo,
@@ -55,7 +55,8 @@ impl EnclaveKeyManager {
                 ek_sealed BLOB NOT NULL,
                 mrenclave TEXT NOT NULL,
                 report BLOB NOT NULL,
-                signed_avr TEXT,
+                ias_report TEXT,
+                dcap_quote TEXT,
                 attested_at TEXT,
                 created_at TEXT NOT NULL DEFAULT (DATETIME('now', 'localtime')),
                 updated_at TEXT NOT NULL DEFAULT (DATETIME('now', 'localtime'))
@@ -75,7 +76,7 @@ impl EnclaveKeyManager {
             .map_err(|e| Error::mutex_lock(e.to_string()))?;
         let mut stmt = conn.prepare(
             r#"
-            SELECT ek_sealed, mrenclave, report, signed_avr
+            SELECT ek_sealed, mrenclave, report, ias_report
             FROM enclave_keys
             WHERE ek_address = ?1
             "#,
@@ -105,17 +106,15 @@ impl EnclaveKeyManager {
                         anyhow!("report: {:?}", e).into(),
                     )
                 })?,
-                signed_avr: match row.get::<_, Option<String>>(3) {
+                ias_report: match row.get::<_, Option<String>>(3) {
                     Ok(None) => None,
-                    Ok(Some(avr)) => Some(
-                        SignedAttestationVerificationReport::from_json(&avr).map_err(|e| {
-                            rusqlite::Error::FromSqlConversionFailure(
-                                3,
-                                Type::Text,
-                                anyhow!("signed_avr: {:?}", e).into(),
-                            )
-                        })?,
-                    ),
+                    Ok(Some(avr)) => Some(IASSignedReport::from_json(&avr).map_err(|e| {
+                        rusqlite::Error::FromSqlConversionFailure(
+                            3,
+                            Type::Text,
+                            anyhow!("ias_report: {:?}", e).into(),
+                        )
+                    })?),
                     Err(e) => return Err(e),
                 },
             })
@@ -146,29 +145,49 @@ impl EnclaveKeyManager {
     }
 
     /// Update the attestation verification report for the enclave key
-    pub fn save_avr(
+    pub fn save_verifiable_quote(
         &self,
         address: Address,
-        signed_avr: SignedAttestationVerificationReport,
+        vquote: VerifiableQuote,
     ) -> Result<(), Error> {
         let conn = self
             .conn
             .lock()
             .map_err(|e| Error::mutex_lock(e.to_string()))?;
-        let attested_at = signed_avr.get_avr()?.attestation_time()?;
-        // update avr and attested_at and signature and sigining_cert
-        let mut stmt = conn.prepare(
-            r#"
-            UPDATE enclave_keys
-            SET signed_avr = ?1, attested_at = ?2
-            WHERE ek_address = ?3
-            "#,
-        )?;
-        stmt.execute(params![
-            signed_avr.to_json()?,
-            attested_at.as_unix_timestamp_secs(),
-            address.to_hex_string()
-        ])?;
+
+        match vquote {
+            VerifiableQuote::IAS(ias_report) => {
+                let mut stmt = conn.prepare(
+                    r#"
+                    UPDATE enclave_keys
+                    SET ias_report = ?1, attested_at = ?2
+                    WHERE ek_address = ?3
+                    "#,
+                )?;
+                stmt.execute(params![
+                    ias_report.to_json()?,
+                    ias_report
+                        .get_avr()?
+                        .attestation_time()?
+                        .as_unix_timestamp_secs(),
+                    address.to_hex_string()
+                ])?;
+            }
+            VerifiableQuote::DCAP(dcap_quote) => {
+                let mut stmt = conn.prepare(
+                    r#"
+                    UPDATE enclave_keys
+                    SET dcap_quote = ?1, attested_at = ?2
+                    WHERE ek_address = ?3
+                    "#,
+                )?;
+                stmt.execute(params![
+                    dcap_quote.to_json()?,
+                    dcap_quote.attested_at.as_unix_timestamp_secs(),
+                    address.to_hex_string()
+                ])?;
+            }
+        }
         Ok(())
     }
 
@@ -180,7 +199,7 @@ impl EnclaveKeyManager {
             .map_err(|e| Error::mutex_lock(e.to_string()))?;
         let mut stmt = conn.prepare(
             r#"
-            SELECT ek_address, ek_sealed, mrenclave, report, signed_avr
+            SELECT ek_address, ek_sealed, mrenclave, report, ias_report
             FROM enclave_keys
             WHERE attested_at IS NOT NULL AND mrenclave = ?1
             ORDER BY attested_at DESC
@@ -222,13 +241,12 @@ impl EnclaveKeyManager {
                             anyhow!("report: {:?}", e).into(),
                         )
                     })?,
-                    signed_avr: Some(
-                        SignedAttestationVerificationReport::from_json(&row.get::<_, String>(4)?)
-                            .map_err(|e| {
+                    ias_report: Some(
+                        IASSignedReport::from_json(&row.get::<_, String>(4)?).map_err(|e| {
                             rusqlite::Error::FromSqlConversionFailure(
                                 4,
                                 Type::Text,
-                                anyhow!("signed_avr: {:?}", e).into(),
+                                anyhow!("ias_report: {:?}", e).into(),
                             )
                         })?,
                     ),
@@ -246,7 +264,7 @@ impl EnclaveKeyManager {
             .map_err(|e| Error::mutex_lock(e.to_string()))?;
         let mut stmt = conn.prepare(
             r#"
-            SELECT ek_address, ek_sealed, mrenclave, report, signed_avr
+            SELECT ek_address, ek_sealed, mrenclave, report, ias_report
             FROM enclave_keys
             ORDER BY updated_at DESC
             "#,
@@ -287,17 +305,15 @@ impl EnclaveKeyManager {
                             anyhow!("report: {:?}", e).into(),
                         )
                     })?,
-                    signed_avr: match row.get::<_, Option<String>>(4) {
+                    ias_report: match row.get::<_, Option<String>>(4) {
                         Ok(None) => None,
-                        Ok(Some(avr)) => Some(
-                            SignedAttestationVerificationReport::from_json(&avr).map_err(|e| {
-                                rusqlite::Error::FromSqlConversionFailure(
-                                    4,
-                                    Type::Text,
-                                    anyhow!("signed_avr: {:?}", e).into(),
-                                )
-                            })?,
-                        ),
+                        Ok(Some(avr)) => Some(IASSignedReport::from_json(&avr).map_err(|e| {
+                            rusqlite::Error::FromSqlConversionFailure(
+                                4,
+                                Type::Text,
+                                anyhow!("ias_report: {:?}", e).into(),
+                            )
+                        })?),
                         Err(e) => return Err(e),
                     },
                 })
@@ -327,22 +343,22 @@ pub struct SealedEnclaveKeyInfo {
     pub mrenclave: Mrenclave,
     #[serde_as(as = "BytesTransmuter<sgx_report_t>")]
     pub report: sgx_report_t,
-    pub signed_avr: Option<SignedAttestationVerificationReport>,
+    pub ias_report: Option<IASSignedReport>,
 }
 
 impl TryFrom<SealedEnclaveKeyInfo> for ProtoEnclaveKeyInfo {
     type Error = Error;
     fn try_from(value: SealedEnclaveKeyInfo) -> Result<Self, Self::Error> {
-        let signed_avr = value
-            .signed_avr
+        let ias_report = value
+            .ias_report
             .ok_or_else(|| Error::unattested_enclave_key(format!("address={}", value.address)))?;
-        let attestation_time = signed_avr.get_avr()?.parse_quote()?.attestation_time;
+        let attestation_time = ias_report.get_avr()?.parse_quote()?.attestation_time;
         Ok(Self {
             enclave_key_address: value.address.into(),
             attestation_time: attestation_time.as_unix_timestamp_secs(),
-            report: signed_avr.avr,
-            signature: signed_avr.signature,
-            signing_cert: signed_avr.signing_cert,
+            report: ias_report.avr,
+            signature: ias_report.signature,
+            signing_cert: ias_report.signing_cert,
             extension: Default::default(),
         })
     }
@@ -351,7 +367,7 @@ impl TryFrom<SealedEnclaveKeyInfo> for ProtoEnclaveKeyInfo {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use attestation_report::AttestationVerificationReport;
+    use attestation_report::IASAttestationVerificationReport;
     use chrono::{DateTime, Duration, Utc};
     use rand::RngCore;
 
@@ -365,12 +381,13 @@ mod tests {
             let sealed_ek = create_sealed_sk();
             assert_eq!(km.all_keys().unwrap().len(), 0);
             km.save(sealed_ek, report).unwrap();
-            assert!(km.load(address).unwrap().signed_avr.is_none());
+            assert!(km.load(address).unwrap().ias_report.is_none());
             assert_eq!(km.all_keys().unwrap().len(), 1);
             assert_eq!(km.available_keys(mrenclave).unwrap().len(), 0);
-            let avr = create_signed_avr(get_time(Duration::zero()));
-            km.save_avr(address, avr).unwrap();
-            assert!(km.load(address).unwrap().signed_avr.is_some());
+            let ias_report = create_ias_report(get_time(Duration::zero()));
+            km.save_verifiable_quote(address, ias_report.into())
+                .unwrap();
+            assert!(km.load(address).unwrap().ias_report.is_some());
             assert_eq!(km.all_keys().unwrap().len(), 1);
             assert_eq!(km.available_keys(mrenclave).unwrap().len(), 1);
             address
@@ -381,12 +398,13 @@ mod tests {
             let sealed_ek = create_sealed_sk();
             assert_eq!(km.all_keys().unwrap().len(), 1);
             km.save(sealed_ek, report).unwrap();
-            assert!(km.load(address).unwrap().signed_avr.is_none());
+            assert!(km.load(address).unwrap().ias_report.is_none());
             assert_eq!(km.all_keys().unwrap().len(), 2);
             assert_eq!(km.available_keys(mrenclave).unwrap().len(), 1);
-            let avr = create_signed_avr(get_time(Duration::minutes(1)));
-            km.save_avr(address, avr).unwrap();
-            assert!(km.load(address).unwrap().signed_avr.is_some());
+            let ias_report = create_ias_report(get_time(Duration::minutes(1)));
+            km.save_verifiable_quote(address, ias_report.into())
+                .unwrap();
+            assert!(km.load(address).unwrap().ias_report.is_some());
             assert_eq!(km.all_keys().unwrap().len(), 2);
             assert_eq!(km.available_keys(mrenclave).unwrap().len(), 2);
         }
@@ -431,9 +449,9 @@ mod tests {
         addr
     }
 
-    fn create_signed_avr(timestamp: DateTime<Utc>) -> SignedAttestationVerificationReport {
-        SignedAttestationVerificationReport {
-            avr: AttestationVerificationReport {
+    fn create_ias_report(timestamp: DateTime<Utc>) -> IASSignedReport {
+        IASSignedReport {
+            avr: IASAttestationVerificationReport {
                 version: 4,
                 timestamp: format!(
                     "{}000",

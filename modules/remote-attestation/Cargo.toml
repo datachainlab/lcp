@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 sgx_types = { rev = "v1.1.6", git = "https://github.com/apache/incubator-teaclave-sgx-sdk" }
+
 log = { version = "0.4.8" }
 rand = { version = "0.8" }
 hex = { version = "0.4", default-features = false, features = ["alloc"] }
@@ -20,8 +21,6 @@ chrono = { version = "0.4.38", features = ["now"], optional = true }
 lcp-types = { path = "../types" }
 crypto = { path = "../crypto", default-features = false }
 attestation-report = { path = "../attestation-report" }
-enclave-api = { path = "../enclave-api" }
-store = { path = "../store" }
 keymanager = { path = "../keymanager" }
 
 [features]

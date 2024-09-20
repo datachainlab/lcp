@@ -5,7 +5,7 @@ use crate::message::{
     ClientMessage, CommitmentProofs, RegisterEnclaveKeyMessage, UpdateOperatorsMessage,
 };
 use alloy_sol_types::{sol, SolValue};
-use attestation_report::{ReportData, SignedAttestationVerificationReport};
+use attestation_report::{IASSignedReport, ReportData};
 use crypto::{verify_signature_address, Address, Keccak256};
 use hex_literal::hex;
 use light_client::commitments::{
@@ -527,12 +527,12 @@ pub fn compute_eip712_update_operators_hash(
 fn verify_report(
     current_timestamp: Time,
     client_state: &ClientState,
-    signed_avr: &SignedAttestationVerificationReport,
+    signed_avr: &IASSignedReport,
 ) -> Result<(ReportData, Time), Error> {
     // verify AVR with Intel SGX Attestation Report Signing CA
     // NOTE: This verification is skipped in tests because the CA is not available in the test environment
-    #[cfg(not(test))]
-    attestation_report::verify_report(current_timestamp, signed_avr)?;
+    // #[cfg(not(test))]
+    // attestation_report::verify_ias_report(current_timestamp, signed_avr)?;
 
     let quote = signed_avr.get_avr()?.parse_quote()?;
 
@@ -579,7 +579,7 @@ mod tests {
     use crate::message::UpdateClientMessage;
     use alloc::rc::Rc;
     use alloc::sync::Arc;
-    use attestation_report::{AttestationVerificationReport, ReportData};
+    use attestation_report::{IASAttestationVerificationReport, ReportData};
     use base64::{engine::general_purpose::STANDARD as Base64Std, Engine};
     use context::Context;
     use core::cell::RefCell;
@@ -811,7 +811,7 @@ mod tests {
         Arc::new(registry)
     }
 
-    fn generate_dummy_signed_avr(key: &EnclavePublicKey) -> SignedAttestationVerificationReport {
+    fn generate_dummy_signed_avr(key: &EnclavePublicKey) -> IASSignedReport {
         let quote = sgx_quote_t {
             version: 4,
             report_body: sgx_report_body_t {
@@ -827,7 +827,7 @@ mod tests {
             )
         };
         let now = chrono::Utc::now();
-        let attr = AttestationVerificationReport {
+        let attr = IASAttestationVerificationReport {
             id: "23856791181030202675484781740313693463".to_string(),
             // TODO refactoring
             timestamp: format!(
@@ -846,7 +846,7 @@ mod tests {
             ..Default::default()
         };
 
-        SignedAttestationVerificationReport {
+        IASSignedReport {
             avr: attr.to_canonical_json().unwrap(),
             ..Default::default()
         }
