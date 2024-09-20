@@ -1,9 +1,10 @@
 use crate::errors::Error;
 use crate::ias_utils::{get_quote, init_quote, validate_qe_report, SGX_QUOTE_SIGN_TYPE};
-use attestation_report::{AttestationVerificationReport, SignedAttestationVerificationReport};
+use attestation_report::{IASAttestationVerificationReport, IASSignedReport};
 use base64::{engine::general_purpose::STANDARD as Base64Std, Engine};
 use crypto::Address;
 use enclave_api::EnclaveCommandAPI;
+use log::*;
 use rsa::signature::{SignatureEncoding, Signer};
 use store::transaction::CommitStore;
 
@@ -14,8 +15,8 @@ pub fn run_ias_ra_simulation<E: EnclaveCommandAPI<S>, S: CommitStore>(
     isv_enclave_quote_status: String,
     signing_key: rsa::pkcs1v15::SigningKey<sha2::Sha256>,
     signing_cert: Vec<u8>,
-) -> Result<SignedAttestationVerificationReport, Error> {
-    let (target_info, _) = init_quote()?;
+) -> Result<IASSignedReport, Error> {
+    let (target_info, _) = init_quote(false)?;
     let ek_info = enclave
         .get_key_manager()
         .load(target_enclave_key)
@@ -33,13 +34,29 @@ pub fn run_ias_ra_simulation<E: EnclaveCommandAPI<S>, S: CommitStore>(
         Default::default(),
     )?;
     validate_qe_report(&target_info, &qe_report)?;
-    create_simulate_avr(
+    let signed_report = create_simulate_avr(
         quote,
         advisory_ids,
         isv_enclave_quote_status,
         signing_key,
         signing_cert,
-    )
+    )?;
+    info!("IAS AVR: {:?}", signed_report.avr);
+    info!(
+        "report_data: {}",
+        signed_report.get_avr()?.parse_quote()?.report_data()
+    );
+    enclave
+        .get_key_manager()
+        .save_verifiable_quote(target_enclave_key, signed_report.clone().into())
+        .map_err(|e| {
+            Error::key_manager(
+                format!("cannot save IAS Simulation AVR: {}", target_enclave_key),
+                e,
+            )
+        })?;
+
+    Ok(signed_report)
 }
 
 fn create_simulate_avr(
@@ -48,10 +65,10 @@ fn create_simulate_avr(
     isv_enclave_quote_status: String,
     signing_key: rsa::pkcs1v15::SigningKey<sha2::Sha256>,
     signing_cert: Vec<u8>,
-) -> Result<SignedAttestationVerificationReport, Error> {
+) -> Result<IASSignedReport, Error> {
     let now = chrono::Utc::now();
     // TODO more configurable via simulation command
-    let avr = AttestationVerificationReport {
+    let avr = IASAttestationVerificationReport {
         id: "23856791181030202675484781740313693463".to_string(),
         // TODO refactoring
         timestamp: format!(
@@ -72,7 +89,7 @@ fn create_simulate_avr(
     };
     let avr_json = avr.to_canonical_json().unwrap();
     let signature = signing_key.sign(avr_json.as_bytes()).to_vec();
-    Ok(SignedAttestationVerificationReport {
+    Ok(IASSignedReport {
         avr: avr_json,
         signature,
         signing_cert,

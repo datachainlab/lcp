@@ -79,7 +79,7 @@ mod tests {
             info!("this test is running in HW mode");
         }
 
-        let (target_info, _) = remote_attestation::init_quote()?;
+        let (target_info, _) = remote_attestation::init_quote(false)?;
         let operator = Address::from_hex_string("0x396e1ccc2f11cd6d2114c2449dad7751357e413e")?;
         let op_ek_addr = match enclave.generate_enclave_key(GenerateEnclaveKeyInput {
             operator: Some(operator),
@@ -213,7 +213,7 @@ mod tests {
         enclave: &Enclave<store::memory::MemStore>,
     ) -> Result<(), anyhow::Error> {
         let operator = Address::from_hex_string("0x396e1ccc2f11cd6d2114c2449dad7751357e413e")?;
-        let (target_info, _) = remote_attestation::init_quote()?;
+        let (target_info, _) = remote_attestation::init_quote(false)?;
         let signer = match enclave.generate_enclave_key(GenerateEnclaveKeyInput {
             operator: Some(operator),
             target_info,

@@ -17,7 +17,7 @@ light-client = { path = "../light-client", default-features = false }
 crypto = { path = "../crypto", default-features = false }
 
 [dev-dependencies]
-sgx_types = { rev = "v1.1.6", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", features = ["extra_traits"] }
+sgx_types = { rev = "1b1d03376056321441ef99716aa0888bd5ef19f7", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", features = ["extra_traits"] }
 ibc = { version = "0.29.0", default-features = false, features = ["serde", "std"] }
 chrono = { version = "0.4", default-features = false, features = ["alloc", "clock"]}
 base64 = { version = "0.22.1", default-features = false, features = ["alloc"] }

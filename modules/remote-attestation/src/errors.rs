@@ -1,6 +1,6 @@
 use flex_error::*;
 use lcp_types::Time;
-use sgx_types::sgx_status_t;
+use sgx_types::{sgx_quote3_error_t, sgx_status_t};
 
 define_error! {
     #[derive(Debug)]
@@ -136,6 +136,14 @@ define_error! {
             format_args!("SGXError: status={:?} descr={}", e.status, e.descr)
         },
 
+        SgxQe3Error {
+            status: sgx_quote3_error_t,
+            descr: String
+        }
+        |e| {
+            format_args!("SGXQE3Error: status={:?} descr={}", e.status, e.descr)
+        },
+
         Time
         [lcp_types::TimeError]
         |_| { "Time error" },
@@ -143,5 +151,11 @@ define_error! {
         EnclaveApi
         [enclave_api::Error]
         |_| { "EnclaveAPI error" },
+    }
+}
+
+impl From<attestation_report::Error> for Error {
+    fn from(e: attestation_report::Error) -> Self {
+        Error::attestation_report(e)
     }
 }

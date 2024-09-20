@@ -4,9 +4,9 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-sgx_types = { rev = "v1.1.6", git = "https://github.com/apache/incubator-teaclave-sgx-sdk" }
-sgx_trts = { rev = "v1.1.6", git = "https://github.com/apache/incubator-teaclave-sgx-sdk" }
-sgx_alloc = { rev = "v1.1.6", git = "https://github.com/apache/incubator-teaclave-sgx-sdk" }
+sgx_types = { rev = "1b1d03376056321441ef99716aa0888bd5ef19f7", git = "https://github.com/apache/incubator-teaclave-sgx-sdk" }
+sgx_trts = { rev = "1b1d03376056321441ef99716aa0888bd5ef19f7", git = "https://github.com/apache/incubator-teaclave-sgx-sdk" }
+sgx_alloc = { rev = "1b1d03376056321441ef99716aa0888bd5ef19f7", git = "https://github.com/apache/incubator-teaclave-sgx-sdk" }
 log = { version = "0.4.8", default-features = false }
 bincode = { version = "2.0.0-rc.3", default-features = false, features = ["serde", "alloc"] }
 flex-error = { version = "0.4.4", default-features = false }

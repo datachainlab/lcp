@@ -20,12 +20,14 @@ mod prelude {
     pub use core::iter::FromIterator;
 }
 
+pub use dcap::DCAPQuote;
 pub use errors::Error;
-mod errors;
+pub use ias::{IASAttestationVerificationReport, IASSignedReport};
+pub use report::{Quote, ReportData, VerifiableQuote};
 
-pub use report::{
-    AttestationVerificationReport, Quote, ReportData, SignedAttestationVerificationReport,
-};
+mod dcap;
+mod errors;
+mod ias;
 mod report;
 
 #[cfg(feature = "std")]

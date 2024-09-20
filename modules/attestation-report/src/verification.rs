@@ -1,5 +1,5 @@
 use crate::prelude::*;
-use crate::{errors::Error, SignedAttestationVerificationReport};
+use crate::{errors::Error, IASSignedReport};
 use lcp_types::{nanos_to_duration, Time};
 
 pub const IAS_REPORT_CA: &[u8] =
@@ -20,10 +20,7 @@ static SUPPORTED_SIG_ALGS: SignatureAlgorithms = &[
     &webpki::RSA_PKCS1_3072_8192_SHA384,
 ];
 
-pub fn verify_report(
-    current_timestamp: Time,
-    report: &SignedAttestationVerificationReport,
-) -> Result<(), Error> {
+pub fn verify_report(current_timestamp: Time, report: &IASSignedReport) -> Result<(), Error> {
     // NOTE: Currently, webpki::Time's constructor only accepts seconds as unix timestamp.
     // Therefore, the current time are rounded up conservatively.
     let duration = nanos_to_duration(current_timestamp.as_unix_timestamp_nanos())?;
