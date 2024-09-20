@@ -40,14 +40,6 @@ define_error! {
             format_args!("Mrenclave mismatch error: expected={} actual={}", e.expected, e.actual)
         },
 
-        WebPki
-        {
-            descr: String
-        }
-        |e| {
-            format_args!("WebPKI error: descr={}", e.descr)
-        },
-
         SerdeJson
         [TraceError<serde_json::Error>]
         |_| { "serde_json error" },

@@ -1,11 +1,13 @@
 use crate::errors::Error;
-use attestation_report::SignedAttestationVerificationReport;
+use attestation_report::IASSignedReport;
 use base64::{engine::general_purpose::STANDARD as Base64Std, Engine};
+use lcp_types::{nanos_to_duration, Time};
 use log::*;
 use rand::RngCore;
 use sgx_types::{
-    sgx_calc_quote_size, sgx_epid_group_id_t, sgx_get_quote, sgx_init_quote, sgx_quote_nonce_t,
-    sgx_quote_sign_type_t, sgx_quote_t, sgx_report_t, sgx_spid_t, sgx_status_t, sgx_target_info_t,
+    sgx_calc_quote_size, sgx_epid_group_id_t, sgx_get_quote, sgx_init_quote,
+    sgx_qe_get_target_info, sgx_quote3_error_t, sgx_quote_nonce_t, sgx_quote_sign_type_t,
+    sgx_quote_t, sgx_report_t, sgx_spid_t, sgx_status_t, sgx_target_info_t,
 };
 use sha2::{Digest, Sha256};
 use std::fmt::Display;
@@ -19,6 +21,23 @@ pub const IAS_HOSTNAME: &str = "api.trustedservices.intel.com";
 pub const IAS_HTTPS_PORT: u16 = 443;
 pub const SGX_QUOTE_SIGN_TYPE: sgx_quote_sign_type_t =
     sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE;
+pub const IAS_REPORT_CA: &[u8] =
+    include_bytes!("../../../enclave/Intel_SGX_Attestation_RootCA.pem");
+
+type SignatureAlgorithms = &'static [&'static webpki::SignatureAlgorithm];
+static SUPPORTED_SIG_ALGS: SignatureAlgorithms = &[
+    &webpki::ECDSA_P256_SHA256,
+    &webpki::ECDSA_P256_SHA384,
+    &webpki::ECDSA_P384_SHA256,
+    &webpki::ECDSA_P384_SHA384,
+    &webpki::RSA_PSS_2048_8192_SHA256_LEGACY_KEY,
+    &webpki::RSA_PSS_2048_8192_SHA384_LEGACY_KEY,
+    &webpki::RSA_PSS_2048_8192_SHA512_LEGACY_KEY,
+    &webpki::RSA_PKCS1_2048_8192_SHA256,
+    &webpki::RSA_PKCS1_2048_8192_SHA384,
+    &webpki::RSA_PKCS1_2048_8192_SHA512,
+    &webpki::RSA_PKCS1_3072_8192_SHA384,
+];
 
 #[derive(Debug, Clone, Copy)]
 pub enum IASMode {
@@ -51,12 +70,22 @@ impl IASMode {
     }
 }
 
-pub fn init_quote() -> Result<(sgx_target_info_t, sgx_epid_group_id_t), Error> {
+pub fn init_quote(target_qe3: bool) -> Result<(sgx_target_info_t, sgx_epid_group_id_t), Error> {
     let mut target_info = sgx_target_info_t::default();
-    let mut epid_group_id = sgx_epid_group_id_t::default();
-    match unsafe { sgx_init_quote(&mut target_info, &mut epid_group_id) } {
-        sgx_status_t::SGX_SUCCESS => Ok((target_info, epid_group_id)),
-        s => Err(Error::sgx_error(s, "failed to sgx_init_quote".into())),
+    if target_qe3 {
+        match unsafe { sgx_qe_get_target_info(&mut target_info) } {
+            sgx_quote3_error_t::SGX_QL_SUCCESS => Ok((target_info, sgx_epid_group_id_t::default())),
+            s => Err(Error::sgx_qe3_error(
+                s,
+                "failed to sgx_qe_get_target_info".into(),
+            )),
+        }
+    } else {
+        let mut epid_group_id = sgx_epid_group_id_t::default();
+        match unsafe { sgx_init_quote(&mut target_info, &mut epid_group_id) } {
+            sgx_status_t::SGX_SUCCESS => Ok((target_info, epid_group_id)),
+            s => Err(Error::sgx_error(s, "failed to sgx_init_quote".into())),
+        }
     }
 }
 
@@ -174,7 +203,7 @@ pub(crate) fn get_report_from_intel(
     mode: IASMode,
     quote: Vec<u8>,
     ias_key: &str,
-) -> Result<SignedAttestationVerificationReport, Error> {
+) -> Result<IASSignedReport, Error> {
     info!("using IAS mode: {}", mode);
     let config = make_ias_client_config();
     let encoded_quote = Base64Std.encode(&quote[..]);
@@ -223,7 +252,26 @@ pub fn validate_qe_report(
     Ok(())
 }
 
-fn parse_response_attn_report(resp: &[u8]) -> Result<SignedAttestationVerificationReport, Error> {
+pub(crate) fn decode_spid(spid_str: &str) -> Result<sgx_spid_t, Error> {
+    let spid_str = spid_str.trim();
+    if spid_str.len() != 32 {
+        return Err(Error::invalid_spid(format!(
+            "invalid length: {}",
+            spid_str.len()
+        )));
+    }
+    let decoded_vec = match hex::decode(spid_str) {
+        Ok(v) => v,
+        Err(_) => {
+            return Err(Error::invalid_spid("failed to decode".to_string()));
+        }
+    };
+    let mut spid = sgx_spid_t::default();
+    spid.id.copy_from_slice(&decoded_vec[..16]);
+    Ok(spid)
+}
+
+fn parse_response_attn_report(resp: &[u8]) -> Result<IASSignedReport, Error> {
     trace!("parse_response_attn_report");
     let mut headers = [httparse::EMPTY_HEADER; 16];
     let mut respp = httparse::Response::new(&mut headers);
@@ -254,14 +302,14 @@ fn parse_response_attn_report(resp: &[u8]) -> Result<SignedAttestationVerificati
                 })?;
                 trace!("content length = {}", len_num);
             }
-            "X-IASReport-Signature" => {
+            "X-IASAttestationVerificationReport-Signature" => {
                 sig = str::from_utf8(h.value)
                     .map_err(|e| {
                         Error::invalid_utf8_bytes(h.value.to_vec(), e, h.name.to_string())
                     })?
                     .to_string()
             }
-            "X-IASReport-Signing-Certificate" => {
+            "X-IASAttestationVerificationReport-Signing-Certificate" => {
                 cert = str::from_utf8(h.value)
                     .map_err(|e| {
                         Error::invalid_utf8_bytes(h.value.to_vec(), e, h.name.to_string())
@@ -305,7 +353,7 @@ fn parse_response_attn_report(resp: &[u8]) -> Result<SignedAttestationVerificati
     let signing_cert = Base64Std
         .decode(&sig_cert)
         .map_err(|e| Error::base64_decode(e, "Signing Certificate".to_string()))?;
-    Ok(SignedAttestationVerificationReport {
+    Ok(IASSignedReport {
         avr: attn_report,
         signature,
         signing_cert,
@@ -400,21 +448,51 @@ fn lookup_ipv4(host: &str, port: u16) -> Result<SocketAddr, Error> {
     Err(Error::cannot_lookup_address(host.to_string(), port))
 }
 
-pub(crate) fn decode_spid(spid_str: &str) -> Result<sgx_spid_t, Error> {
-    let spid_str = spid_str.trim();
-    if spid_str.len() != 32 {
-        return Err(Error::invalid_spid(format!(
-            "invalid length: {}",
-            spid_str.len()
-        )));
-    }
-    let decoded_vec = match hex::decode(spid_str) {
-        Ok(v) => v,
-        Err(_) => {
-            return Err(Error::invalid_spid("failed to decode".to_string()));
-        }
+pub fn verify_ias_report(current_timestamp: Time, report: &IASSignedReport) -> Result<(), Error> {
+    // NOTE: Currently, webpki::Time's constructor only accepts seconds as unix timestamp.
+    // Therefore, the current time are rounded up conservatively.
+    let duration = nanos_to_duration(current_timestamp.as_unix_timestamp_nanos())?;
+    let secs = if duration.subsec_nanos() > 0 {
+        duration.as_secs() + 1
+    } else {
+        duration.as_secs()
     };
-    let mut spid = sgx_spid_t::default();
-    spid.id.copy_from_slice(&decoded_vec[..16]);
-    Ok(spid)
+    let now = webpki::Time::from_seconds_since_unix_epoch(secs);
+    let root_ca_pem = pem::parse(IAS_REPORT_CA).expect("failed to parse pem bytes");
+    let root_ca = root_ca_pem.contents();
+
+    let mut root_store = rustls::RootCertStore::empty();
+    root_store
+        .add(&rustls::Certificate(root_ca.to_vec()))
+        .map_err(|e| Error::web_pki(e.to_string()))?;
+
+    let trust_anchors: Vec<webpki::TrustAnchor> = root_store
+        .roots
+        .iter()
+        .map(|cert| cert.to_trust_anchor())
+        .collect();
+
+    let chain = vec![root_ca];
+
+    let report_cert = webpki::EndEntityCert::from(&report.signing_cert)
+        .map_err(|e| Error::web_pki(e.to_string()))?;
+
+    report_cert
+        .verify_is_valid_tls_server_cert(
+            SUPPORTED_SIG_ALGS,
+            &webpki::TLSServerTrustAnchors(&trust_anchors),
+            &chain,
+            now,
+        )
+        .map_err(|e| Error::web_pki(e.to_string()))?;
+
+    report_cert
+        .verify_signature(
+            &webpki::RSA_PKCS1_2048_8192_SHA256,
+            report.avr.as_ref(),
+            &report.signature,
+        )
+        .map_err(|e| Error::web_pki(e.to_string()))?;
+
+    Ok(())
 }
