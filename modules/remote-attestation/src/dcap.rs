@@ -63,11 +63,34 @@ pub fn run_dcap_ra<E: EnclaveCommandAPI<S>, S: CommitStore>(
         }
     }
 
-    let res = rsgx_tee_get_supplemental_data_version_and_size(&quote);
-    info!(
-        "Successfully get the supplemental data version and size: {:?}",
-        res
-    );
+    let mut supp_data: sgx_ql_qv_supplemental_t = Default::default();
+    let mut supp_data_desc = tee_supp_data_descriptor_t {
+        major_version: 0,
+        data_size: 0,
+        p_data: &mut supp_data as *mut sgx_ql_qv_supplemental_t as *mut u8,
+    };
+
+    match rsgx_tee_get_supplemental_data_version_and_size(&quote) {
+        Ok((supp_ver, supp_size)) => {
+            if supp_size == core::mem::size_of::<sgx_ql_qv_supplemental_t>() as u32 {
+                info!("\tInfo: tee_get_quote_supplemental_data_version_and_size successfully returned.");
+                info!("\tInfo: latest supplemental data major version: {}, minor version: {}, size: {}",
+                    u16::from_be_bytes(supp_ver.to_be_bytes()[..2].try_into().unwrap()),
+                    u16::from_be_bytes(supp_ver.to_be_bytes()[2..].try_into().unwrap()),
+                    supp_size,
+                );
+                supp_data_desc.data_size = supp_size;
+            } else {
+                info!("\tWarning: Quote supplemental data size is different between DCAP QVL and QvE, please make sure you installed DCAP QVL and QvE from same release.")
+            }
+        }
+        Err(e) => {
+            panic!(
+                "Failed to get the supplemental data version and size: {:?}",
+                e
+            );
+        }
+    }
 
     let collateral = rsgx_tee_qv_get_collateral(&quote);
     info!("Successfully get the collateral: {:?}", collateral);
@@ -78,13 +101,6 @@ pub fn run_dcap_ra<E: EnclaveCommandAPI<S>, S: CommitStore>(
         .duration_since(SystemTime::UNIX_EPOCH)
         .unwrap_or(Duration::ZERO)
         .as_secs() as i64;
-
-    let mut supp_data: sgx_ql_qv_supplemental_t = Default::default();
-    let mut supp_data_desc = tee_supp_data_descriptor_t {
-        major_version: 0,
-        data_size: 0,
-        p_data: &mut supp_data as *mut sgx_ql_qv_supplemental_t as *mut u8,
-    };
 
     let p_supplemental_data = match supp_data_desc.data_size {
         0 => None,
