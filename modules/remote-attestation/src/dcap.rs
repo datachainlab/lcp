@@ -5,7 +5,7 @@ use ecall_commands::{CreateReportInput, CreateReportResponse};
 use enclave_api::EnclaveCommandAPI;
 use intel_tee_quote_verification_sys::{
     _sgx_ql_qve_collateral_t__bindgen_ty_1, _sgx_ql_qve_collateral_t__bindgen_ty_1__bindgen_ty_1,
-    sgx_ql_qv_supplemental_t, sgx_ql_qve_collateral_t,
+    quote3_error_t, sgx_ql_qv_supplemental_t, sgx_ql_qve_collateral_t, tee_get_fmspc_from_quote,
 };
 use log::*;
 use sgx_types::{
@@ -45,6 +45,23 @@ pub fn run_dcap_ra<E: EnclaveCommandAPI<S>, S: CommitStore>(
 
     let quote = rsgx_qe_get_quote(&report).unwrap();
     info!("Successfully get the quote: 0x{}", hex::encode(&quote));
+
+    let mut fmspc: [u8; 6] = Default::default();
+    match unsafe {
+        tee_get_fmspc_from_quote(
+            quote.as_ptr(),
+            quote.len() as u32,
+            fmspc.as_mut_ptr(),
+            fmspc.len() as u32,
+        )
+    } {
+        quote3_error_t::SGX_QL_SUCCESS => {
+            info!("Successfully get the fmspc: 0x{}", hex::encode(&fmspc));
+        }
+        error_code => {
+            panic!("Failed to get the fmspc: {:?}", error_code);
+        }
+    }
 
     let res = rsgx_tee_get_supplemental_data_version_and_size(&quote);
     info!(
