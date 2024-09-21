@@ -7,6 +7,7 @@ use intel_tee_quote_verification_sys::{
     _sgx_ql_qve_collateral_t__bindgen_ty_1, _sgx_ql_qve_collateral_t__bindgen_ty_1__bindgen_ty_1,
     sgx_ql_qv_supplemental_t, sgx_ql_qve_collateral_t,
 };
+use log::*;
 use sgx_types::{
     sgx_qe_get_quote, sgx_qe_get_quote_size, sgx_qe_get_target_info, sgx_ql_qe_report_info_t,
     sgx_ql_qv_result_t, sgx_quote3_error_t, sgx_report_t, sgx_target_info_t,
@@ -31,7 +32,7 @@ pub fn run_dcap_ra<E: EnclaveCommandAPI<S>, S: CommitStore>(
     if result != sgx_quote3_error_t::SGX_QL_SUCCESS {
         panic!("Failed to get the target_info");
     }
-    println!("Successfully get the target_info");
+    info!("Successfully get the target_info");
     let CreateReportResponse { report } = enclave
         .create_report(CreateReportInput {
             target_info,
@@ -40,19 +41,19 @@ pub fn run_dcap_ra<E: EnclaveCommandAPI<S>, S: CommitStore>(
         })
         .map_err(Error::enclave_api)?;
 
-    println!("Successfully create the report: {:?}", report);
+    info!("Successfully create the report: {:?}", report);
 
     let quote = rsgx_qe_get_quote(&report).unwrap();
-    println!("Successfully get the quote: {:?}", quote);
+    info!("Successfully get the quote: 0x{}", hex::encode(&quote));
 
     let res = rsgx_tee_get_supplemental_data_version_and_size(&quote);
-    println!(
+    info!(
         "Successfully get the supplemental data version and size: {:?}",
         res
     );
 
     let collateral = rsgx_tee_qv_get_collateral(&quote);
-    println!("Successfully get the collateral: {:?}", collateral);
+    info!("Successfully get the collateral: {:?}", collateral);
 
     // set current time. This is only for sample purposes, in production mode a trusted time should be used.
     //
@@ -85,7 +86,7 @@ pub fn run_dcap_ra<E: EnclaveCommandAPI<S>, S: CommitStore>(
         p_supplemental_data,
     ) {
         Ok((colla_exp_stat, qv_result)) => {
-            println!(
+            info!(
                 "\tInfo: App: tee_verify_quote successfully returned: {} {:?}",
                 colla_exp_stat, qv_result
             );
@@ -102,9 +103,9 @@ pub fn run_dcap_ra<E: EnclaveCommandAPI<S>, S: CommitStore>(
             // this value should be considered in your own attestation/verification policy
             //
             if collateral_expiration_status == 0 {
-                println!("\tInfo: App: Verification completed successfully.");
+                info!("\tInfo: App: Verification completed successfully.");
             } else {
-                println!("\tWarning: App: Verification completed, but collateral is out of date based on 'expiration_check_date' you provided.");
+                info!("\tWarning: App: Verification completed, but collateral is out of date based on 'expiration_check_date' you provided.");
             }
         }
         sgx_ql_qv_result_t::SGX_QL_QV_RESULT_CONFIG_NEEDED
@@ -112,7 +113,7 @@ pub fn run_dcap_ra<E: EnclaveCommandAPI<S>, S: CommitStore>(
         | sgx_ql_qv_result_t::SGX_QL_QV_RESULT_OUT_OF_DATE_CONFIG_NEEDED
         | sgx_ql_qv_result_t::SGX_QL_QV_RESULT_SW_HARDENING_NEEDED
         | sgx_ql_qv_result_t::SGX_QL_QV_RESULT_CONFIG_AND_SW_HARDENING_NEEDED => {
-            println!(
+            info!(
                 "\tWarning: App: Verification completed with Non-terminal result: {:x}",
                 quote_verification_result as u32
             );
@@ -121,7 +122,7 @@ pub fn run_dcap_ra<E: EnclaveCommandAPI<S>, S: CommitStore>(
         | sgx_ql_qv_result_t::SGX_QL_QV_RESULT_REVOKED
         | sgx_ql_qv_result_t::SGX_QL_QV_RESULT_UNSPECIFIED
         | _ => {
-            println!(
+            info!(
                 "\tError: App: Verification completed with Terminal result: {:x}",
                 quote_verification_result as u32
             );
@@ -135,11 +136,11 @@ pub fn run_dcap_ra<E: EnclaveCommandAPI<S>, S: CommitStore>(
         // here we only print supplemental data version for demo usage
         //
         let version_s = unsafe { supp_data.__bindgen_anon_1.__bindgen_anon_1 };
-        println!(
+        info!(
             "\tInfo: Supplemental data Major Version: {}",
             version_s.major_version
         );
-        println!(
+        info!(
             "\tInfo: Supplemental data Minor Version: {}",
             version_s.minor_version
         );
@@ -149,7 +150,7 @@ pub fn run_dcap_ra<E: EnclaveCommandAPI<S>, S: CommitStore>(
         if unsafe { supp_data.__bindgen_anon_1.version } > 3 {
             let sa_list = unsafe { std::ffi::CStr::from_ptr(supp_data.sa_list.as_ptr()) };
             if sa_list.to_bytes().len() > 0 {
-                println!("\tInfo: Advisory ID: {}", sa_list.to_str().unwrap());
+                info!("\tInfo: Advisory ID: {}", sa_list.to_str().unwrap());
             }
         }
     }
