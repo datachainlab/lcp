@@ -21,7 +21,6 @@ chrono = { version = "0.4.38", features = ["now"], optional = true }
 lcp-types = { path = "../types" }
 crypto = { path = "../crypto", default-features = false }
 attestation-report = { path = "../attestation-report" }
-ecall-commands = { path = "../ecall-commands" }
 enclave-api = { path = "../enclave-api" }
 store = { path = "../store", features = ["rocksdbstore"] }
 keymanager = { path = "../keymanager" }

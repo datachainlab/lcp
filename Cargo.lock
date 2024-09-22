@@ -3921,7 +3921,6 @@ dependencies = [
  "base64 0.22.1",
  "chrono",
  "crypto",
- "ecall-commands",
  "enclave-api",
  "flex-error",
  "hex",

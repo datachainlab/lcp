@@ -89,7 +89,7 @@ impl EnclaveKeyManager {
                     rusqlite::Error::FromSqlConversionFailure(0, Type::Blob, e.into())
                 })?,
                 mrenclave: Mrenclave::from_hex_string(&row.get::<_, String>(1)?).unwrap(),
-                report: unsafe { deserialize_bytes(&row.get::<_, Vec<u8>>(2)?).unwrap() },
+                report: deserialize_bytes(&row.get::<_, Vec<u8>>(2)?).unwrap(),
                 avr: match (row.get(3), row.get(4), row.get(5)) {
                     (Ok(None), Ok(None), Ok(None)) => None,
                     (Ok(Some(avr)), Ok(Some(signature)), Ok(Some(signing_cert))) => {
@@ -126,7 +126,7 @@ impl EnclaveKeyManager {
             rd.enclave_key().to_hex_string(),
             sealed_ek.to_vec(),
             Mrenclave::from(report.body.mr_enclave).to_hex_string(),
-            unsafe { serialize_bytes(&report) },
+            serialize_bytes(&report),
         ])?;
         Ok(())
     }
@@ -185,7 +185,7 @@ impl EnclaveKeyManager {
                         rusqlite::Error::FromSqlConversionFailure(1, Type::Blob, e.into())
                     })?,
                     mrenclave: Mrenclave::from_hex_string(&row.get::<_, String>(2)?).unwrap(),
-                    report: unsafe { deserialize_bytes(&row.get::<_, Vec<u8>>(3)?).unwrap() },
+                    report: deserialize_bytes(&row.get::<_, Vec<u8>>(3)?).unwrap(),
                     avr: Some(EndorsedAttestationVerificationReport {
                         avr: row.get(4)?,
                         signature: row.get(5)?,
@@ -221,7 +221,7 @@ impl EnclaveKeyManager {
                         rusqlite::Error::FromSqlConversionFailure(1, Type::Blob, e.into())
                     })?,
                     mrenclave: Mrenclave::from_hex_string(&row.get::<_, String>(2)?).unwrap(),
-                    report: unsafe { deserialize_bytes(&row.get::<_, Vec<u8>>(3)?).unwrap() },
+                    report: deserialize_bytes(&row.get::<_, Vec<u8>>(3)?).unwrap(),
                     avr: match (row.get(4), row.get(5), row.get(6)) {
                         (Ok(None), Ok(None), Ok(None)) => None,
                         (Ok(Some(avr)), Ok(Some(signature)), Ok(Some(signing_cert))) => {

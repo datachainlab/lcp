@@ -16,7 +16,7 @@ where
     where
         S: serde::Serializer,
     {
-        serializer.serialize_bytes(&unsafe { serialize_bytes(source) })
+        serializer.serialize_bytes(&serialize_bytes(source))
     }
 }
 
@@ -30,13 +30,13 @@ where
         D: serde::Deserializer<'de>,
     {
         let bz = <&[u8]>::deserialize(deserializer).map_err(serde::de::Error::custom)?;
-        unsafe { deserialize_bytes(bz) }.map_err(|(len, size)| {
+        deserialize_bytes(bz).map_err(|(len, size)| {
             serde::de::Error::invalid_length(len, &size.to_string().as_str())
         })
     }
 }
 
-pub unsafe fn serialize_bytes<T>(source: &T) -> [u8; core::mem::size_of::<T>()]
+pub fn serialize_bytes<T>(source: &T) -> [u8; core::mem::size_of::<T>()]
 where
     [(); core::mem::size_of::<T>()]:,
     T: ContiguousMemory,
@@ -44,7 +44,7 @@ where
     unsafe { core::mem::transmute_copy::<_, [u8; core::mem::size_of::<T>()]>(source) }
 }
 
-pub unsafe fn deserialize_bytes<T>(bz: &[u8]) -> Result<T, (usize, usize)>
+pub fn deserialize_bytes<T>(bz: &[u8]) -> Result<T, (usize, usize)>
 where
     [(); core::mem::size_of::<T>()]:,
     T: ContiguousMemory,
