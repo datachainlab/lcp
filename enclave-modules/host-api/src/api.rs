@@ -44,3 +44,26 @@ pub fn execute_command(cmd: Command) -> Result<CommandResult, Error> {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use host::environment::Environment;
+    use host::environment::HostStore;
+    use ocall_commands::LogCommand;
+    use std::sync::{Arc, RwLock};
+    use tempfile::TempDir;
+
+    #[test]
+    fn test_execute_command() {
+        let tmp_dir = TempDir::new().unwrap();
+        let home = tmp_dir.path().to_str().unwrap().to_string();
+        let mstore = Arc::new(RwLock::new(HostStore::Memory(Default::default())));
+        host::set_environment(Environment::new(home.into(), mstore)).unwrap();
+
+        let cmd = Command::Log(LogCommand::new(b"TEST".to_vec()));
+        let res = execute_command(cmd);
+        assert!(res.is_ok());
+        assert_eq!(res.unwrap(), CommandResult::Log);
+    }
+}

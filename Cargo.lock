@@ -1960,7 +1960,6 @@ name = "host"
 version = "0.1.0"
 dependencies = [
  "bincode",
- "host-environment",
  "log",
  "ocall-commands",
  "ocall-handler",
@@ -3241,7 +3240,6 @@ dependencies = [
  "log",
  "ocall-commands",
  "sgx_types",
- "store",
 ]
 
 [[package]]

@@ -19,7 +19,7 @@ pub enum Command {
     Store(StoreCommand),
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq)]
 pub enum CommandResult {
     Log,
     Store(StoreResult),

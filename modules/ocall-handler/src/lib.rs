@@ -1,3 +1,4 @@
+pub use host_environment;
 pub use router::dispatch;
 
 mod errors;

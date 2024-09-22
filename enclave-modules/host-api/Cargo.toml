@@ -11,3 +11,7 @@ bincode = { version = "2.0.0-rc.3", default-features = false, features = ["serde
 flex-error = { version = "0.4.4", default-features = false }
 ocall-commands = { path = "../../modules/ocall-commands", default-features = false }
 store = { path = "../../modules/store", default-features = false }
+
+[dev-dependencies]
+tempfile = "3"
+host = { path = "../../modules/host", default-features = false, features = ["test"] }

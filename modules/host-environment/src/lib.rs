@@ -2,8 +2,8 @@ use std::{
     path::PathBuf,
     sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard},
 };
-
-use store::host::HostStore;
+pub use store;
+pub use store::host::HostStore;
 
 pub struct Environment {
     pub home: PathBuf,

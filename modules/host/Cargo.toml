@@ -11,5 +11,10 @@ once_cell = "1.15.0"
 bincode = { version = "2.0.0-rc.3", default-features = false, features = ["serde", "alloc"] }
 
 ocall-commands = { path = "../ocall-commands" }
-ocall-handler = { path = "../ocall-handler" }
-host-environment = { path = "../host-environment" }
+ocall-handler = { path = "../ocall-handler", default-features = false }
+
+[features]
+default = [
+    "ocall-handler/default"
+]
+test = []

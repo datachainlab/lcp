@@ -6,7 +6,6 @@
 
 extern crate alloc;
 
-use core::panic::PanicInfo;
 use core::sync::atomic::{AtomicPtr, Ordering};
 use core::{mem, ptr};
 
@@ -27,11 +26,13 @@ mod errors;
 /// This is a fork of the `sgx_no_tstd` crate, with the following change:
 /// - The `begin_panic_handler` function is added to logging the panic message before aborting.
 
+#[cfg(not(test))]
 #[global_allocator]
 static ALLOC: sgx_alloc::System = sgx_alloc::System;
 
+#[cfg(not(test))]
 #[panic_handler]
-fn begin_panic_handler(info: &PanicInfo<'_>) -> ! {
+fn begin_panic_handler(info: &core::panic::PanicInfo<'_>) -> ! {
     let _ = host_api::api::execute_command(host_api::ocall_commands::Command::Log(
         host_api::ocall_commands::LogCommand {
             msg: alloc::format!("[enclave] panic: {:?}\n", info).into_bytes(),
@@ -40,6 +41,7 @@ fn begin_panic_handler(info: &PanicInfo<'_>) -> ! {
     sgx_abort();
 }
 
+#[cfg(not(test))]
 #[lang = "eh_personality"]
 #[no_mangle]
 unsafe extern "C" fn rust_eh_personality() {}
@@ -77,6 +79,7 @@ pub fn take_alloc_error_hook() -> fn(Layout) {
 
 fn default_alloc_error_hook(_layout: Layout) {}
 
+#[cfg(not(test))]
 #[alloc_error_handler]
 pub fn rust_oom(layout: Layout) -> ! {
     let hook = HOOK.load(Ordering::SeqCst);
@@ -89,11 +92,13 @@ pub fn rust_oom(layout: Layout) -> ! {
     sgx_abort();
 }
 
+#[cfg(not(test))]
 #[link(name = "sgx_trts")]
 extern "C" {
     pub fn abort() -> !;
 }
 
+#[cfg(not(test))]
 fn sgx_abort() -> ! {
     unsafe { abort() }
 }

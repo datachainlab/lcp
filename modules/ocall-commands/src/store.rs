@@ -9,7 +9,7 @@ pub enum StoreCommand {
     Remove(TxId, Vec<u8>),
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq)]
 pub enum StoreResult {
     Get(Option<Vec<u8>>),
     Set,
