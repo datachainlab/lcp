@@ -64,25 +64,9 @@ pub struct IASRemoteAttestation {
         help = "An enclave key attested by Remote Attestation"
     )]
     pub enclave_key: String,
-    /// An operator address to perform `registerEnclaveKey` transaction on-chain
-    #[clap(
-        long = "operator",
-        help = "An operator address to perform `registerEnclaveKey` transaction on-chain"
-    )]
-    pub operator: Option<String>,
     /// IAS mode
     #[clap(long = "development", help = "Use IAS development mode")]
     pub is_dev: bool,
-}
-
-impl IASRemoteAttestation {
-    fn get_operator(&self) -> Result<Option<Address>> {
-        if let Some(operator) = &self.operator {
-            Ok(Some(Address::from_hex_string(operator)?))
-        } else {
-            Ok(None)
-        }
-    }
 }
 
 fn run_ias_remote_attestation<E: EnclaveCommandAPI<S>, S: CommitStore>(
@@ -95,7 +79,6 @@ fn run_ias_remote_attestation<E: EnclaveCommandAPI<S>, S: CommitStore>(
     match ias::run_ias_ra(
         &enclave,
         target_enclave_key,
-        cmd.get_operator()?,
         if cmd.is_dev {
             IASMode::Development
         } else {
@@ -180,17 +163,6 @@ pub struct SimulateRemoteAttestation {
 }
 
 #[cfg(feature = "sgx-sw")]
-impl SimulateRemoteAttestation {
-    fn get_operator(&self) -> Result<Option<Address>> {
-        if let Some(operator) = &self.operator {
-            Ok(Some(Address::from_hex_string(operator)?))
-        } else {
-            Ok(None)
-        }
-    }
-}
-
-#[cfg(feature = "sgx-sw")]
 fn run_simulate_remote_attestation<E: EnclaveCommandAPI<S>, S: CommitStore>(
     enclave: E,
     cmd: &SimulateRemoteAttestation,
@@ -242,7 +214,6 @@ fn run_simulate_remote_attestation<E: EnclaveCommandAPI<S>, S: CommitStore>(
     match remote_attestation::ias_simulation::run_ias_ra_simulation(
         &enclave,
         target_enclave_key,
-        cmd.get_operator()?,
         cmd.advisory_ids.clone(),
         cmd.isv_enclave_quote_status.clone(),
         signing_key,

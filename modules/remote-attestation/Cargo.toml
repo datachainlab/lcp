@@ -24,6 +24,7 @@ attestation-report = { path = "../attestation-report" }
 ecall-commands = { path = "../ecall-commands" }
 enclave-api = { path = "../enclave-api" }
 store = { path = "../store", features = ["rocksdbstore"] }
+keymanager = { path = "../keymanager" }
 
 [features]
 default = []

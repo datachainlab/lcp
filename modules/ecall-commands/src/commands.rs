@@ -45,7 +45,7 @@ pub enum Command {
 impl EnclaveKeySelector for Command {
     fn get_enclave_key(&self) -> Option<crypto::Address> {
         match self {
-            Self::EnclaveManage(cmd) => cmd.get_enclave_key(),
+            Self::EnclaveManage(_) => None,
             Self::LightClient(cmd) => cmd.get_enclave_key(),
         }
     }

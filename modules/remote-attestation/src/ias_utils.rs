@@ -51,7 +51,7 @@ impl IASMode {
     }
 }
 
-pub(crate) fn init_quote() -> Result<(sgx_target_info_t, sgx_epid_group_id_t), Error> {
+pub fn init_quote() -> Result<(sgx_target_info_t, sgx_epid_group_id_t), Error> {
     let mut target_info = sgx_target_info_t::default();
     let mut epid_group_id = sgx_epid_group_id_t::default();
     match unsafe { sgx_init_quote(&mut target_info, &mut epid_group_id) } {
@@ -207,7 +207,7 @@ pub(crate) fn get_report_from_intel(
     parse_response_attn_report(&plaintext)
 }
 
-pub(crate) fn validate_qe_report(
+pub fn validate_qe_report(
     target_info: &sgx_target_info_t,
     qe_report: &sgx_report_t,
 ) -> Result<(), Error> {

@@ -1,14 +1,17 @@
 pub mod errors;
 pub use crate::errors::Error;
-use attestation_report::EndorsedAttestationVerificationReport;
+use attestation_report::{EndorsedAttestationVerificationReport, ReportData};
 use crypto::{Address, SealedEnclaveKey};
-use lcp_types::proto::lcp::service::enclave::v1::EnclaveKeyInfo as ProtoEnclaveKeyInfo;
-use lcp_types::{Mrenclave, Time};
+use lcp_types::{
+    deserialize_bytes, proto::lcp::service::enclave::v1::EnclaveKeyInfo as ProtoEnclaveKeyInfo,
+    serialize_bytes, BytesTransmuter, Mrenclave, Time,
+};
 use log::*;
 use rusqlite::{params, types::Type, Connection};
 use serde::{Deserialize, Serialize};
-use std::sync::Mutex;
-use std::{path::Path, time::Duration};
+use serde_with::serde_as;
+use sgx_types::sgx_report_t;
+use std::{path::Path, sync::Mutex, time::Duration};
 
 pub static KEY_MANAGER_DB: &str = "km.sqlite";
 
@@ -50,6 +53,7 @@ impl EnclaveKeyManager {
                 ek_address TEXT NOT NULL UNIQUE,
                 ek_sealed BLOB NOT NULL,
                 mrenclave TEXT NOT NULL,
+                report BLOB NOT NULL,
                 avr TEXT,
                 signature BLOB,
                 signing_cert BLOB,
@@ -71,7 +75,11 @@ impl EnclaveKeyManager {
             .lock()
             .map_err(|e| Error::mutex_lock(e.to_string()))?;
         let mut stmt = conn.prepare(
-            "SELECT ek_sealed, mrenclave, avr, signature, signing_cert FROM enclave_keys WHERE ek_address = ?1",
+            r#"
+            SELECT ek_sealed, mrenclave, report, avr, signature, signing_cert
+            FROM enclave_keys
+            WHERE ek_address = ?1
+            "#,
         )?;
         let key_info = stmt.query_row(params![address.to_hex_string()], |row| {
             Ok(SealedEnclaveKeyInfo {
@@ -81,7 +89,8 @@ impl EnclaveKeyManager {
                     rusqlite::Error::FromSqlConversionFailure(0, Type::Blob, e.into())
                 })?,
                 mrenclave: Mrenclave::from_hex_string(&row.get::<_, String>(1)?).unwrap(),
-                avr: match (row.get(2), row.get(3), row.get(4)) {
+                report: unsafe { deserialize_bytes(&row.get::<_, Vec<u8>>(2)?).unwrap() },
+                avr: match (row.get(3), row.get(4), row.get(5)) {
                     (Ok(None), Ok(None), Ok(None)) => None,
                     (Ok(Some(avr)), Ok(Some(signature)), Ok(Some(signing_cert))) => {
                         Some(EndorsedAttestationVerificationReport {
@@ -101,23 +110,23 @@ impl EnclaveKeyManager {
     }
 
     /// Save a sealed enclave key
-    pub fn save(
-        &self,
-        address: Address,
-        sealed_ek: SealedEnclaveKey,
-        mrenclave: Mrenclave,
-    ) -> Result<(), Error> {
+    pub fn save(&self, sealed_ek: SealedEnclaveKey, report: sgx_report_t) -> Result<(), Error> {
         let conn = self
             .conn
             .lock()
             .map_err(|e| Error::mutex_lock(e.to_string()))?;
         let mut stmt = conn.prepare(
-            "INSERT INTO enclave_keys (ek_address, ek_sealed, mrenclave) VALUES (?1, ?2, ?3)",
+            r#"
+            INSERT INTO enclave_keys(ek_address, ek_sealed, mrenclave, report)
+            VALUES (?1, ?2, ?3, ?4)
+            "#,
         )?;
+        let rd = ReportData::from(report.body.report_data);
         let _ = stmt.execute(params![
-            address.to_hex_string(),
+            rd.enclave_key().to_hex_string(),
             sealed_ek.to_vec(),
-            mrenclave.to_hex_string()
+            Mrenclave::from(report.body.mr_enclave).to_hex_string(),
+            unsafe { serialize_bytes(&report) },
         ])?;
         Ok(())
     }
@@ -135,7 +144,11 @@ impl EnclaveKeyManager {
         let attested_at = avr.get_avr()?.attestation_time()?;
         // update avr and attested_at and signature and sigining_cert
         let mut stmt = conn.prepare(
-            "UPDATE enclave_keys SET avr = ?1, attested_at = ?2, signature = ?3, signing_cert = ?4 WHERE ek_address = ?5",
+            r#"
+            UPDATE enclave_keys
+            SET avr = ?1, attested_at = ?2, signature = ?3, signing_cert = ?4
+            WHERE ek_address = ?5
+            "#,
         )?;
         stmt.execute(params![
             avr.avr,
@@ -155,7 +168,7 @@ impl EnclaveKeyManager {
             .map_err(|e| Error::mutex_lock(e.to_string()))?;
         let mut stmt = conn.prepare(
             r#"
-            SELECT ek_address, ek_sealed, mrenclave, avr, signature, signing_cert
+            SELECT ek_address, ek_sealed, mrenclave, report, avr, signature, signing_cert
             FROM enclave_keys
             WHERE attested_at IS NOT NULL AND mrenclave = ?1
             ORDER BY attested_at DESC
@@ -172,10 +185,11 @@ impl EnclaveKeyManager {
                         rusqlite::Error::FromSqlConversionFailure(1, Type::Blob, e.into())
                     })?,
                     mrenclave: Mrenclave::from_hex_string(&row.get::<_, String>(2)?).unwrap(),
+                    report: unsafe { deserialize_bytes(&row.get::<_, Vec<u8>>(3)?).unwrap() },
                     avr: Some(EndorsedAttestationVerificationReport {
-                        avr: row.get(3)?,
-                        signature: row.get(4)?,
-                        signing_cert: row.get(5)?,
+                        avr: row.get(4)?,
+                        signature: row.get(5)?,
+                        signing_cert: row.get(6)?,
                     }),
                 })
             })?
@@ -190,7 +204,11 @@ impl EnclaveKeyManager {
             .lock()
             .map_err(|e| Error::mutex_lock(e.to_string()))?;
         let mut stmt = conn.prepare(
-            "SELECT ek_address, ek_sealed, mrenclave, avr, signature, signing_cert FROM enclave_keys ORDER BY updated_at DESC",
+            r#"
+            SELECT ek_address, ek_sealed, mrenclave, report, avr, signature, signing_cert
+            FROM enclave_keys
+            ORDER BY updated_at DESC
+            "#,
         )?;
         let key_infos = stmt
             .query_map(params![], |row| {
@@ -203,7 +221,8 @@ impl EnclaveKeyManager {
                         rusqlite::Error::FromSqlConversionFailure(1, Type::Blob, e.into())
                     })?,
                     mrenclave: Mrenclave::from_hex_string(&row.get::<_, String>(2)?).unwrap(),
-                    avr: match (row.get(3), row.get(4), row.get(5)) {
+                    report: unsafe { deserialize_bytes(&row.get::<_, Vec<u8>>(3)?).unwrap() },
+                    avr: match (row.get(4), row.get(5), row.get(6)) {
                         (Ok(None), Ok(None), Ok(None)) => None,
                         (Ok(Some(avr)), Ok(Some(signature)), Ok(Some(signing_cert))) => {
                             Some(EndorsedAttestationVerificationReport {
@@ -236,11 +255,14 @@ impl EnclaveKeyManager {
     }
 }
 
+#[serde_as]
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SealedEnclaveKeyInfo {
-    pub address: Address,
     pub sealed_ek: SealedEnclaveKey,
+    pub address: Address,
     pub mrenclave: Mrenclave,
+    #[serde_as(as = "BytesTransmuter<sgx_report_t>")]
+    pub report: sgx_report_t,
     pub avr: Option<EndorsedAttestationVerificationReport>,
 }
 
@@ -275,8 +297,9 @@ mod tests {
         let mrenclave = create_mrenclave();
         let address_0 = {
             let address = create_address();
+            let report = create_report(mrenclave, address);
             let sealed_ek = create_sealed_sk();
-            km.save(address, sealed_ek, mrenclave).unwrap();
+            km.save(sealed_ek, report).unwrap();
             assert_eq!(km.all_keys().unwrap().len(), 1);
             assert_eq!(km.available_keys(mrenclave).unwrap().len(), 0);
             let avr = create_eavr(get_time(Duration::zero()));
@@ -287,8 +310,9 @@ mod tests {
         };
         {
             let address = create_address();
+            let report = create_report(mrenclave, address);
             let sealed_ek = create_sealed_sk();
-            km.save(address, sealed_ek, mrenclave).unwrap();
+            km.save(sealed_ek, report).unwrap();
             assert_eq!(km.all_keys().unwrap().len(), 2);
             assert_eq!(km.available_keys(mrenclave).unwrap().len(), 1);
             let avr = create_eavr(get_time(Duration::minutes(1)));
@@ -322,6 +346,13 @@ mod tests {
         let mut sealed_sk = [0u8; 592];
         rand::thread_rng().fill_bytes(&mut sealed_sk);
         SealedEnclaveKey::new_from_bytes(&sealed_sk).unwrap()
+    }
+
+    fn create_report(mrenclave: Mrenclave, ek_addr: Address) -> sgx_report_t {
+        let mut report = sgx_report_t::default();
+        report.body.mr_enclave = mrenclave.into();
+        report.body.report_data = ReportData::new(ek_addr, None).into();
+        report
     }
 
     fn create_address() -> Address {

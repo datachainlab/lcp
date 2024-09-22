@@ -84,6 +84,15 @@ define_error! {
         [attestation_report::Error]
         |_| { "AttestationReport error" },
 
+        KeyManager
+        {
+            descr: String
+        }
+        [keymanager::Error]
+        |e| {
+            format_args!("KeyManager error: descr={}", e.descr)
+        },
+
         UnexpectedIasReportResponse {
             descr: String
         }

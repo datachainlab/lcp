@@ -1,7 +1,7 @@
 use crate::{EnclavePrimitiveAPI, Result};
 use ecall_commands::{
-    AggregateMessagesInput, AggregateMessagesResponse, Command, CommandResponse, CreateReportInput,
-    CreateReportResponse, EnclaveManageCommand, EnclaveManageResponse, GenerateEnclaveKeyInput,
+    AggregateMessagesInput, AggregateMessagesResponse, Command, CommandResponse,
+    EnclaveManageCommand, EnclaveManageResponse, GenerateEnclaveKeyInput,
     GenerateEnclaveKeyResponse, InitClientInput, InitClientResponse, LightClientCommand,
     LightClientExecuteCommand, LightClientQueryCommand, LightClientResponse, QueryClientInput,
     QueryClientResponse, UpdateClientInput, UpdateClientResponse, VerifyMembershipInput,
@@ -22,24 +22,9 @@ pub trait EnclaveCommandAPI<S: CommitStore>: EnclavePrimitiveAPI<S> {
             CommandResponse::EnclaveManage(EnclaveManageResponse::GenerateEnclaveKey(res)) => res,
             _ => unreachable!(),
         };
-        let metadata = self.metadata()?;
-        self.get_key_manager().save(
-            res.pub_key.as_address(),
-            res.sealed_ek.clone(),
-            metadata.enclave_css.body.enclave_hash.m.into(),
-        )?;
+        self.get_key_manager()
+            .save(res.sealed_ek.clone(), res.report)?;
         Ok(res)
-    }
-
-    /// create_report creates a report for the given target_info
-    fn create_report(&self, input: CreateReportInput) -> Result<CreateReportResponse> {
-        match self.execute_command(
-            Command::EnclaveManage(EnclaveManageCommand::CreateReport(input)),
-            None,
-        )? {
-            CommandResponse::EnclaveManage(EnclaveManageResponse::CreateReport(res)) => Ok(res),
-            _ => unreachable!(),
-        }
     }
 
     /// init_client initializes an ELC instance with given states
