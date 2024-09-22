@@ -47,7 +47,7 @@ impl Mrenclave {
     pub fn to_hex_string(&self) -> String {
         format!("0x{}", hex::encode(self.0))
     }
-    pub fn from_hex_string(&self, s: &str) -> Result<Self, TypeError> {
+    pub fn from_hex_string(s: &str) -> Result<Self, TypeError> {
         let s = s.strip_prefix("0x").unwrap_or(s);
         let mut bytes = [0u8; SGX_HASH_SIZE];
         hex::decode_to_slice(s, &mut bytes)?;

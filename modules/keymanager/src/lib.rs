@@ -8,7 +8,7 @@ use log::*;
 use rusqlite::{params, types::Type, Connection};
 use serde::{Deserialize, Serialize};
 use std::sync::Mutex;
-use std::{ops::Deref, path::Path, time::Duration};
+use std::{path::Path, time::Duration};
 
 pub static KEY_MANAGER_DB: &str = "km.sqlite";
 
@@ -47,12 +47,12 @@ impl EnclaveKeyManager {
             BEGIN;
             CREATE TABLE enclave_keys (
                 id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-                ek_address VARCHAR NOT NULL UNIQUE,
-                ek_sealed TEXT NOT NULL,
-                mrenclave VARCHAR NOT NULL,
+                ek_address TEXT NOT NULL UNIQUE,
+                ek_sealed BLOB NOT NULL,
+                mrenclave TEXT NOT NULL,
                 avr TEXT,
-                signature TEXT,
-                signing_cert TEXT,
+                signature BLOB,
+                signing_cert BLOB,
                 attested_at TEXT,
                 created_at TEXT NOT NULL DEFAULT (DATETIME('now', 'localtime')),
                 updated_at TEXT NOT NULL DEFAULT (DATETIME('now', 'localtime'))
@@ -80,7 +80,7 @@ impl EnclaveKeyManager {
                     .map_err(|e| {
                     rusqlite::Error::FromSqlConversionFailure(0, Type::Blob, e.into())
                 })?,
-                mrenclave: Mrenclave(row.get(1)?),
+                mrenclave: Mrenclave::from_hex_string(&row.get::<_, String>(1)?).unwrap(),
                 avr: match (row.get(2), row.get(3), row.get(4)) {
                     (Ok(None), Ok(None), Ok(None)) => None,
                     (Ok(Some(avr)), Ok(Some(signature)), Ok(Some(signing_cert))) => {
@@ -117,7 +117,7 @@ impl EnclaveKeyManager {
         let _ = stmt.execute(params![
             address.to_hex_string(),
             sealed_ek.to_vec(),
-            mrenclave.deref()
+            mrenclave.to_hex_string()
         ])?;
         Ok(())
     }
@@ -162,7 +162,7 @@ impl EnclaveKeyManager {
             "#,
         )?;
         let key_infos = stmt
-            .query_map(params![mrenclave.deref()], |row| {
+            .query_map(params![mrenclave.to_hex_string()], |row| {
                 Ok(SealedEnclaveKeyInfo {
                     address: Address::from_hex_string(&row.get::<_, String>(0)?).unwrap(),
                     sealed_ek: SealedEnclaveKey::new_from_bytes(
@@ -171,7 +171,7 @@ impl EnclaveKeyManager {
                     .map_err(|e| {
                         rusqlite::Error::FromSqlConversionFailure(1, Type::Blob, e.into())
                     })?,
-                    mrenclave: Mrenclave(row.get(2)?),
+                    mrenclave: Mrenclave::from_hex_string(&row.get::<_, String>(2)?).unwrap(),
                     avr: Some(EndorsedAttestationVerificationReport {
                         avr: row.get(3)?,
                         signature: row.get(4)?,
@@ -202,7 +202,7 @@ impl EnclaveKeyManager {
                     .map_err(|e| {
                         rusqlite::Error::FromSqlConversionFailure(1, Type::Blob, e.into())
                     })?,
-                    mrenclave: Mrenclave(row.get(2)?),
+                    mrenclave: Mrenclave::from_hex_string(&row.get::<_, String>(2)?).unwrap(),
                     avr: match (row.get(3), row.get(4), row.get(5)) {
                         (Ok(None), Ok(None), Ok(None)) => None,
                         (Ok(Some(avr)), Ok(Some(signature)), Ok(Some(signing_cert))) => {
