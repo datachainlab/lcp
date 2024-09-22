@@ -2628,6 +2628,7 @@ checksum = "f9b7d56ba4a8344d6be9729995e6b06f928af29998cdf79fe390cbf6b1fee838"
 name = "keymanager"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "attestation-report",
  "chrono",
  "crypto",

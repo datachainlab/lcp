@@ -1,5 +1,6 @@
 pub mod errors;
 pub use crate::errors::Error;
+use anyhow::anyhow;
 use attestation_report::{ReportData, SignedAttestationVerificationReport};
 use crypto::{Address, SealedEnclaveKey};
 use lcp_types::{
@@ -84,16 +85,38 @@ impl EnclaveKeyManager {
                 address,
                 sealed_ek: SealedEnclaveKey::new_from_bytes(row.get::<_, Vec<u8>>(0)?.as_slice())
                     .map_err(|e| {
-                    rusqlite::Error::FromSqlConversionFailure(0, Type::Blob, e.into())
+                    rusqlite::Error::FromSqlConversionFailure(
+                        0,
+                        Type::Blob,
+                        anyhow!("sealed_ek: {:?}", e).into(),
+                    )
                 })?,
-                mrenclave: Mrenclave::from_hex_string(&row.get::<_, String>(1)?).unwrap(),
-                report: deserialize_bytes(&row.get::<_, Vec<u8>>(2)?).unwrap(),
+                mrenclave: Mrenclave::from_hex_string(&row.get::<_, String>(1)?).map_err(|e| {
+                    rusqlite::Error::FromSqlConversionFailure(
+                        1,
+                        Type::Text,
+                        anyhow!("mrenclave: {:?}", e).into(),
+                    )
+                })?,
+                report: deserialize_bytes(&row.get::<_, Vec<u8>>(2)?).map_err(|e| {
+                    rusqlite::Error::FromSqlConversionFailure(
+                        2,
+                        Type::Blob,
+                        anyhow!("report: {:?}", e).into(),
+                    )
+                })?,
                 signed_avr: match row.get::<_, Option<String>>(3) {
                     Ok(None) => None,
-                    Ok(Some(avr)) => {
-                        Some(SignedAttestationVerificationReport::from_json(&avr).unwrap())
-                    }
-                    Err(e) => panic!("failed to get signed_avr: {:?}", e),
+                    Ok(Some(avr)) => Some(
+                        SignedAttestationVerificationReport::from_json(&avr).map_err(|e| {
+                            rusqlite::Error::FromSqlConversionFailure(
+                                3,
+                                Type::Text,
+                                anyhow!("signed_avr: {:?}", e).into(),
+                            )
+                        })?,
+                    ),
+                    Err(e) => return Err(e),
                 },
             })
         })?;
@@ -166,18 +189,48 @@ impl EnclaveKeyManager {
         let key_infos = stmt
             .query_map(params![mrenclave.to_hex_string()], |row| {
                 Ok(SealedEnclaveKeyInfo {
-                    address: Address::from_hex_string(&row.get::<_, String>(0)?).unwrap(),
+                    address: Address::from_hex_string(&row.get::<_, String>(0)?).map_err(|e| {
+                        rusqlite::Error::FromSqlConversionFailure(
+                            0,
+                            Type::Text,
+                            anyhow!("address: {:?}", e).into(),
+                        )
+                    })?,
                     sealed_ek: SealedEnclaveKey::new_from_bytes(
                         row.get::<_, Vec<u8>>(1)?.as_slice(),
                     )
                     .map_err(|e| {
-                        rusqlite::Error::FromSqlConversionFailure(1, Type::Blob, e.into())
+                        rusqlite::Error::FromSqlConversionFailure(
+                            1,
+                            Type::Blob,
+                            anyhow!("sealed_ek: {:?}", e).into(),
+                        )
                     })?,
-                    mrenclave: Mrenclave::from_hex_string(&row.get::<_, String>(2)?).unwrap(),
-                    report: deserialize_bytes(&row.get::<_, Vec<u8>>(3)?).unwrap(),
+                    mrenclave: Mrenclave::from_hex_string(&row.get::<_, String>(2)?).map_err(
+                        |e| {
+                            rusqlite::Error::FromSqlConversionFailure(
+                                2,
+                                Type::Text,
+                                anyhow!("mrenclave: {:?}", e).into(),
+                            )
+                        },
+                    )?,
+                    report: deserialize_bytes(&row.get::<_, Vec<u8>>(3)?).map_err(|e| {
+                        rusqlite::Error::FromSqlConversionFailure(
+                            3,
+                            Type::Blob,
+                            anyhow!("report: {:?}", e).into(),
+                        )
+                    })?,
                     signed_avr: Some(
                         SignedAttestationVerificationReport::from_json(&row.get::<_, String>(4)?)
-                            .unwrap(),
+                            .map_err(|e| {
+                            rusqlite::Error::FromSqlConversionFailure(
+                                4,
+                                Type::Text,
+                                anyhow!("signed_avr: {:?}", e).into(),
+                            )
+                        })?,
                     ),
                 })
             })?
@@ -201,21 +254,51 @@ impl EnclaveKeyManager {
         let key_infos = stmt
             .query_map(params![], |row| {
                 Ok(SealedEnclaveKeyInfo {
-                    address: Address::from_hex_string(&row.get::<_, String>(0)?).unwrap(),
+                    address: Address::from_hex_string(&row.get::<_, String>(0)?).map_err(|e| {
+                        rusqlite::Error::FromSqlConversionFailure(
+                            0,
+                            Type::Text,
+                            anyhow!("address: {:?}", e).into(),
+                        )
+                    })?,
                     sealed_ek: SealedEnclaveKey::new_from_bytes(
                         row.get::<_, Vec<u8>>(1)?.as_slice(),
                     )
                     .map_err(|e| {
-                        rusqlite::Error::FromSqlConversionFailure(1, Type::Blob, e.into())
+                        rusqlite::Error::FromSqlConversionFailure(
+                            1,
+                            Type::Blob,
+                            anyhow!("sealed_ek: {:?}", e).into(),
+                        )
                     })?,
-                    mrenclave: Mrenclave::from_hex_string(&row.get::<_, String>(2)?).unwrap(),
-                    report: deserialize_bytes(&row.get::<_, Vec<u8>>(3)?).unwrap(),
+                    mrenclave: Mrenclave::from_hex_string(&row.get::<_, String>(2)?).map_err(
+                        |e| {
+                            rusqlite::Error::FromSqlConversionFailure(
+                                2,
+                                Type::Text,
+                                anyhow!("mrenclave: {:?}", e).into(),
+                            )
+                        },
+                    )?,
+                    report: deserialize_bytes(&row.get::<_, Vec<u8>>(3)?).map_err(|e| {
+                        rusqlite::Error::FromSqlConversionFailure(
+                            3,
+                            Type::Blob,
+                            anyhow!("report: {:?}", e).into(),
+                        )
+                    })?,
                     signed_avr: match row.get::<_, Option<String>>(4) {
                         Ok(None) => None,
-                        Ok(Some(avr)) => {
-                            Some(SignedAttestationVerificationReport::from_json(&avr).unwrap())
-                        }
-                        Err(e) => panic!("failed to get signed_avr: {:?}", e),
+                        Ok(Some(avr)) => Some(
+                            SignedAttestationVerificationReport::from_json(&avr).map_err(|e| {
+                                rusqlite::Error::FromSqlConversionFailure(
+                                    4,
+                                    Type::Text,
+                                    anyhow!("signed_avr: {:?}", e).into(),
+                                )
+                            })?,
+                        ),
+                        Err(e) => return Err(e),
                     },
                 })
             })?
