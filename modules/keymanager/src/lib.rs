@@ -54,9 +54,7 @@ impl EnclaveKeyManager {
                 ek_sealed BLOB NOT NULL,
                 mrenclave TEXT NOT NULL,
                 report BLOB NOT NULL,
-                avr TEXT,
-                signature BLOB,
-                signing_cert BLOB,
+                signed_avr TEXT,
                 attested_at TEXT,
                 created_at TEXT NOT NULL DEFAULT (DATETIME('now', 'localtime')),
                 updated_at TEXT NOT NULL DEFAULT (DATETIME('now', 'localtime'))
@@ -76,7 +74,7 @@ impl EnclaveKeyManager {
             .map_err(|e| Error::mutex_lock(e.to_string()))?;
         let mut stmt = conn.prepare(
             r#"
-            SELECT ek_sealed, mrenclave, report, avr, signature, signing_cert
+            SELECT ek_sealed, mrenclave, report, signed_avr
             FROM enclave_keys
             WHERE ek_address = ?1
             "#,
@@ -90,19 +88,12 @@ impl EnclaveKeyManager {
                 })?,
                 mrenclave: Mrenclave::from_hex_string(&row.get::<_, String>(1)?).unwrap(),
                 report: deserialize_bytes(&row.get::<_, Vec<u8>>(2)?).unwrap(),
-                signed_avr: match (row.get(3), row.get(4), row.get(5)) {
-                    (Ok(None), Ok(None), Ok(None)) => None,
-                    (Ok(Some(avr)), Ok(Some(signature)), Ok(Some(signing_cert))) => {
-                        Some(SignedAttestationVerificationReport {
-                            avr,
-                            signature,
-                            signing_cert,
-                        })
+                signed_avr: match row.get::<_, Option<String>>(3) {
+                    Ok(None) => None,
+                    Ok(Some(avr)) => {
+                        Some(SignedAttestationVerificationReport::from_json(&avr).unwrap())
                     }
-                    (e0, e1, e2) => [e0.err(), e1.err(), e2.err()]
-                        .into_iter()
-                        .find_map(|e| e.map(Err))
-                        .unwrap()?,
+                    Err(e) => panic!("failed to get signed_avr: {:?}", e),
                 },
             })
         })?;
@@ -135,26 +126,24 @@ impl EnclaveKeyManager {
     pub fn save_avr(
         &self,
         address: Address,
-        avr: SignedAttestationVerificationReport,
+        signed_avr: SignedAttestationVerificationReport,
     ) -> Result<(), Error> {
         let conn = self
             .conn
             .lock()
             .map_err(|e| Error::mutex_lock(e.to_string()))?;
-        let attested_at = avr.get_avr()?.attestation_time()?;
+        let attested_at = signed_avr.get_avr()?.attestation_time()?;
         // update avr and attested_at and signature and sigining_cert
         let mut stmt = conn.prepare(
             r#"
             UPDATE enclave_keys
-            SET avr = ?1, attested_at = ?2, signature = ?3, signing_cert = ?4
-            WHERE ek_address = ?5
+            SET signed_avr = ?1, attested_at = ?2
+            WHERE ek_address = ?3
             "#,
         )?;
         stmt.execute(params![
-            avr.avr,
+            signed_avr.to_json()?,
             attested_at.as_unix_timestamp_secs(),
-            avr.signature,
-            avr.signing_cert,
             address.to_hex_string()
         ])?;
         Ok(())
@@ -168,7 +157,7 @@ impl EnclaveKeyManager {
             .map_err(|e| Error::mutex_lock(e.to_string()))?;
         let mut stmt = conn.prepare(
             r#"
-            SELECT ek_address, ek_sealed, mrenclave, report, avr, signature, signing_cert
+            SELECT ek_address, ek_sealed, mrenclave, report, signed_avr
             FROM enclave_keys
             WHERE attested_at IS NOT NULL AND mrenclave = ?1
             ORDER BY attested_at DESC
@@ -186,11 +175,10 @@ impl EnclaveKeyManager {
                     })?,
                     mrenclave: Mrenclave::from_hex_string(&row.get::<_, String>(2)?).unwrap(),
                     report: deserialize_bytes(&row.get::<_, Vec<u8>>(3)?).unwrap(),
-                    signed_avr: Some(SignedAttestationVerificationReport {
-                        avr: row.get(4)?,
-                        signature: row.get(5)?,
-                        signing_cert: row.get(6)?,
-                    }),
+                    signed_avr: Some(
+                        SignedAttestationVerificationReport::from_json(&row.get::<_, String>(4)?)
+                            .unwrap(),
+                    ),
                 })
             })?
             .collect::<Result<Vec<_>, _>>()?;
@@ -205,7 +193,7 @@ impl EnclaveKeyManager {
             .map_err(|e| Error::mutex_lock(e.to_string()))?;
         let mut stmt = conn.prepare(
             r#"
-            SELECT ek_address, ek_sealed, mrenclave, report, avr, signature, signing_cert
+            SELECT ek_address, ek_sealed, mrenclave, report, signed_avr
             FROM enclave_keys
             ORDER BY updated_at DESC
             "#,
@@ -222,19 +210,12 @@ impl EnclaveKeyManager {
                     })?,
                     mrenclave: Mrenclave::from_hex_string(&row.get::<_, String>(2)?).unwrap(),
                     report: deserialize_bytes(&row.get::<_, Vec<u8>>(3)?).unwrap(),
-                    signed_avr: match (row.get(4), row.get(5), row.get(6)) {
-                        (Ok(None), Ok(None), Ok(None)) => None,
-                        (Ok(Some(avr)), Ok(Some(signature)), Ok(Some(signing_cert))) => {
-                            Some(SignedAttestationVerificationReport {
-                                avr,
-                                signature,
-                                signing_cert,
-                            })
+                    signed_avr: match row.get::<_, Option<String>>(4) {
+                        Ok(None) => None,
+                        Ok(Some(avr)) => {
+                            Some(SignedAttestationVerificationReport::from_json(&avr).unwrap())
                         }
-                        (e0, e1, e2) => [e0.err(), e1.err(), e2.err()]
-                            .into_iter()
-                            .find_map(|e| e.map(Err))
-                            .unwrap()?,
+                        Err(e) => panic!("failed to get signed_avr: {:?}", e),
                     },
                 })
             })?
@@ -299,11 +280,14 @@ mod tests {
             let address = create_address();
             let report = create_report(mrenclave, address);
             let sealed_ek = create_sealed_sk();
+            assert_eq!(km.all_keys().unwrap().len(), 0);
             km.save(sealed_ek, report).unwrap();
+            assert!(km.load(address).unwrap().signed_avr.is_none());
             assert_eq!(km.all_keys().unwrap().len(), 1);
             assert_eq!(km.available_keys(mrenclave).unwrap().len(), 0);
             let avr = create_signed_avr(get_time(Duration::zero()));
             km.save_avr(address, avr).unwrap();
+            assert!(km.load(address).unwrap().signed_avr.is_some());
             assert_eq!(km.all_keys().unwrap().len(), 1);
             assert_eq!(km.available_keys(mrenclave).unwrap().len(), 1);
             address
@@ -312,11 +296,14 @@ mod tests {
             let address = create_address();
             let report = create_report(mrenclave, address);
             let sealed_ek = create_sealed_sk();
+            assert_eq!(km.all_keys().unwrap().len(), 1);
             km.save(sealed_ek, report).unwrap();
+            assert!(km.load(address).unwrap().signed_avr.is_none());
             assert_eq!(km.all_keys().unwrap().len(), 2);
             assert_eq!(km.available_keys(mrenclave).unwrap().len(), 1);
             let avr = create_signed_avr(get_time(Duration::minutes(1)));
             km.save_avr(address, avr).unwrap();
+            assert!(km.load(address).unwrap().signed_avr.is_some());
             assert_eq!(km.all_keys().unwrap().len(), 2);
             assert_eq!(km.available_keys(mrenclave).unwrap().len(), 2);
         }
