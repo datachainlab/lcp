@@ -1,5 +1,5 @@
 use crate::errors::Error;
-use attestation_report::EndorsedAttestationVerificationReport;
+use attestation_report::SignedAttestationVerificationReport;
 use base64::{engine::general_purpose::STANDARD as Base64Std, Engine};
 use log::*;
 use rand::RngCore;
@@ -174,7 +174,7 @@ pub(crate) fn get_report_from_intel(
     mode: IASMode,
     quote: Vec<u8>,
     ias_key: &str,
-) -> Result<EndorsedAttestationVerificationReport, Error> {
+) -> Result<SignedAttestationVerificationReport, Error> {
     info!("using IAS mode: {}", mode);
     let config = make_ias_client_config();
     let encoded_quote = Base64Std.encode(&quote[..]);
@@ -223,7 +223,7 @@ pub fn validate_qe_report(
     Ok(())
 }
 
-fn parse_response_attn_report(resp: &[u8]) -> Result<EndorsedAttestationVerificationReport, Error> {
+fn parse_response_attn_report(resp: &[u8]) -> Result<SignedAttestationVerificationReport, Error> {
     trace!("parse_response_attn_report");
     let mut headers = [httparse::EMPTY_HEADER; 16];
     let mut respp = httparse::Response::new(&mut headers);
@@ -305,7 +305,7 @@ fn parse_response_attn_report(resp: &[u8]) -> Result<EndorsedAttestationVerifica
     let signing_cert = Base64Std
         .decode(&sig_cert)
         .map_err(|e| Error::base64_decode(e, "Signing Certificate".to_string()))?;
-    Ok(EndorsedAttestationVerificationReport {
+    Ok(SignedAttestationVerificationReport {
         avr: attn_report,
         signature,
         signing_cert,

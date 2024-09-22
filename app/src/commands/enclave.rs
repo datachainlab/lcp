@@ -120,9 +120,9 @@ fn run_list_keys<E: EnclaveCommandAPI<S>, S: CommitStore>(
     };
     let mut list_json = Vec::new();
     for eki in list {
-        match eki.avr {
-            Some(eavr) => {
-                let avr = eavr.get_avr()?;
+        match eki.signed_avr {
+            Some(signed_avr) => {
+                let avr = signed_avr.get_avr()?;
                 let report_data = avr.parse_quote()?.report_data();
                 list_json.push(json! {{
                     "address": eki.address.to_hex_string(),

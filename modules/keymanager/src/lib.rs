@@ -1,6 +1,6 @@
 pub mod errors;
 pub use crate::errors::Error;
-use attestation_report::{EndorsedAttestationVerificationReport, ReportData};
+use attestation_report::{ReportData, SignedAttestationVerificationReport};
 use crypto::{Address, SealedEnclaveKey};
 use lcp_types::{
     deserialize_bytes, proto::lcp::service::enclave::v1::EnclaveKeyInfo as ProtoEnclaveKeyInfo,
@@ -90,10 +90,10 @@ impl EnclaveKeyManager {
                 })?,
                 mrenclave: Mrenclave::from_hex_string(&row.get::<_, String>(1)?).unwrap(),
                 report: deserialize_bytes(&row.get::<_, Vec<u8>>(2)?).unwrap(),
-                avr: match (row.get(3), row.get(4), row.get(5)) {
+                signed_avr: match (row.get(3), row.get(4), row.get(5)) {
                     (Ok(None), Ok(None), Ok(None)) => None,
                     (Ok(Some(avr)), Ok(Some(signature)), Ok(Some(signing_cert))) => {
-                        Some(EndorsedAttestationVerificationReport {
+                        Some(SignedAttestationVerificationReport {
                             avr,
                             signature,
                             signing_cert,
@@ -135,7 +135,7 @@ impl EnclaveKeyManager {
     pub fn save_avr(
         &self,
         address: Address,
-        avr: EndorsedAttestationVerificationReport,
+        avr: SignedAttestationVerificationReport,
     ) -> Result<(), Error> {
         let conn = self
             .conn
@@ -186,7 +186,7 @@ impl EnclaveKeyManager {
                     })?,
                     mrenclave: Mrenclave::from_hex_string(&row.get::<_, String>(2)?).unwrap(),
                     report: deserialize_bytes(&row.get::<_, Vec<u8>>(3)?).unwrap(),
-                    avr: Some(EndorsedAttestationVerificationReport {
+                    signed_avr: Some(SignedAttestationVerificationReport {
                         avr: row.get(4)?,
                         signature: row.get(5)?,
                         signing_cert: row.get(6)?,
@@ -222,10 +222,10 @@ impl EnclaveKeyManager {
                     })?,
                     mrenclave: Mrenclave::from_hex_string(&row.get::<_, String>(2)?).unwrap(),
                     report: deserialize_bytes(&row.get::<_, Vec<u8>>(3)?).unwrap(),
-                    avr: match (row.get(4), row.get(5), row.get(6)) {
+                    signed_avr: match (row.get(4), row.get(5), row.get(6)) {
                         (Ok(None), Ok(None), Ok(None)) => None,
                         (Ok(Some(avr)), Ok(Some(signature)), Ok(Some(signing_cert))) => {
-                            Some(EndorsedAttestationVerificationReport {
+                            Some(SignedAttestationVerificationReport {
                                 avr,
                                 signature,
                                 signing_cert,
@@ -263,22 +263,22 @@ pub struct SealedEnclaveKeyInfo {
     pub mrenclave: Mrenclave,
     #[serde_as(as = "BytesTransmuter<sgx_report_t>")]
     pub report: sgx_report_t,
-    pub avr: Option<EndorsedAttestationVerificationReport>,
+    pub signed_avr: Option<SignedAttestationVerificationReport>,
 }
 
 impl TryFrom<SealedEnclaveKeyInfo> for ProtoEnclaveKeyInfo {
     type Error = Error;
     fn try_from(value: SealedEnclaveKeyInfo) -> Result<Self, Self::Error> {
-        let eavr = value
-            .avr
+        let signed_avr = value
+            .signed_avr
             .ok_or_else(|| Error::unattested_enclave_key(format!("address={}", value.address)))?;
-        let attestation_time = eavr.get_avr()?.parse_quote()?.attestation_time;
+        let attestation_time = signed_avr.get_avr()?.parse_quote()?.attestation_time;
         Ok(Self {
             enclave_key_address: value.address.into(),
             attestation_time: attestation_time.as_unix_timestamp_secs(),
-            report: eavr.avr,
-            signature: eavr.signature,
-            signing_cert: eavr.signing_cert,
+            report: signed_avr.avr,
+            signature: signed_avr.signature,
+            signing_cert: signed_avr.signing_cert,
             extension: Default::default(),
         })
     }
@@ -302,7 +302,7 @@ mod tests {
             km.save(sealed_ek, report).unwrap();
             assert_eq!(km.all_keys().unwrap().len(), 1);
             assert_eq!(km.available_keys(mrenclave).unwrap().len(), 0);
-            let avr = create_eavr(get_time(Duration::zero()));
+            let avr = create_signed_avr(get_time(Duration::zero()));
             km.save_avr(address, avr).unwrap();
             assert_eq!(km.all_keys().unwrap().len(), 1);
             assert_eq!(km.available_keys(mrenclave).unwrap().len(), 1);
@@ -315,7 +315,7 @@ mod tests {
             km.save(sealed_ek, report).unwrap();
             assert_eq!(km.all_keys().unwrap().len(), 2);
             assert_eq!(km.available_keys(mrenclave).unwrap().len(), 1);
-            let avr = create_eavr(get_time(Duration::minutes(1)));
+            let avr = create_signed_avr(get_time(Duration::minutes(1)));
             km.save_avr(address, avr).unwrap();
             assert_eq!(km.all_keys().unwrap().len(), 2);
             assert_eq!(km.available_keys(mrenclave).unwrap().len(), 2);
@@ -361,8 +361,8 @@ mod tests {
         addr
     }
 
-    fn create_eavr(timestamp: DateTime<Utc>) -> EndorsedAttestationVerificationReport {
-        EndorsedAttestationVerificationReport {
+    fn create_signed_avr(timestamp: DateTime<Utc>) -> SignedAttestationVerificationReport {
+        SignedAttestationVerificationReport {
             avr: AttestationVerificationReport {
                 version: 4,
                 timestamp: format!(

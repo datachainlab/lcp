@@ -1,6 +1,6 @@
 use crate::errors::Error;
 use crate::ias_utils::{get_quote, init_quote, validate_qe_report, SGX_QUOTE_SIGN_TYPE};
-use attestation_report::{AttestationVerificationReport, EndorsedAttestationVerificationReport};
+use attestation_report::{AttestationVerificationReport, SignedAttestationVerificationReport};
 use base64::{engine::general_purpose::STANDARD as Base64Std, Engine};
 use crypto::Address;
 use enclave_api::EnclaveCommandAPI;
@@ -14,7 +14,7 @@ pub fn run_ias_ra_simulation<E: EnclaveCommandAPI<S>, S: CommitStore>(
     isv_enclave_quote_status: String,
     signing_key: rsa::pkcs1v15::SigningKey<sha2::Sha256>,
     signing_cert: Vec<u8>,
-) -> Result<EndorsedAttestationVerificationReport, Error> {
+) -> Result<SignedAttestationVerificationReport, Error> {
     let (target_info, _) = init_quote()?;
     let ek_info = enclave
         .get_key_manager()
@@ -48,7 +48,7 @@ fn create_simulate_avr(
     isv_enclave_quote_status: String,
     signing_key: rsa::pkcs1v15::SigningKey<sha2::Sha256>,
     signing_cert: Vec<u8>,
-) -> Result<EndorsedAttestationVerificationReport, Error> {
+) -> Result<SignedAttestationVerificationReport, Error> {
     let now = chrono::Utc::now();
     // TODO more configurable via simulation command
     let avr = AttestationVerificationReport {
@@ -72,7 +72,7 @@ fn create_simulate_avr(
     };
     let avr_json = avr.to_canonical_json().unwrap();
     let signature = signing_key.sign(avr_json.as_bytes()).to_vec();
-    Ok(EndorsedAttestationVerificationReport {
+    Ok(SignedAttestationVerificationReport {
         avr: avr_json,
         signature,
         signing_cert,
