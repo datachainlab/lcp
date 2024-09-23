@@ -16,7 +16,7 @@ pub fn update_client<R: LightClientResolver, S: KVStore, K: Signer>(
 
     let lc = get_light_client_by_client_id(ctx, &input.client_id)?;
     let ek = ctx.get_enclave_key();
-    match lc.update_client(ctx, input.client_id.clone(), input.any_header.into())? {
+    match lc.update_client(ctx, input.client_id.clone(), input.any_header)? {
         UpdateClientResult::UpdateState(mut data) => {
             let message: ProxyMessage = {
                 if input.include_state && data.message.emitted_states.is_empty() {

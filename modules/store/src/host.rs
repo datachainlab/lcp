@@ -30,6 +30,7 @@ impl IntoCommitStore<MemStore> for HostStore {
     fn apply<T>(&mut self, f: impl FnOnce(&mut MemStore) -> T) -> T {
         match self {
             HostStore::Memory(store) => f(store),
+            #[allow(unreachable_patterns)]
             _ => unreachable!(),
         }
     }

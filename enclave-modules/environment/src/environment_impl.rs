@@ -10,7 +10,12 @@ pub struct Environment {
 
 impl Environment {
     pub fn new(lc_registry: MapLightClientRegistry) -> Self {
+        if !lc_registry.is_sealed() {
+            panic!("Light client registry must be sealed before creating an environment");
+        }
         Self {
+            // Thread-safe: `lc_registry` is sealed and immutable after initialization
+            #[allow(clippy::arc_with_non_send_sync)]
             lc_registry: Arc::new(lc_registry),
         }
     }

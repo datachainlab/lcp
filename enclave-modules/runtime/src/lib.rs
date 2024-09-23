@@ -73,7 +73,7 @@ pub fn take_alloc_error_hook() -> fn(Layout) {
     if hook.is_null() {
         default_alloc_error_hook
     } else {
-        unsafe { mem::transmute(hook) }
+        unsafe { mem::transmute::<*mut (), fn(Layout)>(hook) }
     }
 }
 
@@ -127,7 +127,7 @@ macro_rules! setup_runtime {
     ($func:block) => {
         use $crate::sgx_types::cfg_if;
 
-        $crate::sgx_trts::global_ctors_object! {_init, _init_func = {
+        $crate::sgx_trts::global_ctors_object! {_INIT, _init_func = {
             $crate::set_environment((|| { $func })()).unwrap()
         }}
 
