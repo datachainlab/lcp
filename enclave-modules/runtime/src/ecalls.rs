@@ -2,7 +2,7 @@ use crate::prelude::*;
 use ecall_commands::{CommandResponse, ECallCommand};
 use ecall_handler::dispatch;
 use enclave_environment::Env;
-use enclave_utils::validate_const_ptr;
+use enclave_utils::{validate_const_ptr, validate_mut_ptr};
 use log::*;
 use once_cell::race::OnceBox;
 use sgx_types::sgx_status_t;
@@ -35,6 +35,11 @@ pub unsafe fn ecall_execute_command(
     validate_const_ptr!(
         command,
         command_len as usize,
+        sgx_status_t::SGX_ERROR_UNEXPECTED
+    );
+    validate_mut_ptr!(
+        output_buf,
+        output_buf_maxlen as usize,
         sgx_status_t::SGX_ERROR_UNEXPECTED
     );
 
