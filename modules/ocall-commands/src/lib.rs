@@ -19,6 +19,18 @@ pub enum Command {
     Store(StoreCommand),
 }
 
+impl From<LogCommand> for Command {
+    fn from(cmd: LogCommand) -> Self {
+        Command::Log(cmd)
+    }
+}
+
+impl From<StoreCommand> for Command {
+    fn from(cmd: StoreCommand) -> Self {
+        Command::Store(cmd)
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq)]
 pub enum CommandResult {
     Log,

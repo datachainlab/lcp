@@ -5,9 +5,9 @@ use crate::{
 use anyhow::Result;
 use clap::Parser;
 use enclave_api::{Enclave, EnclaveProtoAPI};
+use host::store::transaction::CommitStore;
 use serde::de::DeserializeOwned;
 use std::path::PathBuf;
-use store::transaction::CommitStore;
 
 // `client` subcommand
 #[derive(Debug, Parser)]

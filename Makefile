@@ -126,8 +126,8 @@ all: $(App_Path) $(Signed_RustEnclave_Name)
 clean:
 	@rm -f $(App_Dir)/* $(RustEnclave_Name) $(Signed_RustEnclave_Name) enclave/*_t.* app/*_u.* lib/*.a
 	@cargo clean
-	@cargo clean -C enclave
-	@cargo clean -C enclave-modules
+	@cd enclave && cargo clean
+	@cd enclave-modules && cargo clean
 
 ######## EDL Objects ########
 

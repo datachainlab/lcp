@@ -14,7 +14,8 @@ ocall-commands = { path = "../ocall-commands" }
 ocall-handler = { path = "../ocall-handler", default-features = false }
 
 [features]
-default = [
-    "ocall-handler/default"
+default = []
+rocksdb = [
+    "ocall-handler/rocksdb"
 ]
 test = []

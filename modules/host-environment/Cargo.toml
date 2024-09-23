@@ -7,5 +7,5 @@ edition = "2021"
 store = { path = "../store" }
 
 [features]
-default = ["rocksdbstore"]
-rocksdbstore = ["store/rocksdbstore"]
+default = []
+rocksdb = ["store/rocksdb"]

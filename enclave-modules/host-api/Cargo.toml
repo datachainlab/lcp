@@ -15,3 +15,4 @@ store = { path = "../../modules/store", default-features = false }
 [dev-dependencies]
 tempfile = "3"
 host = { path = "../../modules/host", default-features = false, features = ["test"] }
+enclave-api = { path = "../../modules/enclave-api", default-features = false }

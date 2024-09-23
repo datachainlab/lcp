@@ -19,13 +19,11 @@ serde = { version = "1.0.184", default-features = false, features = ["alloc"] }
 serde_json = { version = "1.0", default-features = false, features = ["alloc", "preserve_order"] }
 
 lcp-types = { path = "../modules/types" }
-host = { path = "../modules/host" }
-host-environment = { path = "../modules/host-environment" }
+host = { path = "../modules/host", features = ["rocksdb"] }
+enclave-api = { path = "../modules/enclave-api", features = ["rocksdb"] }
 service = { path = "../modules/service" }
-enclave-api = { path = "../modules/enclave-api" }
 ecall-commands = { path = "../modules/ecall-commands" }
 crypto = { path = "../modules/crypto" }
-store = { path = "../modules/store", features = ["rocksdbstore"] }
 keymanager = { path = "../modules/keymanager" }
 remote-attestation = { path = "../modules/remote-attestation" }
 

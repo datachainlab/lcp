@@ -2671,7 +2671,6 @@ dependencies = [
  "git2",
  "hex",
  "host",
- "host-environment",
  "keymanager",
  "lcp-types",
  "log",
@@ -2679,7 +2678,6 @@ dependencies = [
  "serde",
  "serde_json",
  "service",
- "store",
  "tokio",
 ]
 

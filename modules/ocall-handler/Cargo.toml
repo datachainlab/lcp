@@ -12,7 +12,7 @@ ocall-commands = { path = "../ocall-commands", default-features = false }
 host-environment = { path = "../host-environment", default-features = false }
 
 [features]
-default = ["rocksdbstore"]
-rocksdbstore = [
-    "host-environment/rocksdbstore"
+default = []
+rocksdb = [
+    "host-environment/rocksdb"
 ]
