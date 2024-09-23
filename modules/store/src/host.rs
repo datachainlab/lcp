@@ -5,7 +5,7 @@ use crate::{KVStore, Result, TxId};
 
 /// `HostStore` defines store implementations on host
 pub enum HostStore {
-    #[cfg(feature = "rocksdbstore")]
+    #[cfg(feature = "rocksdb")]
     RocksDB(crate::rocksdb::RocksDBStore),
     Memory(crate::memory::MemStore),
 }
@@ -16,7 +16,7 @@ pub trait IntoCommitStore<S: CommitStore> {
     fn apply<T>(&mut self, f: impl FnOnce(&mut S) -> T) -> T;
 }
 
-#[cfg(feature = "rocksdbstore")]
+#[cfg(feature = "rocksdb")]
 impl IntoCommitStore<crate::rocksdb::RocksDBStore> for HostStore {
     fn apply<T>(&mut self, f: impl FnOnce(&mut crate::rocksdb::RocksDBStore) -> T) -> T {
         match self {
@@ -30,6 +30,7 @@ impl IntoCommitStore<MemStore> for HostStore {
     fn apply<T>(&mut self, f: impl FnOnce(&mut MemStore) -> T) -> T {
         match self {
             HostStore::Memory(store) => f(store),
+            #[allow(unreachable_patterns)]
             _ => unreachable!(),
         }
     }
@@ -38,7 +39,7 @@ impl IntoCommitStore<MemStore> for HostStore {
 impl TxAccessor for HostStore {
     fn run_in_tx<T>(&self, tx_id: TxId, f: impl FnOnce(&dyn KVStore) -> T) -> Result<T> {
         match self {
-            #[cfg(feature = "rocksdbstore")]
+            #[cfg(feature = "rocksdb")]
             HostStore::RocksDB(store) => store.run_in_tx(tx_id, f),
             HostStore::Memory(store) => store.run_in_tx(tx_id, f),
         }
@@ -50,7 +51,7 @@ impl TxAccessor for HostStore {
         f: impl FnOnce(&mut dyn KVStore) -> T,
     ) -> Result<T> {
         match self {
-            #[cfg(feature = "rocksdbstore")]
+            #[cfg(feature = "rocksdb")]
             HostStore::RocksDB(store) => store.run_in_mut_tx(tx_id, f),
             HostStore::Memory(store) => store.run_in_mut_tx(tx_id, f),
         }

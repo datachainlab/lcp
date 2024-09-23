@@ -6,6 +6,7 @@ use lcp_types::ClientId;
 use light_client::{ClientReader, LightClient, LightClientResolver, RegistryError};
 use store::KVStore;
 
+#[allow(clippy::borrowed_box)]
 pub fn get_light_client_by_client_id<'a, R: LightClientResolver, S: KVStore, K: Signer>(
     ctx: &'a Context<R, S, K>,
     client_id: &ClientId,

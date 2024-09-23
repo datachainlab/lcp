@@ -7,10 +7,10 @@ use clap::Parser;
 use crypto::Address;
 use ecall_commands::GenerateEnclaveKeyInput;
 use enclave_api::{Enclave, EnclaveCommandAPI, EnclaveProtoAPI};
+use host::store::transaction::CommitStore;
 use lcp_types::Mrenclave;
 use log::*;
 use serde_json::json;
-use store::transaction::CommitStore;
 
 // `enclave` subcommand
 #[derive(Debug, Parser)]

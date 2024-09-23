@@ -15,7 +15,7 @@ define_error! {
         },
 
         Store
-        [store::Error]
+        [host_environment::store::Error]
         |_| { "Store error" },
 
         Io
@@ -24,8 +24,8 @@ define_error! {
     }
 }
 
-impl From<store::Error> for Error {
-    fn from(err: store::Error) -> Self {
+impl From<host_environment::store::Error> for Error {
+    fn from(err: host_environment::store::Error) -> Self {
         Error::store(err)
     }
 }

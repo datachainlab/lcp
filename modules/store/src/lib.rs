@@ -29,7 +29,7 @@ mod errors;
 pub mod host;
 #[cfg(feature = "std")]
 pub mod memory;
-#[cfg(feature = "rocksdbstore")]
+#[cfg(feature = "rocksdb")]
 pub mod rocksdb;
 mod store;
 #[cfg(feature = "std")]

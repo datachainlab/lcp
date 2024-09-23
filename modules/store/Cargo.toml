@@ -19,8 +19,8 @@ default = ["std"]
 std = [
     "flex-error/std"
 ]
-rocksdbstore = [
+rocksdb = [
     "std",
-    "rocksdb",
+    "dep:rocksdb",
     "ouroboros"
 ]

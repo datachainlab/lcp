@@ -1960,7 +1960,6 @@ name = "host"
 version = "0.1.0"
 dependencies = [
  "bincode",
- "host-environment",
  "log",
  "ocall-commands",
  "ocall-handler",
@@ -2672,7 +2671,6 @@ dependencies = [
  "git2",
  "hex",
  "host",
- "host-environment",
  "keymanager",
  "lcp-types",
  "log",
@@ -2680,7 +2678,6 @@ dependencies = [
  "serde",
  "serde_json",
  "service",
- "store",
  "tokio",
 ]
 
@@ -3241,7 +3238,6 @@ dependencies = [
  "log",
  "ocall-commands",
  "sgx_types",
- "store",
 ]
 
 [[package]]

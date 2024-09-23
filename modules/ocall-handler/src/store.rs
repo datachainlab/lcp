@@ -1,8 +1,8 @@
 use crate::errors::Result;
+use host_environment::store::transaction::TxAccessor;
 use host_environment::Environment;
 use log::*;
 use ocall_commands::{StoreCommand, StoreResult};
-use store::transaction::TxAccessor;
 
 pub fn dispatch(env: &Environment, command: StoreCommand) -> Result<StoreResult> {
     let res = match command {

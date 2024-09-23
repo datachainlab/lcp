@@ -1,6 +1,6 @@
-use host_environment::Environment;
 use log::*;
 use ocall_commands::{CommandResult, OCallCommand};
+use ocall_handler::host_environment::Environment;
 use once_cell::race::OnceBox;
 use sgx_types::sgx_status_t;
 use sgx_types::*;
@@ -22,9 +22,47 @@ pub fn get_environment() -> Option<&'static Environment> {
     HOST_ENVIRONMENT.get()
 }
 
-#[allow(clippy::not_unsafe_ptr_arg_deref)]
+#[cfg(not(feature = "test"))]
 #[no_mangle]
 pub extern "C" fn ocall_execute_command(
+    command: *const u8,
+    command_len: u32,
+    output_buf: *mut u8,
+    output_buf_maxlen: u32,
+    output_len: &mut u32,
+) -> sgx_types::sgx_status_t {
+    _ocall_execute_command(
+        command,
+        command_len,
+        output_buf,
+        output_buf_maxlen,
+        output_len,
+    )
+}
+
+#[cfg(feature = "test")]
+#[no_mangle]
+pub extern "C" fn ocall_execute_command(
+    ret_val: *mut sgx_status_t,
+    command: *const u8,
+    command_len: u32,
+    output_buf: *mut u8,
+    output_buf_maxlen: u32,
+    output_len: &mut u32,
+) -> sgx_types::sgx_status_t {
+    unsafe {
+        *ret_val = sgx_status_t::SGX_SUCCESS;
+    }
+    _ocall_execute_command(
+        command,
+        command_len,
+        output_buf,
+        output_buf_maxlen,
+        output_len,
+    )
+}
+
+fn _ocall_execute_command(
     command: *const u8,
     command_len: u32,
     output_buf: *mut u8,

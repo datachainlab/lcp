@@ -27,11 +27,6 @@ members = [
 ]
 exclude = [
     "enclave",
-    "enclave-modules/runtime",
-    "enclave-modules/environment",
-    "enclave-modules/store",
-    "enclave-modules/utils",
-    "enclave-modules/host-api",
-    "enclave-modules/ecall-handler",
+    "enclave-modules",
     "proto-compiler"
 ]

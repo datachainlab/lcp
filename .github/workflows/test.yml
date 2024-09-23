@@ -23,6 +23,8 @@ jobs:
             ./enclave
           cache-directories: |
             ~/.cargo/registry/src/**/librocksdb-sys-*
+      - run: cargo check -r
+        working-directory: enclave-modules
       - run: make lint-tools
       - run: make lint
 

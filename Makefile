@@ -49,7 +49,6 @@ endif
 
 SGX_COMMON_CFLAGS += -fstack-protector
 
-ENCLAVE_CARGO_FEATURES = --features=default
 APP_CARGO_FEATURES     = --features=default
 ifeq ($(SGX_PRODUCTION), 1)
 	SGX_ENCLAVE_MODE = "Production Mode"
@@ -60,7 +59,6 @@ else
 	SGX_ENCLAVE_CONFIG = "enclave/Enclave.config.xml"
 	SGX_SIGN_KEY = "enclave/Enclave_private.pem"
 	ifneq ($(SGX_MODE), HW)
-		ENCLAVE_CARGO_FEATURES = --features=default
 		APP_CARGO_FEATURES     = --features=default,sgx-sw
 	endif
 endif
@@ -127,8 +125,9 @@ all: $(App_Path) $(Signed_RustEnclave_Name)
 .PHONY: clean
 clean:
 	@rm -f $(App_Dir)/* $(RustEnclave_Name) $(Signed_RustEnclave_Name) enclave/*_t.* app/*_u.* lib/*.a
-	@cd enclave && cargo clean && rm -f Cargo.lock
-	@cargo clean && rm -f Cargo.lock
+	@cargo clean
+	@cd enclave && cargo clean
+	@cd enclave-modules && cargo clean
 
 ######## EDL Objects ########
 
@@ -169,7 +168,7 @@ $(Signed_RustEnclave_Name): $(RustEnclave_Name)
 
 .PHONY: enclave
 enclave:
-	@cd enclave && RUSTFLAGS=$(RUSTFLAGS) cargo build $(CARGO_TARGET) $(ENCLAVE_CARGO_FEATURES)
+	@cd enclave && RUSTFLAGS=$(RUSTFLAGS) cargo build $(CARGO_TARGET)
 	@cp enclave/target/$(OUTPUT_PATH)/libproxy_enclave.a ./lib/libenclave.a
 
 ######## Code generator ########
@@ -187,12 +186,15 @@ lint-tools:
 
 .PHONY: fmt
 fmt:
-	@cargo fmt --all $(CARGO_FMT_OPT) && cd ./enclave && cargo fmt --all $(CARGO_FMT_OPT)
+	@cargo fmt --all $(CARGO_FMT_OPT)
+	@$(TEST_ENCLAVE_CARGO) fmt --all $(CARGO_FMT_OPT)
+	@cd ./enclave && cargo fmt --all $(CARGO_FMT_OPT)
 
 .PHONY: lint
 lint:
 	@$(MAKE) CARGO_FMT_OPT=--check fmt
 	@cargo clippy --locked --tests $(CARGO_TARGET) -- -D warnings
+	@$(TEST_ENCLAVE_CARGO) clippy --locked --tests $(CARGO_TARGET) -- -D warnings
 	@cargo machete
 
 .PHONY: udeps
@@ -208,9 +210,18 @@ nodes-runner:
 
 ######## Tests ########
 
+TEST_ENCLAVE_RUSTFLAGS="-L $(SGX_SDK)/lib64"
+TEST_ENCLAVE_CARGO=RUSTFLAGS=$(TEST_ENCLAVE_RUSTFLAGS) cargo -Z unstable-options -C enclave-modules
+TEST_ENCLAVE_CARGO_TEST=$(TEST_ENCLAVE_CARGO) test $(CARGO_TARGET)
+
 .PHONY: test
 test:
 	@cargo test $(CARGO_TARGET) --lib --workspace --exclude integration-test
+	@$(TEST_ENCLAVE_CARGO_TEST) -p ecall-handler
+	@$(TEST_ENCLAVE_CARGO_TEST) -p enclave-environment
+	@$(TEST_ENCLAVE_CARGO_TEST) -p host-api
+	@$(TEST_ENCLAVE_CARGO_TEST) -p enclave-runtime
+	@$(TEST_ENCLAVE_CARGO_TEST) -p enclave-utils
 
 .PHONY: integration-test
 integration-test: $(Signed_RustEnclave_Name) bin/gaiad

@@ -6,9 +6,9 @@ use anyhow::{bail, Result};
 use clap::Parser;
 use crypto::Address;
 use enclave_api::{Enclave, EnclaveCommandAPI, EnclaveProtoAPI};
+use host::store::transaction::CommitStore;
 use log::info;
 use remote_attestation::{ias, IASMode};
-use store::transaction::CommitStore;
 
 /// `attestation` subcommand
 #[allow(clippy::upper_case_acronyms)]

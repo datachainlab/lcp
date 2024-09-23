@@ -2,9 +2,9 @@ use self::{attestation::AttestationCmd, elc::ELCCmd, enclave::EnclaveCmd, servic
 use crate::{enclave::build_enclave_loader, opts::Opts};
 use anyhow::Result;
 use clap::Parser;
-use host_environment::Environment;
+use host::environment::store::{host::HostStore, rocksdb::RocksDBStore};
+use host::environment::Environment;
 use std::sync::{Arc, RwLock};
-use store::{host::HostStore, rocksdb::RocksDBStore};
 
 mod attestation;
 mod elc;

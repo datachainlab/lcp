@@ -2,7 +2,7 @@ use crate::prelude::*;
 use ecall_commands::{CommandResponse, ECallCommand};
 use ecall_handler::dispatch;
 use enclave_environment::Env;
-use enclave_utils::validate_const_ptr;
+use enclave_utils::{validate_const_ptr, validate_mut_ptr};
 use log::*;
 use once_cell::race::OnceBox;
 use sgx_types::sgx_status_t;
@@ -19,7 +19,12 @@ pub fn set_environment<E: Env + 'static>(env: E) -> Result<(), SetEnvironmentErr
         .map_err(|_| SetEnvironmentError)
 }
 
-pub fn ecall_execute_command(
+/// # Safety
+///
+/// - `command` must be a valid pointer to a buffer of length `command_len`
+/// - `output_buf` must be a valid pointer to a buffer of length `output_buf_maxlen`
+/// - `output_len` must be a valid pointer to a u32
+pub unsafe fn ecall_execute_command(
     command: *const u8,
     command_len: u32,
     output_buf: *mut u8,
@@ -30,6 +35,11 @@ pub fn ecall_execute_command(
     validate_const_ptr!(
         command,
         command_len as usize,
+        sgx_status_t::SGX_ERROR_UNEXPECTED
+    );
+    validate_mut_ptr!(
+        output_buf,
+        output_buf_maxlen as usize,
         sgx_status_t::SGX_ERROR_UNEXPECTED
     );
 

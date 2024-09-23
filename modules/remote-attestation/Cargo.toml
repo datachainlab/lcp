@@ -22,7 +22,7 @@ lcp-types = { path = "../types" }
 crypto = { path = "../crypto", default-features = false }
 attestation-report = { path = "../attestation-report" }
 enclave-api = { path = "../enclave-api" }
-store = { path = "../store", features = ["rocksdbstore"] }
+store = { path = "../store" }
 keymanager = { path = "../keymanager" }
 
 [features]

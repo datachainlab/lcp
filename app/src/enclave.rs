@@ -1,9 +1,9 @@
 use crate::opts::Opts;
 use anyhow::{bail, Result};
 use enclave_api::{Enclave, EnclaveProtoAPI};
+use host::store::transaction::CommitStore;
 use keymanager::EnclaveKeyManager;
 use std::path::PathBuf;
-use store::transaction::CommitStore;
 
 pub trait EnclaveLoader<S: CommitStore> {
     fn load(&self, opts: &Opts, path: Option<&PathBuf>, debug: bool) -> Result<Enclave<S>>;

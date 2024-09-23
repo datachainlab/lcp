@@ -43,6 +43,10 @@ impl MapLightClientRegistry {
             }
         }
     }
+
+    pub fn is_sealed(&self) -> bool {
+        self.sealed
+    }
 }
 
 impl LightClientRegistry for MapLightClientRegistry {

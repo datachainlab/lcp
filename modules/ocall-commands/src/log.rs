@@ -5,3 +5,9 @@ use serde::{Deserialize, Serialize};
 pub struct LogCommand {
     pub msg: Vec<u8>,
 }
+
+impl LogCommand {
+    pub fn new(msg: Vec<u8>) -> Self {
+        Self { msg }
+    }
+}

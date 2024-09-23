@@ -20,8 +20,10 @@ attestation-report = { path = "../attestation-report" }
 lcp-proto = { path = "../../proto", features = ["server"] }
 
 [features]
-default = ["std", "rocksdb"]
+default = ["std"]
 std = [
     "flex-error/std"
 ]
-rocksdb = ["store/rocksdbstore"]
+rocksdb = [
+    "host/rocksdb"
+]

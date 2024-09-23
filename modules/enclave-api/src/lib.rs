@@ -1,5 +1,5 @@
 pub use api::{EnclaveCommandAPI, EnclavePrimitiveAPI, EnclaveProtoAPI};
-pub use enclave::{Enclave, EnclaveInfo};
+pub use enclave::{CommitStoreAccessor, Enclave, EnclaveInfo, HostStoreTxManager};
 pub use errors::Error;
 use errors::Result;
 

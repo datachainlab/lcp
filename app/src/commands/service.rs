@@ -3,10 +3,10 @@ use crate::opts::{EnclaveOpts, Opts};
 use anyhow::Result;
 use clap::Parser;
 use enclave_api::{Enclave, EnclaveProtoAPI};
+use host::store::transaction::CommitStore;
 use log::*;
 use service::{run_service, AppService};
 use std::sync::Arc;
-use store::transaction::CommitStore;
 use tokio::runtime::Builder;
 
 // `service` subcommand
