@@ -23,7 +23,6 @@ pub fn get_environment() -> Option<&'static Environment> {
 }
 
 #[cfg(not(feature = "test"))]
-#[allow(clippy::not_unsafe_ptr_arg_deref)]
 #[no_mangle]
 pub extern "C" fn ocall_execute_command(
     command: *const u8,
@@ -42,7 +41,6 @@ pub extern "C" fn ocall_execute_command(
 }
 
 #[cfg(feature = "test")]
-#[allow(clippy::not_unsafe_ptr_arg_deref)]
 #[no_mangle]
 pub extern "C" fn ocall_execute_command(
     ret_val: *mut sgx_status_t,
