@@ -2628,6 +2628,7 @@ checksum = "f9b7d56ba4a8344d6be9729995e6b06f928af29998cdf79fe390cbf6b1fee838"
 name = "keymanager"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "attestation-report",
  "chrono",
  "crypto",
@@ -2638,6 +2639,8 @@ dependencies = [
  "rusqlite",
  "serde",
  "serde_json",
+ "serde_with",
+ "sgx_types",
 ]
 
 [[package]]
@@ -2727,6 +2730,7 @@ dependencies = [
  "prost",
  "serde",
  "serde_json",
+ "serde_with",
  "sgx_types",
  "tendermint 0.29.0",
 ]
@@ -3918,11 +3922,11 @@ dependencies = [
  "base64 0.22.1",
  "chrono",
  "crypto",
- "ecall-commands",
  "enclave-api",
  "flex-error",
  "hex",
  "httparse",
+ "keymanager",
  "lcp-types",
  "log",
  "rand 0.8.5",

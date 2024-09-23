@@ -24,7 +24,7 @@ pub use errors::Error;
 mod errors;
 
 pub use report::{
-    AttestationVerificationReport, EndorsedAttestationVerificationReport, Quote, ReportData,
+    AttestationVerificationReport, Quote, ReportData, SignedAttestationVerificationReport,
 };
 mod report;
 

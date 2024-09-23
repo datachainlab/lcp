@@ -1,4 +1,6 @@
 #![cfg_attr(not(feature = "std"), no_std)]
+#![feature(generic_const_exprs)]
+#![allow(incomplete_features)]
 extern crate alloc;
 
 pub use any::Any;
@@ -9,6 +11,7 @@ pub use host::ClientId;
 pub use lcp_proto as proto;
 pub use sgx::Mrenclave;
 pub use time::{nanos_to_duration, Time, MAX_UNIX_TIMESTAMP_NANOS};
+pub use transmuter::{deserialize_bytes, serialize_bytes, BytesTransmuter};
 
 mod any;
 mod errors;
@@ -16,6 +19,7 @@ mod height;
 mod host;
 mod sgx;
 mod time;
+mod transmuter;
 
 #[allow(unused_imports)]
 mod prelude {

@@ -70,8 +70,117 @@ mod tests {
         }
     }
 
+    fn test_remote_attestation(
+        enclave: &Enclave<store::memory::MemStore>,
+    ) -> Result<(), anyhow::Error> {
+        if cfg!(feature = "sgx-sw") {
+            info!("this test is running in SW mode");
+        } else {
+            info!("this test is running in HW mode");
+        }
+
+        let (target_info, _) = remote_attestation::init_quote()?;
+        let operator = Address::from_hex_string("0x396e1ccc2f11cd6d2114c2449dad7751357e413e")?;
+        let op_ek_addr = match enclave.generate_enclave_key(GenerateEnclaveKeyInput {
+            operator: Some(operator),
+            target_info,
+        }) {
+            Ok(res) => res.pub_key.as_address(),
+            Err(e) => {
+                bail!("failed to generate an enclave key: {:?}!", e);
+            }
+        };
+        let ek_addr = match enclave.generate_enclave_key(GenerateEnclaveKeyInput {
+            operator: None,
+            target_info,
+        }) {
+            Ok(res) => res.pub_key.as_address(),
+            Err(e) => {
+                bail!("failed to generate an enclave key: {:?}!", e);
+            }
+        };
+
+        #[cfg(not(feature = "sgx-sw"))]
+        {
+            use remote_attestation::ias::run_ias_ra;
+            let res = match run_ias_ra(
+                enclave,
+                op_ek_addr,
+                remote_attestation::IASMode::Production,
+                std::env::var("SPID")?,
+                std::env::var("IAS_KEY")?,
+            ) {
+                Ok(res) => res,
+                Err(e) => {
+                    bail!("IAS Remote Attestation Failed {:?}!", e);
+                }
+            };
+            let report_data = res.get_avr()?.parse_quote()?.report_data();
+            assert_eq!(report_data.enclave_key(), op_ek_addr);
+            assert_eq!(report_data.operator(), operator);
+
+            let res = match run_ias_ra(
+                enclave,
+                ek_addr,
+                remote_attestation::IASMode::Production,
+                std::env::var("SPID")?,
+                std::env::var("IAS_KEY")?,
+            ) {
+                Ok(res) => res,
+                Err(e) => {
+                    panic!("IAS Remote Attestation Failed {:?}!", e);
+                }
+            };
+            let report_data = res.get_avr()?.parse_quote()?.report_data();
+            assert_eq!(report_data.enclave_key(), ek_addr);
+            assert!(report_data.operator().is_zero());
+        }
+        #[cfg(feature = "sgx-sw")]
+        {
+            use remote_attestation::ias_simulation::run_ias_ra_simulation;
+            use remote_attestation::rsa::{pkcs1v15::SigningKey, rand_core::OsRng};
+            use remote_attestation::sha2::Sha256;
+
+            let res = match run_ias_ra_simulation(
+                enclave,
+                op_ek_addr,
+                vec![],
+                "OK".to_string(),
+                SigningKey::<Sha256>::random(&mut OsRng, 3072)?,
+                Default::default(), // TODO set valid certificate
+            ) {
+                Ok(res) => res.get_avr()?,
+                Err(e) => {
+                    bail!("Remote Attestation Simulation Failed {:?}!", e);
+                }
+            };
+            let report_data = res.parse_quote()?.report_data();
+            assert_eq!(report_data.enclave_key(), op_ek_addr);
+            assert_eq!(report_data.operator(), operator);
+
+            let res = match run_ias_ra_simulation(
+                enclave,
+                ek_addr,
+                vec![],
+                "OK".to_string(),
+                SigningKey::<Sha256>::random(&mut OsRng, 3072)?,
+                Default::default(), // TODO set valid certificate
+            ) {
+                Ok(res) => res.get_avr()?,
+                Err(e) => {
+                    bail!("Remote Attestation Simulation Failed {:?}!", e);
+                }
+            };
+            let report_data = res.parse_quote()?.report_data();
+            assert_eq!(report_data.enclave_key(), ek_addr);
+            assert!(report_data.operator().is_zero());
+        }
+
+        Ok(())
+    }
+
     #[test]
-    fn test_elc_state_verification() {
+    fn test_lcp() {
         let tmp_dir = TempDir::new().unwrap();
         let home = tmp_dir.path().to_str().unwrap().to_string();
         host::set_environment(Environment::new(
@@ -83,6 +192,8 @@ mod tests {
         let env = host::get_environment().unwrap();
         let km = EnclaveKeyManager::new(&env.home).unwrap();
         let enclave = Enclave::create(ENCLAVE_FILE, true, km, env.store.clone()).unwrap();
+
+        test_remote_attestation(&enclave).unwrap();
 
         match std::env::var(ENV_SETUP_NODES).map(|v| v.to_lowercase()) {
             Ok(v) if v == "false" => run_test(&enclave).unwrap(),
@@ -101,98 +212,17 @@ mod tests {
         mut rly: Relayer,
         enclave: &Enclave<store::memory::MemStore>,
     ) -> Result<(), anyhow::Error> {
-        if cfg!(feature = "sgx-sw") {
-            info!("this test is running in SW mode");
-        } else {
-            info!("this test is running in HW mode");
-        }
-
-        let signer = match enclave.generate_enclave_key(GenerateEnclaveKeyInput) {
+        let operator = Address::from_hex_string("0x396e1ccc2f11cd6d2114c2449dad7751357e413e")?;
+        let (target_info, _) = remote_attestation::init_quote()?;
+        let signer = match enclave.generate_enclave_key(GenerateEnclaveKeyInput {
+            operator: Some(operator),
+            target_info,
+        }) {
             Ok(res) => res.pub_key.as_address(),
             Err(e) => {
                 bail!("failed to generate an enclave key: {:?}!", e);
             }
         };
-        let operator = Address::from_hex_string("0x396e1ccc2f11cd6d2114c2449dad7751357e413e")?;
-
-        #[cfg(not(feature = "sgx-sw"))]
-        {
-            use remote_attestation::ias::run_ias_ra;
-            let res = match run_ias_ra(
-                enclave,
-                signer,
-                Some(operator),
-                remote_attestation::IASMode::Production,
-                std::env::var("SPID")?,
-                std::env::var("IAS_KEY")?,
-            ) {
-                Ok(res) => res,
-                Err(e) => {
-                    bail!("IAS Remote Attestation Failed {:?}!", e);
-                }
-            };
-            let report_data = res.get_avr()?.parse_quote()?.report_data();
-            assert_eq!(report_data.enclave_key(), signer);
-            assert_eq!(report_data.operator(), operator);
-
-            let res = match run_ias_ra(
-                enclave,
-                signer,
-                None,
-                remote_attestation::IASMode::Production,
-                std::env::var("SPID")?,
-                std::env::var("IAS_KEY")?,
-            ) {
-                Ok(res) => res,
-                Err(e) => {
-                    bail!("IAS Remote Attestation Failed {:?}!", e);
-                }
-            };
-            let report_data = res.get_avr()?.parse_quote()?.report_data();
-            assert_eq!(report_data.enclave_key(), signer);
-            assert!(report_data.operator().is_zero());
-        }
-        #[cfg(feature = "sgx-sw")]
-        {
-            use remote_attestation::ias_simulation::run_ias_ra_simulation;
-            use remote_attestation::rsa::{pkcs1v15::SigningKey, rand_core::OsRng};
-            use remote_attestation::sha2::Sha256;
-            let res = match run_ias_ra_simulation(
-                enclave,
-                signer,
-                Some(operator),
-                vec![],
-                "OK".to_string(),
-                SigningKey::<Sha256>::random(&mut OsRng, 3072)?,
-                Default::default(), // TODO set valid certificate
-            ) {
-                Ok(res) => res.get_avr()?,
-                Err(e) => {
-                    bail!("Remote Attestation Simulation Failed {:?}!", e);
-                }
-            };
-            let report_data = res.parse_quote()?.report_data();
-            assert_eq!(report_data.enclave_key(), signer);
-            assert_eq!(report_data.operator(), operator);
-
-            let res = match run_ias_ra_simulation(
-                enclave,
-                signer,
-                None,
-                vec![],
-                "OK".to_string(),
-                SigningKey::<Sha256>::random(&mut OsRng, 3072)?,
-                Default::default(), // TODO set valid certificate
-            ) {
-                Ok(res) => res.get_avr()?,
-                Err(e) => {
-                    bail!("Remote Attestation Simulation Failed {:?}!", e);
-                }
-            };
-            let report_data = res.parse_quote()?.report_data();
-            assert_eq!(report_data.enclave_key(), signer);
-            assert!(report_data.operator().is_zero());
-        }
 
         let (client_id, last_height) = {
             // XXX use non-latest height here

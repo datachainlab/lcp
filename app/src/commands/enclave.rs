@@ -4,6 +4,7 @@ use crate::{
 };
 use anyhow::{anyhow, Result};
 use clap::Parser;
+use crypto::Address;
 use ecall_commands::GenerateEnclaveKeyInput;
 use enclave_api::{Enclave, EnclaveCommandAPI, EnclaveProtoAPI};
 use lcp_types::Mrenclave;
@@ -59,14 +60,36 @@ pub struct GenerateKey {
     /// Options for enclave
     #[clap(flatten)]
     pub enclave: EnclaveOpts,
+    /// An operator address to perform `registerEnclaveKey` transaction on-chain
+    #[clap(
+        long = "operator",
+        help = "An operator address to perform `registerEnclaveKey` transaction on-c
+    hain"
+    )]
+    pub operator: Option<String>,
+    // TODO add target qe option
+}
+
+impl GenerateKey {
+    fn get_operator(&self) -> Result<Option<Address>> {
+        if let Some(operator) = &self.operator {
+            Ok(Some(Address::from_hex_string(operator)?))
+        } else {
+            Ok(None)
+        }
+    }
 }
 
 fn run_generate_key<E: EnclaveCommandAPI<S>, S: CommitStore>(
     enclave: E,
-    _: &GenerateKey,
+    input: &GenerateKey,
 ) -> Result<()> {
+    let (target_info, _) = remote_attestation::init_quote()?;
     let res = enclave
-        .generate_enclave_key(GenerateEnclaveKeyInput)
+        .generate_enclave_key(GenerateEnclaveKeyInput {
+            target_info,
+            operator: input.get_operator()?,
+        })
         .map_err(|e| anyhow!("failed to generate an enclave key: {:?}", e))?;
     println!("{}", res.pub_key.as_address());
     Ok(())
@@ -97,9 +120,9 @@ fn run_list_keys<E: EnclaveCommandAPI<S>, S: CommitStore>(
     };
     let mut list_json = Vec::new();
     for eki in list {
-        match eki.avr {
-            Some(eavr) => {
-                let avr = eavr.get_avr()?;
+        match eki.signed_avr {
+            Some(signed_avr) => {
+                let avr = signed_avr.get_avr()?;
                 let report_data = avr.parse_quote()?.report_data();
                 list_json.push(json! {{
                     "address": eki.address.to_hex_string(),

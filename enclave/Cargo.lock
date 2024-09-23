@@ -865,6 +865,7 @@ dependencies = [
  "prost",
  "serde",
  "serde_json",
+ "serde_with",
  "sgx_types",
  "tendermint",
 ]

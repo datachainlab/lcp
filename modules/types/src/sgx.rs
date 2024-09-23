@@ -25,6 +25,12 @@ impl From<sgx_measurement_t> for Mrenclave {
     }
 }
 
+impl From<Mrenclave> for sgx_measurement_t {
+    fn from(mrenclave: Mrenclave) -> Self {
+        sgx_measurement_t { m: mrenclave.0 }
+    }
+}
+
 impl From<[u8; SGX_HASH_SIZE]> for Mrenclave {
     fn from(bytes: [u8; SGX_HASH_SIZE]) -> Self {
         Self(bytes)
@@ -47,7 +53,7 @@ impl Mrenclave {
     pub fn to_hex_string(&self) -> String {
         format!("0x{}", hex::encode(self.0))
     }
-    pub fn from_hex_string(&self, s: &str) -> Result<Self, TypeError> {
+    pub fn from_hex_string(s: &str) -> Result<Self, TypeError> {
         let s = s.strip_prefix("0x").unwrap_or(s);
         let mut bytes = [0u8; SGX_HASH_SIZE];
         hex::decode_to_slice(s, &mut bytes)?;

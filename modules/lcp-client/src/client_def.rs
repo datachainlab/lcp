@@ -5,7 +5,7 @@ use crate::message::{
     ClientMessage, CommitmentProofs, RegisterEnclaveKeyMessage, UpdateOperatorsMessage,
 };
 use alloy_sol_types::{sol, SolValue};
-use attestation_report::{EndorsedAttestationVerificationReport, ReportData};
+use attestation_report::{ReportData, SignedAttestationVerificationReport};
 use crypto::{verify_signature_address, Address, Keccak256};
 use hex_literal::hex;
 use light_client::commitments::{
@@ -527,14 +527,14 @@ pub fn compute_eip712_update_operators_hash(
 fn verify_report(
     current_timestamp: Time,
     client_state: &ClientState,
-    eavr: &EndorsedAttestationVerificationReport,
+    signed_avr: &SignedAttestationVerificationReport,
 ) -> Result<(ReportData, Time), Error> {
     // verify AVR with Intel SGX Attestation Report Signing CA
     // NOTE: This verification is skipped in tests because the CA is not available in the test environment
     #[cfg(not(test))]
-    attestation_report::verify_report(current_timestamp, eavr)?;
+    attestation_report::verify_report(current_timestamp, signed_avr)?;
 
-    let quote = eavr.get_avr()?.parse_quote()?;
+    let quote = signed_avr.get_avr()?.parse_quote()?;
 
     // check if attestation report's timestamp is not expired
     let key_expiration = (quote.attestation_time + client_state.key_expiration)?;
@@ -675,7 +675,7 @@ mod tests {
         {
             let mut ctx = Context::new(registry.clone(), ibc_store.clone(), &ek);
             ctx.set_timestamp(Time::now());
-            let report = generate_dummy_eavr(&ek.get_pubkey());
+            let report = generate_dummy_signed_avr(&ek.get_pubkey());
             let operator_signature = op_key
                 .sign(compute_eip712_register_enclave_key(report.avr.as_str()).as_slice())
                 .unwrap();
@@ -811,7 +811,7 @@ mod tests {
         Arc::new(registry)
     }
 
-    fn generate_dummy_eavr(key: &EnclavePublicKey) -> EndorsedAttestationVerificationReport {
+    fn generate_dummy_signed_avr(key: &EnclavePublicKey) -> SignedAttestationVerificationReport {
         let quote = sgx_quote_t {
             version: 4,
             report_body: sgx_report_body_t {
@@ -846,7 +846,7 @@ mod tests {
             ..Default::default()
         };
 
-        EndorsedAttestationVerificationReport {
+        SignedAttestationVerificationReport {
             avr: attr.to_canonical_json().unwrap(),
             ..Default::default()
         }
