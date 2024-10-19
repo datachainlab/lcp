@@ -2879,7 +2879,6 @@ dependencies = [
  "flex-error",
  "ibc",
  "lcp-types",
- "serde",
  "store",
 ]
 
