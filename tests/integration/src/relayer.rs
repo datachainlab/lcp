@@ -1,5 +1,5 @@
 use crate::types::{
-    relayer_header_to_any, to_ibc_channel, to_ibc_client_state, to_ibc_consensus_state,
+    any_to_any, relayer_header_to_any, to_ibc_channel, to_ibc_client_state, to_ibc_consensus_state,
     to_ibc_height, to_relayer_channel_id, to_relayer_client_state, to_relayer_height,
     to_relayer_port_id,
 };
@@ -10,6 +10,7 @@ use ibc::core::ics04_channel::channel::ChannelEnd;
 use ibc::core::ics23_commitment::merkle::MerkleProof;
 use ibc::core::ics24_host::identifier::{ChannelId, PortId};
 use ibc::Height;
+use ibc_proto_relayer26::google::protobuf::Any as ProtoAny;
 use ibc_relayer::chain::{
     client::ClientSettings,
     cosmos::{client::Settings, CosmosSdkChain},
@@ -20,7 +21,6 @@ use ibc_relayer::client_state::AnyClientState;
 use ibc_relayer::config::ChainConfig;
 use ibc_relayer::light_client::tendermint::LightClient as TmLightClient;
 use ibc_relayer::light_client::{tendermint::LightClient, LightClient as IBCLightClient};
-use lcp_proto::google::protobuf::Any as ProtoAny;
 use lcp_types::Any;
 use std::sync::Arc;
 use tendermint_rpc::{Client, HttpClient};
@@ -87,7 +87,10 @@ impl Relayer {
         let (client_state, consensus_state) = self.fetch_state(height)?;
         let any_client_state = ProtoAny::from(client_state);
         let any_consensus_state = ProtoAny::from(consensus_state);
-        Ok((any_client_state.into(), any_consensus_state.into()))
+        Ok((
+            any_to_any(any_client_state),
+            any_to_any(any_consensus_state),
+        ))
     }
 
     pub fn query_latest_height(&self) -> Result<Height> {

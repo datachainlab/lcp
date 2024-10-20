@@ -3,7 +3,7 @@ use crate::prelude::*;
 use core::cmp::Ordering;
 use core::str::FromStr;
 use lcp_proto::ibc::core::client::v1::Height as RawHeight;
-use lcp_proto::protobuf::Protobuf;
+use lcp_proto::Protobuf;
 use serde::{Deserialize, Serialize};
 
 #[derive(Default, Copy, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -141,8 +141,8 @@ impl FromStr for Height {
 }
 
 #[cfg(any(test, feature = "ibc"))]
-impl TryFrom<Height> for ibc::core::ics02_client::height::Height {
-    type Error = ibc::core::ics02_client::error::ClientError;
+impl TryFrom<Height> for ibc_core_client::types::Height {
+    type Error = ibc_core_client::types::error::ClientError;
 
     fn try_from(height: Height) -> Result<Self, Self::Error> {
         if height.revision_height() == 0 {
@@ -155,8 +155,8 @@ impl TryFrom<Height> for ibc::core::ics02_client::height::Height {
 }
 
 #[cfg(any(test, feature = "ibc"))]
-impl From<ibc::core::ics02_client::height::Height> for Height {
-    fn from(height: ibc::core::ics02_client::height::Height) -> Self {
+impl From<ibc_core_client::types::Height> for Height {
+    fn from(height: ibc_core_client::types::Height) -> Self {
         Height::new(height.revision_number(), height.revision_height())
     }
 }
@@ -164,7 +164,7 @@ impl From<ibc::core::ics02_client::height::Height> for Height {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ibc::core::ics02_client::height::Height as ICS02Height;
+    use ibc_core_client::types::Height as ICS02Height;
     use proptest::prelude::*;
 
     proptest! {

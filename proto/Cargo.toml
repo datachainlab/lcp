@@ -12,11 +12,11 @@ doctest = false
 all-features = true
 
 [dependencies]
-prost       = { version = "0.11", default-features = false }
-tonic       = { version = "0.8", optional = true, default-features = false }
+prost       = { version = "0.13", default-features = false }
+tonic       = { version = "0.12.1", optional = true, default-features = false }
 serde       = { version = "1.0", default-features = false }
 schemars    = { version = "0.8", optional = true }
-ibc-proto   = { version = "0.26.0", default-features = false }
+ibc-proto   = { version = "0.47.1", default-features = false, features = ["serde"] }
 
 [features]
 default     = ["std", "client"]

@@ -57,7 +57,7 @@ define_error! {
         |_| { "Commitment proof error" },
 
         IbcProto
-        [TraceError<light_client::types::proto::protobuf::Error>]
+        [TraceError<light_client::types::proto::Error>]
         |_| { "IBCProto error" },
 
         StringFromUtf8Error

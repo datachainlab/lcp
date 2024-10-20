@@ -9,7 +9,9 @@ use ibc::{
     },
     Height,
 };
-use ibc_proto_relayer::{
+use ibc_proto_relayer24::google::protobuf::Any as ProtoAny24;
+use ibc_proto_relayer24::protobuf::Protobuf as Protobuf24;
+use ibc_proto_relayer26::{
     google::protobuf::Any as IBCRelayerAny, protobuf::Protobuf as RelayerProtobuf,
 };
 use ibc_relayer_types::core::ics24_host::identifier::{ChannelId as RChannelId, PortId as RPortId};
@@ -21,7 +23,7 @@ use ibc_relayer_types::{
     core::ics04_channel::channel::ChannelEnd as RChannelEnd,
 };
 use ibc_relayer_types::{core::ics24_host::identifier::ChainId as RChainId, Height as RHeight};
-use lcp_proto::{google::protobuf::Any as ProtoAny, protobuf::Protobuf};
+// use lcp_proto::{google::protobuf::Any as ProtoAny};
 use lcp_types::Any;
 use std::str::FromStr;
 
@@ -31,7 +33,7 @@ use std::str::FromStr;
 /// relayer-types to lcp types
 
 pub(crate) fn relayer_header_to_any(value: RHeader) -> Any {
-    let any = IBCRelayerAny::from(value);
+    let any = ProtoAny24::from(value);
     Any::new(any.type_url, any.value)
 }
 
@@ -46,8 +48,8 @@ pub(crate) fn to_ibc_height(value: RHeight) -> Height {
 }
 
 pub(crate) fn to_ibc_client_state(value: RTendermintClientState) -> TendermintClientState {
-    let any = IBCRelayerAny::from(value);
-    TendermintClientState::try_from(ProtoAny {
+    let any = ProtoAny24::from(value);
+    TendermintClientState::try_from(IBCRelayerAny {
         type_url: any.type_url,
         value: any.value,
     })
@@ -55,8 +57,8 @@ pub(crate) fn to_ibc_client_state(value: RTendermintClientState) -> TendermintCl
 }
 
 pub(crate) fn to_ibc_consensus_state(value: RTendermintConsensusState) -> TendermintConsensusState {
-    let any = IBCRelayerAny::from(value);
-    TendermintConsensusState::try_from(ProtoAny {
+    let any = ProtoAny24::from(value);
+    TendermintConsensusState::try_from(IBCRelayerAny {
         type_url: any.type_url,
         value: any.value,
     })
@@ -82,10 +84,14 @@ pub(crate) fn to_relayer_port_id(value: PortId) -> RPortId {
 }
 
 pub(crate) fn to_relayer_client_state(value: TendermintClientState) -> RTendermintClientState {
-    let any = ProtoAny::from(value);
-    RTendermintClientState::try_from(IBCRelayerAny {
+    let any = IBCRelayerAny::from(value);
+    RTendermintClientState::try_from(ProtoAny24 {
         type_url: any.type_url,
         value: any.value,
     })
     .unwrap()
+}
+
+pub(crate) fn any_to_any(a0: IBCRelayerAny) -> Any {
+    Any::new(a0.type_url, a0.value)
 }

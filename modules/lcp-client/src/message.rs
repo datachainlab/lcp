@@ -9,7 +9,7 @@ use light_client::types::proto::ibc::lightclients::lcp::v1::{
     UpdateClientMessage as RawUpdateClientMessage,
     UpdateOperatorsMessage as RawUpdateOperatorsMessage,
 };
-use light_client::types::{proto::protobuf::Protobuf, Any};
+use light_client::types::{proto::Protobuf, Any};
 use serde::{Deserialize, Serialize};
 
 pub const LCP_REGISTER_ENCLAVE_KEY_MESSAGE_TYPE_URL: &str =
@@ -52,15 +52,15 @@ impl From<ClientMessage> for Any {
         match value {
             ClientMessage::RegisterEnclaveKey(h) => Any::new(
                 LCP_REGISTER_ENCLAVE_KEY_MESSAGE_TYPE_URL.to_string(),
-                h.encode_vec().unwrap(),
+                h.encode_vec(),
             ),
             ClientMessage::UpdateClient(h) => Any::new(
                 LCP_UPDATE_CLIENT_MESSAGE_TYPE_URL.to_string(),
-                h.encode_vec().unwrap(),
+                h.encode_vec(),
             ),
             ClientMessage::UpdateOperators(h) => Any::new(
                 LCP_UPDATE_OPERATORS_MESSAGE_TYPE_URL.to_string(),
-                h.encode_vec().unwrap(),
+                h.encode_vec(),
             ),
         }
     }

@@ -1,0 +1,72 @@
+use ibc_core_host_types::error::DecodingError;
+use ibc_core_host_types::identifiers::ClientId;
+use ibc_primitives::prelude::*;
+use ibc_primitives::proto::{Any, Protobuf};
+
+use crate::ibc::header::MockHeader;
+use crate::ibc::proto::Misbehaviour as RawMisbehaviour;
+
+pub const MOCK_MISBEHAVIOUR_TYPE_URL: &str = "/ibc.mock.Misbehavior";
+
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct Misbehaviour {
+    pub client_id: ClientId,
+    pub header1: MockHeader,
+    pub header2: MockHeader,
+}
+
+impl Protobuf<RawMisbehaviour> for Misbehaviour {}
+
+impl TryFrom<RawMisbehaviour> for Misbehaviour {
+    type Error = DecodingError;
+
+    fn try_from(raw: RawMisbehaviour) -> Result<Self, Self::Error> {
+        Ok(Self {
+            client_id: ClientId::new("07-tendermint", 0).expect("no error"),
+            header1: raw
+                .header1
+                .ok_or(DecodingError::missing_raw_data("misbehaviour header1"))?
+                .try_into()?,
+            header2: raw
+                .header2
+                .ok_or(DecodingError::missing_raw_data("misbehaviour header2"))?
+                .try_into()?,
+        })
+    }
+}
+
+impl From<Misbehaviour> for RawMisbehaviour {
+    fn from(value: Misbehaviour) -> Self {
+        Self {
+            client_id: value.client_id.to_string(),
+            header1: Some(value.header1.into()),
+            header2: Some(value.header2.into()),
+        }
+    }
+}
+
+impl Protobuf<Any> for Misbehaviour {}
+
+impl TryFrom<Any> for Misbehaviour {
+    type Error = DecodingError;
+
+    fn try_from(raw: Any) -> Result<Self, Self::Error> {
+        if let MOCK_MISBEHAVIOUR_TYPE_URL = raw.type_url.as_str() {
+            Protobuf::<RawMisbehaviour>::decode(raw.value.as_ref()).map_err(Into::into)
+        } else {
+            Err(DecodingError::MismatchedResourceName {
+                expected: MOCK_MISBEHAVIOUR_TYPE_URL.to_string(),
+                actual: raw.type_url,
+            })
+        }
+    }
+}
+
+impl From<Misbehaviour> for Any {
+    fn from(misbehaviour: Misbehaviour) -> Self {
+        Self {
+            type_url: MOCK_MISBEHAVIOUR_TYPE_URL.to_string(),
+            value: Protobuf::<RawMisbehaviour>::encode_vec(misbehaviour),
+        }
+    }
+}

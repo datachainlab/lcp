@@ -5,7 +5,7 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 #![deny(warnings, trivial_casts, trivial_numeric_casts, unused_import_braces)]
-#![allow(clippy::large_enum_variant)]
+#![allow(clippy::large_enum_variant, clippy::too_long_first_doc_paragraph)]
 #![allow(rustdoc::bare_urls)]
 #![forbid(unsafe_code)]
 
@@ -29,7 +29,13 @@ pub const IBC_GO_COMMIT: &str = include_str!("IBC_GO_COMMIT");
 #[cfg(feature = "server")]
 pub const FILE_DESCRIPTOR_SET: &[u8] = include_bytes!("descriptor.bin");
 
-pub use ibc_proto::{cosmos, google, ics23, protobuf};
+pub use ibc_proto::{Error, Protobuf};
+
+pub mod google {
+    pub mod protobuf {
+        include_proto!("google.protobuf.rs");
+    }
+}
 
 pub mod ibc {
     pub use ibc_proto::ibc::core;

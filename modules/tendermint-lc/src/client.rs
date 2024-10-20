@@ -1,441 +1,18 @@
-use crate::errors::Error;
-use crate::message::{ClientMessage, Header, Misbehaviour};
+use crate::context::TendermintIBCContext;
 use crate::prelude::*;
-use crate::state::{canonicalize_state, gen_state_id, ClientState, ConsensusState};
-use crate::verifier::check_header_and_update_state;
-use core::str::FromStr;
-use crypto::Keccak256;
-use ibc::clients::ics07_tendermint::client_state::{
-    ClientState as TendermintClientState, TENDERMINT_CLIENT_STATE_TYPE_URL,
-};
-use ibc::clients::ics07_tendermint::client_type;
-use ibc::clients::ics07_tendermint::consensus_state::ConsensusState as TendermintConsensusState;
-use ibc::core::ics02_client::client_state::{
-    downcast_client_state, ClientState as Ics02ClientState, UpdatedState,
-};
-use ibc::core::ics02_client::consensus_state::{
-    downcast_consensus_state, ConsensusState as Ics02ConsensusState,
-};
-use ibc::core::ics02_client::error::ClientError as ICS02Error;
-use ibc::core::ics02_client::header::Header as Ics02Header;
-use ibc::core::ics03_connection::error::ConnectionError as ICS03Error;
-use ibc::core::ics23_commitment::commitment::{
-    CommitmentPrefix as IBCCommitmentPrefix, CommitmentProofBytes as IBCCommitmentProofBytes,
-    CommitmentRoot,
-};
-use ibc::core::ics23_commitment::merkle::{apply_prefix, MerkleProof};
-use ibc::core::ics24_host::Path;
-use lcp_proto::ibc::core::commitment::v1::MerkleProof as RawMerkleProof;
-use light_client::commitments::{
-    CommitmentPrefix, EmittedState, MisbehaviourProxyMessage, PrevState, TrustingPeriodContext,
-    UpdateStateProxyMessage, ValidationContext, VerifyMembershipProxyMessage,
-};
-use light_client::types::{Any, ClientId, Height, Time};
+use crate::state::gen_state_id;
+use ibc_client_tendermint::client_state::ClientState as TendermintClientState;
+use ibc_client_tendermint::types::TENDERMINT_CLIENT_STATE_TYPE_URL;
+use ibc_client_tendermint::TENDERMINT_CLIENT_TYPE;
+use ibc_core_host_types::path::PathBytes;
+use ibc_primitives::proto::Any as IBCAny;
 use light_client::{
-    ibc::IBCContext, CreateClientResult, Error as LightClientError, HostClientReader, LightClient,
-    LightClientRegistry, UpdateClientResult, VerifyMembershipResult,
+    ibc::{CreateExecutionResult, IBCHandler, UpdateExecutionResult},
+    types::{Any, ClientId, Height},
+    CreateClientResult, Error as LightClientError, HostClientReader, LightClient,
+    LightClientRegistry, MisbehaviourData, UpdateClientResult, UpdateStateData,
+    VerifyMembershipResult, VerifyNonMembershipResult,
 };
-use light_client::{MisbehaviourData, UpdateStateData, VerifyNonMembershipResult};
-#[allow(unused_imports)]
-use log::*;
-
-#[derive(Default)]
-pub struct TendermintLightClient;
-
-impl LightClient for TendermintLightClient {
-    fn client_type(&self) -> String {
-        client_type().as_str().to_string()
-    }
-
-    fn latest_height(
-        &self,
-        ctx: &dyn HostClientReader,
-        client_id: &ClientId,
-    ) -> Result<Height, LightClientError> {
-        let client_state: ClientState = ctx.client_state(client_id)?.try_into()?;
-        Ok(client_state.latest_height().into())
-    }
-
-    fn create_client(
-        &self,
-        _: &dyn HostClientReader,
-        any_client_state: Any,
-        any_consensus_state: Any,
-    ) -> Result<CreateClientResult, LightClientError> {
-        let client_state = ClientState::try_from(any_client_state.clone())?;
-        let consensus_state = ConsensusState::try_from(any_consensus_state)?;
-        let _ = client_state
-            .initialise(consensus_state.0.clone().into())
-            .map_err(Error::ics02)?;
-
-        let canonical_client_state = canonicalize_state(&client_state);
-        let height = client_state.latest_height().into();
-        let timestamp = Time::try_from(
-            consensus_state
-                .timestamp()
-                .into_datetime()
-                .ok_or_else(Error::invalid_timestamp)?,
-        )
-        .map_err(Error::time)?;
-        let state_id = gen_state_id(canonical_client_state, consensus_state)?;
-
-        Ok(CreateClientResult {
-            height,
-            message: UpdateStateProxyMessage {
-                prev_height: None,
-                prev_state_id: None,
-                post_height: height,
-                post_state_id: state_id,
-                timestamp,
-                context: ValidationContext::Empty,
-                emitted_states: vec![EmittedState(height, any_client_state)],
-            }
-            .into(),
-            prove: false,
-        })
-    }
-
-    fn update_client(
-        &self,
-        ctx: &dyn HostClientReader,
-        client_id: ClientId,
-        any_client_message: Any,
-    ) -> Result<UpdateClientResult, LightClientError> {
-        match ClientMessage::try_from(any_client_message)? {
-            ClientMessage::Header(h) => Ok(self.update_state(ctx, client_id, h)?.into()),
-            ClientMessage::Misbehaviour(m) => {
-                Ok(self.submit_misbehaviour(ctx, client_id, m)?.into())
-            }
-        }
-    }
-
-    fn verify_membership(
-        &self,
-        ctx: &dyn HostClientReader,
-        client_id: ClientId,
-        prefix: CommitmentPrefix,
-        path: String,
-        value: Vec<u8>,
-        proof_height: Height,
-        proof: Vec<u8>,
-    ) -> Result<VerifyMembershipResult, LightClientError> {
-        let (client_state, consensus_state, prefix, path, proof) =
-            Self::validate_args(ctx, client_id.clone(), prefix, path, proof_height, proof)?;
-
-        client_state
-            .verify_height(proof_height.try_into().map_err(Error::ics02)?)
-            .map_err(|e| Error::ics02(e.into()))?;
-
-        verify_membership(
-            &client_state,
-            &prefix,
-            &proof,
-            consensus_state.root(),
-            path.clone(),
-            value.to_vec(),
-        )
-        .map_err(|e| {
-            Error::ics03(ICS03Error::ClientStateVerificationFailure {
-                client_id: client_id.clone().into(),
-                client_error: e,
-            })
-        })?;
-
-        Ok(VerifyMembershipResult {
-            message: VerifyMembershipProxyMessage::new(
-                prefix.into_vec(),
-                path.to_string(),
-                Some(value.keccak256()),
-                proof_height,
-                gen_state_id(canonicalize_state(&client_state), consensus_state)?,
-            ),
-        })
-    }
-
-    fn verify_non_membership(
-        &self,
-        ctx: &dyn HostClientReader,
-        client_id: ClientId,
-        prefix: Vec<u8>,
-        path: String,
-        proof_height: Height,
-        proof: Vec<u8>,
-    ) -> Result<VerifyNonMembershipResult, LightClientError> {
-        let (client_state, consensus_state, prefix, path, proof) =
-            Self::validate_args(ctx, client_id.clone(), prefix, path, proof_height, proof)?;
-
-        client_state
-            .verify_height(proof_height.try_into().map_err(Error::ics02)?)
-            .map_err(|e| Error::ics02(e.into()))?;
-
-        verify_non_membership(
-            &client_state,
-            &prefix,
-            &proof,
-            consensus_state.root(),
-            path.clone(),
-        )
-        .map_err(|e| {
-            Error::ics03(ICS03Error::ClientStateVerificationFailure {
-                client_id: client_id.clone().into(),
-                client_error: e,
-            })
-        })?;
-
-        Ok(VerifyNonMembershipResult {
-            message: VerifyMembershipProxyMessage::new(
-                prefix.into_vec(),
-                path.to_string(),
-                None,
-                proof_height,
-                gen_state_id(canonicalize_state(&client_state), consensus_state)?,
-            ),
-        })
-    }
-}
-
-impl TendermintLightClient {
-    fn validate_args(
-        ctx: &dyn HostClientReader,
-        client_id: ClientId,
-        counterparty_prefix: Vec<u8>,
-        path: String,
-        proof_height: Height,
-        proof: Vec<u8>,
-    ) -> Result<
-        (
-            ClientState,
-            ConsensusState,
-            IBCCommitmentPrefix,
-            Path,
-            IBCCommitmentProofBytes,
-        ),
-        LightClientError,
-    > {
-        let client_state: ClientState = ctx.client_state(&client_id)?.try_into()?;
-
-        if client_state.is_frozen() {
-            return Err(Error::ics02(ICS02Error::ClientFrozen {
-                client_id: client_id.into(),
-            })
-            .into());
-        }
-
-        let consensus_state: ConsensusState =
-            ctx.consensus_state(&client_id, &proof_height)?.try_into()?;
-
-        let proof: IBCCommitmentProofBytes = proof.try_into().map_err(Error::ics23)?;
-        let prefix: IBCCommitmentPrefix = counterparty_prefix.try_into().map_err(Error::ics23)?;
-        let path: Path = Path::from_str(&path).unwrap();
-        Ok((client_state, consensus_state, prefix, path, proof))
-    }
-
-    fn update_state(
-        &self,
-        ctx: &dyn HostClientReader,
-        client_id: ClientId,
-        header: Header,
-    ) -> Result<UpdateStateData, LightClientError> {
-        // Read client state from the host chain store.
-        let client_state: ClientState = ctx.client_state(&client_id)?.try_into()?;
-
-        if client_state.is_frozen() {
-            return Err(Error::ics02(ICS02Error::ClientFrozen {
-                client_id: client_id.into(),
-            })
-            .into());
-        }
-
-        let height = header.height().into();
-        let header_timestamp: Time = header.timestamp().try_into().map_err(Error::time)?;
-
-        let trusted_consensus_state: ConsensusState = ctx
-            .consensus_state(&client_id, &header.trusted_height.into())
-            .map_err(|_| {
-                Error::ics02(ICS02Error::ConsensusStateNotFound {
-                    client_id: client_id.clone().into(),
-                    height: header.trusted_height,
-                })
-            })?
-            .try_into()?;
-
-        // Use client_state to validate the new header against the latest consensus_state.
-        // This function will return the new client_state (its latest_height changed) and a
-        // consensus_state obtained from header. These will be later persisted by the keeper.
-        let UpdatedState {
-            client_state: new_client_state,
-            consensus_state: new_consensus_state,
-        } = check_header_and_update_state(
-            &client_state,
-            &IBCContext::<TendermintClientState, TendermintConsensusState>::new(ctx),
-            client_id.into(),
-            Any::from(header.clone()).into(),
-        )
-        .map_err(|e| {
-            Error::ics02(ICS02Error::HeaderVerificationFailure {
-                reason: e.to_string(),
-            })
-        })?;
-
-        let new_client_state = ClientState(
-            downcast_client_state::<TendermintClientState>(new_client_state.as_ref())
-                .unwrap()
-                .clone(),
-        );
-        let new_consensus_state = ConsensusState(
-            downcast_consensus_state::<TendermintConsensusState>(new_consensus_state.as_ref())
-                .unwrap()
-                .clone(),
-        );
-
-        let trusted_state_timestamp: Time = trusted_consensus_state
-            .timestamp()
-            .try_into()
-            .map_err(Error::time)?;
-        let lc_opts = client_state.as_light_client_options().unwrap();
-
-        let prev_state_id =
-            gen_state_id(canonicalize_state(&client_state), trusted_consensus_state)?;
-        let post_state_id = gen_state_id(
-            canonicalize_state(&new_client_state),
-            new_consensus_state.clone(),
-        )?;
-        Ok(UpdateStateData {
-            new_any_client_state: new_client_state.into(),
-            new_any_consensus_state: new_consensus_state.into(),
-            height,
-            message: UpdateStateProxyMessage {
-                prev_height: Some(header.trusted_height.into()),
-                prev_state_id: Some(prev_state_id),
-                post_height: height,
-                post_state_id,
-                timestamp: header_timestamp,
-                context: TrustingPeriodContext::new(
-                    lc_opts.trusting_period,
-                    lc_opts.clock_drift,
-                    header_timestamp,
-                    trusted_state_timestamp,
-                )
-                .into(),
-                emitted_states: Default::default(),
-            },
-            prove: true,
-        })
-    }
-
-    fn submit_misbehaviour(
-        &self,
-        ctx: &dyn HostClientReader,
-        client_id: ClientId,
-        misbehaviour: Misbehaviour,
-    ) -> Result<MisbehaviourData, LightClientError> {
-        // Read client state from the host chain store.
-        let client_state: ClientState = ctx.client_state(&client_id)?.try_into()?;
-
-        if client_state.is_frozen() {
-            return Err(Error::ics02(ICS02Error::ClientFrozen {
-                client_id: client_id.into(),
-            })
-            .into());
-        }
-
-        let new_client_state = client_state
-            .check_misbehaviour_and_update_state(
-                &IBCContext::<TendermintClientState, TendermintConsensusState>::new(ctx),
-                client_id.clone().into(),
-                Any::from(misbehaviour.clone()).into(),
-            )
-            .map_err(|e| {
-                Error::ics02(ICS02Error::HeaderVerificationFailure {
-                    reason: e.to_string(),
-                })
-            })?;
-
-        let new_client_state = ClientState(
-            downcast_client_state::<TendermintClientState>(new_client_state.as_ref())
-                .unwrap()
-                .clone(),
-        );
-
-        let (prev_states, trusted_consensus_state_timestamps) = self.make_prev_states(
-            ctx,
-            &client_id,
-            &client_state,
-            vec![
-                misbehaviour.header1().trusted_height.into(),
-                misbehaviour.header2().trusted_height.into(),
-            ],
-        )?;
-        let lc_opts = client_state.as_light_client_options().unwrap();
-        Ok(MisbehaviourData {
-            new_any_client_state: new_client_state.into(),
-            message: MisbehaviourProxyMessage {
-                prev_states,
-                context: TrustingPeriodContext::new(
-                    lc_opts.trusting_period,
-                    lc_opts.clock_drift,
-                    misbehaviour
-                        .header1()
-                        .timestamp()
-                        .try_into()
-                        .map_err(Error::time)?,
-                    trusted_consensus_state_timestamps[0],
-                )
-                .aggregate(TrustingPeriodContext::new(
-                    lc_opts.trusting_period,
-                    lc_opts.clock_drift,
-                    misbehaviour
-                        .header2()
-                        .timestamp()
-                        .try_into()
-                        .map_err(Error::time)?,
-                    trusted_consensus_state_timestamps[1],
-                ))
-                .map_err(|e| {
-                    Error::ics02(ICS02Error::ClientSpecific {
-                        description: e.to_string(),
-                    })
-                })?
-                .into(),
-                client_message: Any::from(misbehaviour),
-            },
-        })
-    }
-
-    fn make_prev_states(
-        &self,
-        ctx: &dyn HostClientReader,
-        client_id: &ClientId,
-        client_state: &ClientState,
-        heights: Vec<Height>,
-    ) -> Result<(Vec<PrevState>, Vec<Time>), LightClientError> {
-        let mut prev_states = Vec::new();
-        let mut timestamps = Vec::new();
-        for height in heights {
-            let ibc_height = height.try_into().map_err(Error::ics02)?;
-            let consensus_state: ConsensusState = ctx
-                .consensus_state(client_id, &height)
-                .map_err(|_| {
-                    Error::ics02(ICS02Error::ConsensusStateNotFound {
-                        client_id: client_id.clone().into(),
-                        height: ibc_height,
-                    })
-                })?
-                .try_into()?;
-            let timestamp = consensus_state
-                .timestamp()
-                .try_into()
-                .map_err(Error::time)?;
-            let prev_state_id = gen_state_id(canonicalize_state(client_state), consensus_state)?;
-            prev_states.push(PrevState {
-                height,
-                state_id: prev_state_id,
-            });
-            timestamps.push(timestamp);
-        }
-        Ok((prev_states, timestamps))
-    }
-}
 
 pub fn register_implementations(registry: &mut dyn LightClientRegistry) {
     registry
@@ -446,43 +23,158 @@ pub fn register_implementations(registry: &mut dyn LightClientRegistry) {
         .unwrap()
 }
 
-fn verify_membership(
-    client_state: &ClientState,
-    prefix: &IBCCommitmentPrefix,
-    proof: &IBCCommitmentProofBytes,
-    root: &CommitmentRoot,
-    path: impl Into<Path>,
-    value: Vec<u8>,
-) -> Result<(), ICS02Error> {
-    let merkle_path = apply_prefix(prefix, vec![path.into().to_string()]);
-    let merkle_proof: MerkleProof = RawMerkleProof::try_from(proof.clone())
-        .map_err(ICS02Error::InvalidCommitmentProof)?
-        .into();
+#[derive(Default)]
+pub struct TendermintLightClient;
 
-    merkle_proof
-        .verify_membership(
-            &client_state.proof_specs,
-            root.clone().into(),
-            merkle_path,
-            value,
-            0,
+impl LightClient for TendermintLightClient {
+    fn client_type(&self) -> String {
+        TENDERMINT_CLIENT_TYPE.to_string()
+    }
+
+    fn latest_height(
+        &self,
+        ctx: &dyn HostClientReader,
+        client_id: &ClientId,
+    ) -> Result<Height, LightClientError> {
+        let client_state: TendermintClientState = IBCAny::from(ctx.client_state(client_id)?)
+            .try_into()
+            .unwrap();
+        Ok(client_state.inner().latest_height.into())
+    }
+
+    fn create_client(
+        &self,
+        ctx: &dyn HostClientReader,
+        any_client_state: Any,
+        any_consensus_state: Any,
+    ) -> Result<CreateClientResult, LightClientError> {
+        let mut ibc_ctx = TendermintIBCContext::new(ctx);
+        let CreateExecutionResult(latest_height) = IBCHandler::create_client(
+            ctx,
+            &mut ibc_ctx,
+            ctx.host_timestamp().into(),
+            any_client_state.into(),
+            any_consensus_state.into(),
         )
-        .map_err(ICS02Error::Ics23Verification)
-}
+        .unwrap();
 
-fn verify_non_membership(
-    client_state: &ClientState,
-    prefix: &IBCCommitmentPrefix,
-    proof: &IBCCommitmentProofBytes,
-    root: &CommitmentRoot,
-    path: impl Into<Path>,
-) -> Result<(), ICS02Error> {
-    let merkle_path = apply_prefix(prefix, vec![path.into().to_string()]);
-    let merkle_proof: MerkleProof = RawMerkleProof::try_from(proof.clone())
-        .map_err(ICS02Error::InvalidCommitmentProof)?
-        .into();
+        let (_, pmsg) =
+            ibc_ctx.gen_initialize_state_proxy_message(|client_state, consensus_state| {
+                gen_state_id(client_state.clone(), consensus_state.clone())
+            });
+        Ok(CreateClientResult {
+            height: latest_height.into(),
+            message: pmsg.into(),
+            prove: false,
+        })
+    }
 
-    merkle_proof
-        .verify_non_membership(&client_state.proof_specs, root.clone().into(), merkle_path)
-        .map_err(ICS02Error::Ics23Verification)
+    fn update_client(
+        &self,
+        ctx: &dyn HostClientReader,
+        client_id: ClientId,
+        any_client_message: Any,
+    ) -> Result<UpdateClientResult, LightClientError> {
+        let ibc_client_message: IBCAny = any_client_message.clone().into();
+        let mut ibc_ctx = TendermintIBCContext::new(ctx);
+        let ibc_client_id = client_id.into();
+
+        match IBCHandler::update_client(&mut ibc_ctx, &ibc_client_id, ibc_client_message.clone())
+            .unwrap()
+        {
+            UpdateExecutionResult::Success(_) => {
+                let ((client_state, consensus_state), pmsg) = ibc_ctx
+                    .gen_update_state_proxy_message(
+                        &ibc_client_id,
+                        |client_state, consensus_state| {
+                            gen_state_id(client_state.clone(), consensus_state.clone())
+                        },
+                    );
+                Ok(UpdateClientResult::UpdateState(UpdateStateData {
+                    new_any_client_state: IBCAny::from(client_state.clone()).into(),
+                    new_any_consensus_state: IBCAny::from(consensus_state).into(),
+                    height: client_state.inner().latest_height.into(),
+                    message: pmsg,
+                    prove: true,
+                }))
+            }
+            UpdateExecutionResult::Misbehaviour => {
+                let pmsg = ibc_ctx.gen_misbehaviour_proxy_message(
+                    &ibc_client_id,
+                    ibc_client_message,
+                    |client_state, consensus_state| {
+                        gen_state_id(client_state.clone(), consensus_state.clone())
+                    },
+                );
+                Ok(UpdateClientResult::Misbehaviour(MisbehaviourData {
+                    new_any_client_state: any_client_message,
+                    message: pmsg,
+                }))
+            }
+        }
+    }
+
+    fn verify_membership(
+        &self,
+        ctx: &dyn HostClientReader,
+        client_id: ClientId,
+        prefix: light_client::commitments::CommitmentPrefix,
+        path: String,
+        value: Vec<u8>,
+        proof_height: Height,
+        proof: Vec<u8>,
+    ) -> Result<VerifyMembershipResult, LightClientError> {
+        let ibc_ctx = TendermintIBCContext::new(ctx);
+        IBCHandler::verify_membership(
+            &ibc_ctx,
+            &client_id.clone().into(),
+            &prefix.clone().into(),
+            proof_height.try_into().unwrap(),
+            &proof.try_into().unwrap(),
+            PathBytes::from_bytes(path.as_bytes()),
+            value.clone(),
+        )
+        .unwrap();
+        let message = ibc_ctx.gen_membership_proxy_message(
+            &client_id.into(),
+            prefix.into(),
+            path,
+            Some(value),
+            |client_state, consensus_state| {
+                gen_state_id(client_state.clone(), consensus_state.clone())
+            },
+        );
+        Ok(VerifyMembershipResult { message })
+    }
+
+    fn verify_non_membership(
+        &self,
+        ctx: &dyn HostClientReader,
+        client_id: ClientId,
+        prefix: light_client::commitments::CommitmentPrefix,
+        path: String,
+        proof_height: Height,
+        proof: Vec<u8>,
+    ) -> Result<VerifyNonMembershipResult, LightClientError> {
+        let ibc_ctx = TendermintIBCContext::new(ctx);
+        IBCHandler::verify_non_membership(
+            &ibc_ctx,
+            &client_id.clone().into(),
+            &prefix.clone().into(),
+            proof_height.try_into().unwrap(),
+            &proof.try_into().unwrap(),
+            PathBytes::from_bytes(path.as_bytes()),
+        )
+        .unwrap();
+        let message = ibc_ctx.gen_membership_proxy_message(
+            &client_id.into(),
+            prefix.into(),
+            path,
+            None,
+            |client_state, consensus_state| {
+                gen_state_id(client_state.clone(), consensus_state.clone())
+            },
+        );
+        Ok(VerifyNonMembershipResult { message })
+    }
 }

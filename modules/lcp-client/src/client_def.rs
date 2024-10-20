@@ -586,15 +586,13 @@ mod tests {
     use core::str::FromStr;
     use core::time::Duration;
     use crypto::{EnclaveKey, EnclavePublicKey, Signer};
-    use ibc::{
-        mock::{
-            client_state::MockClientState, consensus_state::MockConsensusState, header::MockHeader,
-            misbehaviour::Misbehaviour as MockMisbehaviour,
-        },
-        Height as ICS02Height,
-    };
+    use ibc_primitives::proto::Any;
     use light_client::{commitments::prove_commitment, UpdateClientResult};
     use light_client::{ClientKeeper, LightClient, LightClientResolver, MapLightClientRegistry};
+    use mock_lc::ibc::{
+        client_state::MockClientState, consensus_state::MockConsensusState, header::MockHeader,
+        misbehaviour::Misbehaviour as MockMisbehaviour,
+    };
     use mock_lc::MockLightClient;
     use sgx_types::{sgx_quote_t, sgx_report_body_t};
     use store::memory::MemStore;
@@ -686,9 +684,10 @@ mod tests {
 
         // 3. initializes Light Client(Mock) corresponding to the upstream chain on the LCP side
         let upstream_client_id = {
-            let header = MockHeader::new(ICS02Height::new(0, 1).unwrap());
-            let client_state = mock_lc::ClientState::from(MockClientState::new(header));
-            let consensus_state = mock_lc::ConsensusState::from(MockConsensusState::new(header));
+            let header = MockHeader::new(Height::new(0, 1).try_into().unwrap())
+                .with_timestamp((Time::now() - Duration::from_secs(10)).unwrap().into());
+            let client_state = Any::from(MockClientState::new(header));
+            let consensus_state = Any::from(MockConsensusState::new(header));
             let mut ctx = Context::new(registry.clone(), lcp_store.clone(), &ek, Time::now());
 
             let res = MockLightClient.create_client(
@@ -715,13 +714,13 @@ mod tests {
 
         // 4. updates the Light Client state on the LCP side
         let proof1 = {
-            let header = MockHeader::new(ICS02Height::new(0, 2).unwrap());
-
+            let header = MockHeader::new(Height::new(0, 2).try_into().unwrap())
+                .with_timestamp((Time::now() - Duration::from_secs(9)).unwrap().into());
             let mut ctx = Context::new(registry.clone(), lcp_store.clone(), &ek, Time::now());
             let res = MockLightClient.update_client(
                 &ctx,
                 upstream_client_id.clone(),
-                mock_lc::Header::from(header).into(),
+                Any::from(header).into(),
             );
             assert!(res.is_ok(), "res={:?}", res);
 
@@ -769,14 +768,14 @@ mod tests {
             let ctx = Context::new(registry.clone(), lcp_store, &ek, Time::now());
             let mock_misbehaviour = MockMisbehaviour {
                 client_id: upstream_client_id.clone().into(),
-                header1: MockHeader::new(ICS02Height::new(0, 3).unwrap()),
-                header2: MockHeader::new(ICS02Height::new(0, 3).unwrap()),
+                header1: MockHeader::new(Height::new(0, 3).try_into().unwrap()),
+                header2: MockHeader::new(Height::new(0, 3).try_into().unwrap()),
             };
             let res = MockLightClient
                 .update_client(
                     &ctx,
                     upstream_client_id,
-                    mock_lc::Misbehaviour::from(mock_misbehaviour).into(),
+                    Any::from(mock_misbehaviour).into(),
                 )
                 .unwrap();
             let data = match res {

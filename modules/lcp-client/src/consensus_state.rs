@@ -2,7 +2,7 @@ use crate::errors::Error;
 use crate::prelude::*;
 use light_client::commitments::StateID;
 use light_client::types::proto::ibc::lightclients::lcp::v1::ConsensusState as RawConsensusState;
-use light_client::types::proto::protobuf::Protobuf;
+use light_client::types::proto::Protobuf;
 use light_client::types::{Any, Time};
 use prost::Message;
 use serde::{Deserialize, Serialize};

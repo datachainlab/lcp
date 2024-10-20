@@ -57,7 +57,7 @@ where
     let enclave_srv = EnclaveQueryServer::new(srv);
     let reflection = tonic_reflection::server::Builder::configure()
         .register_encoded_file_descriptor_set(lcp_proto::FILE_DESCRIPTOR_SET)
-        .build()
+        .build_v1()
         .expect("failed to create gRPC reflection servicer");
     rt.block_on(async {
         Server::builder()

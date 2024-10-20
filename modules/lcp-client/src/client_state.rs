@@ -8,7 +8,7 @@ use light_client::types::proto::{
         core::client::v1::Height as ProtoHeight,
         lightclients::lcp::v1::ClientState as RawClientState,
     },
-    protobuf::Protobuf,
+    Protobuf,
 };
 use light_client::types::{Any, Height};
 use prost::Message;

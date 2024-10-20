@@ -29,12 +29,12 @@ mod tests {
         },
         Height as IBCHeight,
     };
+    use ibc_proto_relayer26::protobuf::Protobuf as RelayerProtobuf;
     use ibc_test_framework::prelude::{
         run_binary_channel_test, BinaryChannelTest, ChainHandle, Config, ConnectedChains,
         ConnectedChannel, Error, RelayerDriver, TestConfig, TestOverrides,
     };
     use keymanager::EnclaveKeyManager;
-    use lcp_proto::protobuf::Protobuf;
     use lcp_types::{ClientId, Height};
     use log::*;
     use std::str::FromStr;
@@ -260,8 +260,17 @@ mod tests {
             assert!(res.0.is_proven());
 
             let msg: UpdateStateProxyMessage = res.0.message().unwrap().try_into()?;
-            assert!(msg.prev_height == Some(Height::from(last_height)));
-            assert!(msg.post_height == Height::from(post_height));
+            assert!(
+                msg.prev_height
+                    == Some(Height::new(
+                        last_height.revision_number(),
+                        last_height.revision_height()
+                    ))
+            );
+            assert!(
+                msg.post_height
+                    == Height::new(post_height.revision_number(), post_height.revision_height())
+            );
             assert!(msg.emitted_states.len() == 1);
             post_height
         };
@@ -276,13 +285,15 @@ mod tests {
                 rly.query_channel_proof(port_id.clone(), channel_id.clone(), Some(last_height))?;
 
             info!("expected channel is {:?}", res.0);
-
             let _ = enclave.verify_membership(VerifyMembershipInput {
                 client_id: client_id.clone(),
                 prefix: "ibc".into(),
                 path: Path::ChannelEnd(ChannelEndPath(port_id, channel_id)).to_string(),
                 value: res.0.encode_vec()?,
-                proof: CommitmentProofPair(res.2.into(), merkle_proof_to_bytes(res.1)?),
+                proof: CommitmentProofPair(
+                    Height::new(res.2.revision_number(), res.2.revision_height()),
+                    merkle_proof_to_bytes(res.1)?,
+                ),
                 signer,
             })?;
         }
@@ -315,8 +326,14 @@ mod tests {
                 signer,
             })?;
             let msg: UpdateStateProxyMessage = res.0.message().unwrap().try_into()?;
-            assert!(msg.prev_height == Some(Height::from(last_height)));
-            assert!(msg.post_height == Height::from(lh));
+            assert!(
+                msg.prev_height
+                    == Some(Height::new(
+                        last_height.revision_number(),
+                        last_height.revision_height()
+                    ))
+            );
+            assert!(msg.post_height == Height::new(lh.revision_number(), lh.revision_height()));
             assert!(msg.emitted_states.is_empty());
             lh
         };

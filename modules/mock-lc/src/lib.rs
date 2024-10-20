@@ -20,11 +20,9 @@ mod prelude {
     pub use core::iter::FromIterator;
 }
 
-pub use client::{register_implementations, MockLightClient};
-pub use message::{Header, Misbehaviour};
-pub use state::{ClientState, ConsensusState};
+pub use client::{gen_state_id, register_implementations, MockLightClient};
+pub mod ibc;
 
 mod client;
+mod context;
 mod errors;
-pub mod message;
-pub mod state;

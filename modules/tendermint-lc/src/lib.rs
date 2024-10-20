@@ -24,7 +24,6 @@ mod prelude {
 pub use client::{register_implementations, TendermintLightClient};
 
 pub mod client;
+pub mod context;
 pub mod errors;
-pub mod message;
 pub mod state;
-mod verifier;

@@ -5,8 +5,10 @@ edition = "2021"
 
 [dependencies]
 sgx_types = { rev = "v1.1.6", git = "https://github.com/apache/incubator-teaclave-sgx-sdk" }
-prost = { version = "0.11", default-features = false }
-ibc = { version = "0.29.0", default-features = false, features = ["serde"], optional = true }
+prost = { version = "0.13", default-features = false }
+ibc-primitives = { version = "0.55.0", default-features = false, optional = true }
+ibc-core-host = { version = "0.55.0", default-features = false, optional = true }
+ibc-core-client = { version = "0.55.0", default-features = false, features = ["serde"], optional = true }
 lcp-proto = { path = "../../proto", default-features = false }
 serde = { version = "1.0.184", default-features = false, features = ["alloc", "derive"] }
 serde_with = { version = "2.0.1", default-features = false, features = ["alloc", "macros"] }
@@ -17,7 +19,8 @@ time = { version = "0.3", default-features = false, features = ["macros", "parsi
 
 [dev-dependencies]
 proptest = "1.2.0"
-ibc = { version = "0.29.0", default-features = false, features = ["serde"] }
+ibc-core-client = { version = "0.55.0", features = ["serde"], default-features = false }
+bincode = { version = "2.0.0-rc.3", default-features = false, features = ["serde", "alloc"] }
 
 [features]
 default = ["std"]
@@ -26,5 +29,7 @@ std = [
     "time/std",
 ]
 ibc = [
-    "dep:ibc"
+    "ibc-primitives",
+    "ibc-core-host",
+    "ibc-core-client",
 ]

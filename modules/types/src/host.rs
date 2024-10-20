@@ -83,15 +83,15 @@ impl PartialEq<str> for ClientId {
 }
 
 #[cfg(feature = "ibc")]
-impl From<ClientId> for ibc::core::ics24_host::identifier::ClientId {
+impl From<ClientId> for ibc_core_host::types::identifiers::ClientId {
     fn from(value: ClientId) -> Self {
         Self::from_str(value.as_str()).unwrap()
     }
 }
 
 #[cfg(feature = "ibc")]
-impl From<ibc::core::ics24_host::identifier::ClientId> for ClientId {
-    fn from(value: ibc::core::ics24_host::identifier::ClientId) -> Self {
+impl From<ibc_core_host::types::identifiers::ClientId> for ClientId {
+    fn from(value: ibc_core_host::types::identifiers::ClientId) -> Self {
         Self::from_str(value.as_str()).unwrap()
     }
 }

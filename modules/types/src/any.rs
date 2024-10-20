@@ -1,7 +1,8 @@
 use crate::errors::TypeError;
 use crate::prelude::*;
 use core::ops::Deref;
-use lcp_proto::{google::protobuf::Any as ProtoAny, protobuf::Protobuf};
+use lcp_proto::{google::protobuf::Any as ProtoAny, Protobuf};
+use prost::bytes::{Buf, BufMut};
 use serde::{Deserialize, Serialize};
 
 #[derive(Default, Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -58,23 +59,21 @@ pub struct ProtoAnyDef {
 }
 
 impl prost::Message for Any {
-    fn encode_raw<B>(&self, buf: &mut B)
+    fn encode_raw(&self, buf: &mut impl BufMut)
     where
-        B: prost::bytes::BufMut,
         Self: Sized,
     {
         self.0.encode_raw(buf)
     }
 
-    fn merge_field<B>(
+    fn merge_field(
         &mut self,
         tag: u32,
         wire_type: prost::encoding::WireType,
-        buf: &mut B,
+        buf: &mut impl Buf,
         ctx: prost::encoding::DecodeContext,
     ) -> Result<(), prost::DecodeError>
     where
-        B: prost::bytes::Buf,
         Self: Sized,
     {
         self.0.merge_field(tag, wire_type, buf, ctx)
@@ -86,6 +85,27 @@ impl prost::Message for Any {
 
     fn clear(&mut self) {
         self.0.clear()
+    }
+}
+
+#[cfg(feature = "ibc")]
+impl From<ibc_primitives::proto::Any> for Any {
+    fn from(value: ibc_primitives::proto::Any) -> Self {
+        ProtoAny {
+            type_url: value.type_url,
+            value: value.value,
+        }
+        .into()
+    }
+}
+
+#[cfg(feature = "ibc")]
+impl From<Any> for ibc_primitives::proto::Any {
+    fn from(v: Any) -> Self {
+        ibc_primitives::proto::Any {
+            type_url: v.type_url.clone(),
+            value: v.value.clone(),
+        }
     }
 }
 

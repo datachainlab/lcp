@@ -4,7 +4,7 @@ use core::fmt::Display;
 use core::ops::{Add, Sub};
 use core::time::Duration;
 use lcp_proto::google::protobuf::Timestamp;
-use lcp_proto::protobuf::Protobuf;
+use lcp_proto::Protobuf;
 use serde::{Deserialize, Serialize};
 use time::macros::{datetime, offset};
 use time::{OffsetDateTime, PrimitiveDateTime};
@@ -157,25 +157,21 @@ impl Sub<Duration> for Time {
 }
 
 #[cfg(feature = "ibc")]
-impl From<Time> for ibc::timestamp::Timestamp {
+impl From<Time> for ibc_primitives::Timestamp {
     fn from(value: Time) -> Self {
         // Safe to convert to u64 because as_unix_timestamp_nanos() returns a value in 0..=MAX_UNIX_TIMESTAMP_NANOS.
-        ibc::timestamp::Timestamp::from_nanoseconds(
+        ibc_primitives::Timestamp::from_nanoseconds(
             value.as_unix_timestamp_nanos().try_into().unwrap(),
         )
-        .unwrap()
     }
 }
 
 #[cfg(feature = "ibc")]
-impl TryFrom<ibc::timestamp::Timestamp> for Time {
+impl TryFrom<ibc_primitives::Timestamp> for Time {
     type Error = TimeError;
 
-    fn try_from(value: ibc::timestamp::Timestamp) -> Result<Self, Self::Error> {
-        match value.into_datetime() {
-            Some(datetime) => Ok(datetime.try_into()?),
-            None => Err(TimeError::invalid_date()),
-        }
+    fn try_from(value: ibc_primitives::Timestamp) -> Result<Self, Self::Error> {
+        Time::from_unix_timestamp_nanos(value.nanoseconds() as u128)
     }
 }
 
@@ -223,5 +219,15 @@ mod tests {
         assert!(Time::from_unix_timestamp(0, 0).is_ok());
         assert!(Time::from_unix_timestamp(-1, 0).is_err());
         assert!(Time::from_unix_timestamp(i64::MIN, 0).is_err());
+    }
+
+    #[test]
+    fn test_time_serde_bincode() {
+        let time = Time::from_unix_timestamp_nanos(1_000_000_000).unwrap();
+        let serialized = bincode::serde::encode_to_vec(time, bincode::config::standard()).unwrap();
+        let deserialized: Time =
+            bincode::serde::decode_borrowed_from_slice(&serialized, bincode::config::standard())
+                .unwrap();
+        assert_eq!(time, deserialized);
     }
 }
