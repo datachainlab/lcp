@@ -2729,7 +2729,7 @@ dependencies = [
  "serde_json",
  "serde_with",
  "sgx_types",
- "tendermint 0.29.0",
+ "time",
 ]
 
 [[package]]

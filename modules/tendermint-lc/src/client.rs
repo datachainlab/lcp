@@ -70,7 +70,13 @@ impl LightClient for TendermintLightClient {
 
         let canonical_client_state = canonicalize_state(&client_state);
         let height = client_state.latest_height().into();
-        let timestamp: Time = consensus_state.timestamp.into();
+        let timestamp = Time::try_from(
+            consensus_state
+                .timestamp()
+                .into_datetime()
+                .ok_or_else(Error::invalid_timestamp)?,
+        )
+        .map_err(Error::time)?;
         let state_id = gen_state_id(canonical_client_state, consensus_state)?;
 
         Ok(CreateClientResult {
@@ -241,7 +247,7 @@ impl TendermintLightClient {
         }
 
         let height = header.height().into();
-        let header_timestamp: Time = header.timestamp().into();
+        let header_timestamp: Time = header.timestamp().try_into().map_err(Error::time)?;
 
         let trusted_consensus_state: ConsensusState = ctx
             .consensus_state(&client_id, &header.trusted_height.into())
@@ -282,7 +288,10 @@ impl TendermintLightClient {
                 .clone(),
         );
 
-        let trusted_state_timestamp: Time = trusted_consensus_state.timestamp().into();
+        let trusted_state_timestamp: Time = trusted_consensus_state
+            .timestamp()
+            .try_into()
+            .map_err(Error::time)?;
         let lc_opts = client_state.as_light_client_options().unwrap();
 
         let prev_state_id =
@@ -365,13 +374,21 @@ impl TendermintLightClient {
                 context: TrustingPeriodContext::new(
                     lc_opts.trusting_period,
                     lc_opts.clock_drift,
-                    misbehaviour.header1().timestamp().into(),
+                    misbehaviour
+                        .header1()
+                        .timestamp()
+                        .try_into()
+                        .map_err(Error::time)?,
                     trusted_consensus_state_timestamps[0],
                 )
                 .aggregate(TrustingPeriodContext::new(
                     lc_opts.trusting_period,
                     lc_opts.clock_drift,
-                    misbehaviour.header2().timestamp().into(),
+                    misbehaviour
+                        .header2()
+                        .timestamp()
+                        .try_into()
+                        .map_err(Error::time)?,
                     trusted_consensus_state_timestamps[1],
                 ))
                 .map_err(|e| {
@@ -405,7 +422,10 @@ impl TendermintLightClient {
                     })
                 })?
                 .try_into()?;
-            let timestamp = consensus_state.timestamp().into();
+            let timestamp = consensus_state
+                .timestamp()
+                .try_into()
+                .map_err(Error::time)?;
             let prev_state_id = gen_state_id(canonicalize_state(client_state), consensus_state)?;
             prev_states.push(PrevState {
                 height,

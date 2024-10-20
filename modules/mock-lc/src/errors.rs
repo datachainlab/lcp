@@ -30,7 +30,11 @@ define_error! {
 
         Commitment
         [light_client::commitments::Error]
-        |_| { "Commitment error" }
+        |_| { "Commitment error" },
+
+        Time
+        [light_client::types::TimeError]
+        |_| { "Time error" },
     }
 }
 

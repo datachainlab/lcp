@@ -867,7 +867,7 @@ dependencies = [
  "serde_json",
  "serde_with",
  "sgx_types",
- "tendermint",
+ "time",
 ]
 
 [[package]]
