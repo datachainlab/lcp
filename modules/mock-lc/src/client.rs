@@ -50,7 +50,10 @@ impl LightClient for MockLightClient {
         let client_state: ClientState = any_client_state.clone().try_into()?;
         let consensus_state: ConsensusState = any_consensus_state.try_into()?;
         let height = client_state.latest_height().into();
-        let timestamp: Time = consensus_state.timestamp().into();
+        let timestamp: Time = consensus_state
+            .timestamp()
+            .try_into()
+            .map_err(Error::time)?;
         Ok(CreateClientResult {
             height,
             message: UpdateStateProxyMessage {
@@ -128,7 +131,7 @@ impl MockLightClient {
         }
 
         let height = header.height().into();
-        let header_timestamp = header.timestamp().into();
+        let header_timestamp = header.timestamp().try_into().map_err(Error::time)?;
 
         let latest_height = client_state.latest_height();
 

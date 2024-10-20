@@ -97,11 +97,15 @@ impl From<lcp_proto::protobuf::Error> for TypeError {
 define_error! {
     #[derive(Debug, Clone, PartialEq, Eq)]
     TimeError {
-        Tendermint
-            [tendermint::Error]
+        InvalidDate
             |_| {
-                "tendermint error"
+                "invalid date"
             },
+        DurationOutOfRange
+            |_| { format_args!("duration value out of range") },
+        ComponentRange
+            [TraceError<time::error::ComponentRange>]
+            |e| { format_args!("{}", e) },
         TryFromIntError
             [TraceError<core::num::TryFromIntError>]
             |_| {"TryFromIntError"}
