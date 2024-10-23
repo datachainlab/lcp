@@ -1,7 +1,7 @@
 use crate::{prelude::*, EnclaveKeySelector};
 use commitments::CommitmentProof;
 use crypto::Address;
-use lcp_types::{Any, ClientId, Height, Time};
+use lcp_types::{Any, ClientId, Height};
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -44,7 +44,6 @@ pub struct InitClientInput {
     pub client_id: String,
     pub any_client_state: Any,
     pub any_consensus_state: Any,
-    pub current_timestamp: Time,
     pub signer: Address,
 }
 
@@ -53,7 +52,6 @@ pub struct UpdateClientInput {
     pub client_id: ClientId,
     pub any_header: Any,
     pub include_state: bool,
-    pub current_timestamp: Time,
     pub signer: Address,
 }
 
@@ -62,7 +60,6 @@ pub struct AggregateMessagesInput {
     pub signer: Address,
     pub messages: Vec<Vec<u8>>,
     pub signatures: Vec<Vec<u8>>,
-    pub current_timestamp: Time,
 }
 
 #[derive(Serialize, Deserialize, Debug)]

@@ -12,8 +12,6 @@ pub fn update_client<R: LightClientResolver, S: KVStore, K: Signer>(
     ctx: &mut Context<R, S, K>,
     input: UpdateClientInput,
 ) -> Result<LightClientResponse, Error> {
-    ctx.set_timestamp(input.current_timestamp);
-
     let lc = get_light_client_by_client_id(ctx, &input.client_id)?;
     let ek = ctx.get_enclave_key();
     match lc.update_client(ctx, input.client_id.clone(), input.any_header)? {

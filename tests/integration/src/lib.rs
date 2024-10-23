@@ -35,10 +35,10 @@ mod tests {
     };
     use keymanager::EnclaveKeyManager;
     use lcp_proto::protobuf::Protobuf;
-    use lcp_types::{ClientId, Height, Time};
+    use lcp_types::{ClientId, Height};
     use log::*;
+    use std::str::FromStr;
     use std::sync::{Arc, RwLock};
-    use std::{ops::Add, str::FromStr, time::Duration};
     use store::{host::HostStore, memory::MemStore};
     use tempfile::TempDir;
     use tokio::runtime::Runtime as TokioRuntime;
@@ -239,7 +239,6 @@ mod tests {
                 client_id: client_id.clone(),
                 any_client_state: client_state,
                 any_consensus_state: consensus_state,
-                current_timestamp: Time::now(),
                 signer,
             })?;
             assert!(!res.proof.is_proven());
@@ -254,7 +253,6 @@ mod tests {
             let res = enclave.update_client(UpdateClientInput {
                 client_id: client_id.clone(),
                 any_header: target_header,
-                current_timestamp: Time::now(),
                 include_state: true,
                 signer,
             })?;
@@ -298,7 +296,6 @@ mod tests {
                 let res = enclave.update_client(UpdateClientInput {
                     client_id: client_id.clone(),
                     any_header: target_header,
-                    current_timestamp: Time::now().add(Duration::from_secs(10))?, // for gaiad's clock drift
                     include_state: false,
                     signer,
                 })?;
@@ -316,7 +313,6 @@ mod tests {
                 messages,
                 signatures,
                 signer,
-                current_timestamp: Time::now().add(Duration::from_secs(10))?,
             })?;
             let msg: UpdateStateProxyMessage = res.0.message().unwrap().try_into()?;
             assert!(msg.prev_height == Some(Height::from(last_height)));

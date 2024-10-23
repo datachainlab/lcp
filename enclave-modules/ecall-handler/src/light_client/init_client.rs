@@ -13,8 +13,6 @@ pub fn init_client<R: LightClientResolver, S: KVStore, K: Signer>(
     ctx: &mut Context<R, S, K>,
     input: InitClientInput,
 ) -> Result<LightClientResponse, Error> {
-    ctx.set_timestamp(input.current_timestamp);
-
     let lc = match ctx.get_light_client(&input.any_client_state.type_url) {
         Some(lc) => lc,
         None => {
