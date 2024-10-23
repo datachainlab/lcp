@@ -656,9 +656,7 @@ mod tests {
                 timestamp: Time::unix_epoch(),
             };
 
-            let mut ctx = Context::new(registry.clone(), ibc_store.clone(), &ek);
-            ctx.set_timestamp(Time::now());
-
+            let mut ctx = Context::new(registry.clone(), ibc_store.clone(), &ek, Time::now());
             let client_id = ClientId::from_str(&format!("{}-0", LCPClient.client_type())).unwrap();
 
             let res = LCPClient.initialise(
@@ -673,8 +671,7 @@ mod tests {
 
         // 2. register enclave key to the LCP client
         {
-            let mut ctx = Context::new(registry.clone(), ibc_store.clone(), &ek);
-            ctx.set_timestamp(Time::now());
+            let mut ctx = Context::new(registry.clone(), ibc_store.clone(), &ek, Time::now());
             let report = generate_dummy_signed_avr(&ek.get_pubkey());
             let operator_signature = op_key
                 .sign(compute_eip712_register_enclave_key(report.avr.as_str()).as_slice())
@@ -692,8 +689,7 @@ mod tests {
             let header = MockHeader::new(ICS02Height::new(0, 1).unwrap());
             let client_state = mock_lc::ClientState::from(MockClientState::new(header));
             let consensus_state = mock_lc::ConsensusState::from(MockConsensusState::new(header));
-            let mut ctx = Context::new(registry.clone(), lcp_store.clone(), &ek);
-            ctx.set_timestamp(Time::now());
+            let mut ctx = Context::new(registry.clone(), lcp_store.clone(), &ek, Time::now());
 
             let res = MockLightClient.create_client(
                 &ctx,
@@ -721,8 +717,7 @@ mod tests {
         let proof1 = {
             let header = MockHeader::new(ICS02Height::new(0, 2).unwrap());
 
-            let mut ctx = Context::new(registry.clone(), lcp_store.clone(), &ek);
-            ctx.set_timestamp(Time::now());
+            let mut ctx = Context::new(registry.clone(), lcp_store.clone(), &ek, Time::now());
             let res = MockLightClient.update_client(
                 &ctx,
                 upstream_client_id.clone(),
@@ -758,8 +753,12 @@ mod tests {
                 proxy_message: proof1.message().unwrap(),
                 signatures: vec![proof1.signature],
             });
-            let mut ctx = Context::new(registry.clone(), ibc_store.clone(), &ek);
-            ctx.set_timestamp((Time::now() + Duration::from_secs(60)).unwrap());
+            let mut ctx = Context::new(
+                registry.clone(),
+                ibc_store.clone(),
+                &ek,
+                (Time::now() + Duration::from_secs(60)).unwrap(),
+            );
 
             let res = LCPClient.update_client(&mut ctx, lcp_client_id.clone(), header);
             assert!(res.is_ok(), "res={:?}", res);
@@ -767,9 +766,7 @@ mod tests {
 
         // 6. on the upstream side, updates the Light Client state with a misbehaviour
         let misbehaviour_proof = {
-            let mut ctx = Context::new(registry.clone(), lcp_store, &ek);
-            ctx.set_timestamp(Time::now());
-
+            let ctx = Context::new(registry.clone(), lcp_store, &ek, Time::now());
             let mock_misbehaviour = MockMisbehaviour {
                 client_id: upstream_client_id.clone().into(),
                 header1: MockHeader::new(ICS02Height::new(0, 3).unwrap()),
@@ -797,9 +794,12 @@ mod tests {
                 proxy_message: misbehaviour_proof.message().unwrap(),
                 signatures: vec![misbehaviour_proof.signature],
             });
-            let mut ctx = Context::new(registry, ibc_store, &ek);
-            ctx.set_timestamp((Time::now() + Duration::from_secs(60)).unwrap());
-
+            let mut ctx = Context::new(
+                registry,
+                ibc_store,
+                &ek,
+                (Time::now() + Duration::from_secs(60)).unwrap(),
+            );
             let res = LCPClient.update_client(&mut ctx, lcp_client_id, header);
             assert!(res.is_ok(), "res={:?}", res);
         }

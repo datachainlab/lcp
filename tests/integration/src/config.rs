@@ -57,7 +57,7 @@ fn make_tm_config(cfg: TestChainConfig) -> ChainConfig {
         max_msg_num: Default::default(),
         max_tx_size: Default::default(),
         max_block_time: Default::default(),
-        clock_drift: Duration::from_secs(5),
+        clock_drift: Duration::from_secs(30),
         trusting_period: Some(Duration::from_secs(14 * 24 * 3600)),
         trust_threshold: Default::default(),
         gas_price: config::GasPrice::new(0.001, "stake".to_string()),

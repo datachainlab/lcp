@@ -9,7 +9,7 @@ use lcp_types::proto::lcp::service::elc::v1::{
     MsgVerifyNonMembership, MsgVerifyNonMembershipResponse,
     QueryClientRequest as MsgQueryClientRequest, QueryClientResponse as MsgQueryClientResponse,
 };
-use lcp_types::{ClientId, Time};
+use lcp_types::ClientId;
 
 impl TryFrom<MsgCreateClient> for InitClientInput {
     type Error = Error;
@@ -26,7 +26,6 @@ impl TryFrom<MsgCreateClient> for InitClientInput {
             client_id: msg.client_id,
             any_client_state,
             any_consensus_state,
-            current_timestamp: Time::now(),
             signer: Address::try_from(msg.signer.as_slice())?,
         })
     }
@@ -44,7 +43,6 @@ impl TryFrom<MsgUpdateClient> for UpdateClientInput {
             client_id,
             any_header,
             include_state: msg.include_state,
-            current_timestamp: Time::now(),
             signer: Address::try_from(msg.signer.as_slice())?,
         })
     }
@@ -58,7 +56,6 @@ impl TryFrom<MsgAggregateMessages> for AggregateMessagesInput {
             signer,
             messages: msg.messages,
             signatures: msg.signatures,
-            current_timestamp: Time::now(),
         })
     }
 }

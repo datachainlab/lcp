@@ -11,21 +11,17 @@ pub struct Context<'k, R: LightClientResolver, S: KVStore, K: Signer> {
     lc_registry: R,
     store: S,
     ek: &'k K,
-    current_timestamp: Option<Time>,
+    current_timestamp: Time,
 }
 
 impl<'k, R: LightClientResolver, S: KVStore, K: Signer> Context<'k, R, S, K> {
-    pub fn new(lc_registry: R, store: S, ek: &'k K) -> Self {
+    pub fn new(lc_registry: R, store: S, ek: &'k K, current_timestamp: Time) -> Self {
         Self {
             lc_registry,
             store,
             ek,
-            current_timestamp: None,
+            current_timestamp,
         }
-    }
-
-    pub fn set_timestamp(&mut self, timestamp: Time) {
-        self.current_timestamp = Some(timestamp)
     }
 
     pub fn get_enclave_key(&self) -> &'k dyn Signer {
@@ -49,7 +45,7 @@ impl<'k, R: LightClientResolver, S: KVStore, K: Signer> KVStore for Context<'k, 
 
 impl<'k, R: LightClientResolver, S: KVStore, K: Signer> HostContext for Context<'k, R, S, K> {
     fn host_timestamp(&self) -> Time {
-        self.current_timestamp.unwrap()
+        self.current_timestamp
     }
 }
 

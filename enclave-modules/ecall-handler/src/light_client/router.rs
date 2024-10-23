@@ -21,8 +21,12 @@ pub fn dispatch<E: Env>(
             let sealed_ek = cctx
                 .sealed_ek
                 .ok_or(Error::sealed_enclave_key_not_found())?;
-            let mut ctx =
-                Context::new(env.get_lc_registry(), env.new_store(cctx.tx_id), &sealed_ek);
+            let mut ctx = Context::new(
+                env.get_lc_registry(),
+                env.new_store(cctx.tx_id),
+                &sealed_ek,
+                cctx.current_timestamp,
+            );
             match cmd {
                 InitClient(input) => init_client(&mut ctx, input)?,
                 UpdateClient(input) => update_client(&mut ctx, input)?,
@@ -33,8 +37,12 @@ pub fn dispatch<E: Env>(
         }
         LightClientCommand::Query(cmd) => {
             use LightClientQueryCommand::*;
-            let mut ctx =
-                Context::new(env.get_lc_registry(), env.new_store(cctx.tx_id), &NopSigner);
+            let mut ctx = Context::new(
+                env.get_lc_registry(),
+                env.new_store(cctx.tx_id),
+                &NopSigner,
+                cctx.current_timestamp,
+            );
             match cmd {
                 QueryClient(input) => query_client(&mut ctx, input)?,
             }

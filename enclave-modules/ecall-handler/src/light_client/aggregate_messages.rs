@@ -13,8 +13,6 @@ pub fn aggregate_messages<R: LightClientResolver, S: KVStore, K: Signer>(
     ctx: &mut Context<R, S, K>,
     input: AggregateMessagesInput,
 ) -> Result<LightClientResponse, Error> {
-    ctx.set_timestamp(input.current_timestamp);
-
     if input.messages.len() < 2 {
         return Err(Error::invalid_argument(
             "messages and signatures must have at least 2 elements".into(),
