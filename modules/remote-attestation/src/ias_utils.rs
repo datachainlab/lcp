@@ -67,7 +67,7 @@ pub(crate) fn get_quote(
     spid: sgx_spid_t,
 ) -> Result<(Vec<u8>, sgx_report_t), Error> {
     let mut quote_nonce = sgx_quote_nonce_t { rand: [0; 16] };
-    rand::thread_rng().fill_bytes(&mut quote_nonce.rand);
+    rand::rngs::OsRng.fill_bytes(&mut quote_nonce.rand);
 
     let (p_sigrl, sigrl_size) = if sigrl.is_empty() {
         (ptr::null(), 0)
