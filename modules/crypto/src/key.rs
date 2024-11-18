@@ -2,18 +2,18 @@ use crate::prelude::*;
 use crate::{Error, Keccak256, Signer, Verifier};
 use alloc::fmt;
 use core::fmt::Display;
-use libsecp256k1::PublicKeyFormat;
+use core::sync::atomic;
 use libsecp256k1::{
     curve::Scalar,
     util::{COMPRESSED_PUBLIC_KEY_SIZE, SECRET_KEY_SIZE},
-    Message, PublicKey, RecoveryId, SecretKey, Signature,
+    Message, PublicKey, PublicKeyFormat, RecoveryId, SecretKey, Signature,
 };
 use serde::{Deserialize, Serialize};
 use serde_big_array::BigArray;
 use sgx_types::sgx_sealed_data_t;
 use tiny_keccak::Keccak;
+use zeroize::Zeroizing;
 
-#[derive(Default)]
 pub struct EnclaveKey {
     pub(crate) secret_key: SecretKey,
 }
@@ -42,12 +42,22 @@ impl EnclaveKey {
         Ok(Self { secret_key })
     }
 
-    pub fn get_privkey(&self) -> [u8; SECRET_KEY_SIZE] {
-        self.secret_key.serialize()
+    pub fn get_privkey(self) -> Zeroizing<[u8; SECRET_KEY_SIZE]> {
+        Zeroizing::new(self.secret_key.serialize())
     }
 
     pub fn get_pubkey(&self) -> EnclavePublicKey {
         EnclavePublicKey(PublicKey::from_secret_key(&self.secret_key))
+    }
+}
+
+impl Drop for EnclaveKey {
+    fn drop(&mut self) {
+        self.secret_key.clear();
+        // Use fences to prevent accesses from being reordered before this
+        // point, which should hopefully help ensure that all accessors
+        // see zeroes after this point.
+        atomic::compiler_fence(atomic::Ordering::SeqCst);
     }
 }
 
@@ -272,5 +282,23 @@ impl Signer for NopSigner {
     }
     fn sign(&self, _: &[u8]) -> Result<Vec<u8>, Error> {
         Err(Error::nop_signer())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_zeroize_enclave_key() {
+        let ptr = {
+            let ek = EnclaveKey::new().unwrap();
+            let ptr = &ek.secret_key as *const SecretKey as *const u8;
+            let slice = unsafe { core::slice::from_raw_parts(ptr, SECRET_KEY_SIZE) };
+            assert_ne!(slice, &[0u8; SECRET_KEY_SIZE]);
+            ptr
+        };
+        let slice = unsafe { core::slice::from_raw_parts(ptr, SECRET_KEY_SIZE) };
+        assert_eq!(slice, &[0u8; SECRET_KEY_SIZE]);
     }
 }

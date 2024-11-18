@@ -9,8 +9,8 @@ pub(crate) fn generate_enclave_key(
     input: GenerateEnclaveKeyInput,
 ) -> Result<GenerateEnclaveKeyResponse, Error> {
     let ek = EnclaveKey::new()?;
-    let sealed_ek = ek.seal()?;
     let ek_pub = ek.get_pubkey();
+    let sealed_ek = ek.seal()?;
     let report_data = ReportData::new(ek_pub.as_address(), input.operator);
     let report = match rsgx_create_report(&input.target_info, &report_data.into()) {
         Ok(r) => r,
