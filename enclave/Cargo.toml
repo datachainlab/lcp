@@ -9,7 +9,10 @@ name = "proxy_enclave"
 crate-type = ["staticlib"]
 
 [features]
-default = []
+default = ["panic-logging"]
+panic-logging = [
+    "enclave-runtime/panic-logging",
+]
 
 [dependencies]
 enclave-runtime = { path = "../enclave-modules/runtime" }
