@@ -17,7 +17,7 @@ pub trait SealingKey
 where
     Self: core::marker::Sized,
 {
-    fn seal(&self) -> Result<SealedEnclaveKey, Error>;
+    fn seal(self) -> Result<SealedEnclaveKey, Error>;
     fn unseal(sek: &SealedEnclaveKey) -> Result<Self, Error>;
 }
 

@@ -12,8 +12,8 @@ use serde::{Deserialize, Serialize};
 use serde_big_array::BigArray;
 use sgx_types::sgx_sealed_data_t;
 use tiny_keccak::Keccak;
+use zeroize::Zeroizing;
 
-#[derive(Default)]
 pub struct EnclaveKey {
     pub(crate) secret_key: SecretKey,
 }
@@ -42,12 +42,18 @@ impl EnclaveKey {
         Ok(Self { secret_key })
     }
 
-    pub fn get_privkey(&self) -> [u8; SECRET_KEY_SIZE] {
-        self.secret_key.serialize()
+    pub fn get_privkey(self) -> Zeroizing<[u8; SECRET_KEY_SIZE]> {
+        Zeroizing::new(self.secret_key.serialize())
     }
 
     pub fn get_pubkey(&self) -> EnclavePublicKey {
         EnclavePublicKey(PublicKey::from_secret_key(&self.secret_key))
+    }
+}
+
+impl Drop for EnclaveKey {
+    fn drop(&mut self) {
+        self.secret_key.clear();
     }
 }
 
