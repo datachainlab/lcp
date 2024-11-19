@@ -31,12 +31,15 @@ mod errors;
 static ALLOC: sgx_alloc::System = sgx_alloc::System;
 
 #[cfg(not(test))]
+#[allow(unused_variables)]
 #[panic_handler]
 fn begin_panic_handler(info: &core::panic::PanicInfo<'_>) -> ! {
+    #[cfg(feature = "panic-logging")]
+    let msg = alloc::format!("[enclave] panic: {:?}\n", info).into_bytes();
+    #[cfg(not(feature = "panic-logging"))]
+    let msg = alloc::format!("[enclave] panic\n").into_bytes();
     let _ = host_api::api::execute_command(host_api::ocall_commands::Command::Log(
-        host_api::ocall_commands::LogCommand {
-            msg: alloc::format!("[enclave] panic: {:?}\n", info).into_bytes(),
-        },
+        host_api::ocall_commands::LogCommand { msg },
     ));
     sgx_abort();
 }
