@@ -87,7 +87,7 @@ pub(crate) fn get_quote(
         info!("quote size = {}", quote_size);
 
         let mut qe_report = sgx_report_t::default();
-        let quote = [0u8; 2048];
+        let quote: Vec<u8> = vec![0; quote_size as usize];
         let p_quote = quote.as_ptr();
         let ret = unsafe {
             sgx_get_quote(
@@ -105,7 +105,7 @@ pub(crate) fn get_quote(
         if ret != sgx_status_t::SGX_SUCCESS {
             return Err(Error::sgx_error(ret, "failed to sgx_get_quote".into()));
         }
-        (quote[..quote_size as usize].to_vec(), qe_report)
+        (quote, qe_report)
     };
 
     // Check qe_report to defend against replay attack
