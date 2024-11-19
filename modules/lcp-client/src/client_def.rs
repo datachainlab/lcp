@@ -104,7 +104,7 @@ impl LCPClient {
         Ok(())
     }
 
-    // verify_client_message verifies a client message
+    /// update_client verifies a client message and updates the state of the client
     pub fn update_client(
         &self,
         ctx: &mut dyn HostClientKeeper,
