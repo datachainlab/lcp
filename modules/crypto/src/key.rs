@@ -260,13 +260,15 @@ const fn calc_raw_sealed_data_size(add_mac_txt_size: u32, encrypt_txt_size: u32)
     let max = u32::MAX;
     let sealed_data_size = core::mem::size_of::<sgx_sealed_data_t>() as u32;
 
-    if add_mac_txt_size > max - encrypt_txt_size {
-        return max;
-    }
+    assert!(
+        add_mac_txt_size <= max - encrypt_txt_size,
+        "add_mac_txt_size > max - encrypt_txt_size"
+    );
     let payload_size: u32 = add_mac_txt_size + encrypt_txt_size;
-    if payload_size > max - sealed_data_size {
-        return max;
-    }
+    assert!(
+        payload_size <= max - sealed_data_size,
+        "payload_size > max - sealed_data_size"
+    );
     sealed_data_size + payload_size
 }
 
