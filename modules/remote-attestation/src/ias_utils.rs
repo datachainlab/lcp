@@ -415,6 +415,7 @@ pub(crate) fn decode_spid(spid_str: &str) -> Result<sgx_spid_t, Error> {
         }
     };
     let mut spid = sgx_spid_t::default();
-    spid.id.copy_from_slice(&decoded_vec[..16]);
+    // the length of `decoded_vec` is 16 because each byte is represented by 2 characters
+    spid.id.copy_from_slice(&decoded_vec);
     Ok(spid)
 }
