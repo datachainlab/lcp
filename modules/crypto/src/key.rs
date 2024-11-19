@@ -204,13 +204,15 @@ impl Verifier for EnclavePublicKey {
 }
 
 pub fn verify_signature(sign_bytes: &[u8], signature: &[u8]) -> Result<EnclavePublicKey, Error> {
-    assert!(signature.len() == 65);
+    if signature.len() != 65 {
+        return Err(Error::invalid_signature_length(signature.len()));
+    }
 
     let sign_hash = keccak256(sign_bytes);
     let mut s = Scalar::default();
     let _ = s.set_b32(&sign_hash);
 
-    let sig = Signature::parse_overflowing_slice(&signature[..64]).map_err(Error::secp256k1)?;
+    let sig = Signature::parse_standard_slice(&signature[..64]).map_err(Error::secp256k1)?;
     let rid = RecoveryId::parse(signature[64]).map_err(Error::secp256k1)?;
     let signer = libsecp256k1::recover(&Message(s), &sig, &rid).map_err(Error::secp256k1)?;
     Ok(EnclavePublicKey(signer))
