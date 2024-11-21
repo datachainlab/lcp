@@ -36,27 +36,18 @@ pub fn verify_report(
     let root_ca_pem = pem::parse(IAS_REPORT_CA).expect("failed to parse pem bytes");
     let root_ca = root_ca_pem.contents();
 
-    let mut root_store = rustls::RootCertStore::empty();
-    root_store
-        .add(&rustls::Certificate(root_ca.to_vec()))
-        .map_err(|e| Error::web_pki(e.to_string()))?;
+    let trust_anchors = vec![webpki::TrustAnchor::try_from_cert_der(root_ca)
+        .map_err(|e| Error::web_pki(e.to_string()))?];
 
-    let trust_anchors: Vec<webpki::TrustAnchor> = root_store
-        .roots
-        .iter()
-        .map(|cert| cert.to_trust_anchor())
-        .collect();
-
-    let chain = vec![root_ca];
-
-    let report_cert = webpki::EndEntityCert::from(&report.signing_cert)
+    let intermediate_certs = vec![root_ca];
+    let report_cert = webpki::EndEntityCert::try_from(report.signing_cert.as_slice())
         .map_err(|e| Error::web_pki(e.to_string()))?;
 
     report_cert
         .verify_is_valid_tls_server_cert(
             SUPPORTED_SIG_ALGS,
-            &webpki::TLSServerTrustAnchors(&trust_anchors),
-            &chain,
+            &webpki::TlsServerTrustAnchors(&trust_anchors),
+            &intermediate_certs,
             now,
         )
         .map_err(|e| Error::web_pki(e.to_string()))?;
