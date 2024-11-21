@@ -28,7 +28,7 @@ keymanager = { path = "../modules/keymanager" }
 remote-attestation = { path = "../modules/remote-attestation" }
 
 [build-dependencies]
-git2 = "0.17"
+git2 = "0.19"
 
 [features]
 default = []
