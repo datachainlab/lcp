@@ -124,7 +124,7 @@ dependencies = [
  "itoa",
  "paste",
  "ruint",
- "tiny-keccak 2.0.2",
+ "tiny-keccak",
 ]
 
 [[package]]
@@ -156,7 +156,7 @@ dependencies = [
  "quote",
  "syn 2.0.88",
  "syn-solidity",
- "tiny-keccak 2.0.2",
+ "tiny-keccak",
 ]
 
 [[package]]
@@ -1140,7 +1140,7 @@ dependencies = [
  "sgx_trts",
  "sgx_tseal",
  "sgx_types",
- "tiny-keccak 1.5.0",
+ "tiny-keccak",
  "zeroize",
 ]
 
@@ -2428,7 +2428,7 @@ dependencies = [
  "tendermint-rpc",
  "thiserror",
  "tiny-bip39",
- "tiny-keccak 2.0.2",
+ "tiny-keccak",
  "tokio",
  "toml",
  "tonic 0.8.3",
@@ -2977,7 +2977,7 @@ dependencies = [
  "serde_json",
  "sgx_types",
  "store",
- "tiny-keccak 1.5.0",
+ "tiny-keccak",
 ]
 
 [[package]]
@@ -5740,15 +5740,6 @@ dependencies = [
  "unicode-normalization",
  "wasm-bindgen",
  "zeroize",
-]
-
-[[package]]
-name = "tiny-keccak"
-version = "1.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1d8a021c69bb74a44ccedb824a046447e2c84a01df9e5c20779750acb38e11b2"
-dependencies = [
- "crunchy",
 ]
 
 [[package]]
