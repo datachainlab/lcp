@@ -49,8 +49,8 @@ sol! {
 impl From<EthABICommitmentProof> for CommitmentProof {
     fn from(value: EthABICommitmentProof) -> Self {
         Self {
-            message: value.message,
-            signature: value.signature,
+            message: value.message.into(),
+            signature: value.signature.into(),
         }
     }
 }
@@ -58,8 +58,8 @@ impl From<EthABICommitmentProof> for CommitmentProof {
 impl From<CommitmentProof> for EthABICommitmentProof {
     fn from(value: CommitmentProof) -> Self {
         Self {
-            message: value.message,
-            signature: value.signature,
+            message: value.message.into(),
+            signature: value.signature.into(),
         }
     }
 }

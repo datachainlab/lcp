@@ -2,7 +2,7 @@ use crate::types::{ClientId, Height};
 use derive_more::Display;
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Display)]
-#[display(fmt = "clients/{_0}/clientType")]
+#[display("clients/{_0}/clientType")]
 pub struct ClientTypePath(pub ClientId);
 
 impl ClientTypePath {
@@ -12,7 +12,7 @@ impl ClientTypePath {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Display)]
-#[display(fmt = "clients/{_0}/clientState")]
+#[display("clients/{_0}/clientState")]
 pub struct ClientStatePath(pub ClientId);
 
 impl ClientStatePath {
@@ -22,7 +22,7 @@ impl ClientStatePath {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Display)]
-#[display(fmt = "clients/{client_id}/consensusStates/{epoch}-{height}")]
+#[display("clients/{client_id}/consensusStates/{epoch}-{height}")]
 pub struct ClientConsensusStatePath {
     pub client_id: ClientId,
     pub epoch: u64,

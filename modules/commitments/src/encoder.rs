@@ -65,7 +65,7 @@ impl From<EmittedState> for EthABIEmittedState {
     fn from(value: EmittedState) -> Self {
         Self {
             height: value.0.into(),
-            state: value.1.encode_to_vec(),
+            state: value.1.encode_to_vec().into(),
         }
     }
 }
@@ -73,6 +73,9 @@ impl From<EmittedState> for EthABIEmittedState {
 impl TryFrom<EthABIEmittedState> for EmittedState {
     type Error = Error;
     fn try_from(value: EthABIEmittedState) -> Result<Self, Self::Error> {
-        Ok(Self(value.height.into(), Any::try_from(value.state)?))
+        Ok(Self(
+            value.height.into(),
+            Any::try_from(value.state.to_vec())?,
+        ))
     }
 }

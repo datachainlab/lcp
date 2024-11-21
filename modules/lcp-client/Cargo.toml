@@ -10,7 +10,7 @@ serde_json = { version = "1.0", default-features = false }
 flex-error = { version = "0.4.4", default-features = false }
 tiny-keccak = { version = "1.4" }
 hex-literal = { version = "0.4.1" }
-alloy-sol-types = { version = "0.6.0", default-features = false }
+alloy-sol-types = { version = "0.8", default-features = false }
 
 attestation-report = { path = "../attestation-report", default-features = false }
 light-client = { path = "../light-client", default-features = false }
