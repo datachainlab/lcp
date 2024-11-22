@@ -9,7 +9,7 @@ sgx_trts = { rev = "v1.1.6", git = "https://github.com/apache/incubator-teaclave
 sgx_tseal = { rev = "v1.1.6", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", optional = true }
 
 rand = { version = "0.8", default-features = false, optional = true }
-tiny-keccak = "1.4"
+tiny-keccak = "2.0"
 serde = { version = "1.0.184", default-features = false, features = ["alloc", "derive"] }
 serde-big-array = "0.5.1"
 hex = { version = "0.4", default-features = false, features = ["alloc"] }

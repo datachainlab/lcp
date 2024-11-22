@@ -76,12 +76,12 @@ impl EthABIEncoder for ValidationContext {
         match self {
             ValidationContext::Empty => EthABIValidationContext {
                 header,
-                context_bytes: vec![],
+                context_bytes: Default::default(),
             }
             .abi_encode(),
             ValidationContext::TrustingPeriod(ctx) => EthABIValidationContext {
                 header,
-                context_bytes: ctx.ethabi_encode(),
+                context_bytes: ctx.ethabi_encode().into(),
             }
             .abi_encode(),
         }

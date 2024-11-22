@@ -123,7 +123,7 @@ impl From<UpdateStateProxyMessage> for EthABIUpdateStateProxyMessage {
             post_height: msg.post_height.into(),
             post_state_id: B256::from_slice(msg.post_state_id.to_vec().as_slice()),
             timestamp: msg.timestamp.as_unix_timestamp_nanos(),
-            context: msg.context.ethabi_encode(),
+            context: msg.context.ethabi_encode().into(),
             emitted_states: msg
                 .emitted_states
                 .into_iter()
@@ -143,7 +143,7 @@ impl TryFrom<EthABIUpdateStateProxyMessage> for UpdateStateProxyMessage {
             post_height: msg.post_height.into(),
             post_state_id: msg.post_state_id.as_slice().try_into()?,
             timestamp: Time::from_unix_timestamp_nanos(msg.timestamp)?,
-            context: ValidationContext::ethabi_decode(msg.context.as_slice())?,
+            context: ValidationContext::ethabi_decode(msg.context.as_ref())?,
             emitted_states: msg
                 .emitted_states
                 .into_iter()

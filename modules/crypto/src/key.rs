@@ -11,7 +11,7 @@ use libsecp256k1::{
 use serde::{Deserialize, Serialize};
 use serde_big_array::BigArray;
 use sgx_types::sgx_sealed_data_t;
-use tiny_keccak::Keccak;
+use tiny_keccak::{Hasher, Keccak};
 use zeroize::Zeroizing;
 
 pub struct EnclaveKey {
@@ -223,7 +223,7 @@ pub fn verify_signature_address(sign_bytes: &[u8], signature: &[u8]) -> Result<A
 }
 
 fn keccak256(bz: &[u8]) -> [u8; 32] {
-    let mut keccak = Keccak::new_keccak256();
+    let mut keccak = Keccak::v256();
     let mut result = [0u8; 32];
     keccak.update(bz);
     keccak.finalize(result.as_mut());

@@ -20,7 +20,7 @@ tendermint-lc = { path = "../modules/tendermint-lc", default-features = false }
 
 [patch."crates-io"]
 # TODO these patches would be better as optional
-sha2-0106 = { git = "https://github.com/bluele/hashes", branch = "0.10.6-sha256-hwa-disabled", package = "sha2" }
+sha2-0106 = { git = "https://github.com/bluele/hashes", branch = "0.10.8-sha256-hwa-disabled", package = "sha2" }
 sha2-099 = { git = "https://github.com/bluele/hashes", branch = "0.9.9-sha256-hwa-disabled", package = "sha2" }
 
 [profile.release]

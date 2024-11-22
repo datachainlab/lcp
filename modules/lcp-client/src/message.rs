@@ -203,8 +203,8 @@ impl EthABIEncoder for CommitmentProofs {
 impl From<EthABICommitmentProofs> for CommitmentProofs {
     fn from(value: EthABICommitmentProofs) -> Self {
         Self {
-            message: value.message,
-            signatures: value.signatures,
+            message: value.message.into(),
+            signatures: value.signatures.into_iter().map(Into::into).collect(),
         }
     }
 }
@@ -212,8 +212,8 @@ impl From<EthABICommitmentProofs> for CommitmentProofs {
 impl From<CommitmentProofs> for EthABICommitmentProofs {
     fn from(value: CommitmentProofs) -> Self {
         Self {
-            message: value.message,
-            signatures: value.signatures,
+            message: value.message.into(),
+            signatures: value.signatures.into_iter().map(Into::into).collect(),
         }
     }
 }

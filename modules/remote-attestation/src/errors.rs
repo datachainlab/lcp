@@ -50,12 +50,17 @@ define_error! {
             descr: String,
         }
         |e| {
-            format_args!("IOError: descr={}", e.descr)
+            format_args!("IOError: error={:?} descr={}", e.error, e.descr)
         },
 
-        InvalidDnsNameError
-        [TraceError<webpki::InvalidDNSNameError>]
-        |_| { "InvalidDnsNameError" },
+        Rustls
+        [TraceError<rustls::Error>]
+        |_| { "Rustls error" },
+
+        InvalidIasServerName
+        |_| {
+            format_args!("InvalidServerName")
+        },
 
         HttpParseError
         [TraceError<httparse::Error>]
