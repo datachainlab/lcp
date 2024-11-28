@@ -44,8 +44,8 @@ sol! {
 impl From<VerifyMembershipProxyMessage> for EthABIVerifyMembershipProxyMessage {
     fn from(msg: VerifyMembershipProxyMessage) -> Self {
         Self {
-            prefix: msg.prefix,
-            path: msg.path.into_bytes(),
+            prefix: msg.prefix.into(),
+            path: msg.path.into_bytes().into(),
             value: B256::from_slice(msg.value.unwrap_or_default().as_slice()),
             height: EthABIHeight::from(msg.height),
             state_id: B256::from_slice(&msg.state_id.to_vec()),
@@ -57,8 +57,8 @@ impl TryFrom<EthABIVerifyMembershipProxyMessage> for VerifyMembershipProxyMessag
     type Error = Error;
     fn try_from(msg: EthABIVerifyMembershipProxyMessage) -> Result<Self, Self::Error> {
         Ok(Self {
-            prefix: msg.prefix,
-            path: String::from_utf8(msg.path)?,
+            prefix: msg.prefix.into(),
+            path: String::from_utf8(msg.path.to_vec())?,
             value: (!msg.value.is_zero()).then_some(msg.value.0),
             height: msg.height.into(),
             state_id: msg.state_id.as_slice().try_into()?,

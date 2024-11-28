@@ -2,18 +2,18 @@ use crate::prelude::*;
 use crate::{Error, Keccak256, Signer, Verifier};
 use alloc::fmt;
 use core::fmt::Display;
-use libsecp256k1::PublicKeyFormat;
+use core::sync::atomic;
 use libsecp256k1::{
     curve::Scalar,
     util::{COMPRESSED_PUBLIC_KEY_SIZE, SECRET_KEY_SIZE},
-    Message, PublicKey, RecoveryId, SecretKey, Signature,
+    Message, PublicKey, PublicKeyFormat, RecoveryId, SecretKey, Signature,
 };
 use serde::{Deserialize, Serialize};
 use serde_big_array::BigArray;
 use sgx_types::sgx_sealed_data_t;
-use tiny_keccak::Keccak;
+use tiny_keccak::{Hasher, Keccak};
+use zeroize::Zeroizing;
 
-#[derive(Default)]
 pub struct EnclaveKey {
     pub(crate) secret_key: SecretKey,
 }
@@ -42,12 +42,22 @@ impl EnclaveKey {
         Ok(Self { secret_key })
     }
 
-    pub fn get_privkey(&self) -> [u8; SECRET_KEY_SIZE] {
-        self.secret_key.serialize()
+    pub fn get_privkey(self) -> Zeroizing<[u8; SECRET_KEY_SIZE]> {
+        Zeroizing::new(self.secret_key.serialize())
     }
 
     pub fn get_pubkey(&self) -> EnclavePublicKey {
         EnclavePublicKey(PublicKey::from_secret_key(&self.secret_key))
+    }
+}
+
+impl Drop for EnclaveKey {
+    fn drop(&mut self) {
+        self.secret_key.clear();
+        // Use fences to prevent accesses from being reordered before this
+        // point, which should hopefully help ensure that all accessors
+        // see zeroes after this point.
+        atomic::compiler_fence(atomic::Ordering::SeqCst);
     }
 }
 
@@ -194,13 +204,15 @@ impl Verifier for EnclavePublicKey {
 }
 
 pub fn verify_signature(sign_bytes: &[u8], signature: &[u8]) -> Result<EnclavePublicKey, Error> {
-    assert!(signature.len() == 65);
+    if signature.len() != 65 {
+        return Err(Error::invalid_signature_length(signature.len()));
+    }
 
     let sign_hash = keccak256(sign_bytes);
     let mut s = Scalar::default();
     let _ = s.set_b32(&sign_hash);
 
-    let sig = Signature::parse_overflowing_slice(&signature[..64]).map_err(Error::secp256k1)?;
+    let sig = Signature::parse_standard_slice(&signature[..64]).map_err(Error::secp256k1)?;
     let rid = RecoveryId::parse(signature[64]).map_err(Error::secp256k1)?;
     let signer = libsecp256k1::recover(&Message(s), &sig, &rid).map_err(Error::secp256k1)?;
     Ok(EnclavePublicKey(signer))
@@ -211,7 +223,7 @@ pub fn verify_signature_address(sign_bytes: &[u8], signature: &[u8]) -> Result<A
 }
 
 fn keccak256(bz: &[u8]) -> [u8; 32] {
-    let mut keccak = Keccak::new_keccak256();
+    let mut keccak = Keccak::v256();
     let mut result = [0u8; 32];
     keccak.update(bz);
     keccak.finalize(result.as_mut());
@@ -248,13 +260,15 @@ const fn calc_raw_sealed_data_size(add_mac_txt_size: u32, encrypt_txt_size: u32)
     let max = u32::MAX;
     let sealed_data_size = core::mem::size_of::<sgx_sealed_data_t>() as u32;
 
-    if add_mac_txt_size > max - encrypt_txt_size {
-        return max;
-    }
+    assert!(
+        add_mac_txt_size <= max - encrypt_txt_size,
+        "add_mac_txt_size > max - encrypt_txt_size"
+    );
     let payload_size: u32 = add_mac_txt_size + encrypt_txt_size;
-    if payload_size > max - sealed_data_size {
-        return max;
-    }
+    assert!(
+        payload_size <= max - sealed_data_size,
+        "payload_size > max - sealed_data_size"
+    );
     sealed_data_size + payload_size
 }
 
@@ -272,5 +286,23 @@ impl Signer for NopSigner {
     }
     fn sign(&self, _: &[u8]) -> Result<Vec<u8>, Error> {
         Err(Error::nop_signer())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_zeroize_enclave_key() {
+        let ptr = {
+            let ek = EnclaveKey::new().unwrap();
+            let ptr = &ek.secret_key as *const SecretKey as *const u8;
+            let slice = unsafe { core::slice::from_raw_parts(ptr, SECRET_KEY_SIZE) };
+            assert_ne!(slice, &[0u8; SECRET_KEY_SIZE]);
+            ptr
+        };
+        let slice = unsafe { core::slice::from_raw_parts(ptr, SECRET_KEY_SIZE) };
+        assert_eq!(slice, &[0u8; SECRET_KEY_SIZE]);
     }
 }

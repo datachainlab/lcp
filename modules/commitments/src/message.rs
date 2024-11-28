@@ -145,7 +145,8 @@ impl EthABIEncoder for ProxyMessage {
                 Self::UpdateState(c) => c.ethabi_encode(),
                 Self::VerifyMembership(c) => c.ethabi_encode(),
                 Self::Misbehaviour(c) => c.ethabi_encode(),
-            },
+            }
+            .into(),
         }
         .abi_encode()
     }

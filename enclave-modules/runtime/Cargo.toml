@@ -17,3 +17,7 @@ host-api = { path = "../host-api" }
 ecall-handler = { path = "../ecall-handler" }
 enclave-environment = { path = "../environment" }
 ecall-commands = { path = "../../modules/ecall-commands", default-features = false }
+
+[features]
+default = []
+panic-logging = []

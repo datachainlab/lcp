@@ -15,13 +15,11 @@ hex = { version = "0.4", default-features = false, features = ["alloc"] }
 base64 = { version = "0.22.1", default-features = false, features = ["alloc"] }
 
 pem = { version = "2.0", default-features = false }
-rustls     = { version = "0.19", optional = true }
-webpki     = { version = "0.21", optional = true }
+webpki = { version = "0.22", features = ["alloc"], optional = true }
 
 [features]
 default = ["std"]
 std = [
-    "rustls",
     "webpki",
     "flex-error/std",
     "serde_json/preserve_order"

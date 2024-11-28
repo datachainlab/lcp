@@ -14,7 +14,7 @@ use light_client::commitments::{
 };
 use light_client::types::{ClientId, Height, Time};
 use light_client::{HostClientKeeper, HostClientReader};
-use tiny_keccak::Keccak;
+use tiny_keccak::{Hasher, Keccak};
 
 pub const LCP_CLIENT_TYPE: &str = "0000-lcp";
 
@@ -104,7 +104,7 @@ impl LCPClient {
         Ok(())
     }
 
-    // verify_client_message verifies a client message
+    /// update_client verifies a client message and updates the state of the client
     pub fn update_client(
         &self,
         ctx: &mut dyn HostClientKeeper,
@@ -438,7 +438,7 @@ impl LCPClient {
 pub fn compute_eip712_register_enclave_key(avr: &str) -> Vec<u8> {
     // 0x1901 | DOMAIN_SEPARATOR_REGISTER_ENCLAVE_KEY | keccak256(keccak256("RegisterEnclaveKey(string avr)") | keccak256(avr))
     let type_hash = {
-        let mut h = Keccak::new_keccak256();
+        let mut h = Keccak::v256();
         h.update(&keccak256(b"RegisterEnclaveKey(string avr)"));
         h.update(&keccak256(avr.as_bytes()));
         let mut result = [0u8; 32];
@@ -491,7 +491,7 @@ pub fn compute_eip712_update_operators(
             thresholdNumerator: threshold_numerator,
             thresholdDenominator: threshold_denominator,
         };
-        let mut h = Keccak::new_keccak256();
+        let mut h = Keccak::v256();
         let bz = eip712_update_operator.abi_encode();
         h.update(&bz);
         let mut result = [0u8; 32];
@@ -566,7 +566,7 @@ fn enclave_key_path(client_id: &ClientId, ek: Address) -> Vec<u8> {
 }
 
 fn keccak256(bz: &[u8]) -> [u8; 32] {
-    let mut keccak = Keccak::new_keccak256();
+    let mut keccak = Keccak::v256();
     let mut result = [0u8; 32];
     keccak.update(bz);
     keccak.finalize(result.as_mut());

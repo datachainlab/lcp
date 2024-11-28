@@ -3,6 +3,7 @@ use attestation_report::SignedAttestationVerificationReport;
 use base64::{engine::general_purpose::STANDARD as Base64Std, Engine};
 use log::*;
 use rand::RngCore;
+use rustls::RootCertStore;
 use sgx_types::{
     sgx_calc_quote_size, sgx_epid_group_id_t, sgx_get_quote, sgx_init_quote, sgx_quote_nonce_t,
     sgx_quote_sign_type_t, sgx_quote_t, sgx_report_t, sgx_spid_t, sgx_status_t, sgx_target_info_t,
@@ -67,7 +68,7 @@ pub(crate) fn get_quote(
     spid: sgx_spid_t,
 ) -> Result<(Vec<u8>, sgx_report_t), Error> {
     let mut quote_nonce = sgx_quote_nonce_t { rand: [0; 16] };
-    rand::thread_rng().fill_bytes(&mut quote_nonce.rand);
+    rand::rngs::OsRng.fill_bytes(&mut quote_nonce.rand);
 
     let (p_sigrl, sigrl_size) = if sigrl.is_empty() {
         (ptr::null(), 0)
@@ -87,7 +88,7 @@ pub(crate) fn get_quote(
         info!("quote size = {}", quote_size);
 
         let mut qe_report = sgx_report_t::default();
-        let quote = [0u8; 2048];
+        let quote: Vec<u8> = vec![0; quote_size as usize];
         let p_quote = quote.as_ptr();
         let ret = unsafe {
             sgx_get_quote(
@@ -105,7 +106,7 @@ pub(crate) fn get_quote(
         if ret != sgx_status_t::SGX_SUCCESS {
             return Err(Error::sgx_error(ret, "failed to sgx_get_quote".into()));
         }
-        (quote[..quote_size as usize].to_vec(), qe_report)
+        (quote, qe_report)
     };
 
     // Check qe_report to defend against replay attack
@@ -151,10 +152,13 @@ pub(crate) fn get_sigrl_from_intel(
         ias_key);
 
     trace!("get_sigrl_from_intel: {}", req);
-
-    let dns_name = webpki::DNSNameRef::try_from_ascii_str(IAS_HOSTNAME)
-        .map_err(Error::invalid_dns_name_error)?;
-    let mut sess = rustls::ClientSession::new(&Arc::new(config), dns_name);
+    let mut sess = rustls::ClientConnection::new(
+        Arc::new(config),
+        IAS_HOSTNAME
+            .try_into()
+            .map_err(|_| Error::invalid_ias_server_name())?,
+    )
+    .map_err(Error::rustls)?;
     let mut sock = TcpStream::connect(lookup_ipv4(IAS_HOSTNAME, IAS_HTTPS_PORT)?)
         .map_err(|e| Error::io_error(e, "failed to connect to IAS server".to_string()))?;
     let mut tls = rustls::Stream::new(&mut sess, &mut sock);
@@ -164,8 +168,20 @@ pub(crate) fn get_sigrl_from_intel(
 
     info!("write complete");
 
-    tls.read_to_end(&mut plaintext)
-        .map_err(|e| Error::io_error(e, "failed to read response from IAS server".to_string()))?;
+    match tls.read_to_end(&mut plaintext) {
+        Ok(_) => (),
+        Err(e) if e.kind() == std::io::ErrorKind::UnexpectedEof => {
+            // IAS server may not send `close_notify` message, so we can ignore this error.
+            // ref. https://docs.rs/rustls/0.23.17/rustls/manual/_03_howto/index.html#unexpected-eof
+            info!("probably IAS server did not send close_notify message");
+        }
+        Err(e) => {
+            return Err(Error::io_error(
+                e,
+                "failed to read response from IAS server".to_string(),
+            ));
+        }
+    }
     info!("read_to_end complete");
     parse_response_sigrl(&plaintext)
 }
@@ -188,9 +204,13 @@ pub(crate) fn get_report_from_intel(
                       encoded_json);
 
     trace!("{}", req);
-    let dns_name = webpki::DNSNameRef::try_from_ascii_str(IAS_HOSTNAME)
-        .map_err(Error::invalid_dns_name_error)?;
-    let mut sess = rustls::ClientSession::new(&Arc::new(config), dns_name);
+    let mut sess = rustls::ClientConnection::new(
+        Arc::new(config),
+        IAS_HOSTNAME
+            .try_into()
+            .map_err(|_| Error::invalid_ias_server_name())?,
+    )
+    .map_err(Error::rustls)?;
     let mut sock = TcpStream::connect(lookup_ipv4(IAS_HOSTNAME, IAS_HTTPS_PORT)?)
         .map_err(|e| Error::io_error(e, "Failed to connect to IAS server".to_string()))?;
     let mut tls = rustls::Stream::new(&mut sess, &mut sock);
@@ -200,8 +220,20 @@ pub(crate) fn get_report_from_intel(
 
     info!("write complete");
 
-    tls.read_to_end(&mut plaintext)
-        .map_err(|e| Error::io_error(e, "failed to read response from IAS server".to_string()))?;
+    match tls.read_to_end(&mut plaintext) {
+        Ok(_) => (),
+        Err(e) if e.kind() == std::io::ErrorKind::UnexpectedEof => {
+            // IAS server may not send `close_notify` message, so we can ignore this error.
+            // ref. https://docs.rs/rustls/0.23.17/rustls/manual/_03_howto/index.html#unexpected-eof
+            info!("probably IAS server did not send close_notify message");
+        }
+        Err(e) => {
+            return Err(Error::io_error(
+                e,
+                "failed to read response from IAS server".to_string(),
+            ));
+        }
+    }
     info!("read_to_end complete");
 
     parse_response_attn_report(&plaintext)
@@ -362,13 +394,13 @@ fn parse_response_sigrl(resp: &[u8]) -> Result<Vec<u8>, Error> {
 }
 
 fn make_ias_client_config() -> rustls::ClientConfig {
-    let mut config = rustls::ClientConfig::new();
-
-    config
-        .root_store
-        .add_server_trust_anchors(&webpki_roots::TLS_SERVER_ROOTS);
-
-    config
+    let builder = rustls::ClientConfig::builder();
+    let root_store = RootCertStore {
+        roots: webpki_roots::TLS_SERVER_ROOTS.into(),
+    };
+    builder
+        .with_root_certificates(root_store)
+        .with_no_client_auth()
 }
 
 fn percent_decode(orig: String) -> Result<String, Error> {
@@ -415,6 +447,7 @@ pub(crate) fn decode_spid(spid_str: &str) -> Result<sgx_spid_t, Error> {
         }
     };
     let mut spid = sgx_spid_t::default();
-    spid.id.copy_from_slice(&decoded_vec[..16]);
+    // the length of `decoded_vec` is 16 because each byte is represented by 2 characters
+    spid.id.copy_from_slice(&decoded_vec);
     Ok(spid)
 }

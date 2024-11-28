@@ -47,6 +47,14 @@ define_error! {
             format_args!("invalid address length: expected=20 actual={}", e.length)
         },
 
+        InvalidSignatureLength
+        {
+            length: usize,
+        }
+        |e| {
+            format_args!("invalid signature length: expected=65 actual={}", e.length)
+        },
+
         InsufficientSecretKeySize
         {
             path: String,

@@ -82,8 +82,8 @@ impl From<MisbehaviourProxyMessage> for EthABIMisbehaviourProxyMessage {
                     state_id: B256::from_slice(v.state_id.to_vec().as_slice()),
                 })
                 .collect(),
-            context: msg.context.ethabi_encode(),
-            client_message: msg.client_message.encode_to_vec(),
+            context: msg.context.ethabi_encode().into(),
+            client_message: msg.client_message.encode_to_vec().into(),
         }
     }
 }
@@ -101,8 +101,8 @@ impl TryFrom<EthABIMisbehaviourProxyMessage> for MisbehaviourProxyMessage {
                     state_id: StateID::from(v.state_id.0),
                 })
                 .collect(),
-            context: ValidationContext::ethabi_decode(msg.context.as_slice())?,
-            client_message: Any::decode(msg.client_message.as_slice())
+            context: ValidationContext::ethabi_decode(msg.context.as_ref())?,
+            client_message: Any::decode(msg.client_message.to_vec().as_ref())
                 .map_err(Error::proto_decode_error)?,
         })
     }
