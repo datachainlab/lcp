@@ -1,3 +1,5 @@
+#[allow(clippy::doc_lazy_continuation)]
+pub mod dcap;
 pub mod errors;
 pub mod ias;
 #[cfg(feature = "sgx-sw")]
