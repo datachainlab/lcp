@@ -1,4 +1,5 @@
 use crate::service::AppService;
+use attestation_report::RAType;
 use crypto::Address;
 use enclave_api::EnclaveProtoAPI;
 use lcp_proto::lcp::service::enclave::v1::{
@@ -20,12 +21,20 @@ where
         req: Request<QueryAvailableEnclaveKeysRequest>,
     ) -> Result<Response<QueryAvailableEnclaveKeysResponse>, Status> {
         let mut res = QueryAvailableEnclaveKeysResponse::default();
+        let req = req.into_inner();
         let keys = self
             .enclave
             .get_key_manager()
             .available_keys(
-                Mrenclave::try_from(req.into_inner().mrenclave)
-                    .map_err(|e| Status::aborted(e.to_string()))?,
+                Mrenclave::try_from(req.mrenclave).map_err(|e| Status::aborted(e.to_string()))?,
+                if req.ra_type == 0 {
+                    None
+                } else {
+                    Some(
+                        RAType::from_u32(req.ra_type)
+                            .map_err(|e| Status::aborted(e.to_string()))?,
+                    )
+                },
             )
             .map_err(|e| Status::aborted(e.to_string()))?;
         for key in keys {

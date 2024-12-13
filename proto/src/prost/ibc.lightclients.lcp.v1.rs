@@ -20,6 +20,18 @@ pub struct RegisterEnclaveKeyMessage {
 }
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
+pub struct ZkdcapRegisterEnclaveKeyMessage {
+    #[prost(uint32, tag = "1")]
+    pub zkvm_type: u32,
+    #[prost(bytes = "vec", tag = "2")]
+    pub commit: ::prost::alloc::vec::Vec<u8>,
+    #[prost(bytes = "vec", tag = "3")]
+    pub proof: ::prost::alloc::vec::Vec<u8>,
+    #[prost(bytes = "vec", tag = "4")]
+    pub operator_signature: ::prost::alloc::vec::Vec<u8>,
+}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct UpdateOperatorsMessage {
     #[prost(uint64, tag = "1")]
     pub nonce: u64,
@@ -37,6 +49,9 @@ pub struct UpdateOperatorsMessage {
 pub struct ClientState {
     #[prost(bytes = "vec", tag = "1")]
     pub mrenclave: ::prost::alloc::vec::Vec<u8>,
+    /// enclave key's expiration from the remote attestation time in seconds
+    ///
+    /// If the key is got from the DCAP/zkDCAP's quote, it should be the collateral's expiration time instead.
     #[prost(uint64, tag = "2")]
     pub key_expiration: u64,
     #[prost(bool, tag = "3")]
@@ -59,6 +74,16 @@ pub struct ClientState {
     pub operators_threshold_numerator: u64,
     #[prost(uint64, tag = "10")]
     pub operators_threshold_denominator: u64,
+    /// An optional field to store the verifier info for zkDCAP
+    ///
+    /// if empty, the zkDCAP is not enabled
+    /// otherwise, the zkDCAP is enabled
+    /// The layout of each element is as follows:
+    /// 0: zkVM type (e.g. 1 for risc0)
+    /// 1-31: reserved
+    /// 32-64: guest program identifier
+    #[prost(bytes = "vec", repeated, tag = "11")]
+    pub zkdcap_verifier_infos: ::prost::alloc::vec::Vec<::prost::alloc::vec::Vec<u8>>,
 }
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]

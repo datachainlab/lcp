@@ -8,6 +8,7 @@ sgx_types = { rev = "v1.1.6", git = "https://github.com/apache/incubator-teaclav
 chrono = { version = "0.4", default-features = false, features = ["alloc"]}
 serde = { version = "1.0.184", default-features = false, features = ["alloc"] }
 serde_json = { version = "1.0", default-features = false, features = ["alloc"] }
+serde_with = { version = "2.0.1", default-features = false, features = ["alloc", "macros", "hex"] }
 crypto = { path = "../crypto", default-features = false }
 lcp-types = { path = "../types", default-features = false }
 flex-error = { version = "0.4.4", default-features = false }
@@ -15,6 +16,9 @@ hex = { version = "0.4", default-features = false, features = ["alloc"] }
 base64 = { version = "0.22.1", default-features = false, features = ["alloc"] }
 pem = { version = "2.0", default-features = false }
 webpki = { version = "0.22", features = ["alloc"] }
+anyhow = { version = "1", default-features = false }
+
+dcap-quote-verifier = { git = "https://github.com/datachainlab/zkdcap", rev = "ff53632f49d2d8b00c9bcc456aeeeb139bacca9f", optional = true }
 
 [dev-dependencies]
 tokio = { version = "1.0", default-features = false, features = ["macros"] }
@@ -22,6 +26,7 @@ tokio = { version = "1.0", default-features = false, features = ["macros"] }
 [features]
 default = ["std"]
 std = [
+    "dcap-quote-verifier",
     "webpki/std",
     "flex-error/std",
     "lcp-types/std",

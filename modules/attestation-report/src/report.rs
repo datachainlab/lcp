@@ -1,43 +1,135 @@
+use crate::dcap::ZKDCAPQuote;
 use crate::{dcap::DCAPQuote, errors::Error};
 use crate::{prelude::*, IASSignedReport};
 use core::fmt::{Debug, Display, Error as FmtError};
 use crypto::Address;
 use lcp_types::Time;
+use serde::{Deserialize, Serialize};
 use sgx_types::{metadata::metadata_t, sgx_measurement_t, sgx_quote_t, sgx_report_data_t};
 
 pub const REPORT_DATA_V1: u8 = 1;
 
-#[derive(Debug)]
-pub enum VerifiableQuote {
-    IAS(IASSignedReport),
-    DCAP(DCAPQuote),
+#[derive(Debug, Serialize, Deserialize)]
+pub enum QEType {
+    IAS,
+    DCAP,
 }
 
-impl VerifiableQuote {
-    pub fn attested_at(&self) -> Result<Time, Error> {
+impl QEType {
+    pub fn as_u32(&self) -> u32 {
         match self {
-            VerifiableQuote::IAS(report) => report.get_avr()?.attestation_time(),
-            VerifiableQuote::DCAP(quote) => Ok(quote.attested_at),
+            Self::IAS => 1,
+            Self::DCAP => 2,
+        }
+    }
+    pub fn from_u32(v: u32) -> Result<Self, Error> {
+        match v {
+            1 => Ok(Self::IAS),
+            2 => Ok(Self::DCAP),
+            _ => Err(Error::invalid_qe_type(v)),
         }
     }
 }
 
-impl From<IASSignedReport> for VerifiableQuote {
-    fn from(report: IASSignedReport) -> Self {
-        VerifiableQuote::IAS(report)
+#[derive(Debug, Serialize, Deserialize)]
+pub enum RAType {
+    IAS,
+    DCAP,
+    ZKDCAP,
+    MockZKDCAP,
+}
+
+impl RAType {
+    pub fn as_u32(&self) -> u32 {
+        match self {
+            Self::IAS => 1,
+            Self::DCAP => 2,
+            Self::ZKDCAP => 3,
+            Self::MockZKDCAP => 4,
+        }
+    }
+    pub fn from_u32(v: u32) -> Result<Self, Error> {
+        match v {
+            1 => Ok(Self::IAS),
+            2 => Ok(Self::DCAP),
+            3 => Ok(Self::ZKDCAP),
+            4 => Ok(Self::MockZKDCAP),
+            _ => Err(Error::invalid_ra_type(v)),
+        }
     }
 }
 
-impl From<DCAPQuote> for VerifiableQuote {
+impl Display for RAType {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> Result<(), FmtError> {
+        write!(
+            f,
+            "{}",
+            match self {
+                Self::IAS => "ias",
+                Self::DCAP => "dcap",
+                Self::ZKDCAP => "zkdcap",
+                Self::MockZKDCAP => "mock_zkdcap",
+            }
+        )
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(tag = "type")]
+pub enum RAQuote {
+    IAS(IASSignedReport),
+    DCAP(DCAPQuote),
+    ZKDCAP(ZKDCAPQuote),
+}
+
+impl RAQuote {
+    pub fn ra_type(&self) -> RAType {
+        match self {
+            RAQuote::IAS(_) => RAType::IAS,
+            RAQuote::DCAP(_) => RAType::DCAP,
+            RAQuote::ZKDCAP(quote) => {
+                if quote.mock {
+                    RAType::MockZKDCAP
+                } else {
+                    RAType::ZKDCAP
+                }
+            }
+        }
+    }
+
+    pub fn attested_at(&self) -> Result<Time, Error> {
+        match self {
+            RAQuote::IAS(report) => report.get_avr()?.attestation_time(),
+            RAQuote::DCAP(quote) => Ok(quote.attested_at),
+            RAQuote::ZKDCAP(quote) => Ok(quote.dcap_quote.attested_at),
+        }
+    }
+
+    pub fn from_json(json: &str) -> Result<Self, Error> {
+        serde_json::from_str(json).map_err(Error::serde_json)
+    }
+
+    pub fn to_json(&self) -> Result<String, Error> {
+        serde_json::to_string(self).map_err(Error::serde_json)
+    }
+}
+
+impl From<IASSignedReport> for RAQuote {
+    fn from(report: IASSignedReport) -> Self {
+        RAQuote::IAS(report)
+    }
+}
+
+impl From<DCAPQuote> for RAQuote {
     fn from(quote: DCAPQuote) -> Self {
-        VerifiableQuote::DCAP(quote)
+        RAQuote::DCAP(quote)
     }
 }
 
 /// ReportData is a 64-byte value that is embedded in the Quote
 /// | version: 1 byte | enclave key: 20 bytes | operator: 20 bytes | nonce: 22 bytes |
 #[derive(Debug, Clone, PartialEq)]
-pub struct ReportData([u8; 64]);
+pub struct ReportData(pub [u8; 64]);
 
 impl ReportData {
     /// Creates a new report data

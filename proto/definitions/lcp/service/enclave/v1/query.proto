@@ -13,6 +13,7 @@ service Query {
 
 message QueryAvailableEnclaveKeysRequest {
   bytes mrenclave = 1;
+  uint32 ra_type = 2;
 }
 
 message QueryAvailableEnclaveKeysResponse {
@@ -20,12 +21,55 @@ message QueryAvailableEnclaveKeysResponse {
 }
 
 message EnclaveKeyInfo {
+  oneof key_info {
+    IASEnclaveKeyInfo ias = 1;
+    DCAPEnclaveKeyInfo dcap = 2;
+    ZKDCAPEncalveKeyInfo zkdcap = 3;
+  }
+}
+
+message IASEnclaveKeyInfo {
   bytes enclave_key_address = 1;
-  uint64 attestation_time = 2;
-  string report = 3;
+  string report = 2;
+  uint64 attestation_time = 3;
   bytes signature = 4;
   bytes signing_cert = 5;
-  bytes extension = 6;
+}
+
+message DCAPEnclaveKeyInfo {
+  bytes enclave_key_address = 1;
+  bytes quote = 2;
+  bytes fmspc = 3;
+  uint64 attestation_time = 4;
+  string tcb_status = 5;
+  repeated string advisory_ids = 6;
+  DCAPCollateral collateral = 7;
+}
+
+message ZKDCAPEncalveKeyInfo {
+  DCAPEnclaveKeyInfo dcap = 1;
+  ZKVMProof zkp = 2;
+}
+
+message ZKVMProof {
+  oneof proof {
+    Risc0ZKVMProof risc0 = 1;
+  }
+}
+
+message Risc0ZKVMProof {
+  bytes image_id = 1;
+  bytes seal = 2;
+  bytes commit = 3;
+}
+
+message DCAPCollateral {
+  bytes tcbinfo_bytes = 1;
+  bytes qeidentity_bytes = 2;
+  bytes sgx_intel_root_ca_der = 3;
+  bytes sgx_tcb_signing_der = 4;
+  bytes sgx_intel_root_ca_crl_der = 5;
+  bytes sgx_pck_crl_der = 6;
 }
 
 message QueryEnclaveKeyRequest {

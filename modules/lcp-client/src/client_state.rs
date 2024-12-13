@@ -22,10 +22,69 @@ pub struct ClientState {
     pub key_expiration: Duration,
     pub latest_height: Height,
     pub frozen: bool,
+    pub allowed_quote_statuses: Vec<String>,
+    pub allowed_advisory_ids: Vec<String>,
     pub operators: Vec<Address>,
     pub operators_nonce: u64,
     pub operators_threshold_numerator: u64,
     pub operators_threshold_denominator: u64,
+    pub zkdcap_verifier_infos: Vec<ZKDCAPVerifierInfo>,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default, Serialize, Deserialize)]
+pub enum ZKVMType {
+    #[default]
+    Unspecified,
+    Risc0,
+}
+
+impl ZKVMType {
+    pub fn from_u8(value: u8) -> Result<Self, Error> {
+        match value {
+            0 => Ok(ZKVMType::Unspecified),
+            1 => Ok(ZKVMType::Risc0),
+            _ => Err(Error::invalid_zkdcap_verifier_info(vec![value])),
+        }
+    }
+    pub fn as_u8(&self) -> u8 {
+        match self {
+            ZKVMType::Unspecified => 0,
+            ZKVMType::Risc0 => 1,
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Default, Serialize, Deserialize)]
+pub struct ZKDCAPVerifierInfo {
+    pub zkvm_type: ZKVMType,
+    pub program_id: [u8; 32],
+}
+
+impl ZKDCAPVerifierInfo {
+    pub fn to_bytes(&self) -> Vec<u8> {
+        let mut bytes = Vec::with_capacity(64);
+        bytes.push(self.zkvm_type.as_u8());
+        bytes.extend_from_slice(&[0u8; 31]);
+        bytes.extend_from_slice(&self.program_id);
+        bytes
+    }
+
+    pub fn from_bytes(bytes: &[u8]) -> Result<Self, Error> {
+        if bytes.len() != 64 {
+            return Err(Error::invalid_zkdcap_verifier_info(bytes.to_vec()));
+        }
+        let zkvm_type = match bytes[0] {
+            0 => ZKVMType::Unspecified,
+            1 => ZKVMType::Risc0,
+            _ => return Err(Error::invalid_zkdcap_verifier_info(bytes.to_vec())),
+        };
+        let mut program_id = [0u8; 32];
+        program_id.copy_from_slice(&bytes[32..]);
+        Ok(ZKDCAPVerifierInfo {
+            zkvm_type,
+            program_id,
+        })
+    }
 }
 
 impl ClientState {
@@ -72,6 +131,11 @@ impl From<ClientState> for RawClientState {
             operators_nonce: 0,
             operators_threshold_numerator: 0,
             operators_threshold_denominator: 0,
+            zkdcap_verifier_infos: value
+                .zkdcap_verifier_infos
+                .iter()
+                .map(|info| info.to_bytes())
+                .collect(),
         }
     }
 }
@@ -86,6 +150,8 @@ impl TryFrom<RawClientState> for ClientState {
             key_expiration: Duration::from_secs(raw.key_expiration),
             frozen: raw.frozen,
             latest_height: Height::new(height.revision_number, height.revision_height),
+            allowed_quote_statuses: raw.allowed_quote_statuses,
+            allowed_advisory_ids: raw.allowed_advisory_ids,
             operators: raw
                 .operators
                 .into_iter()
@@ -94,6 +160,11 @@ impl TryFrom<RawClientState> for ClientState {
             operators_nonce: raw.operators_nonce,
             operators_threshold_numerator: raw.operators_threshold_numerator,
             operators_threshold_denominator: raw.operators_threshold_denominator,
+            zkdcap_verifier_infos: raw
+                .zkdcap_verifier_infos
+                .into_iter()
+                .map(|bytes| ZKDCAPVerifierInfo::from_bytes(&bytes))
+                .collect::<Result<_, _>>()?,
         })
     }
 }

@@ -316,14 +316,14 @@ fn parse_response_attn_report(resp: &[u8]) -> Result<IASSignedReport, Error> {
                 })?;
                 trace!("content length = {}", len_num);
             }
-            "X-IASAttestationVerificationReport-Signature" => {
+            "X-IASReport-Signature" => {
                 sig = str::from_utf8(h.value)
                     .map_err(|e| {
                         Error::invalid_utf8_bytes(h.value.to_vec(), e, h.name.to_string())
                     })?
                     .to_string()
             }
-            "X-IASAttestationVerificationReport-Signing-Certificate" => {
+            "X-IASReport-Signing-Certificate" => {
                 cert = str::from_utf8(h.value)
                     .map_err(|e| {
                         Error::invalid_utf8_bytes(h.value.to_vec(), e, h.name.to_string())

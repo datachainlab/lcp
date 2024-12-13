@@ -1,10 +1,14 @@
 pub mod errors;
 pub use crate::errors::Error;
 use anyhow::anyhow;
-use attestation_report::{IASSignedReport, ReportData, VerifiableQuote};
+use attestation_report::{QEType, RAQuote, RAType, ReportData};
 use crypto::{Address, SealedEnclaveKey};
 use lcp_types::{
-    deserialize_bytes, proto::lcp::service::enclave::v1::EnclaveKeyInfo as ProtoEnclaveKeyInfo,
+    deserialize_bytes,
+    proto::lcp::service::enclave::v1::{
+        enclave_key_info, zkvm_proof, DcapEnclaveKeyInfo, EnclaveKeyInfo as ProtoEnclaveKeyInfo,
+        IasEnclaveKeyInfo, Risc0ZkvmProof, ZkdcapEncalveKeyInfo, ZkvmProof,
+    },
     serialize_bytes, BytesTransmuter, Mrenclave, Time,
 };
 use log::*;
@@ -55,8 +59,9 @@ impl EnclaveKeyManager {
                 ek_sealed BLOB NOT NULL,
                 mrenclave TEXT NOT NULL,
                 report BLOB NOT NULL,
-                ias_report TEXT,
-                dcap_quote TEXT,
+                qe_type INTEGER NOT NULL,
+                ra_type INTEGER,
+                ra_quote TEXT,
                 attested_at TEXT,
                 created_at TEXT NOT NULL DEFAULT (DATETIME('now', 'localtime')),
                 updated_at TEXT NOT NULL DEFAULT (DATETIME('now', 'localtime'))
@@ -76,7 +81,7 @@ impl EnclaveKeyManager {
             .map_err(|e| Error::mutex_lock(e.to_string()))?;
         let mut stmt = conn.prepare(
             r#"
-            SELECT ek_sealed, mrenclave, report, ias_report
+            SELECT ek_sealed, mrenclave, report, qe_type, ra_quote
             FROM enclave_keys
             WHERE ek_address = ?1
             "#,
@@ -106,13 +111,20 @@ impl EnclaveKeyManager {
                         anyhow!("report: {:?}", e).into(),
                     )
                 })?,
-                ias_report: match row.get::<_, Option<String>>(3) {
+                qe_type: QEType::from_u32(row.get::<_, i64>(3)? as u32).map_err(|e| {
+                    rusqlite::Error::FromSqlConversionFailure(
+                        3,
+                        Type::Integer,
+                        anyhow!("qe_type: {:?}", e).into(),
+                    )
+                })?,
+                ra_quote: match row.get::<_, Option<String>>(4) {
                     Ok(None) => None,
-                    Ok(Some(avr)) => Some(IASSignedReport::from_json(&avr).map_err(|e| {
+                    Ok(Some(ra_quote)) => Some(RAQuote::from_json(&ra_quote).map_err(|e| {
                         rusqlite::Error::FromSqlConversionFailure(
-                            3,
+                            4,
                             Type::Text,
-                            anyhow!("ias_report: {:?}", e).into(),
+                            anyhow!("ra_quote: {:?}", e).into(),
                         )
                     })?),
                     Err(e) => return Err(e),
@@ -123,15 +135,20 @@ impl EnclaveKeyManager {
     }
 
     /// Save a sealed enclave key
-    pub fn save(&self, sealed_ek: SealedEnclaveKey, report: sgx_report_t) -> Result<(), Error> {
+    pub fn save(
+        &self,
+        sealed_ek: SealedEnclaveKey,
+        report: sgx_report_t,
+        qe_type: QEType,
+    ) -> Result<(), Error> {
         let conn = self
             .conn
             .lock()
             .map_err(|e| Error::mutex_lock(e.to_string()))?;
         let mut stmt = conn.prepare(
             r#"
-            INSERT INTO enclave_keys(ek_address, ek_sealed, mrenclave, report)
-            VALUES (?1, ?2, ?3, ?4)
+            INSERT INTO enclave_keys(ek_address, ek_sealed, mrenclave, report, qe_type)
+            VALUES (?1, ?2, ?3, ?4, ?5)
             "#,
         )?;
         let rd = ReportData::from(report.body.report_data);
@@ -140,73 +157,72 @@ impl EnclaveKeyManager {
             sealed_ek.to_vec(),
             Mrenclave::from(report.body.mr_enclave).to_hex_string(),
             serialize_bytes(&report),
+            qe_type.as_u32()
         ])?;
         Ok(())
     }
 
     /// Update the attestation verification report for the enclave key
-    pub fn save_verifiable_quote(
-        &self,
-        address: Address,
-        vquote: VerifiableQuote,
-    ) -> Result<(), Error> {
-        let conn = self
-            .conn
-            .lock()
-            .map_err(|e| Error::mutex_lock(e.to_string()))?;
-
-        match vquote {
-            VerifiableQuote::IAS(ias_report) => {
-                let mut stmt = conn.prepare(
-                    r#"
-                    UPDATE enclave_keys
-                    SET ias_report = ?1, attested_at = ?2
-                    WHERE ek_address = ?3
-                    "#,
-                )?;
-                stmt.execute(params![
-                    ias_report.to_json()?,
-                    ias_report
-                        .get_avr()?
-                        .attestation_time()?
-                        .as_unix_timestamp_secs(),
-                    address.to_hex_string()
-                ])?;
-            }
-            VerifiableQuote::DCAP(dcap_quote) => {
-                let mut stmt = conn.prepare(
-                    r#"
-                    UPDATE enclave_keys
-                    SET dcap_quote = ?1, attested_at = ?2
-                    WHERE ek_address = ?3
-                    "#,
-                )?;
-                stmt.execute(params![
-                    dcap_quote.to_json()?,
-                    dcap_quote.attested_at.as_unix_timestamp_secs(),
-                    address.to_hex_string()
-                ])?;
-            }
-        }
-        Ok(())
-    }
-
-    /// Returns a list of available enclave keys
-    pub fn available_keys(&self, mrenclave: Mrenclave) -> Result<Vec<SealedEnclaveKeyInfo>, Error> {
+    pub fn save_ra_quote(&self, address: Address, ra_quote: RAQuote) -> Result<(), Error> {
         let conn = self
             .conn
             .lock()
             .map_err(|e| Error::mutex_lock(e.to_string()))?;
         let mut stmt = conn.prepare(
             r#"
-            SELECT ek_address, ek_sealed, mrenclave, report, ias_report
-            FROM enclave_keys
-            WHERE attested_at IS NOT NULL AND mrenclave = ?1
-            ORDER BY attested_at DESC
+            UPDATE enclave_keys
+            SET ra_type = ?1, ra_quote = ?2, attested_at = ?3
+            WHERE ek_address = ?4
             "#,
         )?;
+        stmt.execute(params![
+            ra_quote.ra_type().as_u32(),
+            ra_quote.to_json()?,
+            ra_quote.attested_at()?.as_unix_timestamp_secs(),
+            address.to_hex_string()
+        ])?;
+        Ok(())
+    }
+
+    /// Returns a list of available enclave keys
+    pub fn available_keys(
+        &self,
+        mrenclave: Mrenclave,
+        ra_type: Option<RAType>,
+    ) -> Result<Vec<SealedEnclaveKeyInfo>, Error> {
+        let conn = self
+            .conn
+            .lock()
+            .map_err(|e| Error::mutex_lock(e.to_string()))?;
+
+        let (mut stmt, params) = if let Some(ra_type) = ra_type {
+            (
+                conn.prepare(
+                    r#"
+                SELECT ek_address, ek_sealed, mrenclave, report, qe_type, ra_quote
+                FROM enclave_keys
+                WHERE attested_at IS NOT NULL AND mrenclave = ?1 AND ra_type = ?2
+                ORDER BY attested_at DESC
+                "#,
+                )?,
+                params![mrenclave.to_hex_string(), ra_type.as_u32()],
+            )
+        } else {
+            (
+                conn.prepare(
+                    r#"
+                SELECT ek_address, ek_sealed, mrenclave, report, qe_type, ra_quote
+                FROM enclave_keys
+                WHERE attested_at IS NOT NULL AND mrenclave = ?1
+                ORDER BY attested_at DESC
+                "#,
+                )?,
+                params![mrenclave.to_hex_string()],
+            )
+        };
+
         let key_infos = stmt
-            .query_map(params![mrenclave.to_hex_string()], |row| {
+            .query_map(params, |row| {
                 Ok(SealedEnclaveKeyInfo {
                     address: Address::from_hex_string(&row.get::<_, String>(0)?).map_err(|e| {
                         rusqlite::Error::FromSqlConversionFailure(
@@ -241,15 +257,24 @@ impl EnclaveKeyManager {
                             anyhow!("report: {:?}", e).into(),
                         )
                     })?,
-                    ias_report: Some(
-                        IASSignedReport::from_json(&row.get::<_, String>(4)?).map_err(|e| {
+                    qe_type: QEType::from_u32(row.get::<_, i64>(4)? as u32).map_err(|e| {
+                        rusqlite::Error::FromSqlConversionFailure(
+                            4,
+                            Type::Integer,
+                            anyhow!("qe_type: {:?}", e).into(),
+                        )
+                    })?,
+                    ra_quote: match row.get::<_, Option<String>>(5) {
+                        Ok(None) => None,
+                        Ok(Some(ra_quote)) => Some(RAQuote::from_json(&ra_quote).map_err(|e| {
                             rusqlite::Error::FromSqlConversionFailure(
-                                4,
+                                5,
                                 Type::Text,
-                                anyhow!("ias_report: {:?}", e).into(),
+                                anyhow!("ra_quote: {:?}", e).into(),
                             )
-                        })?,
-                    ),
+                        })?),
+                        Err(e) => return Err(e),
+                    },
                 })
             })?
             .collect::<Result<Vec<_>, _>>()?;
@@ -264,7 +289,7 @@ impl EnclaveKeyManager {
             .map_err(|e| Error::mutex_lock(e.to_string()))?;
         let mut stmt = conn.prepare(
             r#"
-            SELECT ek_address, ek_sealed, mrenclave, report, ias_report
+            SELECT ek_address, ek_sealed, mrenclave, report, qe_type, ra_quote
             FROM enclave_keys
             ORDER BY updated_at DESC
             "#,
@@ -305,13 +330,20 @@ impl EnclaveKeyManager {
                             anyhow!("report: {:?}", e).into(),
                         )
                     })?,
-                    ias_report: match row.get::<_, Option<String>>(4) {
+                    qe_type: QEType::from_u32(row.get::<_, i64>(4)? as u32).map_err(|e| {
+                        rusqlite::Error::FromSqlConversionFailure(
+                            4,
+                            Type::Integer,
+                            anyhow!("qe_type: {:?}", e).into(),
+                        )
+                    })?,
+                    ra_quote: match row.get::<_, Option<String>>(5) {
                         Ok(None) => None,
-                        Ok(Some(avr)) => Some(IASSignedReport::from_json(&avr).map_err(|e| {
+                        Ok(Some(avr)) => Some(RAQuote::from_json(&avr).map_err(|e| {
                             rusqlite::Error::FromSqlConversionFailure(
-                                4,
+                                5,
                                 Type::Text,
-                                anyhow!("ias_report: {:?}", e).into(),
+                                anyhow!("ra_quote: {:?}", e).into(),
                             )
                         })?),
                         Err(e) => return Err(e),
@@ -343,31 +375,83 @@ pub struct SealedEnclaveKeyInfo {
     pub mrenclave: Mrenclave,
     #[serde_as(as = "BytesTransmuter<sgx_report_t>")]
     pub report: sgx_report_t,
-    pub ias_report: Option<IASSignedReport>,
+    pub qe_type: QEType,
+    pub ra_quote: Option<RAQuote>,
 }
 
 impl TryFrom<SealedEnclaveKeyInfo> for ProtoEnclaveKeyInfo {
     type Error = Error;
     fn try_from(value: SealedEnclaveKeyInfo) -> Result<Self, Self::Error> {
-        let ias_report = value
-            .ias_report
-            .ok_or_else(|| Error::unattested_enclave_key(format!("address={}", value.address)))?;
-        let attestation_time = ias_report.get_avr()?.parse_quote()?.attestation_time;
-        Ok(Self {
-            enclave_key_address: value.address.into(),
-            attestation_time: attestation_time.as_unix_timestamp_secs(),
-            report: ias_report.avr,
-            signature: ias_report.signature,
-            signing_cert: ias_report.signing_cert,
-            extension: Default::default(),
-        })
+        match value.ra_quote {
+            Some(RAQuote::IAS(report)) => {
+                let attestation_time = report
+                    .get_avr()?
+                    .attestation_time()?
+                    .as_unix_timestamp_secs();
+                Ok(ProtoEnclaveKeyInfo {
+                    key_info: Some(enclave_key_info::KeyInfo::Ias(IasEnclaveKeyInfo {
+                        enclave_key_address: value.address.into(),
+                        attestation_time,
+                        report: report.avr,
+                        signature: report.signature,
+                        signing_cert: report.signing_cert,
+                    })),
+                })
+            }
+            Some(RAQuote::DCAP(dcap)) => {
+                let attestation_time = dcap.attested_at.as_unix_timestamp_secs();
+                Ok(ProtoEnclaveKeyInfo {
+                    key_info: Some(enclave_key_info::KeyInfo::Dcap(DcapEnclaveKeyInfo {
+                        enclave_key_address: value.address.into(),
+                        quote: dcap.raw,
+                        fmspc: dcap.fmspc.to_vec(),
+                        attestation_time,
+                        tcb_status: dcap.tcb_status,
+                        advisory_ids: dcap.advisory_ids,
+                        collateral: Some(dcap.collateral),
+                    })),
+                })
+            }
+            Some(RAQuote::ZKDCAP(zkquote)) => {
+                let attestation_time = zkquote.dcap_quote.attested_at.as_unix_timestamp_secs();
+                let dcap = zkquote.dcap_quote;
+                Ok(ProtoEnclaveKeyInfo {
+                    key_info: Some(enclave_key_info::KeyInfo::Zkdcap(ZkdcapEncalveKeyInfo {
+                        dcap: Some(DcapEnclaveKeyInfo {
+                            enclave_key_address: value.address.into(),
+                            quote: dcap.raw,
+                            fmspc: dcap.fmspc.to_vec(),
+                            attestation_time,
+                            tcb_status: dcap.tcb_status,
+                            advisory_ids: dcap.advisory_ids,
+                            collateral: Some(dcap.collateral),
+                        }),
+                        zkp: Some(ZkvmProof {
+                            proof: Some(match zkquote.zkp {
+                                attestation_report::ZKVMProof::Risc0(proof) => {
+                                    zkvm_proof::Proof::Risc0(Risc0ZkvmProof {
+                                        image_id: proof.image_id.to_vec(),
+                                        seal: proof.seal,
+                                        commit: proof.commit,
+                                    })
+                                }
+                            }),
+                        }),
+                    })),
+                })
+            }
+            None => Err(Error::unattested_enclave_key(format!(
+                "address={}",
+                value.address
+            ))),
+        }
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use attestation_report::IASAttestationVerificationReport;
+    use attestation_report::{IASAttestationVerificationReport, IASSignedReport};
     use chrono::{DateTime, Duration, Utc};
     use rand::RngCore;
 
@@ -380,16 +464,25 @@ mod tests {
             let report = create_report(mrenclave, address);
             let sealed_ek = create_sealed_sk();
             assert_eq!(km.all_keys().unwrap().len(), 0);
-            km.save(sealed_ek, report).unwrap();
-            assert!(km.load(address).unwrap().ias_report.is_none());
+            km.save(sealed_ek, report, QEType::IAS).unwrap();
+            assert!(km.load(address).unwrap().ra_quote.is_none());
             assert_eq!(km.all_keys().unwrap().len(), 1);
-            assert_eq!(km.available_keys(mrenclave).unwrap().len(), 0);
+            assert_eq!(
+                km.available_keys(mrenclave, Some(RAType::IAS))
+                    .unwrap()
+                    .len(),
+                0
+            );
             let ias_report = create_ias_report(get_time(Duration::zero()));
-            km.save_verifiable_quote(address, ias_report.into())
-                .unwrap();
-            assert!(km.load(address).unwrap().ias_report.is_some());
+            km.save_ra_quote(address, ias_report.into()).unwrap();
+            assert!(km.load(address).unwrap().ra_quote.is_some());
             assert_eq!(km.all_keys().unwrap().len(), 1);
-            assert_eq!(km.available_keys(mrenclave).unwrap().len(), 1);
+            assert_eq!(
+                km.available_keys(mrenclave, Some(RAType::IAS))
+                    .unwrap()
+                    .len(),
+                1
+            );
             address
         };
         {
@@ -397,29 +490,60 @@ mod tests {
             let report = create_report(mrenclave, address);
             let sealed_ek = create_sealed_sk();
             assert_eq!(km.all_keys().unwrap().len(), 1);
-            km.save(sealed_ek, report).unwrap();
-            assert!(km.load(address).unwrap().ias_report.is_none());
+            km.save(sealed_ek, report, QEType::IAS).unwrap();
+            assert!(km.load(address).unwrap().ra_quote.is_none());
             assert_eq!(km.all_keys().unwrap().len(), 2);
-            assert_eq!(km.available_keys(mrenclave).unwrap().len(), 1);
+            assert_eq!(
+                km.available_keys(mrenclave, Some(RAType::IAS))
+                    .unwrap()
+                    .len(),
+                1
+            );
             let ias_report = create_ias_report(get_time(Duration::minutes(1)));
-            km.save_verifiable_quote(address, ias_report.into())
-                .unwrap();
-            assert!(km.load(address).unwrap().ias_report.is_some());
+            km.save_ra_quote(address, ias_report.into()).unwrap();
+            assert!(km.load(address).unwrap().ra_quote.is_some());
             assert_eq!(km.all_keys().unwrap().len(), 2);
-            assert_eq!(km.available_keys(mrenclave).unwrap().len(), 2);
+            assert_eq!(
+                km.available_keys(mrenclave, Some(RAType::IAS))
+                    .unwrap()
+                    .len(),
+                2
+            );
         }
         // there are no keys available for the mrenclave
-        assert_eq!(km.available_keys(create_mrenclave()).unwrap().len(), 0);
+        assert_eq!(
+            km.available_keys(create_mrenclave(), Some(RAType::IAS))
+                .unwrap()
+                .len(),
+            0
+        );
         assert_eq!(km.prune(30).unwrap(), 1);
         assert_eq!(km.all_keys().unwrap().len(), 1);
         assert_eq!(
-            km.available_keys(mrenclave)
+            km.available_keys(mrenclave, Some(RAType::IAS))
                 .unwrap()
                 .first()
                 .unwrap()
                 .address,
             address_0
         );
+    }
+
+    #[test]
+    fn test_key_info_conversion() {
+        let km = EnclaveKeyManager::new_in_memory().unwrap();
+        let mrenclave = create_mrenclave();
+        let sealed_ek = create_sealed_sk();
+        let address = create_address();
+        let report = create_report(mrenclave, address);
+        km.save(sealed_ek, report, QEType::IAS).unwrap();
+        let key_info = km.load(address).unwrap();
+        assert!(ProtoEnclaveKeyInfo::try_from(key_info).is_err());
+        let ias_report = create_ias_report(get_time(Duration::minutes(1)));
+        km.save_ra_quote(address, ias_report.into()).unwrap();
+        let key_info = km.load(address).unwrap();
+        let res = ProtoEnclaveKeyInfo::try_from(key_info);
+        assert!(res.is_ok(), "{:?}", res);
     }
 
     fn get_time(d: Duration) -> DateTime<Utc> {

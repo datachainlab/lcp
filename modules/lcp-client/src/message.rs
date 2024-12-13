@@ -1,27 +1,33 @@
+use crate::client_state::ZKVMType;
 use crate::errors::Error;
 use crate::prelude::*;
 use alloy_sol_types::{sol, SolValue};
 use attestation_report::IASSignedReport;
 use crypto::Address;
+use dcap_quote_verifier::types::VerifiedOutput;
 use light_client::commitments::{Error as CommitmentError, EthABIEncoder, ProxyMessage};
 use light_client::types::proto::ibc::lightclients::lcp::v1::{
     RegisterEnclaveKeyMessage as RawRegisterEnclaveKeyMessage,
     UpdateClientMessage as RawUpdateClientMessage,
     UpdateOperatorsMessage as RawUpdateOperatorsMessage,
+    ZkdcapRegisterEnclaveKeyMessage as RawZKDCAPRegisterEnclaveKeyMessage,
 };
 use light_client::types::{proto::protobuf::Protobuf, Any};
 use serde::{Deserialize, Serialize};
 
 pub const LCP_REGISTER_ENCLAVE_KEY_MESSAGE_TYPE_URL: &str =
     "/ibc.lightclients.lcp.v1.RegisterEnclaveKeyMessage";
+pub const LCP_ZKDCAP_REGISTER_ENCLAVE_KEY_MESSAGE_TYPE_URL: &str =
+    "/ibc.lightclients.lcp.v1.ZKDCAPRegisterEnclaveKeyMessage";
 pub const LCP_UPDATE_CLIENT_MESSAGE_TYPE_URL: &str = "/ibc.lightclients.lcp.v1.UpdateClientMessage";
 pub const LCP_UPDATE_OPERATORS_MESSAGE_TYPE_URL: &str =
     "/ibc.lightclients.lcp.v1.UpdateOperatorsMessage";
 
 #[allow(clippy::large_enum_variant)]
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum ClientMessage {
     RegisterEnclaveKey(RegisterEnclaveKeyMessage),
+    ZKDCAPRegisterEnclaveKey(ZKDCAPRegisterEnclaveKeyMessage),
     UpdateClient(UpdateClientMessage),
     UpdateOperators(UpdateOperatorsMessage),
 }
@@ -52,6 +58,10 @@ impl From<ClientMessage> for Any {
         match value {
             ClientMessage::RegisterEnclaveKey(h) => Any::new(
                 LCP_REGISTER_ENCLAVE_KEY_MESSAGE_TYPE_URL.to_string(),
+                h.encode_vec().unwrap(),
+            ),
+            ClientMessage::ZKDCAPRegisterEnclaveKey(h) => Any::new(
+                LCP_ZKDCAP_REGISTER_ENCLAVE_KEY_MESSAGE_TYPE_URL.to_string(),
                 h.encode_vec().unwrap(),
             ),
             ClientMessage::UpdateClient(h) => Any::new(
@@ -95,6 +105,43 @@ impl From<RegisterEnclaveKeyMessage> for RawRegisterEnclaveKeyMessage {
             report: value.report.avr.into_bytes(),
             signature: value.report.signature,
             signing_cert: value.report.signing_cert,
+            operator_signature: value.operator_signature.unwrap_or_default(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ZKDCAPRegisterEnclaveKeyMessage {
+    pub zkvm_type: ZKVMType,
+    pub commit: VerifiedOutput,
+    pub proof: Vec<u8>,
+    pub operator_signature: Option<Vec<u8>>,
+}
+
+impl Protobuf<RawZKDCAPRegisterEnclaveKeyMessage> for ZKDCAPRegisterEnclaveKeyMessage {}
+
+impl TryFrom<RawZKDCAPRegisterEnclaveKeyMessage> for ZKDCAPRegisterEnclaveKeyMessage {
+    type Error = Error;
+    fn try_from(value: RawZKDCAPRegisterEnclaveKeyMessage) -> Result<Self, Self::Error> {
+        Ok(ZKDCAPRegisterEnclaveKeyMessage {
+            zkvm_type: ZKVMType::from_u8(
+                u8::try_from(value.zkvm_type).map_err(Error::zk_vm_type_conversion)?,
+            )?,
+            commit: VerifiedOutput::from_bytes(&value.commit)
+                .map_err(Error::dcap_quote_verifier)?,
+            proof: value.proof,
+            operator_signature: (!value.operator_signature.is_empty())
+                .then_some(value.operator_signature),
+        })
+    }
+}
+
+impl From<ZKDCAPRegisterEnclaveKeyMessage> for RawZKDCAPRegisterEnclaveKeyMessage {
+    fn from(value: ZKDCAPRegisterEnclaveKeyMessage) -> Self {
+        RawZKDCAPRegisterEnclaveKeyMessage {
+            zkvm_type: value.zkvm_type as u32,
+            commit: value.commit.to_bytes(),
+            proof: value.proof,
             operator_signature: value.operator_signature.unwrap_or_default(),
         }
     }

@@ -4,6 +4,8 @@
 pub struct QueryAvailableEnclaveKeysRequest {
     #[prost(bytes = "vec", tag = "1")]
     pub mrenclave: ::prost::alloc::vec::Vec<u8>,
+    #[prost(uint32, tag = "2")]
+    pub ra_type: u32,
 }
 #[derive(::serde::Serialize, ::serde::Deserialize)]
 #[allow(clippy::derive_partial_eq_without_eq)]
@@ -16,18 +18,110 @@ pub struct QueryAvailableEnclaveKeysResponse {
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct EnclaveKeyInfo {
+    #[prost(oneof = "enclave_key_info::KeyInfo", tags = "1, 2, 3")]
+    pub key_info: ::core::option::Option<enclave_key_info::KeyInfo>,
+}
+/// Nested message and enum types in `EnclaveKeyInfo`.
+pub mod enclave_key_info {
+    #[derive(::serde::Serialize, ::serde::Deserialize)]
+    #[allow(clippy::derive_partial_eq_without_eq)]
+    #[derive(Clone, PartialEq, ::prost::Oneof)]
+    pub enum KeyInfo {
+        #[prost(message, tag = "1")]
+        Ias(super::IasEnclaveKeyInfo),
+        #[prost(message, tag = "2")]
+        Dcap(super::DcapEnclaveKeyInfo),
+        #[prost(message, tag = "3")]
+        Zkdcap(super::ZkdcapEncalveKeyInfo),
+    }
+}
+#[derive(::serde::Serialize, ::serde::Deserialize)]
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct IasEnclaveKeyInfo {
     #[prost(bytes = "vec", tag = "1")]
     pub enclave_key_address: ::prost::alloc::vec::Vec<u8>,
-    #[prost(uint64, tag = "2")]
-    pub attestation_time: u64,
-    #[prost(string, tag = "3")]
+    #[prost(string, tag = "2")]
     pub report: ::prost::alloc::string::String,
+    #[prost(uint64, tag = "3")]
+    pub attestation_time: u64,
     #[prost(bytes = "vec", tag = "4")]
     pub signature: ::prost::alloc::vec::Vec<u8>,
     #[prost(bytes = "vec", tag = "5")]
     pub signing_cert: ::prost::alloc::vec::Vec<u8>,
+}
+#[derive(::serde::Serialize, ::serde::Deserialize)]
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct DcapEnclaveKeyInfo {
+    #[prost(bytes = "vec", tag = "1")]
+    pub enclave_key_address: ::prost::alloc::vec::Vec<u8>,
+    #[prost(bytes = "vec", tag = "2")]
+    pub quote: ::prost::alloc::vec::Vec<u8>,
+    #[prost(bytes = "vec", tag = "3")]
+    pub fmspc: ::prost::alloc::vec::Vec<u8>,
+    #[prost(uint64, tag = "4")]
+    pub attestation_time: u64,
+    #[prost(string, tag = "5")]
+    pub tcb_status: ::prost::alloc::string::String,
+    #[prost(string, repeated, tag = "6")]
+    pub advisory_ids: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
+    #[prost(message, optional, tag = "7")]
+    pub collateral: ::core::option::Option<DcapCollateral>,
+}
+#[derive(::serde::Serialize, ::serde::Deserialize)]
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct ZkdcapEncalveKeyInfo {
+    #[prost(message, optional, tag = "1")]
+    pub dcap: ::core::option::Option<DcapEnclaveKeyInfo>,
+    #[prost(message, optional, tag = "2")]
+    pub zkp: ::core::option::Option<ZkvmProof>,
+}
+#[derive(::serde::Serialize, ::serde::Deserialize)]
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct ZkvmProof {
+    #[prost(oneof = "zkvm_proof::Proof", tags = "1")]
+    pub proof: ::core::option::Option<zkvm_proof::Proof>,
+}
+/// Nested message and enum types in `ZKVMProof`.
+pub mod zkvm_proof {
+    #[derive(::serde::Serialize, ::serde::Deserialize)]
+    #[allow(clippy::derive_partial_eq_without_eq)]
+    #[derive(Clone, PartialEq, ::prost::Oneof)]
+    pub enum Proof {
+        #[prost(message, tag = "1")]
+        Risc0(super::Risc0ZkvmProof),
+    }
+}
+#[derive(::serde::Serialize, ::serde::Deserialize)]
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct Risc0ZkvmProof {
+    #[prost(bytes = "vec", tag = "1")]
+    pub image_id: ::prost::alloc::vec::Vec<u8>,
+    #[prost(bytes = "vec", tag = "2")]
+    pub seal: ::prost::alloc::vec::Vec<u8>,
+    #[prost(bytes = "vec", tag = "3")]
+    pub commit: ::prost::alloc::vec::Vec<u8>,
+}
+#[derive(::serde::Serialize, ::serde::Deserialize)]
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct DcapCollateral {
+    #[prost(bytes = "vec", tag = "1")]
+    pub tcbinfo_bytes: ::prost::alloc::vec::Vec<u8>,
+    #[prost(bytes = "vec", tag = "2")]
+    pub qeidentity_bytes: ::prost::alloc::vec::Vec<u8>,
+    #[prost(bytes = "vec", tag = "3")]
+    pub sgx_intel_root_ca_der: ::prost::alloc::vec::Vec<u8>,
+    #[prost(bytes = "vec", tag = "4")]
+    pub sgx_tcb_signing_der: ::prost::alloc::vec::Vec<u8>,
+    #[prost(bytes = "vec", tag = "5")]
+    pub sgx_intel_root_ca_crl_der: ::prost::alloc::vec::Vec<u8>,
     #[prost(bytes = "vec", tag = "6")]
-    pub extension: ::prost::alloc::vec::Vec<u8>,
+    pub sgx_pck_crl_der: ::prost::alloc::vec::Vec<u8>,
 }
 #[derive(::serde::Serialize, ::serde::Deserialize)]
 #[allow(clippy::derive_partial_eq_without_eq)]

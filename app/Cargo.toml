@@ -26,12 +26,17 @@ ecall-commands = { path = "../modules/ecall-commands" }
 crypto = { path = "../modules/crypto" }
 keymanager = { path = "../modules/keymanager" }
 remote-attestation = { path = "../modules/remote-attestation" }
+attestation-report = { path = "../modules/attestation-report" }
+zkdcap-risc0 = { git = "https://github.com/datachainlab/zkdcap", rev = "ff53632f49d2d8b00c9bcc456aeeeb139bacca9f" }
 
 [build-dependencies]
 git2 = "0.19"
 
 [features]
 default = []
+cuda = [
+    "remote-attestation/cuda"
+]
 sgx-sw = [
     "remote-attestation/sgx-sw"
 ]

@@ -1,4 +1,5 @@
 use crate::prelude::*;
+use crate::serde_base64;
 use crate::{errors::Error, Quote};
 use base64::{engine::general_purpose::STANDARD as Base64Std, Engine};
 use chrono::prelude::DateTime;
@@ -40,14 +41,6 @@ pub struct IASSignedReport {
 impl IASSignedReport {
     pub fn get_avr(&self) -> Result<IASAttestationVerificationReport, Error> {
         serde_json::from_slice(self.avr.as_ref()).map_err(Error::serde_json)
-    }
-
-    pub fn to_json(&self) -> Result<String, Error> {
-        serde_json::to_string(self).map_err(Error::serde_json)
-    }
-
-    pub fn from_json(json: &str) -> Result<Self, Error> {
-        serde_json::from_str(json).map_err(Error::serde_json)
     }
 }
 
@@ -170,21 +163,4 @@ pub fn verify_ias_report(current_timestamp: Time, report: &IASSignedReport) -> R
         .map_err(|e| Error::web_pki(e.to_string()))?;
 
     Ok(())
-}
-
-mod serde_base64 {
-    use super::*;
-    use serde::{Deserialize, Deserializer, Serialize, Serializer};
-
-    pub fn serialize<S: Serializer>(v: &Vec<u8>, s: S) -> Result<S::Ok, S::Error> {
-        let base64 = Base64Std.encode(v);
-        String::serialize(&base64, s)
-    }
-
-    pub fn deserialize<'de, D: Deserializer<'de>>(d: D) -> Result<Vec<u8>, D::Error> {
-        let base64 = String::deserialize(d)?;
-        Base64Std
-            .decode(base64.as_bytes())
-            .map_err(serde::de::Error::custom)
-    }
 }

@@ -66,6 +66,26 @@ define_error! {
         [TraceError<httparse::Error>]
         |_| { "HttpParseError" },
 
+        Reqwest
+        [TraceError<reqwest::Error>]
+        |_| { "Reqwest error" },
+
+        ReqwestGet
+        [TraceError<reqwest::Error>]
+        |_| { "Reqwest get error" },
+
+        InvalidHttpStatus {
+            url: String,
+            status: reqwest::StatusCode,
+        }
+        |e| {
+            format_args!("InvalidHTTPStatus: url={} status={}", e.url, e.status)
+        },
+
+        Pem
+        [TraceError<pem::PemError>]
+        |_| { "Pem error" },
+
         HttpParsePartialStatus
         |_| { "HttpParsePartialStatus" },
 
@@ -153,6 +173,10 @@ define_error! {
         [lcp_types::TimeError]
         |_| { "Time error" },
 
+        Zkvm
+        [zkvm::Error]
+        |_| { "Zkvm error" },
+
         WebPki
         {
             descr: String
@@ -160,6 +184,18 @@ define_error! {
         |e| {
             format_args!("WebPKI error: descr={}", e.descr)
         },
+
+        Collateral
+        {
+            descr: String
+        }
+        |e| {
+            format_args!("Collateral: descr={}", e.descr)
+        },
+
+        DcapQuoteVerifier
+        [TraceError<dcap_quote_verifier::Error>]
+        |_| { "DCAP quote verifier error" },
     }
 }
 
@@ -172,5 +208,11 @@ impl From<attestation_report::Error> for Error {
 impl From<lcp_types::TimeError> for Error {
     fn from(e: lcp_types::TimeError) -> Self {
         Error::time(e)
+    }
+}
+
+impl From<reqwest::Error> for Error {
+    fn from(e: reqwest::Error) -> Self {
+        Error::reqwest(e)
     }
 }

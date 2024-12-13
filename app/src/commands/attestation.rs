@@ -7,7 +7,9 @@ use clap::Parser;
 use crypto::Address;
 use enclave_api::{Enclave, EnclaveCommandAPI, EnclaveProtoAPI};
 use host::store::transaction::CommitStore;
-use remote_attestation::{dcap, ias, IASMode};
+use remote_attestation::zkvm::prover::{BonsaiProverOptions, Risc0ProverMode};
+use remote_attestation::{dcap, ias, zkdcap, IASMode};
+use std::{path::PathBuf, str::FromStr};
 
 /// `attestation` subcommand
 #[allow(clippy::upper_case_acronyms)]
@@ -17,8 +19,10 @@ pub enum AttestationCmd {
     IAS(IASRemoteAttestation),
     #[clap(display_order = 2, about = "Remote Attestation with DCAP")]
     DCAP(DCAPRemoteAttestation),
+    #[clap(display_order = 3, about = "Remote Attestation with zkDCAP")]
+    ZKDCAP(ZKDCAPRemoteAttestation),
     #[cfg(feature = "sgx-sw")]
-    #[clap(display_order = 3, about = "Simulate Remote Attestation")]
+    #[clap(display_order = 4, about = "Simulate Remote Attestation")]
     Simulate(SimulateRemoteAttestation),
 }
 
@@ -39,6 +43,10 @@ impl AttestationCmd {
                 cmd,
             ),
             AttestationCmd::DCAP(cmd) => run_dcap_remote_attestation(
+                enclave_loader.load(opts, cmd.enclave.path.as_ref(), cmd.enclave.is_debug())?,
+                cmd,
+            ),
+            AttestationCmd::ZKDCAP(cmd) => run_zkdcap_remote_attestation(
                 enclave_loader.load(opts, cmd.enclave.path.as_ref(), cmd.enclave.is_debug())?,
                 cmd,
             ),
@@ -230,6 +238,91 @@ fn run_dcap_remote_attestation<E: EnclaveCommandAPI<S>, S: CommitStore>(
     dcap::run_dcap_ra(
         enclave.get_key_manager(),
         Address::from_hex_string(&cmd.enclave_key)?,
+    )?;
+    Ok(())
+}
+
+#[derive(Clone, Debug, Parser, PartialEq)]
+pub struct ZKDCAPRemoteAttestation {
+    /// Options for enclave
+    #[clap(flatten)]
+    pub enclave: EnclaveOpts,
+    /// An enclave key attested by Remote Attestation
+    #[clap(
+        long = "enclave_key",
+        help = "An enclave key attested by Remote Attestation"
+    )]
+    pub enclave_key: String,
+    #[clap(long = "program_path", help = "Path to the zkVM guest program")]
+    pub program_path: Option<PathBuf>,
+    #[clap(
+        long = "prove_mode",
+        default_value = "local",
+        help = "Prove mode (dev or local or bonsai)"
+    )]
+    pub prove_mode: ProveMode,
+    #[clap(long = "bonsai_api_url", help = "Bonsai API URL")]
+    pub bonsai_api_url: Option<String>,
+    #[clap(long = "bonsai_api_key", help = "Bonsai API key")]
+    pub bonsai_api_key: Option<String>,
+}
+
+impl ZKDCAPRemoteAttestation {
+    pub fn get_zkvm_program(&self) -> Result<Vec<u8>> {
+        match &self.program_path {
+            Some(path) => std::fs::read(path).map_err(|e| {
+                anyhow!(
+                    "failed to read zk program: path={} error={}",
+                    path.to_string_lossy(),
+                    e
+                )
+            }),
+            None => Ok(zkdcap_risc0::DCAP_QUOTE_VERIFIER_ELF.to_vec()),
+        }
+    }
+
+    pub fn get_bonsai_prover_options(&self) -> Result<BonsaiProverOptions> {
+        Ok(BonsaiProverOptions {
+            api_url: self.bonsai_api_url.clone(),
+            api_key: self.bonsai_api_key.clone(),
+        })
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum ProveMode {
+    Dev,
+    Local,
+    Bonsai,
+}
+
+impl FromStr for ProveMode {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "dev" => Ok(Self::Dev),
+            "local" => Ok(Self::Local),
+            "bonsai" => Ok(Self::Bonsai),
+            _ => Err(anyhow!("invalid prove mode: {}", s)),
+        }
+    }
+}
+
+fn run_zkdcap_remote_attestation<E: EnclaveCommandAPI<S>, S: CommitStore>(
+    enclave: E,
+    cmd: &ZKDCAPRemoteAttestation,
+) -> Result<()> {
+    let mode = match cmd.prove_mode {
+        ProveMode::Dev => Risc0ProverMode::Dev,
+        ProveMode::Local => Risc0ProverMode::Local,
+        ProveMode::Bonsai => Risc0ProverMode::Bonsai(cmd.get_bonsai_prover_options()?),
+    };
+    zkdcap::run_zkdcap_ra(
+        enclave.get_key_manager(),
+        Address::from_hex_string(&cmd.enclave_key)?,
+        mode,
+        cmd.get_zkvm_program()?.as_ref(),
     )?;
     Ok(())
 }

@@ -81,19 +81,25 @@ mod tests {
 
         let (target_info, _) = remote_attestation::init_quote(false)?;
         let operator = Address::from_hex_string("0x396e1ccc2f11cd6d2114c2449dad7751357e413e")?;
-        let op_ek_addr = match enclave.generate_enclave_key(GenerateEnclaveKeyInput {
-            operator: Some(operator),
-            target_info,
-        }) {
+        let op_ek_addr = match enclave.generate_enclave_key(
+            GenerateEnclaveKeyInput {
+                operator: Some(operator),
+                target_info,
+            },
+            false,
+        ) {
             Ok(res) => res.pub_key.as_address(),
             Err(e) => {
                 bail!("failed to generate an enclave key: {:?}!", e);
             }
         };
-        let ek_addr = match enclave.generate_enclave_key(GenerateEnclaveKeyInput {
-            operator: None,
-            target_info,
-        }) {
+        let ek_addr = match enclave.generate_enclave_key(
+            GenerateEnclaveKeyInput {
+                operator: None,
+                target_info,
+            },
+            false,
+        ) {
             Ok(res) => res.pub_key.as_address(),
             Err(e) => {
                 bail!("failed to generate an enclave key: {:?}!", e);
@@ -214,10 +220,13 @@ mod tests {
     ) -> Result<(), anyhow::Error> {
         let operator = Address::from_hex_string("0x396e1ccc2f11cd6d2114c2449dad7751357e413e")?;
         let (target_info, _) = remote_attestation::init_quote(false)?;
-        let signer = match enclave.generate_enclave_key(GenerateEnclaveKeyInput {
-            operator: Some(operator),
-            target_info,
-        }) {
+        let signer = match enclave.generate_enclave_key(
+            GenerateEnclaveKeyInput {
+                operator: Some(operator),
+                target_info,
+            },
+            false,
+        ) {
             Ok(res) => res.pub_key.as_address(),
             Err(e) => {
                 bail!("failed to generate an enclave key: {:?}!", e);
