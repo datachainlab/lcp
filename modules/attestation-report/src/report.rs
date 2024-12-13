@@ -3,11 +3,12 @@ use crate::{prelude::*, IASSignedReport};
 use core::fmt::{Debug, Display, Error as FmtError};
 use crypto::Address;
 use lcp_types::Time;
+use serde::{Deserialize, Serialize};
 use sgx_types::{metadata::metadata_t, sgx_measurement_t, sgx_quote_t, sgx_report_data_t};
 
 pub const REPORT_DATA_V1: u8 = 1;
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub enum VerifiableQuote {
     IAS(IASSignedReport),
     DCAP(DCAPQuote),

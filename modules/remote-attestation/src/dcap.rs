@@ -18,7 +18,6 @@ pub fn run_dcap_ra(
     let quote = rsgx_qe_get_quote(&ek_info.report).unwrap();
     println!("Successfully get the quote: {:?}", quote);
     let current_time = Time::now();
-    // libqvl_verify_quote(&quote, current_time)?;
     key_manager
         .save_verifiable_quote(
             target_enclave_key,

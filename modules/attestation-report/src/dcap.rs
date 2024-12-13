@@ -1,10 +1,12 @@
 use crate::prelude::*;
+use crate::serde_base64;
 use crate::Error;
 use lcp_types::Time;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct DCAPQuote {
+    #[serde(with = "serde_base64")]
     pub raw: Vec<u8>,
     pub attested_at: Time,
 }
@@ -19,5 +21,9 @@ impl DCAPQuote {
 
     pub fn to_json(&self) -> Result<String, Error> {
         serde_json::to_string(self).map_err(Error::serde_json)
+    }
+
+    pub fn from_json(json: &str) -> Result<Self, Error> {
+        serde_json::from_str(json).map_err(Error::serde_json)
     }
 }

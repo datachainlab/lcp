@@ -1,7 +1,7 @@
 pub mod errors;
 pub use crate::errors::Error;
 use anyhow::anyhow;
-use attestation_report::{IASSignedReport, ReportData, VerifiableQuote};
+use attestation_report::{DCAPQuote, IASSignedReport, ReportData, VerifiableQuote};
 use crypto::{Address, SealedEnclaveKey};
 use lcp_types::{
     deserialize_bytes, proto::lcp::service::enclave::v1::EnclaveKeyInfo as ProtoEnclaveKeyInfo,
@@ -76,7 +76,7 @@ impl EnclaveKeyManager {
             .map_err(|e| Error::mutex_lock(e.to_string()))?;
         let mut stmt = conn.prepare(
             r#"
-            SELECT ek_sealed, mrenclave, report, ias_report
+            SELECT ek_sealed, mrenclave, report, ias_report, dcap_quote
             FROM enclave_keys
             WHERE ek_address = ?1
             "#,
@@ -113,6 +113,17 @@ impl EnclaveKeyManager {
                             3,
                             Type::Text,
                             anyhow!("ias_report: {:?}", e).into(),
+                        )
+                    })?),
+                    Err(e) => return Err(e),
+                },
+                dcap_quote: match row.get::<_, Option<String>>(4) {
+                    Ok(None) => None,
+                    Ok(Some(dq)) => Some(DCAPQuote::from_json(&dq).map_err(|e| {
+                        rusqlite::Error::FromSqlConversionFailure(
+                            4,
+                            Type::Text,
+                            anyhow!("dcap_quote: {:?}", e).into(),
                         )
                     })?),
                     Err(e) => return Err(e),
@@ -199,7 +210,7 @@ impl EnclaveKeyManager {
             .map_err(|e| Error::mutex_lock(e.to_string()))?;
         let mut stmt = conn.prepare(
             r#"
-            SELECT ek_address, ek_sealed, mrenclave, report, ias_report
+            SELECT ek_address, ek_sealed, mrenclave, report, ias_report, dcap_quote
             FROM enclave_keys
             WHERE attested_at IS NOT NULL AND mrenclave = ?1
             ORDER BY attested_at DESC
@@ -250,6 +261,17 @@ impl EnclaveKeyManager {
                             )
                         })?,
                     ),
+                    dcap_quote: match row.get::<_, Option<String>>(5) {
+                        Ok(None) => None,
+                        Ok(Some(dq)) => Some(DCAPQuote::from_json(&dq).map_err(|e| {
+                            rusqlite::Error::FromSqlConversionFailure(
+                                5,
+                                Type::Text,
+                                anyhow!("dcap_quote: {:?}", e).into(),
+                            )
+                        })?),
+                        Err(e) => return Err(e),
+                    },
                 })
             })?
             .collect::<Result<Vec<_>, _>>()?;
@@ -264,7 +286,7 @@ impl EnclaveKeyManager {
             .map_err(|e| Error::mutex_lock(e.to_string()))?;
         let mut stmt = conn.prepare(
             r#"
-            SELECT ek_address, ek_sealed, mrenclave, report, ias_report
+            SELECT ek_address, ek_sealed, mrenclave, report, ias_report, dcap_quote
             FROM enclave_keys
             ORDER BY updated_at DESC
             "#,
@@ -316,6 +338,17 @@ impl EnclaveKeyManager {
                         })?),
                         Err(e) => return Err(e),
                     },
+                    dcap_quote: match row.get::<_, Option<String>>(5) {
+                        Ok(None) => None,
+                        Ok(Some(dq)) => Some(DCAPQuote::from_json(&dq).map_err(|e| {
+                            rusqlite::Error::FromSqlConversionFailure(
+                                5,
+                                Type::Text,
+                                anyhow!("dcap_quote: {:?}", e).into(),
+                            )
+                        })?),
+                        Err(e) => return Err(e),
+                    },
                 })
             })?
             .collect::<Result<Vec<_>, _>>()?;
@@ -344,6 +377,7 @@ pub struct SealedEnclaveKeyInfo {
     #[serde_as(as = "BytesTransmuter<sgx_report_t>")]
     pub report: sgx_report_t,
     pub ias_report: Option<IASSignedReport>,
+    pub dcap_quote: Option<DCAPQuote>,
 }
 
 impl TryFrom<SealedEnclaveKeyInfo> for ProtoEnclaveKeyInfo {
