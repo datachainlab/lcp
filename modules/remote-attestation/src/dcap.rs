@@ -6,12 +6,11 @@ use dcap_rs::types::quotes::version_3::QuoteV3;
 use dcap_rs::utils::cert::{extract_sgx_extension, parse_certchain, parse_pem};
 use keymanager::EnclaveKeyManager;
 use lcp_types::Time;
+use log::*;
 use sgx_types::{sgx_qe_get_quote, sgx_qe_get_quote_size, sgx_quote3_error_t, sgx_report_t};
 
 const INTEL_ROOT_CA: &'static [u8] =
     include_bytes!("../assets/Intel_SGX_Provisioning_Certification_RootCA.der");
-// TODO This is not root of trust, so we should get it via network
-const INTEL_ROOT_CA_CRL: &'static [u8] = include_bytes!("../assets/IntelSGXRootCA.der");
 
 pub fn run_dcap_ra(
     key_manager: &EnclaveKeyManager,
@@ -26,6 +25,7 @@ pub fn run_dcap_ra(
     let raw_quote = rsgx_qe_get_quote(&ek_info.report).unwrap();
     let quote = QuoteV3::from_bytes(&raw_quote);
     println!("Successfully get the quote: {:?}", quote);
+
     let current_time = Time::now();
     key_manager
         .save_verifiable_quote(
@@ -54,8 +54,9 @@ fn rsgx_qe_get_quote(app_report: &sgx_report_t) -> Result<Vec<u8>, sgx_quote3_er
     }
 }
 
-pub async fn get_collateral(pccs_url: &str, quote: &QuoteV3) -> IntelCollateral {
+async fn get_collateral(pccs_url: &str, quote: &QuoteV3) -> IntelCollateral {
     let base_url = format!("{}/sgx/certification/v4", pccs_url.trim_end_matches('/'));
+    info!("base_url: {}", base_url);
     assert_eq!(
         quote.signature.qe_cert_data.cert_data_type, 5,
         "QE Cert Type must be 5"
@@ -70,15 +71,9 @@ pub async fn get_collateral(pccs_url: &str, quote: &QuoteV3) -> IntelCollateral 
     let sgx_extensions = extract_sgx_extension(&pck_cert);
     let fmspc = hex::encode_upper(sgx_extensions.fmspc);
 
-    let builder = reqwest::Client::builder();
-    let client = builder.build().unwrap();
-
+    let client = reqwest::Client::new();
     let mut collateral = IntelCollateral::new();
     {
-        println!(
-            "Getting TCB info from {}",
-            format!("{base_url}/tcb?fmspc={fmspc}")
-        );
         let res = client
             .get(format!("{base_url}/tcb?fmspc={fmspc}"))
             .send()
@@ -94,20 +89,25 @@ pub async fn get_collateral(pccs_url: &str, quote: &QuoteV3) -> IntelCollateral 
         collateral.set_tcbinfo_bytes(res.bytes().await.unwrap().as_ref());
     }
 
-    // let qe_identity_issuer_chain;
     {
-        let response = client
+        let res = client
             .get(format!("{base_url}/qe/identity"))
             .send()
             .await
             .unwrap();
-        // qe_identity_issuer_chain = get_header(&response, "SGX-Enclave-Identity-Issuer-Chain").unwrap();
-        let raw_qe_identity = response.text().await.unwrap();
-        collateral.set_qeidentity_bytes(raw_qe_identity.as_bytes());
+        collateral.set_qeidentity_bytes(res.bytes().await.unwrap().as_ref());
     }
     collateral.set_intel_root_ca_der(INTEL_ROOT_CA);
 
-    collateral.set_sgx_intel_root_ca_crl_der(INTEL_ROOT_CA_CRL);
+    {
+        let res = client
+            .get("https://certificates.trustedservices.intel.com/IntelSGXRootCA.der")
+            .send()
+            .await
+            .unwrap();
+        let crl = res.bytes().await.unwrap();
+        collateral.set_sgx_intel_root_ca_crl_der(&crl);
+    }
 
     {
         let res = client
@@ -115,8 +115,7 @@ pub async fn get_collateral(pccs_url: &str, quote: &QuoteV3) -> IntelCollateral 
             .send()
             .await
             .unwrap();
-        let crl = res.bytes().await.unwrap();
-        collateral.set_sgx_processor_crl_der(&crl);
+        collateral.set_sgx_processor_crl_der(res.bytes().await.unwrap().as_ref());
     }
     {
         let res = client
@@ -124,8 +123,7 @@ pub async fn get_collateral(pccs_url: &str, quote: &QuoteV3) -> IntelCollateral 
             .send()
             .await
             .unwrap();
-        let crl = res.bytes().await.unwrap();
-        collateral.set_sgx_platform_crl_der(&crl);
+        collateral.set_sgx_platform_crl_der(res.bytes().await.unwrap().as_ref());
     }
 
     collateral
