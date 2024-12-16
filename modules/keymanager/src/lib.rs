@@ -252,15 +252,17 @@ impl EnclaveKeyManager {
                             anyhow!("report: {:?}", e).into(),
                         )
                     })?,
-                    ias_report: Some(
-                        IASSignedReport::from_json(&row.get::<_, String>(4)?).map_err(|e| {
+                    ias_report: match row.get::<_, Option<String>>(4) {
+                        Ok(None) => None,
+                        Ok(Some(avr)) => Some(IASSignedReport::from_json(&avr).map_err(|e| {
                             rusqlite::Error::FromSqlConversionFailure(
                                 4,
                                 Type::Text,
                                 anyhow!("ias_report: {:?}", e).into(),
                             )
-                        })?,
-                    ),
+                        })?),
+                        Err(e) => return Err(e),
+                    },
                     dcap_quote: match row.get::<_, Option<String>>(5) {
                         Ok(None) => None,
                         Ok(Some(dq)) => Some(DCAPQuote::from_json(&dq).map_err(|e| {
