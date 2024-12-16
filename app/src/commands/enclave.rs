@@ -142,10 +142,10 @@ fn run_list_keys<E: EnclaveCommandAPI<S>, S: CommitStore>(
                 "type": "dcap",
                 "address": eki.address.to_hex_string(),
                 "attested": true,
-                "report_data": dcap_quote.report_data().to_string(),
-                "isv_enclave_quote_status": dcap_quote.tcb_status.to_string(),
+                "report_data": dcap_quote.report_data()?.to_string(),
+                "isv_enclave_quote_status": dcap_quote.tcb_status,
                 "advisory_ids": dcap_quote.advisory_ids,
-                "attested_at": dcap_quote.attested_at,
+                "attested_at": dcap_quote.attested_at.to_string(),
             }});
         } else {
             list_json.push(json! {{

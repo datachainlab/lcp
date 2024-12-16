@@ -1,7 +1,6 @@
 use crate::prelude::*;
 use crate::serde_base64;
 use crate::Error;
-use crate::ReportData;
 use lcp_types::Time;
 use serde::{Deserialize, Serialize};
 
@@ -9,55 +8,9 @@ use serde::{Deserialize, Serialize};
 pub struct DCAPQuote {
     #[serde(with = "serde_base64")]
     pub raw: Vec<u8>,
-    pub tcb_status: TcbStatus,
+    pub tcb_status: String,
     pub advisory_ids: Option<Vec<String>>,
     pub attested_at: Time,
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub enum TcbStatus {
-    OK,
-    TcbSwHardeningNeeded,
-    TcbConfigurationAndSwHardeningNeeded,
-    TcbConfigurationNeeded,
-    TcbOutOfDate,
-    TcbOutOfDateConfigurationNeeded,
-    TcbRevoked,
-    TcbUnrecognized,
-}
-
-impl TcbStatus {
-    pub fn from_str(s: &str) -> Self {
-        return match s {
-            "UpToDate" => TcbStatus::OK,
-            "SWHardeningNeeded" => TcbStatus::TcbSwHardeningNeeded,
-            "ConfigurationAndSWHardeningNeeded" => TcbStatus::TcbConfigurationAndSwHardeningNeeded,
-            "ConfigurationNeeded" => TcbStatus::TcbConfigurationNeeded,
-            "OutOfDate" => TcbStatus::TcbOutOfDate,
-            "OutOfDateConfigurationNeeded" => TcbStatus::TcbOutOfDateConfigurationNeeded,
-            "Revoked" => TcbStatus::TcbRevoked,
-            _ => TcbStatus::TcbUnrecognized,
-        };
-    }
-}
-
-impl ToString for TcbStatus {
-    fn to_string(&self) -> String {
-        return match self {
-            TcbStatus::OK => "UpToDate".to_string(),
-            TcbStatus::TcbSwHardeningNeeded => "SWHardeningNeeded".to_string(),
-            TcbStatus::TcbConfigurationAndSwHardeningNeeded => {
-                "ConfigurationAndSWHardeningNeeded".to_string()
-            }
-            TcbStatus::TcbConfigurationNeeded => "ConfigurationNeeded".to_string(),
-            TcbStatus::TcbOutOfDate => "OutOfDate".to_string(),
-            TcbStatus::TcbOutOfDateConfigurationNeeded => {
-                "OutOfDateConfigurationNeeded".to_string()
-            }
-            TcbStatus::TcbRevoked => "Revoked".to_string(),
-            TcbStatus::TcbUnrecognized => "Unrecognized".to_string(),
-        };
-    }
 }
 
 impl DCAPQuote {
@@ -69,7 +22,7 @@ impl DCAPQuote {
     ) -> Self {
         DCAPQuote {
             raw: raw_quote,
-            tcb_status: TcbStatus::from_str(&tcb_status),
+            tcb_status,
             advisory_ids,
             attested_at,
         }
@@ -84,9 +37,9 @@ impl DCAPQuote {
     }
 
     #[cfg(feature = "std")]
-    pub fn report_data(&self) -> ReportData {
+    pub fn report_data(&self) -> Result<crate::ReportData, Error> {
         use dcap_rs::types::quotes::version_3::QuoteV3;
         let quote = QuoteV3::from_bytes(&self.raw);
-        ReportData(quote.isv_enclave_report.report_data)
+        Ok(crate::ReportData(quote.isv_enclave_report.report_data))
     }
 }
