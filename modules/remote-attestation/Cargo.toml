@@ -32,9 +32,6 @@ crypto = { path = "../crypto", default-features = false }
 attestation-report = { path = "../attestation-report" }
 keymanager = { path = "../keymanager" }
 
-[dev-dependencies]
-tokio = { version = "1", features = ["macros"] }
-
 [features]
 default = []
 sgx-sw = ["rsa", "chrono"]

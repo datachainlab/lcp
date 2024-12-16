@@ -1,15 +1,18 @@
+use std::time::SystemTime;
+
 use crate::errors::Error;
 use attestation_report::DCAPQuote;
 use crypto::Address;
 use dcap_rs::types::collaterals::IntelCollateral;
 use dcap_rs::types::quotes::version_3::QuoteV3;
 use dcap_rs::utils::cert::{extract_sgx_extension, parse_certchain, parse_pem};
+use dcap_rs::utils::quotes::version_3::verify_quote_dcapv3;
 use keymanager::EnclaveKeyManager;
 use lcp_types::Time;
 use log::*;
 use sgx_types::{sgx_qe_get_quote, sgx_qe_get_quote_size, sgx_quote3_error_t, sgx_report_t};
 
-const INTEL_ROOT_CA: &'static [u8] =
+const INTEL_ROOT_CA: &[u8] =
     include_bytes!("../assets/Intel_SGX_Provisioning_Certification_RootCA.der");
 
 pub fn run_dcap_ra(
@@ -23,8 +26,24 @@ pub fn run_dcap_ra(
         )
     })?;
     let raw_quote = rsgx_qe_get_quote(&ek_info.report).unwrap();
+    info!("Successfully get the quote: {}", hex::encode(&raw_quote));
+
     let quote = QuoteV3::from_bytes(&raw_quote);
-    println!("Successfully get the quote: {:?}", quote);
+
+    let collateral = get_collateral(
+        "https://api.trustedservices.intel.com/",
+        "https://certificates.trustedservices.intel.com/",
+        &quote,
+    );
+    let output = verify_quote_dcapv3(
+        &quote,
+        &collateral,
+        SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .unwrap()
+            .as_secs(),
+    );
+    info!("DCAP RA output: {:?}", output);
 
     let current_time = Time::now();
     key_manager
@@ -54,7 +73,7 @@ fn rsgx_qe_get_quote(app_report: &sgx_report_t) -> Result<Vec<u8>, sgx_quote3_er
     }
 }
 
-async fn get_collateral(pccs_url: &str, quote: &QuoteV3) -> IntelCollateral {
+fn get_collateral(pccs_url: &str, certs_service_url: &str, quote: &QuoteV3) -> IntelCollateral {
     let base_url = format!("{}/sgx/certification/v4", pccs_url.trim_end_matches('/'));
     info!("base_url: {}", base_url);
     assert_eq!(
@@ -63,22 +82,18 @@ async fn get_collateral(pccs_url: &str, quote: &QuoteV3) -> IntelCollateral {
     );
     let certchain_pems = parse_pem(&quote.signature.qe_cert_data.cert_data).unwrap();
     let certchain = parse_certchain(&certchain_pems);
+    assert_eq!(certchain.len(), 3, "QE Cert chain must have 3 certs");
 
     // get the pck certificate, and check whether issuer common name is valid
     let pck_cert = &certchain[0];
 
     // get the SGX extension
-    let sgx_extensions = extract_sgx_extension(&pck_cert);
+    let sgx_extensions = extract_sgx_extension(pck_cert);
     let fmspc = hex::encode_upper(sgx_extensions.fmspc);
 
-    let client = reqwest::Client::new();
     let mut collateral = IntelCollateral::new();
     {
-        let res = client
-            .get(format!("{base_url}/tcb?fmspc={fmspc}"))
-            .send()
-            .await
-            .unwrap();
+        let res = reqwest::blocking::get(format!("{base_url}/tcb?fmspc={fmspc}")).unwrap();
         let issuer_chain = extract_raw_certs(
             get_header(&res, "TCB-Info-Issuer-Chain")
                 .unwrap()
@@ -86,50 +101,39 @@ async fn get_collateral(pccs_url: &str, quote: &QuoteV3) -> IntelCollateral {
         )
         .unwrap();
         collateral.set_sgx_tcb_signing_der(&issuer_chain[0]);
-        collateral.set_tcbinfo_bytes(res.bytes().await.unwrap().as_ref());
+        collateral.set_tcbinfo_bytes(res.bytes().unwrap().as_ref());
     }
 
     {
-        let res = client
-            .get(format!("{base_url}/qe/identity"))
-            .send()
-            .await
-            .unwrap();
-        collateral.set_qeidentity_bytes(res.bytes().await.unwrap().as_ref());
+        let res = reqwest::blocking::get(format!("{base_url}/qe/identity")).unwrap();
+        collateral.set_qeidentity_bytes(res.bytes().unwrap().as_ref());
     }
     collateral.set_intel_root_ca_der(INTEL_ROOT_CA);
 
     {
-        let res = client
-            .get("https://certificates.trustedservices.intel.com/IntelSGXRootCA.der")
-            .send()
-            .await
-            .unwrap();
-        let crl = res.bytes().await.unwrap();
-        collateral.set_sgx_intel_root_ca_crl_der(&crl);
+        let res = reqwest::blocking::get(format!(
+            "{}/IntelSGXRootCA.der",
+            certs_service_url.trim_end_matches('/')
+        ))
+        .unwrap();
+        collateral.set_sgx_intel_root_ca_crl_der(res.bytes().unwrap().as_ref());
     }
 
     {
-        let res = client
-            .get(format!("{base_url}/pckcrl?ca=processor&encoding=der"))
-            .send()
-            .await
-            .unwrap();
-        collateral.set_sgx_processor_crl_der(res.bytes().await.unwrap().as_ref());
+        let res =
+            reqwest::blocking::get(format!("{base_url}/pckcrl?ca=processor&encoding=der")).unwrap();
+        collateral.set_sgx_processor_crl_der(res.bytes().unwrap().as_ref());
     }
     {
-        let res = client
-            .get(format!("{base_url}/pckcrl?ca=platform&encoding=der"))
-            .send()
-            .await
-            .unwrap();
-        collateral.set_sgx_platform_crl_der(res.bytes().await.unwrap().as_ref());
+        let res =
+            reqwest::blocking::get(format!("{base_url}/pckcrl?ca=platform&encoding=der")).unwrap();
+        collateral.set_sgx_platform_crl_der(res.bytes().unwrap().as_ref());
     }
 
     collateral
 }
 
-fn get_header(res: &reqwest::Response, name: &str) -> Result<String, String> {
+fn get_header(res: &reqwest::blocking::Response, name: &str) -> Result<String, String> {
     let value = res
         .headers()
         .get(name)
@@ -151,22 +155,24 @@ fn extract_raw_certs(cert_chain: &[u8]) -> Result<Vec<Vec<u8>>, Error> {
 
 #[cfg(test)]
 mod tests {
-    use std::time::SystemTime;
-
-    use dcap_rs::utils::quotes::version_3::verify_quote_dcapv3;
-
     use super::*;
+    use dcap_rs::{constants::SGX_TEE_TYPE, utils::quotes::version_3::verify_quote_dcapv3};
+    use std::time::SystemTime;
 
     #[test]
     fn test_quote() {
         QuoteV3::from_bytes(&get_test_quote());
     }
 
-    #[tokio::test]
-    async fn test_dcap_collateral() {
+    #[test]
+    fn test_dcap_collateral() {
         let quote = get_test_quote();
         let quote = QuoteV3::from_bytes(&quote);
-        let collateral = get_collateral("https://api.trustedservices.intel.com/", &quote).await;
+        let collateral = get_collateral(
+            "https://api.trustedservices.intel.com/",
+            "https://certificates.trustedservices.intel.com/",
+            &quote,
+        );
         let output = verify_quote_dcapv3(
             &quote,
             &collateral,
@@ -175,7 +181,7 @@ mod tests {
                 .unwrap()
                 .as_secs(),
         );
-        println!("{:?}", output);
+        assert_eq!(output.tee_type, SGX_TEE_TYPE);
     }
 
     fn get_test_quote() -> Vec<u8> {
