@@ -38,7 +38,7 @@ impl From<DCAPQuote> for VerifiableQuote {
 /// ReportData is a 64-byte value that is embedded in the Quote
 /// | version: 1 byte | enclave key: 20 bytes | operator: 20 bytes | nonce: 22 bytes |
 #[derive(Debug, Clone, PartialEq)]
-pub struct ReportData([u8; 64]);
+pub struct ReportData(pub(crate) [u8; 64]);
 
 impl ReportData {
     /// Creates a new report data

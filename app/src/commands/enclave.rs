@@ -121,25 +121,37 @@ fn run_list_keys<E: EnclaveCommandAPI<S>, S: CommitStore>(
     };
     let mut list_json = Vec::new();
     for eki in list {
-        match eki.ias_report {
-            Some(ias_report) => {
-                let avr = ias_report.get_avr()?;
-                let report_data = avr.parse_quote()?.report_data();
-                list_json.push(json! {{
-                    "address": eki.address.to_hex_string(),
-                    "attested": true,
-                    "report_data": report_data.to_string(),
-                    "isv_enclave_quote_status": avr.isv_enclave_quote_status,
-                    "advisory_ids": avr.advisory_ids,
-                    "attested_at": avr.timestamp
-                }});
-            }
-            None => {
-                list_json.push(json! {{
-                    "address": eki.address.to_hex_string(),
-                    "attested": false,
-                }});
-            }
+        let ias_attested = eki.ias_report.is_some();
+        let dcap_attested = eki.dcap_quote.is_some();
+
+        if ias_attested {
+            let avr = eki.ias_report.as_ref().unwrap().get_avr()?;
+            let report_data = avr.parse_quote()?.report_data();
+            list_json.push(json! {{
+                "type": "ias",
+                "address": eki.address.to_hex_string(),
+                "attested": true,
+                "report_data": report_data.to_string(),
+                "isv_enclave_quote_status": avr.isv_enclave_quote_status,
+                "advisory_ids": avr.advisory_ids,
+                "attested_at": avr.timestamp
+            }});
+        } else if dcap_attested {
+            let dcap_quote = eki.dcap_quote.as_ref().unwrap();
+            list_json.push(json! {{
+                "type": "dcap",
+                "address": eki.address.to_hex_string(),
+                "attested": true,
+                "report_data": dcap_quote.report_data().to_string(),
+                "isv_enclave_quote_status": dcap_quote.tcb_status.to_string(),
+                "advisory_ids": dcap_quote.advisory_ids,
+                "attested_at": dcap_quote.attested_at,
+            }});
+        } else {
+            list_json.push(json! {{
+                "address": eki.address.to_hex_string(),
+                "attested": false,
+            }});
         }
     }
     println!("{}", serde_json::to_string(&list_json).unwrap());

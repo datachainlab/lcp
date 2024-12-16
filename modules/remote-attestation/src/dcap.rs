@@ -49,7 +49,13 @@ pub fn run_dcap_ra(
     key_manager
         .save_verifiable_quote(
             target_enclave_key,
-            DCAPQuote::new(raw_quote, current_time).into(),
+            DCAPQuote::new(
+                raw_quote,
+                output.tcb_status.to_string(),
+                output.advisory_ids,
+                current_time,
+            )
+            .into(),
         )
         .map_err(|e| {
             Error::key_manager(format!("cannot save DCAP AVR: {}", target_enclave_key), e)
@@ -89,10 +95,9 @@ fn get_collateral(pccs_url: &str, certs_service_url: &str, quote: &QuoteV3) -> I
 
     // get the SGX extension
     let sgx_extensions = extract_sgx_extension(pck_cert);
-    let fmspc = hex::encode_upper(sgx_extensions.fmspc);
-
     let mut collateral = IntelCollateral::new();
     {
+        let fmspc = hex::encode_upper(sgx_extensions.fmspc);
         let res = reqwest::blocking::get(format!("{base_url}/tcb?fmspc={fmspc}")).unwrap();
         let issuer_chain = extract_raw_certs(
             get_header(&res, "TCB-Info-Issuer-Chain")

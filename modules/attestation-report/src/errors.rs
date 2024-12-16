@@ -23,14 +23,6 @@ define_error! {
             format_args!("unexpected report data version: expected={} actual={}", e.expected, e.actual)
         },
 
-        InvalidReportDataSize
-        {
-            size: usize
-        }
-        |e| {
-            format_args!("invalid report data size: size must be >= 20, but got {}", e.size)
-        },
-
         MrenclaveMismatch
         {
             expected: Mrenclave,
