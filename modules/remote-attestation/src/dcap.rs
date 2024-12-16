@@ -47,7 +47,7 @@ pub fn run_dcap_ra(
 
     let current_time = Time::now();
     key_manager
-        .save_verifiable_quote(
+        .save_ra_quote(
             target_enclave_key,
             DCAPQuote::new(
                 raw_quote,

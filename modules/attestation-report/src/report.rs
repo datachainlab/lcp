@@ -9,29 +9,67 @@ use sgx_types::{metadata::metadata_t, sgx_measurement_t, sgx_quote_t, sgx_report
 pub const REPORT_DATA_V1: u8 = 1;
 
 #[derive(Debug, Serialize, Deserialize)]
-pub enum VerifiableQuote {
-    IAS(IASSignedReport),
-    DCAP(DCAPQuote),
+pub enum RAType {
+    IAS,
+    DCAP,
 }
 
-impl VerifiableQuote {
-    pub fn attested_at(&self) -> Result<Time, Error> {
+impl RAType {
+    pub fn as_u32(&self) -> u32 {
         match self {
-            VerifiableQuote::IAS(report) => report.get_avr()?.attestation_time(),
-            VerifiableQuote::DCAP(quote) => Ok(quote.attested_at),
+            Self::IAS => 1,
+            Self::DCAP => 2,
+        }
+    }
+    pub fn from_u32(v: u32) -> Result<Self, Error> {
+        match v {
+            1 => Ok(Self::IAS),
+            2 => Ok(Self::DCAP),
+            _ => Err(Error::invalid_ra_type(v)),
         }
     }
 }
 
-impl From<IASSignedReport> for VerifiableQuote {
-    fn from(report: IASSignedReport) -> Self {
-        VerifiableQuote::IAS(report)
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(tag = "type")]
+pub enum RAQuote {
+    IAS(IASSignedReport),
+    DCAP(DCAPQuote),
+}
+
+impl RAQuote {
+    pub fn ra_type(&self) -> RAType {
+        match self {
+            RAQuote::IAS(_) => RAType::IAS,
+            RAQuote::DCAP(_) => RAType::DCAP,
+        }
+    }
+
+    pub fn attested_at(&self) -> Result<Time, Error> {
+        match self {
+            RAQuote::IAS(report) => report.get_avr()?.attestation_time(),
+            RAQuote::DCAP(quote) => Ok(quote.attested_at),
+        }
+    }
+
+    pub fn from_json(json: &str) -> Result<Self, Error> {
+        serde_json::from_str(json).map_err(Error::serde_json)
+    }
+
+    pub fn to_json(&self) -> Result<String, Error> {
+        serde_json::to_string(self).map_err(Error::serde_json)
     }
 }
 
-impl From<DCAPQuote> for VerifiableQuote {
+impl From<IASSignedReport> for RAQuote {
+    fn from(report: IASSignedReport) -> Self {
+        RAQuote::IAS(report)
+    }
+}
+
+impl From<DCAPQuote> for RAQuote {
     fn from(quote: DCAPQuote) -> Self {
-        VerifiableQuote::DCAP(quote)
+        RAQuote::DCAP(quote)
     }
 }
 

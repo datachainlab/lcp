@@ -3431,6 +3431,7 @@ name = "lcp"
 version = "0.0.1"
 dependencies = [
  "anyhow",
+ "attestation-report",
  "clap 4.5.21",
  "crypto",
  "dirs",

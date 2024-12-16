@@ -23,6 +23,14 @@ define_error! {
             format_args!("unexpected report data version: expected={} actual={}", e.expected, e.actual)
         },
 
+        InvalidRaType
+        {
+            ra_type: u32
+        }
+        |e| {
+            format_args!("Invalid RA type: ra_type={}", e.ra_type)
+        },
+
         MrenclaveMismatch
         {
             expected: Mrenclave,

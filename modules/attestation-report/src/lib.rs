@@ -23,7 +23,7 @@ mod prelude {
 pub use dcap::DCAPQuote;
 pub use errors::Error;
 pub use ias::{verify_ias_report, IASAttestationVerificationReport, IASSignedReport};
-pub use report::{Quote, ReportData, VerifiableQuote};
+pub use report::{Quote, RAQuote, RAType, ReportData};
 
 pub(crate) mod serde_base64 {
     use crate::prelude::*;

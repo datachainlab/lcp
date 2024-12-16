@@ -42,14 +42,6 @@ impl IASSignedReport {
     pub fn get_avr(&self) -> Result<IASAttestationVerificationReport, Error> {
         serde_json::from_slice(self.avr.as_ref()).map_err(Error::serde_json)
     }
-
-    pub fn to_json(&self) -> Result<String, Error> {
-        serde_json::to_string(self).map_err(Error::serde_json)
-    }
-
-    pub fn from_json(json: &str) -> Result<Self, Error> {
-        serde_json::from_str(json).map_err(Error::serde_json)
-    }
 }
 
 // IASAttestationVerificationReport represents Intel's Attestation Verification Report
