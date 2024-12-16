@@ -56,7 +56,6 @@ fn rsgx_qe_get_quote(app_report: &sgx_report_t) -> Result<Vec<u8>, sgx_quote3_er
 
 pub async fn get_collateral(pccs_url: &str, quote: &QuoteV3) -> IntelCollateral {
     let base_url = format!("{}/sgx/certification/v4", pccs_url.trim_end_matches('/'));
-    let v3_base_url = format!("{}/sgx/certification/v3", pccs_url.trim_end_matches('/'));
     assert_eq!(
         quote.signature.qe_cert_data.cert_data_type, 5,
         "QE Cert Type must be 5"
@@ -66,7 +65,6 @@ pub async fn get_collateral(pccs_url: &str, quote: &QuoteV3) -> IntelCollateral 
 
     // get the pck certificate, and check whether issuer common name is valid
     let pck_cert = &certchain[0];
-    // let pck_cert_issuer = &certchain[1];
 
     // get the SGX extension
     let sgx_extensions = extract_sgx_extension(&pck_cert);
@@ -76,22 +74,24 @@ pub async fn get_collateral(pccs_url: &str, quote: &QuoteV3) -> IntelCollateral 
     let client = builder.build().unwrap();
 
     let mut collateral = IntelCollateral::new();
-    // used?
-    let tcb_info_issuer_chain;
-    let raw_tcb_info;
     {
         println!(
             "Getting TCB info from {}",
-            format!("{v3_base_url}/tcb?fmspc={fmspc}")
+            format!("{base_url}/tcb?fmspc={fmspc}")
         );
         let res = client
-            .get(format!("{v3_base_url}/tcb?fmspc={fmspc}"))
+            .get(format!("{base_url}/tcb?fmspc={fmspc}"))
             .send()
             .await
             .unwrap();
-        tcb_info_issuer_chain = get_header(&res, "SGX-TCB-Info-Issuer-Chain").unwrap();
-        raw_tcb_info = res.text().await.unwrap();
-        collateral.set_tcbinfo_bytes(raw_tcb_info.as_bytes());
+        let issuer_chain = extract_raw_certs(
+            get_header(&res, "TCB-Info-Issuer-Chain")
+                .unwrap()
+                .as_bytes(),
+        )
+        .unwrap();
+        collateral.set_sgx_tcb_signing_der(&issuer_chain[0]);
+        collateral.set_tcbinfo_bytes(res.bytes().await.unwrap().as_ref());
     }
 
     // let qe_identity_issuer_chain;
@@ -106,9 +106,6 @@ pub async fn get_collateral(pccs_url: &str, quote: &QuoteV3) -> IntelCollateral 
         collateral.set_qeidentity_bytes(raw_qe_identity.as_bytes());
     }
     collateral.set_intel_root_ca_der(INTEL_ROOT_CA);
-
-    let tcb_info_issuer_chain = extract_raw_certs(tcb_info_issuer_chain.as_bytes()).unwrap();
-    collateral.set_sgx_tcb_signing_der(&tcb_info_issuer_chain[0]);
 
     collateral.set_sgx_intel_root_ca_crl_der(INTEL_ROOT_CA_CRL);
 
@@ -134,8 +131,8 @@ pub async fn get_collateral(pccs_url: &str, quote: &QuoteV3) -> IntelCollateral 
     collateral
 }
 
-fn get_header(resposne: &reqwest::Response, name: &str) -> Result<String, String> {
-    let value = resposne
+fn get_header(res: &reqwest::Response, name: &str) -> Result<String, String> {
+    let value = res
         .headers()
         .get(name)
         .ok_or(format!("Missing {name}"))?
