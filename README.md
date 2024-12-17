@@ -4,8 +4,6 @@
   <img alt="LCP" src="./.github/logo.png" />
 </div>
 
-**This software is still under heavy active development.**
-
 LCP is a proxy for light client verification executed in TEE.
 
 LCP uses Intel SGX, a representative TEE implementation, to provide light clients implemented in enclave. It also provides an on-chain client(called LCP Client) that verifies commitments indicating the results of verification by the light clients. In addition, LCP Client is compatible with [ICS-02](https://github.com/cosmos/ibc/tree/main/spec/core/ics-002-client-semantics), so LCP can be integrated with [IBC](https://github.com/cosmos/ibc).
@@ -26,6 +24,10 @@ For the details, please see here: https://docs.lcp.network
 - [Ethereum](https://github.com/datachainlab/ethereum-elc)
 - [BNB Smart Chain](https://github.com/datachainlab/parlia-elc)
 - [Hyperledger Besu](https://github.com/datachainlab/besu-qbft-elc)
+
+## Security Audit
+
+Both lcp and [lcp-solidity](https://github.com/datachainlab/lcp-solidity) have been audited by Quantstamp, Inc. The audit report can be found on [the Quantstamp's website](https://certificate.quantstamp.com/full/datachain-lc-ps/4c1873cd-919f-4191-89c8-59d03d7fdcb8/index.html) or in [this directory](./docs/audit).
 
 ## Related repositories
 
