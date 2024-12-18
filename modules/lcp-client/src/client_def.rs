@@ -1,4 +1,4 @@
-use crate::client_state::ClientState;
+use crate::client_state::{ClientState, ZKDCAPVerifierInfo};
 use crate::consensus_state::ConsensusState;
 use crate::errors::Error;
 use crate::message::{
@@ -229,6 +229,8 @@ impl LCPClient {
         client_state: ClientState,
         message: ZKDCAPRegisterEnclaveKeyMessage,
     ) -> Result<(), Error> {
+        assert!(client_state.zkdcap_verifier_info.is_some());
+
         assert!(!client_state.frozen);
 
         // TODO
@@ -245,7 +247,11 @@ impl LCPClient {
 
         let operator = if let Some(operator_signature) = message.operator_signature {
             verify_signature_address(
-                compute_eip712_zkdcap_register_enclave_key(message.commit.hash()).as_ref(),
+                compute_eip712_zkdcap_register_enclave_key(
+                    client_state.zkdcap_verifier_info.unwrap(),
+                    message.commit.hash(),
+                )
+                .as_ref(),
                 operator_signature.as_ref(),
             )?
         } else {
@@ -505,11 +511,17 @@ pub fn compute_eip712_register_enclave_key_hash(avr: &str) -> [u8; 32] {
     keccak256(&compute_eip712_register_enclave_key(avr))
 }
 
-pub fn compute_eip712_zkdcap_register_enclave_key(commit_hash: [u8; 32]) -> Vec<u8> {
-    // 0x1901 | DOMAIN_SEPARATOR_ZKDCAP_REGISTER_ENCLAVE_KEY | keccak256(keccak256("ZKDCAPRegisterEnclaveKey(bytes32 commit_hash)") | commit_hash)
+pub fn compute_eip712_zkdcap_register_enclave_key(
+    zkdcap_verifier_info: ZKDCAPVerifierInfo,
+    commit_hash: [u8; 32],
+) -> Vec<u8> {
+    // 0x1901 | DOMAIN_SEPARATOR_ZKDCAP_REGISTER_ENCLAVE_KEY | keccak256(keccak256("ZKDCAPRegisterEnclaveKey(bytes zkdcapVerifierInfo,bytes32 commitHash)") | keccak256(zkdcap_verifier_info) | commit_hash)
     let type_hash = {
         let mut h = Keccak::v256();
-        h.update(&keccak256(b"ZKDCAPRegisterEnclaveKey(bytes32 commit_hash)"));
+        h.update(&keccak256(
+            b"ZKDCAPRegisterEnclaveKey(bytes zkdcapVerifierInfo,bytes32 commitHash)",
+        ));
+        h.update(&keccak256(zkdcap_verifier_info.to_bytes().as_ref()));
         h.update(&commit_hash);
         let mut result = [0u8; 32];
         h.finalize(result.as_mut());

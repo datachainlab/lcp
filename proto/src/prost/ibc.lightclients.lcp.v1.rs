@@ -69,8 +69,16 @@ pub struct ClientState {
     pub operators_threshold_numerator: u64,
     #[prost(uint64, tag = "10")]
     pub operators_threshold_denominator: u64,
+    /// An optional field to store the verifier info for zkDCAP
+    ///
+    /// if empty, the zkDCAP is not enabled
+    /// otherwise, the zkDCAP is enabled
+    /// the bytes layout is the following:
+    /// 0: zkVM type (e.g. 1 for risc0)
+    /// 1-31: reserved
+    /// 32-64: guest program identifier
     #[prost(bytes = "vec", tag = "11")]
-    pub zkdcap_risc0_image_id: ::prost::alloc::vec::Vec<u8>,
+    pub zkdcap_verifier_info: ::prost::alloc::vec::Vec<u8>,
 }
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]

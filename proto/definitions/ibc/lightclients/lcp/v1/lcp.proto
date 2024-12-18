@@ -46,7 +46,15 @@ message ClientState {
   uint64 operators_nonce = 8;
   uint64 operators_threshold_numerator = 9;
   uint64 operators_threshold_denominator = 10;
-  bytes zkdcap_risc0_image_id = 11;
+  // An optional field to store the verifier info for zkDCAP
+  //
+  // if empty, the zkDCAP is not enabled
+  // otherwise, the zkDCAP is enabled
+  // the bytes layout is the following:
+  // 0: zkVM type (e.g. 1 for risc0)
+  // 1-31: reserved
+  // 32-64: guest program identifier
+  bytes zkdcap_verifier_info = 11;
 }
 
 message ConsensusState {

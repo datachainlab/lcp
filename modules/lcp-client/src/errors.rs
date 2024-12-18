@@ -41,11 +41,11 @@ define_error! {
             format_args!("Mrenclave mismatch: expected={:?} actual={:?}", e.expected, e.actual)
         },
 
-        InvalidZkdcapRisc0ImageId {
-            image_id: Vec<u8>
+        InvalidZkdcapVerifierInfo {
+            bytes: Vec<u8>
         }
         |e| {
-            format_args!("Invalid zkdcap_risc0_image_id: image_id={:?}", e.image_id)
+            format_args!("Invalid zkdcap_verifier_info: bytes={:?}", e.bytes)
         },
 
         AttestationReport
