@@ -20,6 +20,16 @@ pub struct RegisterEnclaveKeyMessage {
 }
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
+pub struct ZkdcapRegisterEnclaveKeyMessage {
+    #[prost(bytes = "vec", tag = "1")]
+    pub commit: ::prost::alloc::vec::Vec<u8>,
+    #[prost(bytes = "vec", tag = "2")]
+    pub proof: ::prost::alloc::vec::Vec<u8>,
+    #[prost(bytes = "vec", tag = "3")]
+    pub operator_signature: ::prost::alloc::vec::Vec<u8>,
+}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct UpdateOperatorsMessage {
     #[prost(uint64, tag = "1")]
     pub nonce: u64,

@@ -24,5 +24,6 @@ mod prelude {
 pub mod client_def;
 pub mod client_state;
 pub mod consensus_state;
+pub mod dcap;
 pub mod errors;
 pub mod message;
