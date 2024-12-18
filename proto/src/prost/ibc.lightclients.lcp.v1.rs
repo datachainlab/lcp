@@ -69,6 +69,8 @@ pub struct ClientState {
     pub operators_threshold_numerator: u64,
     #[prost(uint64, tag = "10")]
     pub operators_threshold_denominator: u64,
+    #[prost(bytes = "vec", tag = "11")]
+    pub zkdcap_risc0_image_id: ::prost::alloc::vec::Vec<u8>,
 }
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]

@@ -46,6 +46,7 @@ message ClientState {
   uint64 operators_nonce = 8;
   uint64 operators_threshold_numerator = 9;
   uint64 operators_threshold_denominator = 10;
+  bytes zkdcap_risc0_image_id = 11;
 }
 
 message ConsensusState {
