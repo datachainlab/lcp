@@ -3,6 +3,7 @@ use crate::{
     opts::{EnclaveOpts, Opts},
 };
 use anyhow::{anyhow, Result};
+use attestation_report::RAQuote;
 use clap::Parser;
 use crypto::Address;
 use ecall_commands::GenerateEnclaveKeyInput;
@@ -67,7 +68,8 @@ pub struct GenerateKey {
     hain"
     )]
     pub operator: Option<String>,
-    // TODO add target qe option
+    #[clap(long = "target_qe3", help = "Create a report for QE3 instead of QE")]
+    pub target_qe3: bool,
 }
 
 impl GenerateKey {
@@ -84,12 +86,15 @@ fn run_generate_key<E: EnclaveCommandAPI<S>, S: CommitStore>(
     enclave: E,
     input: &GenerateKey,
 ) -> Result<()> {
-    let (target_info, _) = remote_attestation::init_quote()?;
+    let (target_info, _) = remote_attestation::init_quote(input.target_qe3)?;
     let res = enclave
-        .generate_enclave_key(GenerateEnclaveKeyInput {
-            target_info,
-            operator: input.get_operator()?,
-        })
+        .generate_enclave_key(
+            GenerateEnclaveKeyInput {
+                target_info,
+                operator: input.get_operator()?,
+            },
+            input.target_qe3,
+        )
         .map_err(|e| anyhow!("failed to generate an enclave key: {:?}", e))?;
     println!("{}", res.pub_key.as_address());
     Ok(())
@@ -120,17 +125,29 @@ fn run_list_keys<E: EnclaveCommandAPI<S>, S: CommitStore>(
     };
     let mut list_json = Vec::new();
     for eki in list {
-        match eki.signed_avr {
-            Some(signed_avr) => {
-                let avr = signed_avr.get_avr()?;
+        match eki.ra_quote {
+            Some(RAQuote::IAS(report)) => {
+                let avr = report.get_avr()?;
                 let report_data = avr.parse_quote()?.report_data();
                 list_json.push(json! {{
+                    "type": "ias",
                     "address": eki.address.to_hex_string(),
                     "attested": true,
                     "report_data": report_data.to_string(),
                     "isv_enclave_quote_status": avr.isv_enclave_quote_status,
                     "advisory_ids": avr.advisory_ids,
                     "attested_at": avr.timestamp
+                }});
+            }
+            Some(RAQuote::DCAP(quote)) => {
+                list_json.push(json! {{
+                    "type": "dcap",
+                    "address": eki.address.to_hex_string(),
+                    "attested": true,
+                    "report_data": quote.report_data()?.to_string(),
+                    "isv_enclave_quote_status": quote.tcb_status,
+                    "advisory_ids": quote.advisory_ids,
+                    "attested_at": quote.attested_at.to_string(),
                 }});
             }
             None => {

@@ -20,12 +20,24 @@ message QueryAvailableEnclaveKeysResponse {
 }
 
 message EnclaveKeyInfo {
+  oneof key_info {
+    IASEnclaveKeyInfo ias = 1;
+    DCAPEnclaveKeyInfo dcap = 2;
+  }
+}
+
+message IASEnclaveKeyInfo {
   bytes enclave_key_address = 1;
-  uint64 attestation_time = 2;
-  string report = 3;
+  string report = 2;
+  uint64 attestation_time = 3;
   bytes signature = 4;
   bytes signing_cert = 5;
-  bytes extension = 6;
+}
+
+message DCAPEnclaveKeyInfo {
+  bytes enclave_key_address = 1;
+  bytes quote = 2;
+  uint64 attestation_time = 3;
 }
 
 message QueryEnclaveKeyRequest {

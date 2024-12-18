@@ -1,4 +1,5 @@
 use crate::{EnclavePrimitiveAPI, Result};
+use attestation_report::RAType;
 use ecall_commands::{
     AggregateMessagesInput, AggregateMessagesResponse, Command, CommandResponse,
     EnclaveManageCommand, EnclaveManageResponse, GenerateEnclaveKeyInput,
@@ -14,6 +15,7 @@ pub trait EnclaveCommandAPI<S: CommitStore>: EnclavePrimitiveAPI<S> {
     fn generate_enclave_key(
         &self,
         input: GenerateEnclaveKeyInput,
+        is_target_qe3: bool,
     ) -> Result<GenerateEnclaveKeyResponse> {
         let res = match self.execute_command(
             Command::EnclaveManage(EnclaveManageCommand::GenerateEnclaveKey(input)),
@@ -22,8 +24,15 @@ pub trait EnclaveCommandAPI<S: CommitStore>: EnclavePrimitiveAPI<S> {
             CommandResponse::EnclaveManage(EnclaveManageResponse::GenerateEnclaveKey(res)) => res,
             _ => unreachable!(),
         };
-        self.get_key_manager()
-            .save(res.sealed_ek.clone(), res.report)?;
+        self.get_key_manager().save(
+            res.sealed_ek.clone(),
+            res.report,
+            if is_target_qe3 {
+                RAType::DCAP
+            } else {
+                RAType::IAS
+            },
+        )?;
         Ok(res)
     }
 

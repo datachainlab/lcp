@@ -19,6 +19,12 @@ message RegisterEnclaveKeyMessage {
   bytes operator_signature = 4;
 }
 
+message ZKDCAPRegisterEnclaveKeyMessage {
+  bytes commit = 1;
+  bytes proof = 2;
+  bytes operator_signature = 3;
+}
+
 message UpdateOperatorsMessage {
   uint64 nonce = 1;
   repeated bytes new_operators = 2;

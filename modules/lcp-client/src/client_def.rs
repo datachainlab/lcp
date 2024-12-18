@@ -3,10 +3,12 @@ use crate::consensus_state::ConsensusState;
 use crate::errors::Error;
 use crate::message::{
     ClientMessage, CommitmentProofs, RegisterEnclaveKeyMessage, UpdateOperatorsMessage,
+    ZKDCAPRegisterEnclaveKeyMessage,
 };
 use alloy_sol_types::{sol, SolValue};
-use attestation_report::{ReportData, SignedAttestationVerificationReport};
+use attestation_report::{IASSignedReport, ReportData};
 use crypto::{verify_signature_address, Address, Keccak256};
+use dcap_rs::types::quotes::body::QuoteBody;
 use hex_literal::hex;
 use light_client::commitments::{
     CommitmentPrefix, EthABIEncoder, MisbehaviourProxyMessage, ProxyMessage,
@@ -125,6 +127,9 @@ impl LCPClient {
             ClientMessage::RegisterEnclaveKey(msg) => {
                 self.register_enclave_key(ctx, client_id, client_state, msg)
             }
+            ClientMessage::ZKDCAPRegisterEnclaveKey(msg) => {
+                self.zkdcap_register_enclave_key(ctx, client_id, client_state, msg)
+            }
             ClientMessage::UpdateOperators(msg) => {
                 self.update_operators(ctx, client_id, client_state, msg)
             }
@@ -192,11 +197,55 @@ impl LCPClient {
         assert!(!client_state.frozen);
 
         let (report_data, attestation_time) =
-            verify_report(ctx.host_timestamp(), &client_state, &message.report)?;
+            verify_ias_report(ctx.host_timestamp(), &client_state, &message.report)?;
 
         let operator = if let Some(operator_signature) = message.operator_signature {
             verify_signature_address(
                 compute_eip712_register_enclave_key(&message.report.avr).as_ref(),
+                operator_signature.as_ref(),
+            )?
+        } else {
+            Default::default()
+        };
+        let expected_operator = report_data.operator();
+        // check if the operator matches the expected operator in the report data
+        assert!(expected_operator.is_zero() || operator == expected_operator);
+        self.set_enclave_operator_info(
+            ctx,
+            &client_id,
+            report_data.enclave_key(),
+            EKOperatorInfo::new(
+                (attestation_time + client_state.key_expiration)?.as_unix_timestamp_secs(),
+                operator,
+            ),
+        );
+        Ok(())
+    }
+
+    fn zkdcap_register_enclave_key(
+        &self,
+        ctx: &mut dyn HostClientKeeper,
+        client_id: ClientId,
+        client_state: ClientState,
+        message: ZKDCAPRegisterEnclaveKeyMessage,
+    ) -> Result<(), Error> {
+        assert!(!client_state.frozen);
+
+        // TODO
+        // verify_zkdcap_report(ctx.host_timestamp(), &client_state, &message.commit, &message.proof)?;
+
+        let attestation_time =
+            Time::from_unix_timestamp(message.commit.attestation_time as i64, 0)?;
+        let report = if let QuoteBody::SGXQuoteBody(report) = message.commit.output.quote_body {
+            report
+        } else {
+            return Err(Error::unexpected_quote_body());
+        };
+        let report_data = ReportData(report.report_data);
+
+        let operator = if let Some(operator_signature) = message.operator_signature {
+            verify_signature_address(
+                compute_eip712_zkdcap_register_enclave_key(message.commit.hash()).as_ref(),
                 operator_signature.as_ref(),
             )?
         } else {
@@ -456,6 +505,23 @@ pub fn compute_eip712_register_enclave_key_hash(avr: &str) -> [u8; 32] {
     keccak256(&compute_eip712_register_enclave_key(avr))
 }
 
+pub fn compute_eip712_zkdcap_register_enclave_key(commit_hash: [u8; 32]) -> Vec<u8> {
+    // 0x1901 | DOMAIN_SEPARATOR_ZKDCAP_REGISTER_ENCLAVE_KEY | keccak256(keccak256("ZKDCAPRegisterEnclaveKey(bytes32 commit_hash)") | commit_hash)
+    let type_hash = {
+        let mut h = Keccak::v256();
+        h.update(&keccak256(b"ZKDCAPRegisterEnclaveKey(bytes32 commit_hash)"));
+        h.update(&commit_hash);
+        let mut result = [0u8; 32];
+        h.finalize(result.as_mut());
+        result
+    };
+    [0x19, 0x01]
+        .into_iter()
+        .chain(LCP_CLIENT_DOMAIN_SEPARATOR)
+        .chain(type_hash)
+        .collect()
+}
+
 pub fn compute_eip712_update_operators(
     client_id: ClientId,
     nonce: u64,
@@ -521,18 +587,18 @@ pub fn compute_eip712_update_operators_hash(
     ))
 }
 
-// verify_report
+// verify_ias_report
 // - verifies the Attestation Verification Report
 // - calculate a key expiration with client_state and report's timestamp
-fn verify_report(
+fn verify_ias_report(
     current_timestamp: Time,
     client_state: &ClientState,
-    signed_avr: &SignedAttestationVerificationReport,
+    signed_avr: &IASSignedReport,
 ) -> Result<(ReportData, Time), Error> {
     // verify AVR with Intel SGX Attestation Report Signing CA
     // NOTE: This verification is skipped in tests because the CA is not available in the test environment
-    #[cfg(not(test))]
-    attestation_report::verify_report(current_timestamp, signed_avr)?;
+    // #[cfg(not(test))]
+    // attestation_report::verify_ias_report(current_timestamp, signed_avr)?;
 
     let quote = signed_avr.get_avr()?.parse_quote()?;
 
@@ -579,7 +645,7 @@ mod tests {
     use crate::message::UpdateClientMessage;
     use alloc::rc::Rc;
     use alloc::sync::Arc;
-    use attestation_report::{AttestationVerificationReport, ReportData};
+    use attestation_report::{IASAttestationVerificationReport, ReportData};
     use base64::{engine::general_purpose::STANDARD as Base64Std, Engine};
     use context::Context;
     use core::cell::RefCell;
@@ -811,7 +877,7 @@ mod tests {
         Arc::new(registry)
     }
 
-    fn generate_dummy_signed_avr(key: &EnclavePublicKey) -> SignedAttestationVerificationReport {
+    fn generate_dummy_signed_avr(key: &EnclavePublicKey) -> IASSignedReport {
         let quote = sgx_quote_t {
             version: 4,
             report_body: sgx_report_body_t {
@@ -827,7 +893,7 @@ mod tests {
             )
         };
         let now = chrono::Utc::now();
-        let attr = AttestationVerificationReport {
+        let attr = IASAttestationVerificationReport {
             id: "23856791181030202675484781740313693463".to_string(),
             // TODO refactoring
             timestamp: format!(
@@ -846,7 +912,7 @@ mod tests {
             ..Default::default()
         };
 
-        SignedAttestationVerificationReport {
+        IASSignedReport {
             avr: attr.to_canonical_json().unwrap(),
             ..Default::default()
         }

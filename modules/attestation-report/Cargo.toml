@@ -13,14 +13,20 @@ lcp-types = { path = "../types", default-features = false }
 flex-error = { version = "0.4.4", default-features = false }
 hex = { version = "0.4", default-features = false, features = ["alloc"] }
 base64 = { version = "0.22.1", default-features = false, features = ["alloc"] }
-
 pem = { version = "2.0", default-features = false }
-webpki = { version = "0.22", features = ["alloc"], optional = true }
+webpki = { version = "0.22", features = ["alloc"] }
+
+dcap-rs = { git = "https://github.com/bluele/dcap-rs", rev = "c3098b6a3c9faa4a884c87db65d0f586000bcf16", optional = true }
+
+[dev-dependencies]
+tokio = { version = "1.0", default-features = false, features = ["macros"] }
 
 [features]
 default = ["std"]
 std = [
-    "webpki",
+    "dcap-rs",
+    "webpki/std",
     "flex-error/std",
+    "lcp-types/std",
     "serde_json/preserve_order"
 ]

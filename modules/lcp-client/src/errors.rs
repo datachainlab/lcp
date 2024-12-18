@@ -19,6 +19,11 @@ define_error! {
             format_args!("unexpected header type: type_url={}", e.type_url)
         },
 
+        UnexpectedQuoteBody
+        |e| {
+            "unexpected quote body"
+        },
+
         ExpiredAvr {
             current_timestamp: light_client::types::Time,
             attestation_time: light_client::types::Time,
