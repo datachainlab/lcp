@@ -56,19 +56,19 @@ pub fn run_dcap_ra(
                 output.advisory_ids.unwrap_or_default(),
                 current_time,
                 DcapCollateral {
-                    tcbinfo_bytes: collateral.tcbinfo_bytes.unwrap().to_vec(),
-                    qeidentity_bytes: collateral.qeidentity_bytes.unwrap().to_vec(),
-                    sgx_intel_root_ca_der: collateral.sgx_intel_root_ca_der.unwrap().to_vec(),
-                    sgx_tcb_signing_der: collateral.sgx_tcb_signing_der.unwrap().to_vec(),
+                    tcbinfo_bytes: collateral.tcbinfo_bytes.unwrap_or_default(),
+                    qeidentity_bytes: collateral.qeidentity_bytes.unwrap_or_default(),
+                    sgx_intel_root_ca_der: collateral.sgx_intel_root_ca_der.unwrap_or_default(),
+                    sgx_tcb_signing_der: collateral.sgx_tcb_signing_der.unwrap_or_default(),
                     sgx_intel_root_ca_crl_der: collateral
                         .sgx_intel_root_ca_crl_der
-                        .unwrap()
-                        .to_vec(),
+                        .unwrap_or_default(),
                     sgx_pck_processor_crl_der: collateral
                         .sgx_pck_processor_crl_der
-                        .unwrap()
-                        .to_vec(),
-                    sgx_pck_platform_crl_der: collateral.sgx_pck_platform_crl_der.unwrap().to_vec(),
+                        .unwrap_or_default(),
+                    sgx_pck_platform_crl_der: collateral
+                        .sgx_pck_platform_crl_der
+                        .unwrap_or_default(),
                 },
             )
             .into(),
