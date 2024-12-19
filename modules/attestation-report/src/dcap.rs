@@ -9,6 +9,7 @@ use serde::{Deserialize, Serialize};
 pub struct DCAPQuote {
     #[serde(with = "serde_base64")]
     pub raw: Vec<u8>,
+    pub fmspc: [u8; 6],
     pub tcb_status: String,
     pub advisory_ids: Vec<String>,
     pub attested_at: Time,
@@ -18,6 +19,7 @@ pub struct DCAPQuote {
 impl DCAPQuote {
     pub fn new(
         raw_quote: Vec<u8>,
+        fmspc: [u8; 6],
         tcb_status: String,
         advisory_ids: Vec<String>,
         attested_at: Time,
@@ -25,6 +27,7 @@ impl DCAPQuote {
     ) -> Self {
         DCAPQuote {
             raw: raw_quote,
+            fmspc,
             tcb_status,
             advisory_ids,
             attested_at,

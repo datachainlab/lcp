@@ -54,13 +54,15 @@ pub struct DcapEnclaveKeyInfo {
     pub enclave_key_address: ::prost::alloc::vec::Vec<u8>,
     #[prost(bytes = "vec", tag = "2")]
     pub quote: ::prost::alloc::vec::Vec<u8>,
-    #[prost(uint64, tag = "3")]
+    #[prost(bytes = "vec", tag = "3")]
+    pub fmspc: ::prost::alloc::vec::Vec<u8>,
+    #[prost(uint64, tag = "4")]
     pub attestation_time: u64,
-    #[prost(string, tag = "4")]
+    #[prost(string, tag = "5")]
     pub tcb_status: ::prost::alloc::string::String,
-    #[prost(string, repeated, tag = "5")]
+    #[prost(string, repeated, tag = "6")]
     pub advisory_ids: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
-    #[prost(message, optional, tag = "6")]
+    #[prost(message, optional, tag = "7")]
     pub collateral: ::core::option::Option<DcapCollateral>,
 }
 #[derive(::serde::Serialize, ::serde::Deserialize)]

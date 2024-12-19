@@ -52,6 +52,7 @@ pub fn run_dcap_ra(
             target_enclave_key,
             DCAPQuote::new(
                 raw_quote,
+                output.fmspc,
                 output.tcb_status.to_string(),
                 output.advisory_ids.unwrap_or_default(),
                 current_time,

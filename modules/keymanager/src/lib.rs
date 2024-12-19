@@ -379,6 +379,7 @@ impl TryFrom<SealedEnclaveKeyInfo> for ProtoEnclaveKeyInfo {
                     key_info: Some(enclave_key_info::KeyInfo::Dcap(DcapEnclaveKeyInfo {
                         enclave_key_address: value.address.into(),
                         quote: dcap.raw,
+                        fmspc: dcap.fmspc.to_vec(),
                         attestation_time,
                         tcb_status: dcap.tcb_status,
                         advisory_ids: dcap.advisory_ids,

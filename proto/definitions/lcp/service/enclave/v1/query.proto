@@ -37,10 +37,11 @@ message IASEnclaveKeyInfo {
 message DCAPEnclaveKeyInfo {
   bytes enclave_key_address = 1;
   bytes quote = 2;
-  uint64 attestation_time = 3;
-  string tcb_status = 4;
-  repeated string advisory_ids = 5;
-  DCAPCollateral collateral = 6;
+  bytes fmspc = 3;
+  uint64 attestation_time = 4;
+  string tcb_status = 5;
+  repeated string advisory_ids = 6;
+  DCAPCollateral collateral = 7;
 }
 
 message DCAPCollateral {
