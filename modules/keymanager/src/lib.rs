@@ -380,6 +380,9 @@ impl TryFrom<SealedEnclaveKeyInfo> for ProtoEnclaveKeyInfo {
                         enclave_key_address: value.address.into(),
                         quote: dcap.raw,
                         attestation_time,
+                        tcb_status: dcap.tcb_status,
+                        advisory_ids: dcap.advisory_ids,
+                        collateral: Some(dcap.collateral),
                     })),
                 })
             }

@@ -8,6 +8,7 @@ use dcap_rs::types::quotes::version_3::QuoteV3;
 use dcap_rs::utils::cert::{extract_sgx_extension, parse_certchain, parse_pem};
 use dcap_rs::utils::quotes::version_3::verify_quote_dcapv3;
 use keymanager::EnclaveKeyManager;
+use lcp_types::proto::lcp::service::enclave::v1::DcapCollateral;
 use lcp_types::Time;
 use log::*;
 use sgx_types::{sgx_qe_get_quote, sgx_qe_get_quote_size, sgx_quote3_error_t, sgx_report_t};
@@ -52,8 +53,23 @@ pub fn run_dcap_ra(
             DCAPQuote::new(
                 raw_quote,
                 output.tcb_status.to_string(),
-                output.advisory_ids,
+                output.advisory_ids.unwrap_or_default(),
                 current_time,
+                DcapCollateral {
+                    tcbinfo_bytes: collateral.tcbinfo_bytes.unwrap().to_vec(),
+                    qeidentity_bytes: collateral.qeidentity_bytes.unwrap().to_vec(),
+                    sgx_intel_root_ca_der: collateral.sgx_intel_root_ca_der.unwrap().to_vec(),
+                    sgx_tcb_signing_der: collateral.sgx_tcb_signing_der.unwrap().to_vec(),
+                    sgx_intel_root_ca_crl_der: collateral
+                        .sgx_intel_root_ca_crl_der
+                        .unwrap()
+                        .to_vec(),
+                    sgx_pck_processor_crl_der: collateral
+                        .sgx_pck_processor_crl_der
+                        .unwrap()
+                        .to_vec(),
+                    sgx_pck_platform_crl_der: collateral.sgx_pck_platform_crl_der.unwrap().to_vec(),
+                },
             )
             .into(),
         )

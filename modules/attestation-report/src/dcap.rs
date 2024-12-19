@@ -1,30 +1,34 @@
 use crate::prelude::*;
 use crate::serde_base64;
 use crate::Error;
+use lcp_types::proto::lcp::service::enclave::v1::DcapCollateral;
 use lcp_types::Time;
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct DCAPQuote {
     #[serde(with = "serde_base64")]
     pub raw: Vec<u8>,
     pub tcb_status: String,
-    pub advisory_ids: Option<Vec<String>>,
+    pub advisory_ids: Vec<String>,
     pub attested_at: Time,
+    pub collateral: DcapCollateral,
 }
 
 impl DCAPQuote {
     pub fn new(
         raw_quote: Vec<u8>,
         tcb_status: String,
-        advisory_ids: Option<Vec<String>>,
+        advisory_ids: Vec<String>,
         attested_at: Time,
+        collateral: DcapCollateral,
     ) -> Self {
         DCAPQuote {
             raw: raw_quote,
             tcb_status,
             advisory_ids,
             attested_at,
+            collateral,
         }
     }
 

@@ -38,6 +38,19 @@ message DCAPEnclaveKeyInfo {
   bytes enclave_key_address = 1;
   bytes quote = 2;
   uint64 attestation_time = 3;
+  string tcb_status = 4;
+  repeated string advisory_ids = 5;
+  DCAPCollateral collateral = 6;
+}
+
+message DCAPCollateral {
+  bytes tcbinfo_bytes = 1;
+  bytes qeidentity_bytes = 2;
+  bytes sgx_intel_root_ca_der = 3;
+  bytes sgx_tcb_signing_der = 4;
+  bytes sgx_intel_root_ca_crl_der = 5;
+  bytes sgx_pck_processor_crl_der = 6;
+  bytes sgx_pck_platform_crl_der = 7;
 }
 
 message QueryEnclaveKeyRequest {

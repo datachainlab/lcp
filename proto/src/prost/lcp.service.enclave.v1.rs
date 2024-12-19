@@ -56,6 +56,31 @@ pub struct DcapEnclaveKeyInfo {
     pub quote: ::prost::alloc::vec::Vec<u8>,
     #[prost(uint64, tag = "3")]
     pub attestation_time: u64,
+    #[prost(string, tag = "4")]
+    pub tcb_status: ::prost::alloc::string::String,
+    #[prost(string, repeated, tag = "5")]
+    pub advisory_ids: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
+    #[prost(message, optional, tag = "6")]
+    pub collateral: ::core::option::Option<DcapCollateral>,
+}
+#[derive(::serde::Serialize, ::serde::Deserialize)]
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct DcapCollateral {
+    #[prost(bytes = "vec", tag = "1")]
+    pub tcbinfo_bytes: ::prost::alloc::vec::Vec<u8>,
+    #[prost(bytes = "vec", tag = "2")]
+    pub qeidentity_bytes: ::prost::alloc::vec::Vec<u8>,
+    #[prost(bytes = "vec", tag = "3")]
+    pub sgx_intel_root_ca_der: ::prost::alloc::vec::Vec<u8>,
+    #[prost(bytes = "vec", tag = "4")]
+    pub sgx_tcb_signing_der: ::prost::alloc::vec::Vec<u8>,
+    #[prost(bytes = "vec", tag = "5")]
+    pub sgx_intel_root_ca_crl_der: ::prost::alloc::vec::Vec<u8>,
+    #[prost(bytes = "vec", tag = "6")]
+    pub sgx_pck_processor_crl_der: ::prost::alloc::vec::Vec<u8>,
+    #[prost(bytes = "vec", tag = "7")]
+    pub sgx_pck_platform_crl_der: ::prost::alloc::vec::Vec<u8>,
 }
 #[derive(::serde::Serialize, ::serde::Deserialize)]
 #[allow(clippy::derive_partial_eq_without_eq)]
