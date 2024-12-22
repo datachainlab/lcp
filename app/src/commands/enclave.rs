@@ -126,29 +126,45 @@ fn run_list_keys<E: EnclaveCommandAPI<S>, S: CommitStore>(
     let mut list_json = Vec::new();
     for eki in list {
         match eki.ra_quote {
-            Some(RAQuote::IAS(report)) => {
-                let avr = report.get_avr()?;
-                let report_data = avr.parse_quote()?.report_data();
-                list_json.push(json! {{
-                    "type": "ias",
-                    "address": eki.address.to_hex_string(),
-                    "attested": true,
-                    "report_data": report_data.to_string(),
-                    "isv_enclave_quote_status": avr.isv_enclave_quote_status,
-                    "advisory_ids": avr.advisory_ids,
-                    "attested_at": avr.timestamp
-                }});
-            }
-            Some(RAQuote::DCAP(quote)) => {
-                list_json.push(json! {{
-                    "type": "dcap",
-                    "address": eki.address.to_hex_string(),
-                    "attested": true,
-                    "report_data": quote.report_data()?.to_string(),
-                    "isv_enclave_quote_status": quote.tcb_status,
-                    "advisory_ids": quote.advisory_ids,
-                    "attested_at": quote.attested_at.to_string(),
-                }});
+            Some(ra_quote) => {
+                let ra_type = ra_quote.ra_type();
+                match ra_quote {
+                    RAQuote::IAS(report) => {
+                        let avr = report.get_avr()?;
+                        let report_data = avr.parse_quote()?.report_data();
+                        list_json.push(json! {{
+                            "type": ra_type.to_string(),
+                            "address": eki.address.to_hex_string(),
+                            "attested": true,
+                            "report_data": report_data.to_string(),
+                            "isv_enclave_quote_status": avr.isv_enclave_quote_status,
+                            "advisory_ids": avr.advisory_ids,
+                            "attested_at": avr.timestamp
+                        }});
+                    }
+                    RAQuote::DCAP(quote) => {
+                        list_json.push(json! {{
+                            "type": ra_type.to_string(),
+                            "address": eki.address.to_hex_string(),
+                            "attested": true,
+                            "report_data": quote.report_data()?.to_string(),
+                            "isv_enclave_quote_status": quote.tcb_status,
+                            "advisory_ids": quote.advisory_ids,
+                            "attested_at": quote.attested_at.to_string(),
+                        }});
+                    }
+                    RAQuote::ZKDCAP(quote) => {
+                        list_json.push(json! {{
+                            "type": ra_type.to_string(),
+                            "address": eki.address.to_hex_string(),
+                            "attested": true,
+                            "report_data": quote.dcap_quote.report_data()?.to_string(),
+                            "isv_enclave_quote_status": quote.dcap_quote.tcb_status,
+                            "advisory_ids": quote.dcap_quote.advisory_ids,
+                            "attested_at": quote.dcap_quote.attested_at.to_string(),
+                        }});
+                    }
+                }
             }
             None => {
                 list_json.push(json! {{

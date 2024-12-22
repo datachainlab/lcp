@@ -23,6 +23,7 @@ message EnclaveKeyInfo {
   oneof key_info {
     IASEnclaveKeyInfo ias = 1;
     DCAPEnclaveKeyInfo dcap = 2;
+    ZKDCAPEncalveKeyInfo zkdcap = 3;
   }
 }
 
@@ -42,6 +43,22 @@ message DCAPEnclaveKeyInfo {
   string tcb_status = 5;
   repeated string advisory_ids = 6;
   DCAPCollateral collateral = 7;
+}
+
+message ZKDCAPEncalveKeyInfo {
+  DCAPEnclaveKeyInfo dcap = 1;
+  ZKVMProof zkp = 2;
+}
+
+message ZKVMProof {
+  oneof proof {
+    Risc0ZKVMProof risc0 = 1;
+  }
+}
+
+message Risc0ZKVMProof {
+  bytes seal = 1;
+  bytes commit = 2;
 }
 
 message DCAPCollateral {

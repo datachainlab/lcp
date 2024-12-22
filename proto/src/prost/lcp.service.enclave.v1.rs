@@ -16,7 +16,7 @@ pub struct QueryAvailableEnclaveKeysResponse {
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct EnclaveKeyInfo {
-    #[prost(oneof = "enclave_key_info::KeyInfo", tags = "1, 2")]
+    #[prost(oneof = "enclave_key_info::KeyInfo", tags = "1, 2, 3")]
     pub key_info: ::core::option::Option<enclave_key_info::KeyInfo>,
 }
 /// Nested message and enum types in `EnclaveKeyInfo`.
@@ -29,6 +29,8 @@ pub mod enclave_key_info {
         Ias(super::IasEnclaveKeyInfo),
         #[prost(message, tag = "2")]
         Dcap(super::DcapEnclaveKeyInfo),
+        #[prost(message, tag = "3")]
+        Zkdcap(super::ZkdcapEncalveKeyInfo),
     }
 }
 #[derive(::serde::Serialize, ::serde::Deserialize)]
@@ -64,6 +66,41 @@ pub struct DcapEnclaveKeyInfo {
     pub advisory_ids: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
     #[prost(message, optional, tag = "7")]
     pub collateral: ::core::option::Option<DcapCollateral>,
+}
+#[derive(::serde::Serialize, ::serde::Deserialize)]
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct ZkdcapEncalveKeyInfo {
+    #[prost(message, optional, tag = "1")]
+    pub dcap: ::core::option::Option<DcapEnclaveKeyInfo>,
+    #[prost(message, optional, tag = "2")]
+    pub zkp: ::core::option::Option<ZkvmProof>,
+}
+#[derive(::serde::Serialize, ::serde::Deserialize)]
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct ZkvmProof {
+    #[prost(oneof = "zkvm_proof::Proof", tags = "1")]
+    pub proof: ::core::option::Option<zkvm_proof::Proof>,
+}
+/// Nested message and enum types in `ZKVMProof`.
+pub mod zkvm_proof {
+    #[derive(::serde::Serialize, ::serde::Deserialize)]
+    #[allow(clippy::derive_partial_eq_without_eq)]
+    #[derive(Clone, PartialEq, ::prost::Oneof)]
+    pub enum Proof {
+        #[prost(message, tag = "1")]
+        Risc0(super::Risc0ZkvmProof),
+    }
+}
+#[derive(::serde::Serialize, ::serde::Deserialize)]
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct Risc0ZkvmProof {
+    #[prost(bytes = "vec", tag = "1")]
+    pub seal: ::prost::alloc::vec::Vec<u8>,
+    #[prost(bytes = "vec", tag = "2")]
+    pub commit: ::prost::alloc::vec::Vec<u8>,
 }
 #[derive(::serde::Serialize, ::serde::Deserialize)]
 #[allow(clippy::derive_partial_eq_without_eq)]

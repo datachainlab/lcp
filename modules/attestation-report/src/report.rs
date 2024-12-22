@@ -1,3 +1,4 @@
+use crate::dcap::ZKDCAPQuote;
 use crate::{dcap::DCAPQuote, errors::Error};
 use crate::{prelude::*, IASSignedReport};
 use core::fmt::{Debug, Display, Error as FmtError};
@@ -12,6 +13,7 @@ pub const REPORT_DATA_V1: u8 = 1;
 pub enum RAType {
     IAS,
     DCAP,
+    ZKDCAP,
 }
 
 impl RAType {
@@ -19,14 +21,30 @@ impl RAType {
         match self {
             Self::IAS => 1,
             Self::DCAP => 2,
+            Self::ZKDCAP => 3,
         }
     }
     pub fn from_u32(v: u32) -> Result<Self, Error> {
         match v {
             1 => Ok(Self::IAS),
             2 => Ok(Self::DCAP),
+            3 => Ok(Self::ZKDCAP),
             _ => Err(Error::invalid_ra_type(v)),
         }
+    }
+}
+
+impl Display for RAType {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> Result<(), FmtError> {
+        write!(
+            f,
+            "{}",
+            match self {
+                Self::IAS => "ias",
+                Self::DCAP => "dcap",
+                Self::ZKDCAP => "zkdcap",
+            }
+        )
     }
 }
 
@@ -35,6 +53,7 @@ impl RAType {
 pub enum RAQuote {
     IAS(IASSignedReport),
     DCAP(DCAPQuote),
+    ZKDCAP(ZKDCAPQuote),
 }
 
 impl RAQuote {
@@ -42,6 +61,7 @@ impl RAQuote {
         match self {
             RAQuote::IAS(_) => RAType::IAS,
             RAQuote::DCAP(_) => RAType::DCAP,
+            RAQuote::ZKDCAP(_) => RAType::ZKDCAP,
         }
     }
 
@@ -49,6 +69,7 @@ impl RAQuote {
         match self {
             RAQuote::IAS(report) => report.get_avr()?.attestation_time(),
             RAQuote::DCAP(quote) => Ok(quote.attested_at),
+            RAQuote::ZKDCAP(quote) => Ok(quote.dcap_quote.attested_at),
         }
     }
 

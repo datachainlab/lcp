@@ -6,8 +6,8 @@ use crypto::{Address, SealedEnclaveKey};
 use lcp_types::{
     deserialize_bytes,
     proto::lcp::service::enclave::v1::{
-        enclave_key_info, DcapEnclaveKeyInfo, EnclaveKeyInfo as ProtoEnclaveKeyInfo,
-        IasEnclaveKeyInfo,
+        enclave_key_info, zkvm_proof, DcapEnclaveKeyInfo, EnclaveKeyInfo as ProtoEnclaveKeyInfo,
+        IasEnclaveKeyInfo, Risc0ZkvmProof, ZkdcapEncalveKeyInfo, ZkvmProof,
     },
     serialize_bytes, BytesTransmuter, Mrenclave, Time,
 };
@@ -162,7 +162,7 @@ impl EnclaveKeyManager {
     }
 
     /// Update the attestation verification report for the enclave key
-    pub fn save_ra_quote(&self, address: Address, vquote: RAQuote) -> Result<(), Error> {
+    pub fn save_ra_quote(&self, address: Address, ra_quote: RAQuote) -> Result<(), Error> {
         let conn = self
             .conn
             .lock()
@@ -175,8 +175,8 @@ impl EnclaveKeyManager {
             "#,
         )?;
         stmt.execute(params![
-            vquote.to_json()?,
-            vquote.attested_at()?.as_unix_timestamp_secs(),
+            ra_quote.to_json()?,
+            ra_quote.attested_at()?.as_unix_timestamp_secs(),
             address.to_hex_string()
         ])?;
         Ok(())
@@ -384,6 +384,33 @@ impl TryFrom<SealedEnclaveKeyInfo> for ProtoEnclaveKeyInfo {
                         tcb_status: dcap.tcb_status,
                         advisory_ids: dcap.advisory_ids,
                         collateral: Some(dcap.collateral),
+                    })),
+                })
+            }
+            Some(RAQuote::ZKDCAP(zkquote)) => {
+                let attestation_time = zkquote.dcap_quote.attested_at.as_unix_timestamp_secs();
+                let dcap = zkquote.dcap_quote;
+                Ok(ProtoEnclaveKeyInfo {
+                    key_info: Some(enclave_key_info::KeyInfo::Zkdcap(ZkdcapEncalveKeyInfo {
+                        dcap: Some(DcapEnclaveKeyInfo {
+                            enclave_key_address: value.address.into(),
+                            quote: dcap.raw,
+                            fmspc: dcap.fmspc.to_vec(),
+                            attestation_time,
+                            tcb_status: dcap.tcb_status,
+                            advisory_ids: dcap.advisory_ids,
+                            collateral: Some(dcap.collateral),
+                        }),
+                        zkp: Some(ZkvmProof {
+                            proof: Some(match zkquote.zkp {
+                                attestation_report::ZKVMProof::Risc0(proof) => {
+                                    zkvm_proof::Proof::Risc0(Risc0ZkvmProof {
+                                        seal: proof.seal,
+                                        commit: proof.commit,
+                                    })
+                                }
+                            }),
+                        }),
                     })),
                 })
             }
