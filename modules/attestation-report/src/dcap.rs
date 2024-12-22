@@ -74,11 +74,16 @@ pub struct Risc0ZKVMProof {
 pub struct ZKDCAPQuote {
     pub dcap_quote: DCAPQuote,
     pub zkp: ZKVMProof,
+    pub mock: bool,
 }
 
 impl ZKDCAPQuote {
-    pub fn new(dcap_quote: DCAPQuote, zkp: ZKVMProof) -> Self {
-        ZKDCAPQuote { dcap_quote, zkp }
+    pub fn new(dcap_quote: DCAPQuote, zkp: ZKVMProof, mock: bool) -> Self {
+        ZKDCAPQuote {
+            dcap_quote,
+            zkp,
+            mock,
+        }
     }
 
     pub fn to_json(&self) -> Result<String, Error> {

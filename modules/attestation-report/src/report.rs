@@ -36,6 +36,7 @@ pub enum RAType {
     IAS,
     DCAP,
     ZKDCAP,
+    MockZKDCAP,
 }
 
 impl RAType {
@@ -44,6 +45,7 @@ impl RAType {
             Self::IAS => 1,
             Self::DCAP => 2,
             Self::ZKDCAP => 3,
+            Self::MockZKDCAP => 4,
         }
     }
     pub fn from_u32(v: u32) -> Result<Self, Error> {
@@ -51,6 +53,7 @@ impl RAType {
             1 => Ok(Self::IAS),
             2 => Ok(Self::DCAP),
             3 => Ok(Self::ZKDCAP),
+            4 => Ok(Self::MockZKDCAP),
             _ => Err(Error::invalid_ra_type(v)),
         }
     }
@@ -65,6 +68,7 @@ impl Display for RAType {
                 Self::IAS => "ias",
                 Self::DCAP => "dcap",
                 Self::ZKDCAP => "zkdcap",
+                Self::MockZKDCAP => "mock_zkdcap",
             }
         )
     }
@@ -83,7 +87,13 @@ impl RAQuote {
         match self {
             RAQuote::IAS(_) => RAType::IAS,
             RAQuote::DCAP(_) => RAType::DCAP,
-            RAQuote::ZKDCAP(_) => RAType::ZKDCAP,
+            RAQuote::ZKDCAP(quote) => {
+                if quote.mock {
+                    RAType::MockZKDCAP
+                } else {
+                    RAType::ZKDCAP
+                }
+            }
         }
     }
 
