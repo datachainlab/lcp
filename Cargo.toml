@@ -21,6 +21,7 @@ members = [
     "modules/tendermint-lc",
     "modules/mock-lc",
     "modules/service",
+    "modules/zkvm",
     "proto",
     "tests/integration",
     "tools/nodes-runner",
@@ -28,5 +29,6 @@ members = [
 exclude = [
     "enclave",
     "enclave-modules",
+    "methods",
     "proto-compiler"
 ]
