@@ -10,6 +10,28 @@ use sgx_types::{metadata::metadata_t, sgx_measurement_t, sgx_quote_t, sgx_report
 pub const REPORT_DATA_V1: u8 = 1;
 
 #[derive(Debug, Serialize, Deserialize)]
+pub enum QEType {
+    IAS,
+    DCAP,
+}
+
+impl QEType {
+    pub fn as_u32(&self) -> u32 {
+        match self {
+            Self::IAS => 1,
+            Self::DCAP => 2,
+        }
+    }
+    pub fn from_u32(v: u32) -> Result<Self, Error> {
+        match v {
+            1 => Ok(Self::IAS),
+            2 => Ok(Self::DCAP),
+            _ => Err(Error::invalid_qe_type(v)),
+        }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub enum RAType {
     IAS,
     DCAP,

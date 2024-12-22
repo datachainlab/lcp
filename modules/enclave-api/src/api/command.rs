@@ -1,5 +1,5 @@
 use crate::{EnclavePrimitiveAPI, Result};
-use attestation_report::RAType;
+use attestation_report::QEType;
 use ecall_commands::{
     AggregateMessagesInput, AggregateMessagesResponse, Command, CommandResponse,
     EnclaveManageCommand, EnclaveManageResponse, GenerateEnclaveKeyInput,
@@ -28,9 +28,9 @@ pub trait EnclaveCommandAPI<S: CommitStore>: EnclavePrimitiveAPI<S> {
             res.sealed_ek.clone(),
             res.report,
             if is_target_qe3 {
-                RAType::DCAP
+                QEType::DCAP
             } else {
-                RAType::IAS
+                QEType::IAS
             },
         )?;
         Ok(res)

@@ -23,6 +23,14 @@ define_error! {
             format_args!("unexpected report data version: expected={} actual={}", e.expected, e.actual)
         },
 
+        InvalidQeType
+        {
+            qe_type: u32
+        }
+        |e| {
+            format_args!("Invalid QE type: qe_type={}", e.qe_type)
+        },
+
         InvalidRaType
         {
             ra_type: u32

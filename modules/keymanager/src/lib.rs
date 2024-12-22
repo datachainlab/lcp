@@ -1,7 +1,7 @@
 pub mod errors;
 pub use crate::errors::Error;
 use anyhow::anyhow;
-use attestation_report::{RAQuote, RAType, ReportData};
+use attestation_report::{QEType, RAQuote, ReportData};
 use crypto::{Address, SealedEnclaveKey};
 use lcp_types::{
     deserialize_bytes,
@@ -59,7 +59,8 @@ impl EnclaveKeyManager {
                 ek_sealed BLOB NOT NULL,
                 mrenclave TEXT NOT NULL,
                 report BLOB NOT NULL,
-                ra_type INTEGER NOT NULL,
+                qe_type INTEGER NOT NULL,
+                ra_type INTEGER,
                 ra_quote TEXT,
                 attested_at TEXT,
                 created_at TEXT NOT NULL DEFAULT (DATETIME('now', 'localtime')),
@@ -80,7 +81,7 @@ impl EnclaveKeyManager {
             .map_err(|e| Error::mutex_lock(e.to_string()))?;
         let mut stmt = conn.prepare(
             r#"
-            SELECT ek_sealed, mrenclave, report, ra_type, ra_quote
+            SELECT ek_sealed, mrenclave, report, qe_type, ra_quote
             FROM enclave_keys
             WHERE ek_address = ?1
             "#,
@@ -110,11 +111,11 @@ impl EnclaveKeyManager {
                         anyhow!("report: {:?}", e).into(),
                     )
                 })?,
-                ra_type: RAType::from_u32(row.get::<_, i64>(3)? as u32).map_err(|e| {
+                qe_type: QEType::from_u32(row.get::<_, i64>(3)? as u32).map_err(|e| {
                     rusqlite::Error::FromSqlConversionFailure(
                         3,
                         Type::Integer,
-                        anyhow!("ra_type: {:?}", e).into(),
+                        anyhow!("qe_type: {:?}", e).into(),
                     )
                 })?,
                 ra_quote: match row.get::<_, Option<String>>(4) {
@@ -138,7 +139,7 @@ impl EnclaveKeyManager {
         &self,
         sealed_ek: SealedEnclaveKey,
         report: sgx_report_t,
-        ra_type: RAType,
+        qe_type: QEType,
     ) -> Result<(), Error> {
         let conn = self
             .conn
@@ -146,7 +147,7 @@ impl EnclaveKeyManager {
             .map_err(|e| Error::mutex_lock(e.to_string()))?;
         let mut stmt = conn.prepare(
             r#"
-            INSERT INTO enclave_keys(ek_address, ek_sealed, mrenclave, report, ra_type)
+            INSERT INTO enclave_keys(ek_address, ek_sealed, mrenclave, report, qe_type)
             VALUES (?1, ?2, ?3, ?4, ?5)
             "#,
         )?;
@@ -156,7 +157,7 @@ impl EnclaveKeyManager {
             sealed_ek.to_vec(),
             Mrenclave::from(report.body.mr_enclave).to_hex_string(),
             serialize_bytes(&report),
-            ra_type.as_u32()
+            qe_type.as_u32()
         ])?;
         Ok(())
     }
@@ -170,11 +171,12 @@ impl EnclaveKeyManager {
         let mut stmt = conn.prepare(
             r#"
             UPDATE enclave_keys
-            SET ra_quote = ?1, attested_at = ?2
-            WHERE ek_address = ?3
+            SET ra_type = ?1, ra_quote = ?2, attested_at = ?3
+            WHERE ek_address = ?4
             "#,
         )?;
         stmt.execute(params![
+            ra_quote.ra_type().as_u32(),
             ra_quote.to_json()?,
             ra_quote.attested_at()?.as_unix_timestamp_secs(),
             address.to_hex_string()
@@ -190,7 +192,7 @@ impl EnclaveKeyManager {
             .map_err(|e| Error::mutex_lock(e.to_string()))?;
         let mut stmt = conn.prepare(
             r#"
-            SELECT ek_address, ek_sealed, mrenclave, report, ra_type, ra_quote
+            SELECT ek_address, ek_sealed, mrenclave, report, qe_type, ra_quote
             FROM enclave_keys
             WHERE attested_at IS NOT NULL AND mrenclave = ?1
             ORDER BY attested_at DESC
@@ -232,11 +234,11 @@ impl EnclaveKeyManager {
                             anyhow!("report: {:?}", e).into(),
                         )
                     })?,
-                    ra_type: RAType::from_u32(row.get::<_, i64>(4)? as u32).map_err(|e| {
+                    qe_type: QEType::from_u32(row.get::<_, i64>(4)? as u32).map_err(|e| {
                         rusqlite::Error::FromSqlConversionFailure(
                             4,
                             Type::Integer,
-                            anyhow!("ra_type: {:?}", e).into(),
+                            anyhow!("qe_type: {:?}", e).into(),
                         )
                     })?,
                     ra_quote: match row.get::<_, Option<String>>(5) {
@@ -264,7 +266,7 @@ impl EnclaveKeyManager {
             .map_err(|e| Error::mutex_lock(e.to_string()))?;
         let mut stmt = conn.prepare(
             r#"
-            SELECT ek_address, ek_sealed, mrenclave, report, ra_type, ra_quote
+            SELECT ek_address, ek_sealed, mrenclave, report, qe_type, ra_quote
             FROM enclave_keys
             ORDER BY updated_at DESC
             "#,
@@ -305,11 +307,11 @@ impl EnclaveKeyManager {
                             anyhow!("report: {:?}", e).into(),
                         )
                     })?,
-                    ra_type: RAType::from_u32(row.get::<_, i64>(4)? as u32).map_err(|e| {
+                    qe_type: QEType::from_u32(row.get::<_, i64>(4)? as u32).map_err(|e| {
                         rusqlite::Error::FromSqlConversionFailure(
                             4,
                             Type::Integer,
-                            anyhow!("ra_type: {:?}", e).into(),
+                            anyhow!("qe_type: {:?}", e).into(),
                         )
                     })?,
                     ra_quote: match row.get::<_, Option<String>>(5) {
@@ -350,7 +352,7 @@ pub struct SealedEnclaveKeyInfo {
     pub mrenclave: Mrenclave,
     #[serde_as(as = "BytesTransmuter<sgx_report_t>")]
     pub report: sgx_report_t,
-    pub ra_type: RAType,
+    pub qe_type: QEType,
     pub ra_quote: Option<RAQuote>,
 }
 
@@ -438,7 +440,7 @@ mod tests {
             let report = create_report(mrenclave, address);
             let sealed_ek = create_sealed_sk();
             assert_eq!(km.all_keys().unwrap().len(), 0);
-            km.save(sealed_ek, report, RAType::IAS).unwrap();
+            km.save(sealed_ek, report, QEType::IAS).unwrap();
             assert!(km.load(address).unwrap().ra_quote.is_none());
             assert_eq!(km.all_keys().unwrap().len(), 1);
             assert_eq!(km.available_keys(mrenclave).unwrap().len(), 0);
@@ -454,7 +456,7 @@ mod tests {
             let report = create_report(mrenclave, address);
             let sealed_ek = create_sealed_sk();
             assert_eq!(km.all_keys().unwrap().len(), 1);
-            km.save(sealed_ek, report, RAType::IAS).unwrap();
+            km.save(sealed_ek, report, QEType::IAS).unwrap();
             assert!(km.load(address).unwrap().ra_quote.is_none());
             assert_eq!(km.all_keys().unwrap().len(), 2);
             assert_eq!(km.available_keys(mrenclave).unwrap().len(), 1);
@@ -485,7 +487,7 @@ mod tests {
         let sealed_ek = create_sealed_sk();
         let address = create_address();
         let report = create_report(mrenclave, address);
-        km.save(sealed_ek, report, RAType::IAS).unwrap();
+        km.save(sealed_ek, report, QEType::IAS).unwrap();
         let key_info = km.load(address).unwrap();
         assert!(ProtoEnclaveKeyInfo::try_from(key_info).is_err());
         let ias_report = create_ias_report(get_time(Duration::minutes(1)));
