@@ -1,7 +1,7 @@
 pub mod errors;
 pub use crate::errors::Error;
 use anyhow::anyhow;
-use attestation_report::{QEType, RAQuote, ReportData};
+use attestation_report::{QEType, RAQuote, RAType, ReportData};
 use crypto::{Address, SealedEnclaveKey};
 use lcp_types::{
     deserialize_bytes,
@@ -185,21 +185,44 @@ impl EnclaveKeyManager {
     }
 
     /// Returns a list of available enclave keys
-    pub fn available_keys(&self, mrenclave: Mrenclave) -> Result<Vec<SealedEnclaveKeyInfo>, Error> {
+    pub fn available_keys(
+        &self,
+        mrenclave: Mrenclave,
+        ra_type: Option<RAType>,
+    ) -> Result<Vec<SealedEnclaveKeyInfo>, Error> {
         let conn = self
             .conn
             .lock()
             .map_err(|e| Error::mutex_lock(e.to_string()))?;
-        let mut stmt = conn.prepare(
-            r#"
-            SELECT ek_address, ek_sealed, mrenclave, report, qe_type, ra_quote
-            FROM enclave_keys
-            WHERE attested_at IS NOT NULL AND mrenclave = ?1
-            ORDER BY attested_at DESC
-            "#,
-        )?;
+
+        let (mut stmt, params) = if let Some(ra_type) = ra_type {
+            (
+                conn.prepare(
+                    r#"
+                SELECT ek_address, ek_sealed, mrenclave, report, qe_type, ra_quote
+                FROM enclave_keys
+                WHERE attested_at IS NOT NULL AND mrenclave = ?1 AND ra_type = ?2
+                ORDER BY attested_at DESC
+                "#,
+                )?,
+                params![mrenclave.to_hex_string(), ra_type.as_u32()],
+            )
+        } else {
+            (
+                conn.prepare(
+                    r#"
+                SELECT ek_address, ek_sealed, mrenclave, report, qe_type, ra_quote
+                FROM enclave_keys
+                WHERE attested_at IS NOT NULL AND mrenclave = ?1
+                ORDER BY attested_at DESC
+                "#,
+                )?,
+                params![mrenclave.to_hex_string()],
+            )
+        };
+
         let key_infos = stmt
-            .query_map(params![mrenclave.to_hex_string()], |row| {
+            .query_map(params, |row| {
                 Ok(SealedEnclaveKeyInfo {
                     address: Address::from_hex_string(&row.get::<_, String>(0)?).map_err(|e| {
                         rusqlite::Error::FromSqlConversionFailure(
@@ -443,12 +466,22 @@ mod tests {
             km.save(sealed_ek, report, QEType::IAS).unwrap();
             assert!(km.load(address).unwrap().ra_quote.is_none());
             assert_eq!(km.all_keys().unwrap().len(), 1);
-            assert_eq!(km.available_keys(mrenclave).unwrap().len(), 0);
+            assert_eq!(
+                km.available_keys(mrenclave, Some(RAType::IAS))
+                    .unwrap()
+                    .len(),
+                0
+            );
             let ias_report = create_ias_report(get_time(Duration::zero()));
             km.save_ra_quote(address, ias_report.into()).unwrap();
             assert!(km.load(address).unwrap().ra_quote.is_some());
             assert_eq!(km.all_keys().unwrap().len(), 1);
-            assert_eq!(km.available_keys(mrenclave).unwrap().len(), 1);
+            assert_eq!(
+                km.available_keys(mrenclave, Some(RAType::IAS))
+                    .unwrap()
+                    .len(),
+                1
+            );
             address
         };
         {
@@ -459,19 +492,34 @@ mod tests {
             km.save(sealed_ek, report, QEType::IAS).unwrap();
             assert!(km.load(address).unwrap().ra_quote.is_none());
             assert_eq!(km.all_keys().unwrap().len(), 2);
-            assert_eq!(km.available_keys(mrenclave).unwrap().len(), 1);
+            assert_eq!(
+                km.available_keys(mrenclave, Some(RAType::IAS))
+                    .unwrap()
+                    .len(),
+                1
+            );
             let ias_report = create_ias_report(get_time(Duration::minutes(1)));
             km.save_ra_quote(address, ias_report.into()).unwrap();
             assert!(km.load(address).unwrap().ra_quote.is_some());
             assert_eq!(km.all_keys().unwrap().len(), 2);
-            assert_eq!(km.available_keys(mrenclave).unwrap().len(), 2);
+            assert_eq!(
+                km.available_keys(mrenclave, Some(RAType::IAS))
+                    .unwrap()
+                    .len(),
+                2
+            );
         }
         // there are no keys available for the mrenclave
-        assert_eq!(km.available_keys(create_mrenclave()).unwrap().len(), 0);
+        assert_eq!(
+            km.available_keys(create_mrenclave(), Some(RAType::IAS))
+                .unwrap()
+                .len(),
+            0
+        );
         assert_eq!(km.prune(30).unwrap(), 1);
         assert_eq!(km.all_keys().unwrap().len(), 1);
         assert_eq!(
-            km.available_keys(mrenclave)
+            km.available_keys(mrenclave, Some(RAType::IAS))
                 .unwrap()
                 .first()
                 .unwrap()

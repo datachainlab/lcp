@@ -4,6 +4,8 @@
 pub struct QueryAvailableEnclaveKeysRequest {
     #[prost(bytes = "vec", tag = "1")]
     pub mrenclave: ::prost::alloc::vec::Vec<u8>,
+    #[prost(uint32, tag = "2")]
+    pub ra_type: u32,
 }
 #[derive(::serde::Serialize, ::serde::Deserialize)]
 #[allow(clippy::derive_partial_eq_without_eq)]

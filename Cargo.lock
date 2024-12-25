@@ -6871,6 +6871,7 @@ name = "service"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "attestation-report",
  "crypto",
  "enclave-api",
  "lcp-proto",

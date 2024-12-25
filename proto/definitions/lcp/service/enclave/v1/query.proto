@@ -13,6 +13,7 @@ service Query {
 
 message QueryAvailableEnclaveKeysRequest {
   bytes mrenclave = 1;
+  uint32 ra_type = 2;
 }
 
 message QueryAvailableEnclaveKeysResponse {

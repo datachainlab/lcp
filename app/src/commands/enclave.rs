@@ -119,7 +119,10 @@ fn run_list_keys<E: EnclaveCommandAPI<S>, S: CommitStore>(
 ) -> Result<()> {
     let km = enclave.get_key_manager();
     let list = if input.available_only {
-        km.available_keys(enclave.metadata()?.enclave_css.body.enclave_hash.m.into())?
+        km.available_keys(
+            enclave.metadata()?.enclave_css.body.enclave_hash.m.into(),
+            None,
+        )?
     } else {
         km.all_keys()?
     };
@@ -133,7 +136,7 @@ fn run_list_keys<E: EnclaveCommandAPI<S>, S: CommitStore>(
                         let avr = report.get_avr()?;
                         let report_data = avr.parse_quote()?.report_data();
                         list_json.push(json! {{
-                            "type": ra_type.to_string(),
+                            "ra_type": ra_type.to_string(),
                             "address": eki.address.to_hex_string(),
                             "attested": true,
                             "report_data": report_data.to_string(),
@@ -144,7 +147,7 @@ fn run_list_keys<E: EnclaveCommandAPI<S>, S: CommitStore>(
                     }
                     RAQuote::DCAP(quote) => {
                         list_json.push(json! {{
-                            "type": ra_type.to_string(),
+                            "ra_type": ra_type.to_string(),
                             "address": eki.address.to_hex_string(),
                             "attested": true,
                             "report_data": quote.report_data()?.to_string(),
@@ -155,7 +158,7 @@ fn run_list_keys<E: EnclaveCommandAPI<S>, S: CommitStore>(
                     }
                     RAQuote::ZKDCAP(quote) => {
                         list_json.push(json! {{
-                            "type": ra_type.to_string(),
+                            "ra_type": ra_type.to_string(),
                             "address": eki.address.to_hex_string(),
                             "attested": true,
                             "report_data": quote.dcap_quote.report_data()?.to_string(),
