@@ -17,8 +17,10 @@ pub enum AttestationCmd {
     IAS(IASRemoteAttestation),
     #[clap(display_order = 2, about = "Remote Attestation with DCAP")]
     DCAP(DCAPRemoteAttestation),
+    #[clap(display_order = 3, about = "Remote Attestation with zkDCAP")]
+    ZKDCAP(ZKDCAPRemoteAttestation),
     #[cfg(feature = "sgx-sw")]
-    #[clap(display_order = 3, about = "Simulate Remote Attestation")]
+    #[clap(display_order = 4, about = "Simulate Remote Attestation")]
     Simulate(SimulateRemoteAttestation),
 }
 
@@ -41,6 +43,13 @@ impl AttestationCmd {
             AttestationCmd::DCAP(cmd) => run_dcap_remote_attestation(
                 enclave_loader.load(opts, cmd.enclave.path.as_ref(), cmd.enclave.is_debug())?,
                 cmd,
+            ),
+            AttestationCmd::ZKDCAP(cmd) => run_zkdcap_remote_attestation(
+                enclave_loader.load(opts, cmd.enclave.path.as_ref(), cmd.enclave.is_debug())?,
+                &ZKDCAPRemoteAttestation {
+                    enclave: cmd.enclave.clone(),
+                    enclave_key: cmd.enclave_key.clone(),
+                },
             ),
             #[cfg(feature = "sgx-sw")]
             AttestationCmd::Simulate(cmd) => run_simulate_remote_attestation(
@@ -231,5 +240,29 @@ fn run_dcap_remote_attestation<E: EnclaveCommandAPI<S>, S: CommitStore>(
         enclave.get_key_manager(),
         Address::from_hex_string(&cmd.enclave_key)?,
     )?;
+    Ok(())
+}
+
+#[derive(Clone, Debug, Parser, PartialEq)]
+pub struct ZKDCAPRemoteAttestation {
+    /// Options for enclave
+    #[clap(flatten)]
+    pub enclave: EnclaveOpts,
+    /// An enclave key attested by Remote Attestation
+    #[clap(
+        long = "enclave_key",
+        help = "An enclave key attested by Remote Attestation"
+    )]
+    pub enclave_key: String,
+}
+
+fn run_zkdcap_remote_attestation<E: EnclaveCommandAPI<S>, S: CommitStore>(
+    enclave: E,
+    cmd: &ZKDCAPRemoteAttestation,
+) -> Result<()> {
+    // dcap::run_zkdcap_ra(
+    //     enclave.get_key_manager(),
+    //     Address::from_hex_string(&cmd.enclave_key)?,
+    // )?;
     Ok(())
 }

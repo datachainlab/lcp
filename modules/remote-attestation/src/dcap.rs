@@ -1,10 +1,9 @@
-use std::time::SystemTime;
-
 use crate::errors::Error;
 use attestation_report::DCAPQuote;
 use crypto::Address;
 use dcap_rs::types::collaterals::IntelCollateral;
 use dcap_rs::types::quotes::version_3::QuoteV3;
+use dcap_rs::types::VerifiedOutput;
 use dcap_rs::utils::cert::{extract_sgx_extension, parse_certchain, parse_pem};
 use dcap_rs::utils::quotes::version_3::verify_quote_dcapv3;
 use keymanager::EnclaveKeyManager;
@@ -20,6 +19,53 @@ pub fn run_dcap_ra(
     key_manager: &EnclaveKeyManager,
     target_enclave_key: Address,
 ) -> Result<(), Error> {
+    let current_time = Time::now();
+    let result = dcap_ra(key_manager, target_enclave_key, current_time)?;
+
+    key_manager
+        .save_ra_quote(
+            target_enclave_key,
+            DCAPQuote::new(
+                result.raw_quote,
+                result.output.fmspc,
+                result.output.tcb_status.to_string(),
+                result.output.advisory_ids.unwrap_or_default(),
+                current_time,
+                DcapCollateral {
+                    tcbinfo_bytes: result.collateral.tcbinfo_bytes.unwrap_or_default(),
+                    qeidentity_bytes: result.collateral.qeidentity_bytes.unwrap_or_default(),
+                    sgx_intel_root_ca_der: result
+                        .collateral
+                        .sgx_intel_root_ca_der
+                        .unwrap_or_default(),
+                    sgx_tcb_signing_der: result.collateral.sgx_tcb_signing_der.unwrap_or_default(),
+                    sgx_intel_root_ca_crl_der: result
+                        .collateral
+                        .sgx_intel_root_ca_crl_der
+                        .unwrap_or_default(),
+                    sgx_pck_processor_crl_der: result
+                        .collateral
+                        .sgx_pck_processor_crl_der
+                        .unwrap_or_default(),
+                    sgx_pck_platform_crl_der: result
+                        .collateral
+                        .sgx_pck_platform_crl_der
+                        .unwrap_or_default(),
+                },
+            )
+            .into(),
+        )
+        .map_err(|e| {
+            Error::key_manager(format!("cannot save DCAP AVR: {}", target_enclave_key), e)
+        })?;
+    Ok(())
+}
+
+pub(crate) fn dcap_ra(
+    key_manager: &EnclaveKeyManager,
+    target_enclave_key: Address,
+    current_time: Time,
+) -> Result<DCAPRemoteAttestationResult, Error> {
     let ek_info = key_manager.load(target_enclave_key).map_err(|e| {
         Error::key_manager(
             format!("cannot load enclave key: {}", target_enclave_key),
@@ -36,48 +82,21 @@ pub fn run_dcap_ra(
         "https://certificates.trustedservices.intel.com/",
         &quote,
     );
-    let output = verify_quote_dcapv3(
-        &quote,
-        &collateral,
-        SystemTime::now()
-            .duration_since(SystemTime::UNIX_EPOCH)
-            .unwrap()
-            .as_secs(),
-    );
+    let output = verify_quote_dcapv3(&quote, &collateral, current_time.as_unix_timestamp_secs());
     info!("DCAP RA output: {:?}", output);
 
-    let current_time = Time::now();
-    key_manager
-        .save_ra_quote(
-            target_enclave_key,
-            DCAPQuote::new(
-                raw_quote,
-                output.fmspc,
-                output.tcb_status.to_string(),
-                output.advisory_ids.unwrap_or_default(),
-                current_time,
-                DcapCollateral {
-                    tcbinfo_bytes: collateral.tcbinfo_bytes.unwrap_or_default(),
-                    qeidentity_bytes: collateral.qeidentity_bytes.unwrap_or_default(),
-                    sgx_intel_root_ca_der: collateral.sgx_intel_root_ca_der.unwrap_or_default(),
-                    sgx_tcb_signing_der: collateral.sgx_tcb_signing_der.unwrap_or_default(),
-                    sgx_intel_root_ca_crl_der: collateral
-                        .sgx_intel_root_ca_crl_der
-                        .unwrap_or_default(),
-                    sgx_pck_processor_crl_der: collateral
-                        .sgx_pck_processor_crl_der
-                        .unwrap_or_default(),
-                    sgx_pck_platform_crl_der: collateral
-                        .sgx_pck_platform_crl_der
-                        .unwrap_or_default(),
-                },
-            )
-            .into(),
-        )
-        .map_err(|e| {
-            Error::key_manager(format!("cannot save DCAP AVR: {}", target_enclave_key), e)
-        })?;
-    Ok(())
+    Ok(DCAPRemoteAttestationResult {
+        raw_quote,
+        output,
+        collateral,
+    })
+}
+
+#[derive(Debug)]
+pub struct DCAPRemoteAttestationResult {
+    pub raw_quote: Vec<u8>,
+    pub output: VerifiedOutput,
+    pub collateral: IntelCollateral,
 }
 
 fn rsgx_qe_get_quote(app_report: &sgx_report_t) -> Result<Vec<u8>, sgx_quote3_error_t> {
@@ -179,7 +198,6 @@ fn extract_raw_certs(cert_chain: &[u8]) -> Result<Vec<Vec<u8>>, Error> {
 mod tests {
     use super::*;
     use dcap_rs::{constants::SGX_TEE_TYPE, utils::quotes::version_3::verify_quote_dcapv3};
-    use std::time::SystemTime;
 
     #[test]
     fn test_quote() {
@@ -195,14 +213,7 @@ mod tests {
             "https://certificates.trustedservices.intel.com/",
             &quote,
         );
-        let output = verify_quote_dcapv3(
-            &quote,
-            &collateral,
-            SystemTime::now()
-                .duration_since(SystemTime::UNIX_EPOCH)
-                .unwrap()
-                .as_secs(),
-        );
+        let output = verify_quote_dcapv3(&quote, &collateral, Time::now().as_unix_timestamp_secs());
         assert_eq!(output.tee_type, SGX_TEE_TYPE);
     }
 

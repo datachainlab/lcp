@@ -5679,6 +5679,7 @@ dependencies = [
  "sha2 0.10.8",
  "urlencoding",
  "webpki-roots 0.26.6",
+ "zkvm",
 ]
 
 [[package]]

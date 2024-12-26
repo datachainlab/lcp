@@ -31,6 +31,7 @@ lcp-types = { path = "../types" }
 crypto = { path = "../crypto", default-features = false }
 attestation-report = { path = "../attestation-report" }
 keymanager = { path = "../keymanager" }
+zkvm = { path = "../zkvm" }
 
 [features]
 default = []
