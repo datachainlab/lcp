@@ -1,6 +1,7 @@
 use crate::prelude::*;
 use crate::serde_base64;
 use crate::Error;
+use crate::RAQuote;
 use lcp_types::proto::lcp::service::enclave::v1::DcapCollateral;
 use lcp_types::Time;
 use serde::{Deserialize, Serialize};
@@ -75,6 +76,12 @@ pub struct ZKDCAPQuote {
     pub dcap_quote: DCAPQuote,
     pub zkp: ZKVMProof,
     pub mock: bool,
+}
+
+impl From<ZKDCAPQuote> for RAQuote {
+    fn from(quote: ZKDCAPQuote) -> Self {
+        RAQuote::ZKDCAP(quote)
+    }
 }
 
 impl ZKDCAPQuote {

@@ -21,5 +21,13 @@ define_error! {
         |e| {
             format_args!("Bonsai proving error: {}", e.descr)
         },
+
+        UnsupportedReceiptType
+        {
+            descr: String
+        }
+        |e| {
+            format_args!("Unsupported receipt type: {}", e.descr)
+        },
     }
 }

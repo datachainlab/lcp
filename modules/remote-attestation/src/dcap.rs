@@ -23,40 +23,9 @@ pub fn run_dcap_ra(
     let result = dcap_ra(key_manager, target_enclave_key, current_time)?;
 
     key_manager
-        .save_ra_quote(
-            target_enclave_key,
-            DCAPQuote::new(
-                result.raw_quote,
-                result.output.fmspc,
-                result.output.tcb_status.to_string(),
-                result.output.advisory_ids.unwrap_or_default(),
-                current_time,
-                DcapCollateral {
-                    tcbinfo_bytes: result.collateral.tcbinfo_bytes.unwrap_or_default(),
-                    qeidentity_bytes: result.collateral.qeidentity_bytes.unwrap_or_default(),
-                    sgx_intel_root_ca_der: result
-                        .collateral
-                        .sgx_intel_root_ca_der
-                        .unwrap_or_default(),
-                    sgx_tcb_signing_der: result.collateral.sgx_tcb_signing_der.unwrap_or_default(),
-                    sgx_intel_root_ca_crl_der: result
-                        .collateral
-                        .sgx_intel_root_ca_crl_der
-                        .unwrap_or_default(),
-                    sgx_pck_processor_crl_der: result
-                        .collateral
-                        .sgx_pck_processor_crl_der
-                        .unwrap_or_default(),
-                    sgx_pck_platform_crl_der: result
-                        .collateral
-                        .sgx_pck_platform_crl_der
-                        .unwrap_or_default(),
-                },
-            )
-            .into(),
-        )
+        .save_ra_quote(target_enclave_key, result.get_quote().into())
         .map_err(|e| {
-            Error::key_manager(format!("cannot save DCAP AVR: {}", target_enclave_key), e)
+            Error::key_manager(format!("cannot save DCAP quote: {}", target_enclave_key), e)
         })?;
     Ok(())
 }
@@ -97,6 +66,47 @@ pub struct DCAPRemoteAttestationResult {
     pub raw_quote: Vec<u8>,
     pub output: VerifiedOutput,
     pub collateral: IntelCollateral,
+}
+
+impl DCAPRemoteAttestationResult {
+    pub fn get_quote(&self) -> DCAPQuote {
+        DCAPQuote::new(
+            self.raw_quote.clone(),
+            self.output.fmspc,
+            self.output.tcb_status.to_string(),
+            self.output.advisory_ids.clone().unwrap_or_default(),
+            Time::now(),
+            DcapCollateral {
+                tcbinfo_bytes: self.collateral.tcbinfo_bytes.clone().unwrap_or_default(),
+                qeidentity_bytes: self.collateral.qeidentity_bytes.clone().unwrap_or_default(),
+                sgx_intel_root_ca_der: self
+                    .collateral
+                    .sgx_intel_root_ca_der
+                    .clone()
+                    .unwrap_or_default(),
+                sgx_tcb_signing_der: self
+                    .collateral
+                    .sgx_tcb_signing_der
+                    .clone()
+                    .unwrap_or_default(),
+                sgx_intel_root_ca_crl_der: self
+                    .collateral
+                    .sgx_intel_root_ca_crl_der
+                    .clone()
+                    .unwrap_or_default(),
+                sgx_pck_processor_crl_der: self
+                    .collateral
+                    .sgx_pck_processor_crl_der
+                    .clone()
+                    .unwrap_or_default(),
+                sgx_pck_platform_crl_der: self
+                    .collateral
+                    .sgx_pck_platform_crl_der
+                    .clone()
+                    .unwrap_or_default(),
+            },
+        )
+    }
 }
 
 fn rsgx_qe_get_quote(app_report: &sgx_report_t) -> Result<Vec<u8>, sgx_quote3_error_t> {

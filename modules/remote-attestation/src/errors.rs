@@ -153,6 +153,10 @@ define_error! {
         [lcp_types::TimeError]
         |_| { "Time error" },
 
+        Zkvm
+        [zkvm::Error]
+        |_| { "Zkvm error" },
+
         WebPki
         {
             descr: String
