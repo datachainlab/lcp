@@ -48,7 +48,7 @@ pub struct LocalProverOptions {
     // 1. options
     // 2. env var `RISC0_DEV_MODE`
     // 3. default to false
-    is_dev_mode: Option<bool>,
+    pub is_dev_mode: Option<bool>,
 }
 
 impl LocalProverOptions {
@@ -75,12 +75,12 @@ pub struct BonsaiProverOptions {
     // 1. options
     // 2. env var `BONSAI_API_URL`
     // 3. default to "https://api.bonsai.xyz/"
-    api_url: Option<String>,
+    pub api_url: Option<String>,
     // priotize the following order:
     // 1. options
     // 2. env var `BONSAI_API_KEY`
     // 3. return error
-    api_key: Option<String>,
+    pub api_key: Option<String>,
 }
 
 impl BonsaiProverOptions {
@@ -101,6 +101,6 @@ impl BonsaiProverOptions {
         self.api_key
             .clone()
             .or_else(|| std::env::var("BONSAI_API_KEY").ok())
-            .ok_or_else(|| Error::missing_bonsai_api_key())
+            .ok_or_else(Error::missing_bonsai_api_key)
     }
 }

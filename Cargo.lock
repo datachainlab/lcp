@@ -4045,6 +4045,7 @@ dependencies = [
  "keymanager",
  "lcp-types",
  "log",
+ "methods",
  "remote-attestation",
  "serde",
  "serde_json",

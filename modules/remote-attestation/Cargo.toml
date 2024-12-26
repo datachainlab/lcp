@@ -34,5 +34,6 @@ keymanager = { path = "../keymanager" }
 zkvm = { path = "../zkvm" }
 
 [features]
-default = []
+default = ["zkdcap"]
+zkdcap = []
 sgx-sw = ["rsa", "chrono"]

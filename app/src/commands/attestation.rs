@@ -7,7 +7,8 @@ use clap::Parser;
 use crypto::Address;
 use enclave_api::{Enclave, EnclaveCommandAPI, EnclaveProtoAPI};
 use host::store::transaction::CommitStore;
-use remote_attestation::{dcap, ias, IASMode};
+use remote_attestation::{dcap, ias, zkdcap, IASMode};
+use zkvm::{LocalProverOptions, Risc0ProverMode};
 
 /// `attestation` subcommand
 #[allow(clippy::upper_case_acronyms)]
@@ -260,9 +261,13 @@ fn run_zkdcap_remote_attestation<E: EnclaveCommandAPI<S>, S: CommitStore>(
     enclave: E,
     cmd: &ZKDCAPRemoteAttestation,
 ) -> Result<()> {
-    // dcap::run_zkdcap_ra(
-    //     enclave.get_key_manager(),
-    //     Address::from_hex_string(&cmd.enclave_key)?,
-    // )?;
+    zkdcap::run_zkdcap_ra(
+        enclave.get_key_manager(),
+        Address::from_hex_string(&cmd.enclave_key)?,
+        Risc0ProverMode::Local(LocalProverOptions {
+            is_dev_mode: Some(true),
+        }),
+        methods::DCAP_VERIFIER_ELF,
+    )?;
     Ok(())
 }
