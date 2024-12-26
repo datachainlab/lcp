@@ -35,7 +35,7 @@ pub fn run_zkdcap_ra(
         .save_ra_quote(
             target_enclave_key,
             ZKDCAPQuote::new(
-                quote.into(),
+                quote,
                 ZKVMProof::Risc0(Risc0ZKVMProof {
                     seal,
                     commit: prover_info.receipt.journal.bytes,
