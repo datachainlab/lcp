@@ -8,7 +8,7 @@ use crypto::Address;
 use enclave_api::{Enclave, EnclaveCommandAPI, EnclaveProtoAPI};
 use host::store::transaction::CommitStore;
 use remote_attestation::{dcap, ias, zkdcap, IASMode};
-use zkvm::{LocalProverOptions, Risc0ProverMode};
+use remote_attestation::zkvm::{LocalProverOptions, Risc0ProverMode};
 
 /// `attestation` subcommand
 #[allow(clippy::upper_case_acronyms)]

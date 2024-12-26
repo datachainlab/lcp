@@ -34,6 +34,6 @@ keymanager = { path = "../keymanager" }
 zkvm = { path = "../zkvm" }
 
 [features]
-default = ["zkdcap"]
-zkdcap = []
+default = []
+cuda = ["zkvm/cuda"]
 sgx-sw = ["rsa", "chrono"]

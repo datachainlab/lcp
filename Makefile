@@ -5,6 +5,7 @@ SGX_ARCH ?= x64
 SGX_DEBUG ?= 0
 SGX_PRERELEASE ?= 0
 SGX_PRODUCTION ?= 0
+ZK_PROVER_CUDA ?= 0
 
 include buildenv.mk
 
@@ -61,6 +62,9 @@ else
 	ifneq ($(SGX_MODE), HW)
 		APP_CARGO_FEATURES     = --features=default,sgx-sw
 	endif
+endif
+ifeq ($(ZK_PROVER_CUDA), 1)
+	APP_CARGO_FEATURES     = --features=default,cuda
 endif
 
 ######## CUSTOM Settings ########

@@ -4051,7 +4051,6 @@ dependencies = [
  "serde_json",
  "service",
  "tokio",
- "zkvm",
 ]
 
 [[package]]

@@ -27,7 +27,6 @@ crypto = { path = "../modules/crypto" }
 keymanager = { path = "../modules/keymanager" }
 remote-attestation = { path = "../modules/remote-attestation" }
 attestation-report = { path = "../modules/attestation-report" }
-zkvm = { path = "../modules/zkvm" }
 methods = { path = "../methods" }
 
 [build-dependencies]
@@ -35,6 +34,9 @@ git2 = "0.19"
 
 [features]
 default = []
+cuda = [
+    "remote-attestation/cuda"
+]
 sgx-sw = [
     "remote-attestation/sgx-sw"
 ]
