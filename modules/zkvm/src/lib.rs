@@ -1,7 +1,10 @@
 mod errors;
 pub use crate::errors::Error;
 pub use risc0_zkvm::{compute_image_id, ExecutorEnv};
-use risc0_zkvm::{sha::Digestible, BonsaiProver, InnerReceipt, LocalProver, ProveInfo, Prover};
+use risc0_zkvm::{
+    sha::Digestible, BonsaiProver, InnerReceipt, LocalProver, ProveInfo, Prover, ProverOpts,
+    VerifierContext,
+};
 
 #[derive(Debug, Clone)]
 pub enum Risc0ProverMode {
@@ -31,14 +34,24 @@ pub fn prove(mode: &Risc0ProverMode, env: ExecutorEnv, elf: &[u8]) -> Result<Pro
         Risc0ProverMode::Local(_) => {
             let prover = LocalProver::new("local");
             let prover_info = prover
-                .prove(env, elf)
+                .prove_with_ctx(
+                    env,
+                    &VerifierContext::default(),
+                    elf,
+                    &ProverOpts::groth16(),
+                )
                 .map_err(|e| Error::local_proving_error(e.to_string()))?;
             Ok(prover_info)
         }
         Risc0ProverMode::Bonsai(_) => {
             let prover = BonsaiProver::new("bonsai");
             let prover_info = prover
-                .prove(env, elf)
+                .prove_with_ctx(
+                    env,
+                    &VerifierContext::default(),
+                    elf,
+                    &ProverOpts::groth16(),
+                )
                 .map_err(|e| Error::bonsai_proving_error(e.to_string()))?;
             Ok(prover_info)
         }
