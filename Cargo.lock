@@ -1817,7 +1817,7 @@ checksum = "e8566979429cf69b49a5c740c60791108e86440e8be149bbea4fe54d2c32d6e2"
 [[package]]
 name = "dcap-rs"
 version = "0.1.0"
-source = "git+https://github.com/bluele/dcap-rs?rev=c3098b6a3c9faa4a884c87db65d0f586000bcf16#c3098b6a3c9faa4a884c87db65d0f586000bcf16"
+source = "git+https://github.com/bluele/dcap-rs?rev=ccc1fd7a88503bf9b1a15d9f9fdf30244ee91ee9#ccc1fd7a88503bf9b1a15d9f9fdf30244ee91ee9"
 dependencies = [
  "alloy-sol-types",
  "chrono",
