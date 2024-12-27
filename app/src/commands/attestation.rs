@@ -7,8 +7,9 @@ use clap::Parser;
 use crypto::Address;
 use enclave_api::{Enclave, EnclaveCommandAPI, EnclaveProtoAPI};
 use host::store::transaction::CommitStore;
-use remote_attestation::zkvm::{LocalProverOptions, Risc0ProverMode};
+use remote_attestation::zkvm::{BonsaiProverOptions, LocalProverOptions, Risc0ProverMode};
 use remote_attestation::{dcap, ias, zkdcap, IASMode};
+use std::str::FromStr;
 
 /// `attestation` subcommand
 #[allow(clippy::upper_case_acronyms)]
@@ -47,10 +48,7 @@ impl AttestationCmd {
             ),
             AttestationCmd::ZKDCAP(cmd) => run_zkdcap_remote_attestation(
                 enclave_loader.load(opts, cmd.enclave.path.as_ref(), cmd.enclave.is_debug())?,
-                &ZKDCAPRemoteAttestation {
-                    enclave: cmd.enclave.clone(),
-                    enclave_key: cmd.enclave_key.clone(),
-                },
+                cmd,
             ),
             #[cfg(feature = "sgx-sw")]
             AttestationCmd::Simulate(cmd) => run_simulate_remote_attestation(
@@ -255,18 +253,65 @@ pub struct ZKDCAPRemoteAttestation {
         help = "An enclave key attested by Remote Attestation"
     )]
     pub enclave_key: String,
+    #[clap(
+        long = "prove_mode",
+        default_value = "local",
+        help = "Prove mode (local or bonsai)"
+    )]
+    pub prove_mode: ProveMode,
+    #[clap(long = "dev", help = "Run in dev mode")]
+    pub dev: Option<bool>,
+    #[clap(long = "bonsai_api_url", help = "Bonsai API URL")]
+    pub bonsai_api_url: Option<String>,
+    #[clap(long = "bonsai_api_key", help = "Bonsai API key")]
+    pub bonsai_api_key: Option<String>,
+}
+
+impl ZKDCAPRemoteAttestation {
+    pub fn get_local_prover_options(&self) -> Result<LocalProverOptions> {
+        Ok(LocalProverOptions {
+            is_dev_mode: self.dev,
+        })
+    }
+
+    pub fn get_bonsai_prover_options(&self) -> Result<BonsaiProverOptions> {
+        Ok(BonsaiProverOptions {
+            api_url: self.bonsai_api_url.clone(),
+            api_key: self.bonsai_api_key.clone(),
+        })
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum ProveMode {
+    Local,
+    Bonsai,
+}
+
+impl FromStr for ProveMode {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "local" => Ok(Self::Local),
+            "bonsai" => Ok(Self::Bonsai),
+            _ => Err(anyhow!("invalid prove mode: {}", s)),
+        }
+    }
 }
 
 fn run_zkdcap_remote_attestation<E: EnclaveCommandAPI<S>, S: CommitStore>(
     enclave: E,
     cmd: &ZKDCAPRemoteAttestation,
 ) -> Result<()> {
+    let mode = match cmd.prove_mode {
+        ProveMode::Local => Risc0ProverMode::Local(cmd.get_local_prover_options()?),
+        ProveMode::Bonsai => Risc0ProverMode::Bonsai(cmd.get_bonsai_prover_options()?),
+    };
     zkdcap::run_zkdcap_ra(
         enclave.get_key_manager(),
         Address::from_hex_string(&cmd.enclave_key)?,
-        Risc0ProverMode::Local(LocalProverOptions {
-            is_dev_mode: Some(true),
-        }),
+        mode,
         methods::DCAP_VERIFIER_ELF,
     )?;
     Ok(())
