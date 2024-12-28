@@ -16,6 +16,8 @@ dcap-rs = { git = "https://github.com/bluele/dcap-rs", rev = "ccc1fd7a88503bf9b1
 attestation-report = { path = "../attestation-report", default-features = false }
 light-client = { path = "../light-client", default-features = false }
 crypto = { path = "../crypto", default-features = false }
+zkvm = { path = "../zkvm", default-features = false, features = ["verifier"] }
+methods = { path = "../../methods" }
 
 [dev-dependencies]
 sgx_types = { rev = "v1.1.6", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", features = ["extra_traits"] }

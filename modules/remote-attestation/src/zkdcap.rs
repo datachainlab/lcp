@@ -5,9 +5,10 @@ use keymanager::EnclaveKeyManager;
 use lcp_types::Time;
 use log::info;
 use zkvm::{
-    encode_seal, prove,
+    encode_seal,
+    prover::{prove, Risc0ProverMode},
     risc0_zkvm::{compute_image_id, ExecutorEnv},
-    Risc0ProverMode,
+    verifier::verify_groth16_proof,
 };
 
 pub fn run_zkdcap_ra(
@@ -41,8 +42,7 @@ pub fn run_zkdcap_ra(
 
     let seal = encode_seal(&prover_info.receipt).unwrap();
     if let zkvm::risc0_zkvm::InnerReceipt::Groth16(_) = prover_info.receipt.inner {
-        zkvm::verify_groth16_proof(
-            // prover_info.receipt.inner.groth16().unwrap().seal.clone(),
+        verify_groth16_proof(
             seal.clone(),
             image_id,
             prover_info.receipt.journal.bytes.clone(),

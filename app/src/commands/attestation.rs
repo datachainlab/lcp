@@ -7,7 +7,7 @@ use clap::Parser;
 use crypto::Address;
 use enclave_api::{Enclave, EnclaveCommandAPI, EnclaveProtoAPI};
 use host::store::transaction::CommitStore;
-use remote_attestation::zkvm::{BonsaiProverOptions, LocalProverOptions, Risc0ProverMode};
+use remote_attestation::zkvm::prover::{BonsaiProverOptions, LocalProverOptions, Risc0ProverMode};
 use remote_attestation::{dcap, ias, zkdcap, IASMode};
 use std::str::FromStr;
 

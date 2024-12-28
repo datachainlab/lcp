@@ -68,6 +68,10 @@ define_error! {
         [light_client::commitments::Error]
         |_| { "Commitment proof error" },
 
+        Zkvm
+        [zkvm::Error]
+        |_| { "Zkvm error" },
+
         IbcProto
         [TraceError<light_client::types::proto::protobuf::Error>]
         |_| { "IBCProto error" },
@@ -105,6 +109,12 @@ impl From<light_client::Error> for Error {
 impl From<light_client::commitments::Error> for Error {
     fn from(value: light_client::commitments::Error) -> Self {
         Self::commitment_proof(value)
+    }
+}
+
+impl From<zkvm::Error> for Error {
+    fn from(value: zkvm::Error) -> Self {
+        Self::zkvm(value)
     }
 }
 

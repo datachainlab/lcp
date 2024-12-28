@@ -29,5 +29,22 @@ define_error! {
         |e| {
             format_args!("Unsupported receipt type: {}", e.descr)
         },
+
+        Groth16VerificationError
+        {
+            descr: String
+        }
+        |e| {
+            format_args!("Groth16 verification error: {}", e.descr)
+        },
+
+        UnexpectedSelector
+        {
+            expected: Vec<u8>,
+            actual: Vec<u8>
+        }
+        |e| {
+            format_args!("Expected selector {:?} but got {:?}", e.expected, e.actual)
+        }
     }
 }

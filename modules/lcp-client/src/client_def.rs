@@ -16,6 +16,7 @@ use light_client::commitments::{
 };
 use light_client::types::{ClientId, Height, Time};
 use light_client::{HostClientKeeper, HostClientReader};
+use methods::DCAP_VERIFIER_ID;
 use tiny_keccak::{Hasher, Keccak};
 
 pub const LCP_CLIENT_TYPE: &str = "0000-lcp";
@@ -233,8 +234,11 @@ impl LCPClient {
 
         assert!(!client_state.frozen);
 
-        // TODO
-        // verify_zkdcap_report(ctx.host_timestamp(), &client_state, &message.commit, &message.proof)?;
+        zkvm::verifier::verify_groth16_proof(
+            message.proof,
+            DCAP_VERIFIER_ID,
+            message.commit.to_bytes(),
+        )?;
 
         let attestation_time =
             Time::from_unix_timestamp(message.commit.attestation_time as i64, 0)?;
