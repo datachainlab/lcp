@@ -2,8 +2,7 @@ mod errors;
 pub use crate::errors::Error;
 pub use risc0_zkvm::{compute_image_id, ExecutorEnv};
 use risc0_zkvm::{
-    sha::Digestible, BonsaiProver, InnerReceipt, LocalProver, ProveInfo, Prover, ProverOpts,
-    VerifierContext,
+    sha::{Digest, Digestible}, BonsaiProver, Groth16Receipt, Groth16ReceiptVerifierParameters, InnerReceipt, LocalProver, MaybePruned, ProveInfo, Prover, ProverOpts, ReceiptClaim, VerifierContext
 };
 
 #[derive(Debug, Clone)]
@@ -153,4 +152,23 @@ pub fn encode_seal(receipt: &risc0_zkvm::Receipt) -> Result<Vec<u8>, Error> {
         }
     };
     Ok(seal)
+}
+
+pub fn create_groth16_receipt(
+    seal: Vec<u8>,
+    image_id: Digest,
+    journal: Vec<u8>,
+) -> Groth16Receipt<ReceiptClaim> {
+    let claim = ReceiptClaim::ok(image_id, journal);
+    let claim = MaybePruned::Value(claim);
+    Groth16Receipt::new(seal, claim, Groth16ReceiptVerifierParameters::default().digest())
+}
+
+pub fn verify_groth16_proof(
+    seal: Vec<u8>,
+    image_id: Digest,
+    journal: Vec<u8>,
+) {
+    let receipt = create_groth16_receipt(seal, image_id, journal);
+    receipt.verify_integrity().unwrap();
 }

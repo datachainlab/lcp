@@ -35,6 +35,8 @@ pub fn run_zkdcap_ra(
     prover_info.receipt.verify(image_id).unwrap();
     info!("receipt verified");
 
+    zkvm::verify_groth16_proof(prover_info.receipt.inner.groth16().unwrap().seal.clone(), image_id, prover_info.receipt.journal.bytes.clone());
+
     let seal = encode_seal(&prover_info.receipt).unwrap();
     let quote = res.get_quote();
 
