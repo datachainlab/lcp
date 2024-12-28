@@ -1,8 +1,11 @@
 mod errors;
 pub use crate::errors::Error;
-pub use risc0_zkvm::{compute_image_id, ExecutorEnv};
+use risc0_zkp::verify::VerificationError;
+pub use risc0_zkvm;
 use risc0_zkvm::{
-    sha::{Digest, Digestible}, BonsaiProver, Groth16Receipt, Groth16ReceiptVerifierParameters, InnerReceipt, LocalProver, MaybePruned, ProveInfo, Prover, ProverOpts, ReceiptClaim, VerifierContext
+    sha::{Digest, Digestible},
+    BonsaiProver, ExecutorEnv, Groth16Receipt, Groth16ReceiptVerifierParameters, InnerReceipt,
+    LocalProver, MaybePruned, ProveInfo, Prover, ProverOpts, ReceiptClaim, VerifierContext,
 };
 
 #[derive(Debug, Clone)]
@@ -156,19 +159,28 @@ pub fn encode_seal(receipt: &risc0_zkvm::Receipt) -> Result<Vec<u8>, Error> {
 
 pub fn create_groth16_receipt(
     seal: Vec<u8>,
-    image_id: Digest,
+    image_id: impl Into<Digest>,
     journal: Vec<u8>,
 ) -> Groth16Receipt<ReceiptClaim> {
-    let claim = ReceiptClaim::ok(image_id, journal);
-    let claim = MaybePruned::Value(claim);
-    Groth16Receipt::new(seal, claim, Groth16ReceiptVerifierParameters::default().digest())
+    let claim = MaybePruned::Value(ReceiptClaim::ok(image_id, journal));
+    Groth16Receipt::new(
+        seal,
+        claim,
+        Groth16ReceiptVerifierParameters::default().digest(),
+    )
 }
 
 pub fn verify_groth16_proof(
     seal: Vec<u8>,
-    image_id: Digest,
+    image_id: impl Into<Digest>,
     journal: Vec<u8>,
-) {
-    let receipt = create_groth16_receipt(seal, image_id, journal);
-    receipt.verify_integrity().unwrap();
+) -> Result<(), VerificationError> {
+    let expected_selector = &seal[..4];
+    let data = &seal[4..];
+    let receipt = create_groth16_receipt(data.to_vec(), image_id, journal);
+    let selector = receipt.verifier_parameters.as_bytes()[..4].to_vec();
+    if expected_selector != selector {
+        return Err(VerificationError::InvalidProof);
+    }
+    receipt.verify_integrity()
 }

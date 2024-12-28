@@ -4,7 +4,11 @@ use crypto::Address;
 use keymanager::EnclaveKeyManager;
 use lcp_types::Time;
 use log::info;
-use zkvm::{compute_image_id, encode_seal, prove, ExecutorEnv, Risc0ProverMode};
+use zkvm::{
+    encode_seal, prove,
+    risc0_zkvm::{compute_image_id, ExecutorEnv},
+    Risc0ProverMode,
+};
 
 pub fn run_zkdcap_ra(
     key_manager: &EnclaveKeyManager,
@@ -35,11 +39,23 @@ pub fn run_zkdcap_ra(
     prover_info.receipt.verify(image_id).unwrap();
     info!("receipt verified");
 
-    zkvm::verify_groth16_proof(prover_info.receipt.inner.groth16().unwrap().seal.clone(), image_id, prover_info.receipt.journal.bytes.clone());
-
     let seal = encode_seal(&prover_info.receipt).unwrap();
-    let quote = res.get_quote();
+    if let zkvm::risc0_zkvm::InnerReceipt::Groth16(_) = prover_info.receipt.inner {
+        zkvm::verify_groth16_proof(
+            // prover_info.receipt.inner.groth16().unwrap().seal.clone(),
+            seal.clone(),
+            image_id,
+            prover_info.receipt.journal.bytes.clone(),
+        )
+        .unwrap();
+    } else {
+        assert!(
+            prover_mode.is_dev_mode(),
+            "if not groth16, must be dev mode"
+        );
+    }
 
+    let quote = res.get_quote();
     key_manager
         .save_ra_quote(
             target_enclave_key,

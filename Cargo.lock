@@ -8988,6 +8988,7 @@ name = "zkvm"
 version = "0.1.0"
 dependencies = [
  "flex-error",
+ "risc0-zkp",
  "risc0-zkvm",
 ]
 
