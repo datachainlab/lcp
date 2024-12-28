@@ -1,9 +1,9 @@
-use crate::dcap::DCAPVerifierCommit;
 use crate::errors::Error;
 use crate::prelude::*;
 use alloy_sol_types::{sol, SolValue};
 use attestation_report::IASSignedReport;
 use crypto::Address;
+use dcap_rs::types::DCAPVerifierCommit;
 use light_client::commitments::{Error as CommitmentError, EthABIEncoder, ProxyMessage};
 use light_client::types::proto::ibc::lightclients::lcp::v1::{
     RegisterEnclaveKeyMessage as RawRegisterEnclaveKeyMessage,

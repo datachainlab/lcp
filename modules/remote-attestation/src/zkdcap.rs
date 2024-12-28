@@ -4,7 +4,7 @@ use crypto::Address;
 use keymanager::EnclaveKeyManager;
 use lcp_types::Time;
 use log::info;
-use zkvm::{encode_seal, prove, ExecutorEnv, Risc0ProverMode};
+use zkvm::{compute_image_id, encode_seal, prove, ExecutorEnv, Risc0ProverMode};
 
 pub fn run_zkdcap_ra(
     key_manager: &EnclaveKeyManager,
@@ -12,6 +12,9 @@ pub fn run_zkdcap_ra(
     prover_mode: Risc0ProverMode,
     elf: &[u8],
 ) -> Result<(), Error> {
+    let image_id = compute_image_id(elf).unwrap();
+    info!("image_id: {}", hex::encode(image_id.as_bytes()));
+
     let current_time = Time::now();
     let res = dcap_ra(key_manager, target_enclave_key, current_time)?;
 
@@ -27,7 +30,11 @@ pub fn run_zkdcap_ra(
 
     info!("proving with prover mode: {:?}", prover_mode);
     let prover_info = prove(&prover_mode, env, elf).unwrap();
-    info!("prover info: {:?}", prover_info.stats);
+    info!("proving done: stats: {:?}", prover_info.stats);
+
+    prover_info.receipt.verify(image_id).unwrap();
+    info!("receipt verified");
+
     let seal = encode_seal(&prover_info.receipt).unwrap();
     let quote = res.get_quote();
 
