@@ -430,6 +430,7 @@ impl TryFrom<SealedEnclaveKeyInfo> for ProtoEnclaveKeyInfo {
                             proof: Some(match zkquote.zkp {
                                 attestation_report::ZKVMProof::Risc0(proof) => {
                                     zkvm_proof::Proof::Risc0(Risc0ZkvmProof {
+                                        image_id: proof.image_id.to_vec(),
                                         seal: proof.seal,
                                         commit: proof.commit,
                                     })

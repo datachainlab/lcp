@@ -1,15 +1,17 @@
 use crate::prelude::*;
-use crate::serde_base64;
 use crate::Error;
 use crate::RAQuote;
 use lcp_types::proto::lcp::service::enclave::v1::DcapCollateral;
 use lcp_types::Time;
 use serde::{Deserialize, Serialize};
+use serde_with::serde_as;
 
+#[serde_as]
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct DCAPQuote {
-    #[serde(with = "serde_base64")]
+    #[serde_as(as = "serde_with::hex::Hex<serde_with::formats::Lowercase>")]
     pub raw: Vec<u8>,
+    #[serde_as(as = "serde_with::hex::Hex<serde_with::formats::Lowercase>")]
     pub fmspc: [u8; 6],
     pub tcb_status: String,
     pub advisory_ids: Vec<String>,
@@ -65,9 +67,14 @@ impl ZKVMProof {
     }
 }
 
+#[serde_as]
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Risc0ZKVMProof {
+    #[serde_as(as = "serde_with::hex::Hex<serde_with::formats::Lowercase>")]
+    pub image_id: [u8; 32],
+    #[serde_as(as = "serde_with::hex::Hex<serde_with::formats::Lowercase>")]
     pub seal: Vec<u8>,
+    #[serde_as(as = "serde_with::hex::Hex<serde_with::formats::Lowercase>")]
     pub commit: Vec<u8>,
 }
 

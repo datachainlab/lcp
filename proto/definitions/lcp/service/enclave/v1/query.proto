@@ -58,8 +58,9 @@ message ZKVMProof {
 }
 
 message Risc0ZKVMProof {
-  bytes seal = 1;
-  bytes commit = 2;
+  bytes image_id = 1;
+  bytes seal = 2;
+  bytes commit = 3;
 }
 
 message DCAPCollateral {

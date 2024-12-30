@@ -62,6 +62,7 @@ pub fn run_zkdcap_ra(
             ZKDCAPQuote::new(
                 quote,
                 ZKVMProof::Risc0(Risc0ZKVMProof {
+                    image_id: image_id.into(),
                     seal,
                     commit: prover_info.receipt.journal.bytes,
                 }),

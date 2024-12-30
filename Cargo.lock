@@ -721,6 +721,7 @@ dependencies = [
  "pem 2.0.1",
  "serde",
  "serde_json",
+ "serde_with",
  "sgx_types",
  "tokio",
  "webpki 0.22.4",

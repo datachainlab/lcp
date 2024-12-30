@@ -100,8 +100,10 @@ pub mod zkvm_proof {
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct Risc0ZkvmProof {
     #[prost(bytes = "vec", tag = "1")]
-    pub seal: ::prost::alloc::vec::Vec<u8>,
+    pub image_id: ::prost::alloc::vec::Vec<u8>,
     #[prost(bytes = "vec", tag = "2")]
+    pub seal: ::prost::alloc::vec::Vec<u8>,
+    #[prost(bytes = "vec", tag = "3")]
     pub commit: ::prost::alloc::vec::Vec<u8>,
 }
 #[derive(::serde::Serialize, ::serde::Deserialize)]
