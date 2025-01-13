@@ -27,7 +27,7 @@ crypto = { path = "../modules/crypto" }
 keymanager = { path = "../modules/keymanager" }
 remote-attestation = { path = "../modules/remote-attestation" }
 attestation-report = { path = "../modules/attestation-report" }
-methods = { path = "../methods" }
+risc0-methods = { path = "../zkvm/risc0" }
 
 [build-dependencies]
 git2 = "0.19"

@@ -16,7 +16,7 @@ use light_client::commitments::{
 };
 use light_client::types::{ClientId, Height, Time};
 use light_client::{HostClientKeeper, HostClientReader};
-use methods::DCAP_VERIFIER_ID;
+use risc0_methods::DCAP_VERIFIER_ID;
 use tiny_keccak::{Hasher, Keccak};
 
 pub const LCP_CLIENT_TYPE: &str = "0000-lcp";

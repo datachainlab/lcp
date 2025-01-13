@@ -18,7 +18,11 @@ pub fn run_zkdcap_ra(
     elf: &[u8],
 ) -> Result<(), Error> {
     let image_id = compute_image_id(elf).unwrap();
-    info!("image_id: {}", hex::encode(image_id.as_bytes()));
+    info!(
+        "Run zkDCAP verification with prover_mode={} image_id={}",
+        prover_mode,
+        hex::encode(image_id.as_bytes())
+    );
 
     let current_time = Time::now();
     let res = dcap_ra(key_manager, target_enclave_key, current_time)?;

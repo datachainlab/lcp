@@ -1,2 +1,4 @@
 //! Generated crate containing the image ID and ELF binary of the build guest.
-include!(concat!(env!("OUT_DIR"), "/methods.rs"));
+#[rustfmt::skip]
+mod methods;
+pub use methods::*;

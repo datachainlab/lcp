@@ -1,5 +1,3 @@
-use alloy_primitives::U256;
-use alloy_sol_types::SolValue;
 use dcap_rs::types::collaterals::IntelCollateral;
 use risc0_zkvm::guest::env;
 use dcap_rs::utils::quotes::version_3::verify_quote_dcapv3;

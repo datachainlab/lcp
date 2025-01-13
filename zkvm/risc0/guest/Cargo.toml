@@ -7,11 +7,7 @@ edition = "2021"
 name = "dcap_verifier"
 path = "src/bin/main.rs"
 
-[workspace]
-
 [dependencies]
-alloy-primitives = { version = "=0.8.12", default-features = false, features = ["rlp", "serde", "std"] }
-alloy-sol-types = { version = "=0.8.12" }
 risc0-zkvm = { version = "1.1", default-features = false, features = ['std'] }
 dcap-rs = { git = "https://github.com/bluele/dcap-rs", rev = "ccc1fd7a88503bf9b1a15d9f9fdf30244ee91ee9" }
 

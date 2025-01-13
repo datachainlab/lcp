@@ -1,0 +1,3 @@
+
+pub const DCAP_VERIFIER_ID: [u32; 8] = [1279608822, 4011258820, 1851276170, 2186192677, 284778989, 1386201931, 1608222479, 637501522];
+pub const DCAP_VERIFIER_ELF: &[u8] = include_bytes!("../artifacts/dcap-verifier");

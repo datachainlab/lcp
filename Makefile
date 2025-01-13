@@ -1,3 +1,8 @@
+######## LCP Build Settings ########
+LCP_RISC0_BUILD ?= 0
+ZK_PROVER_CUDA ?= 0
+APP_CARGO_FLAGS ?=
+
 ######## SGX SDK Settings ########
 SGX_SDK ?= /opt/sgxsdk
 SGX_MODE ?= HW
@@ -5,7 +10,6 @@ SGX_ARCH ?= x64
 SGX_DEBUG ?= 0
 SGX_PRERELEASE ?= 0
 SGX_PRODUCTION ?= 0
-ZK_PROVER_CUDA ?= 0
 
 include buildenv.mk
 
@@ -50,14 +54,14 @@ endif
 
 SGX_COMMON_CFLAGS += -fstack-protector
 
-APP_CARGO_FEATURES     = --features=default
+APP_CARGO_FEATURES = --features=default
+SGX_ENCLAVE_CONFIG = "enclave/Enclave.config.xml"
 ifeq ($(SGX_PRODUCTION), 1)
 	SGX_ENCLAVE_MODE = "Production Mode"
 	SGX_ENCLAVE_CONFIG = $(SGX_ENCLAVE_CONFIG)
 	SGX_SIGN_KEY = $(SGX_COMMERCIAL_KEY)
 else
 	SGX_ENCLAVE_MODE = "Development Mode"
-	SGX_ENCLAVE_CONFIG = "enclave/Enclave.config.xml"
 	SGX_SIGN_KEY = "enclave/Enclave_private.pem"
 	ifneq ($(SGX_MODE), HW)
 		APP_CARGO_FEATURES     = --features=default,sgx-sw
@@ -78,7 +82,7 @@ Enclave_EDL_Files := enclave/Enclave_t.c enclave/Enclave_t.h app/Enclave_u.c app
 
 ######## APP Settings ########
 
-App_Rust_Flags := $(CARGO_TARGET) $(APP_CARGO_FEATURES)
+App_Rust_Flags := $(CARGO_TARGET) $(APP_CARGO_FEATURES) $(APP_CARGO_FLAGS)
 App_SRC_Files := $(shell find app/ -type f -name '*.rs') $(shell find app/ -type f -name 'Cargo.toml')
 App_Include_Paths := -I ./app -I./include -I$(SGX_SDK)/include
 App_C_Flags := $(SGX_COMMON_CFLAGS) -fPIC -Wno-attributes $(App_Include_Paths)
@@ -112,7 +116,6 @@ RustEnclave_Link_Flags := -Wl,--no-undefined -nostdlib -nodefaultlibs -nostartfi
 	-Wl,--start-group -lsgx_tcxx -lsgx_tstdc -l$(Service_Library_Name) -l$(Crypto_Library_Name) $(RustEnclave_Link_Libs) -Wl,--end-group \
 	-Wl,--version-script=enclave/Enclave.lds \
 	$(ENCLAVE_LDFLAGS)
-RUSTFLAGS :="-C target-feature=+avx2"
 
 RustEnclave_Name := enclave/enclave.so
 Signed_RustEnclave_Name := bin/enclave.signed.so
@@ -150,7 +153,7 @@ $(App_Enclave_u_Object): app/Enclave_u.o
 	$(AR) rcsD $@ $^
 
 $(App_Path): $(App_Enclave_u_Object) $(App_SRC_Files)
-	@cd app && SGX_SDK=$(SGX_SDK) SGX_MODE=$(SGX_MODE) cargo build $(App_Rust_Flags)
+	@cd app && SGX_SDK=$(SGX_SDK) SGX_MODE=$(SGX_MODE) LCP_RISC0_BUILD=$(LCP_RISC0_BUILD) cargo build $(App_Rust_Flags)
 	@echo "Cargo  =>  $@"
 	mkdir -p bin
 	cp $(App_Rust_Path)/$(App_Name) ./bin
@@ -167,7 +170,7 @@ $(RustEnclave_Name): enclave enclave/Enclave_t.o
 
 $(Signed_RustEnclave_Name): $(RustEnclave_Name)
 	mkdir -p bin
-	@$(SGX_ENCLAVE_SIGNER) sign -key enclave/Enclave_private.pem -enclave $(RustEnclave_Name) -out $@ -config enclave/Enclave.config.xml
+	@$(SGX_ENCLAVE_SIGNER) sign -key enclave/Enclave_private.pem -enclave $(RustEnclave_Name) -out $@ -config $(SGX_ENCLAVE_CONFIG)
 	@echo "SIGN =>  $@"
 
 .PHONY: enclave
@@ -229,7 +232,7 @@ test:
 
 .PHONY: integration-test
 integration-test: $(Signed_RustEnclave_Name) bin/gaiad
-	cargo test $(CARGO_TARGET) --package integration-test $(APP_CARGO_FEATURES)
+	@PATH=${PATH}:$(CURDIR)/bin cargo test $(CARGO_TARGET) --package integration-test $(APP_CARGO_FEATURES)
 
 .PHONY: test-nodes
 test-setup-nodes: bin/gaiad
