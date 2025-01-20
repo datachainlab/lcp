@@ -209,6 +209,6 @@ impl From<lcp_types::TimeError> for Error {
 
 impl From<reqwest::Error> for Error {
     fn from(e: reqwest::Error) -> Self {
-        Error::reqwest(e.into())
+        Error::reqwest(e)
     }
 }

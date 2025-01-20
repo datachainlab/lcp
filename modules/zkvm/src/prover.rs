@@ -45,10 +45,7 @@ impl Risc0ProverMode {
     }
 
     pub fn is_dev_mode(&self) -> bool {
-        match self {
-            Self::Dev => true,
-            _ => false,
-        }
+        matches!(self, Self::Dev)
     }
 }
 

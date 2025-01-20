@@ -208,7 +208,7 @@ fn extract_raw_certs(cert_chain: &[u8]) -> Result<Vec<Vec<u8>>, Error> {
 
 fn http_get(url: String) -> Result<reqwest::blocking::Response, Error> {
     info!("get collateral from {}", url);
-    let res = reqwest::blocking::get(&url).map_err(|e| Error::reqwest_get(e))?;
+    let res = reqwest::blocking::get(&url).map_err(Error::reqwest_get)?;
     if !res.status().is_success() {
         return Err(Error::invalid_http_status(url, res.status()));
     }
