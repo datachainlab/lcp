@@ -1,8 +1,8 @@
-use std::fmt::Display;
 use crate::Error;
 use risc0_zkvm::{
     BonsaiProver, ExecutorEnv, LocalProver, ProveInfo, Prover, ProverOpts, VerifierContext,
 };
+use std::fmt::Display;
 
 #[derive(Debug, Clone)]
 pub enum Risc0ProverMode {

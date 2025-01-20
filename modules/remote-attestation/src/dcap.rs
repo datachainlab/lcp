@@ -50,7 +50,7 @@ pub(crate) fn dcap_ra(
         "https://api.trustedservices.intel.com/",
         "https://certificates.trustedservices.intel.com/",
         &quote,
-    );
+    )?;
     let output = verify_quote_dcapv3(&quote, &collateral, current_time.as_unix_timestamp_secs());
     info!("DCAP RA output: {:?}", output);
 
@@ -125,83 +125,94 @@ fn rsgx_qe_get_quote(app_report: &sgx_report_t) -> Result<Vec<u8>, sgx_quote3_er
     }
 }
 
-fn get_collateral(pccs_url: &str, certs_service_url: &str, quote: &QuoteV3) -> IntelCollateral {
-    let base_url = format!("{}/sgx/certification/v4", pccs_url.trim_end_matches('/'));
-    info!("base_url: {}", base_url);
-    assert_eq!(
-        quote.signature.qe_cert_data.cert_data_type, 5,
-        "QE Cert Type must be 5"
-    );
-    let certchain_pems = parse_pem(&quote.signature.qe_cert_data.cert_data).unwrap();
-    let certchain = parse_certchain(&certchain_pems);
-    assert_eq!(certchain.len(), 3, "QE Cert chain must have 3 certs");
+fn get_collateral(
+    pccs_url: &str,
+    certs_service_url: &str,
+    quote: &QuoteV3,
+) -> Result<IntelCollateral, Error> {
+    let pccs_url = pccs_url.trim_end_matches('/');
+    let certs_service_url = certs_service_url.trim_end_matches('/');
+    let base_url = format!("{pccs_url}/sgx/certification/v4");
+    if quote.signature.qe_cert_data.cert_data_type != 5 {
+        return Err(Error::collateral("QE Cert Type must be 5".to_string()));
+    }
+    let certchain_pems = parse_pem(&quote.signature.qe_cert_data.cert_data)
+        .map_err(|e| Error::collateral(format!("cannot parse QE cert chain: {}", e)))?;
 
-    // get the pck certificate, and check whether issuer common name is valid
+    let certchain = parse_certchain(&certchain_pems);
+    if certchain.len() != 3 {
+        return Err(Error::collateral(
+            "QE Cert chain must have 3 certs".to_string(),
+        ));
+    }
+
+    // get the pck certificate
     let pck_cert = &certchain[0];
 
     // get the SGX extension
     let sgx_extensions = extract_sgx_extension(pck_cert);
     let mut collateral = IntelCollateral::new();
+    collateral.set_intel_root_ca_der(INTEL_ROOT_CA);
     {
         let fmspc = hex::encode_upper(sgx_extensions.fmspc);
-        let res = reqwest::blocking::get(format!("{base_url}/tcb?fmspc={fmspc}")).unwrap();
-        let issuer_chain = extract_raw_certs(
-            get_header(&res, "TCB-Info-Issuer-Chain")
-                .unwrap()
-                .as_bytes(),
-        )
-        .unwrap();
+        let res = http_get(format!("{base_url}/tcb?fmspc={fmspc}"))?;
+        let issuer_chain =
+            extract_raw_certs(get_header(&res, "TCB-Info-Issuer-Chain")?.as_bytes())?;
         collateral.set_sgx_tcb_signing_der(&issuer_chain[0]);
-        collateral.set_tcbinfo_bytes(res.bytes().unwrap().as_ref());
+        collateral.set_tcbinfo_bytes(res.bytes()?.as_ref());
     }
 
-    {
-        let res = reqwest::blocking::get(format!("{base_url}/qe/identity")).unwrap();
-        collateral.set_qeidentity_bytes(res.bytes().unwrap().as_ref());
-    }
-    collateral.set_intel_root_ca_der(INTEL_ROOT_CA);
+    collateral.set_qeidentity_bytes(
+        http_get(format!("{base_url}/qe/identity"))?
+            .bytes()?
+            .as_ref(),
+    );
+    collateral.set_sgx_intel_root_ca_crl_der(
+        http_get(format!("{certs_service_url}/IntelSGXRootCA.der",))?
+            .bytes()?
+            .as_ref(),
+    );
+    collateral.set_sgx_processor_crl_der(
+        http_get(format!("{base_url}/pckcrl?ca=processor&encoding=der"))?
+            .bytes()?
+            .as_ref(),
+    );
+    collateral.set_sgx_platform_crl_der(
+        http_get(format!("{base_url}/pckcrl?ca=platform&encoding=der"))?
+            .bytes()?
+            .as_ref(),
+    );
 
-    {
-        let res = reqwest::blocking::get(format!(
-            "{}/IntelSGXRootCA.der",
-            certs_service_url.trim_end_matches('/')
-        ))
-        .unwrap();
-        collateral.set_sgx_intel_root_ca_crl_der(res.bytes().unwrap().as_ref());
-    }
-
-    {
-        let res =
-            reqwest::blocking::get(format!("{base_url}/pckcrl?ca=processor&encoding=der")).unwrap();
-        collateral.set_sgx_processor_crl_der(res.bytes().unwrap().as_ref());
-    }
-    {
-        let res =
-            reqwest::blocking::get(format!("{base_url}/pckcrl?ca=platform&encoding=der")).unwrap();
-        collateral.set_sgx_platform_crl_der(res.bytes().unwrap().as_ref());
-    }
-
-    collateral
+    Ok(collateral)
 }
 
-fn get_header(res: &reqwest::blocking::Response, name: &str) -> Result<String, String> {
+fn get_header(res: &reqwest::blocking::Response, name: &str) -> Result<String, Error> {
     let value = res
         .headers()
         .get(name)
-        .ok_or(format!("Missing {name}"))?
+        .ok_or_else(|| Error::collateral(format!("missing header {}", name)))?
         .to_str()
-        .unwrap();
-    let value = urlencoding::decode(value).unwrap();
+        .map_err(|e| Error::collateral(format!("invalid header value: {}", e)))?;
+    let value = urlencoding::decode(value)
+        .map_err(|e| Error::collateral(format!("invalid header value: {}", e)))?;
     Ok(value.into_owned())
 }
 
 fn extract_raw_certs(cert_chain: &[u8]) -> Result<Vec<Vec<u8>>, Error> {
     Ok(pem::parse_many(cert_chain)
-        // .map_err(|_| Error::CodecError)?
-        .unwrap()
+        .map_err(Error::pem)?
         .iter()
         .map(|i| i.contents().to_vec())
         .collect())
+}
+
+fn http_get(url: String) -> Result<reqwest::blocking::Response, Error> {
+    info!("get collateral from {}", url);
+    let res = reqwest::blocking::get(&url).map_err(|e| Error::reqwest_get(e))?;
+    if !res.status().is_success() {
+        return Err(Error::invalid_http_status(url, res.status()));
+    }
+    Ok(res)
 }
 
 #[cfg(test)]
@@ -222,7 +233,8 @@ mod tests {
             "https://api.trustedservices.intel.com/",
             "https://certificates.trustedservices.intel.com/",
             &quote,
-        );
+        )
+        .unwrap();
         let output = verify_quote_dcapv3(&quote, &collateral, Time::now().as_unix_timestamp_secs());
         assert_eq!(output.tee_type, SGX_TEE_TYPE);
     }
