@@ -114,7 +114,7 @@ impl ZKDCAPQuote {
     }
 
     #[cfg(feature = "std")]
-    pub fn commit(&self) -> dcap_rs::types::DCAPVerifierCommit {
-        dcap_rs::types::DCAPVerifierCommit::from_bytes(self.zkp.commit())
+    pub fn commit(&self) -> dcap_rs::types::VerifiedOutput {
+        dcap_rs::types::VerifiedOutput::from_bytes(self.zkp.commit())
     }
 }

@@ -69,8 +69,7 @@ message DCAPCollateral {
   bytes sgx_intel_root_ca_der = 3;
   bytes sgx_tcb_signing_der = 4;
   bytes sgx_intel_root_ca_crl_der = 5;
-  bytes sgx_pck_processor_crl_der = 6;
-  bytes sgx_pck_platform_crl_der = 7;
+  bytes sgx_pck_crl_der = 6;
 }
 
 message QueryEnclaveKeyRequest {

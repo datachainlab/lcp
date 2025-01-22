@@ -121,9 +121,7 @@ pub struct DcapCollateral {
     #[prost(bytes = "vec", tag = "5")]
     pub sgx_intel_root_ca_crl_der: ::prost::alloc::vec::Vec<u8>,
     #[prost(bytes = "vec", tag = "6")]
-    pub sgx_pck_processor_crl_der: ::prost::alloc::vec::Vec<u8>,
-    #[prost(bytes = "vec", tag = "7")]
-    pub sgx_pck_platform_crl_der: ::prost::alloc::vec::Vec<u8>,
+    pub sgx_pck_crl_der: ::prost::alloc::vec::Vec<u8>,
 }
 #[derive(::serde::Serialize, ::serde::Deserialize)]
 #[allow(clippy::derive_partial_eq_without_eq)]

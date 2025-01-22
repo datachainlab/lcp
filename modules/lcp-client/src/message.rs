@@ -3,7 +3,7 @@ use crate::prelude::*;
 use alloy_sol_types::{sol, SolValue};
 use attestation_report::IASSignedReport;
 use crypto::Address;
-use dcap_rs::types::DCAPVerifierCommit;
+use dcap_rs::types::VerifiedOutput;
 use light_client::commitments::{Error as CommitmentError, EthABIEncoder, ProxyMessage};
 use light_client::types::proto::ibc::lightclients::lcp::v1::{
     RegisterEnclaveKeyMessage as RawRegisterEnclaveKeyMessage,
@@ -111,7 +111,7 @@ impl From<RegisterEnclaveKeyMessage> for RawRegisterEnclaveKeyMessage {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ZKDCAPRegisterEnclaveKeyMessage {
-    pub commit: DCAPVerifierCommit,
+    pub commit: VerifiedOutput,
     pub proof: Vec<u8>,
     pub operator_signature: Option<Vec<u8>>,
 }
@@ -122,7 +122,7 @@ impl TryFrom<RawZKDCAPRegisterEnclaveKeyMessage> for ZKDCAPRegisterEnclaveKeyMes
     type Error = Error;
     fn try_from(value: RawZKDCAPRegisterEnclaveKeyMessage) -> Result<Self, Self::Error> {
         Ok(ZKDCAPRegisterEnclaveKeyMessage {
-            commit: DCAPVerifierCommit::from_bytes(&value.commit),
+            commit: VerifiedOutput::from_bytes(&value.commit),
             proof: value.proof,
             operator_signature: (!value.operator_signature.is_empty())
                 .then_some(value.operator_signature),

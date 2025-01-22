@@ -240,14 +240,25 @@ impl LCPClient {
             message.commit.to_bytes(),
         )?;
 
-        let attestation_time =
-            Time::from_unix_timestamp(message.commit.attestation_time as i64, 0)?;
-        let report = if let QuoteBody::SGXQuoteBody(report) = message.commit.output.quote_body {
+        let report = if let QuoteBody::SGXQuoteBody(report) = message.commit.quote_body {
             report
         } else {
             return Err(Error::unexpected_quote_body());
         };
         let report_data = ReportData(report.report_data);
+
+        assert_eq!(
+            report.mrenclave.as_slice(),
+            client_state.mr_enclave.as_slice(),
+            "mrenclave mismatch"
+        );
+        assert!(
+            message
+                .commit
+                .validity_intersection
+                .validate_time(ctx.host_timestamp().as_unix_timestamp_secs()),
+            "invalid validity intersection"
+        );
 
         let operator = if let Some(operator_signature) = message.operator_signature {
             verify_signature_address(
@@ -269,7 +280,7 @@ impl LCPClient {
             &client_id,
             report_data.enclave_key(),
             EKOperatorInfo::new(
-                (attestation_time + client_state.key_expiration)?.as_unix_timestamp_secs(),
+                message.commit.validity_intersection.validity_not_after_min,
                 operator,
             ),
         );

@@ -11,7 +11,7 @@ flex-error = { version = "0.4.4", default-features = false }
 tiny-keccak = { version = "2.0" }
 hex-literal = { version = "0.4.1" }
 alloy-sol-types = { version = "0.8", default-features = false }
-dcap-rs = { git = "https://github.com/bluele/dcap-rs", rev = "ccc1fd7a88503bf9b1a15d9f9fdf30244ee91ee9" }
+dcap-rs = { git = "https://github.com/bluele/dcap-rs", rev = "5618f4181e860e61748a202a7b53f6608339417a" }
 
 attestation-report = { path = "../attestation-report", default-features = false }
 light-client = { path = "../light-client", default-features = false }

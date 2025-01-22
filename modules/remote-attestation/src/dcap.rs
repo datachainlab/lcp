@@ -4,7 +4,9 @@ use crypto::Address;
 use dcap_rs::types::collaterals::IntelCollateral;
 use dcap_rs::types::quotes::version_3::QuoteV3;
 use dcap_rs::types::VerifiedOutput;
-use dcap_rs::utils::cert::{extract_sgx_extension, parse_certchain, parse_pem};
+use dcap_rs::utils::cert::{
+    extract_sgx_extension, get_x509_subject_cn, parse_certchain, parse_pem,
+};
 use dcap_rs::utils::quotes::version_3::verify_quote_dcapv3;
 use keymanager::EnclaveKeyManager;
 use lcp_types::proto::lcp::service::enclave::v1::DcapCollateral;
@@ -77,33 +79,12 @@ impl DCAPRemoteAttestationResult {
             self.output.advisory_ids.clone().unwrap_or_default(),
             Time::now(),
             DcapCollateral {
-                tcbinfo_bytes: self.collateral.tcbinfo_bytes.clone().unwrap_or_default(),
-                qeidentity_bytes: self.collateral.qeidentity_bytes.clone().unwrap_or_default(),
-                sgx_intel_root_ca_der: self
-                    .collateral
-                    .sgx_intel_root_ca_der
-                    .clone()
-                    .unwrap_or_default(),
-                sgx_tcb_signing_der: self
-                    .collateral
-                    .sgx_tcb_signing_der
-                    .clone()
-                    .unwrap_or_default(),
-                sgx_intel_root_ca_crl_der: self
-                    .collateral
-                    .sgx_intel_root_ca_crl_der
-                    .clone()
-                    .unwrap_or_default(),
-                sgx_pck_processor_crl_der: self
-                    .collateral
-                    .sgx_pck_processor_crl_der
-                    .clone()
-                    .unwrap_or_default(),
-                sgx_pck_platform_crl_der: self
-                    .collateral
-                    .sgx_pck_platform_crl_der
-                    .clone()
-                    .unwrap_or_default(),
+                tcbinfo_bytes: self.collateral.tcbinfo_bytes.clone(),
+                qeidentity_bytes: self.collateral.qeidentity_bytes.clone(),
+                sgx_intel_root_ca_der: self.collateral.sgx_intel_root_ca_der.clone(),
+                sgx_tcb_signing_der: self.collateral.sgx_tcb_signing_der.clone(),
+                sgx_intel_root_ca_crl_der: self.collateral.sgx_intel_root_ca_crl_der.clone(),
+                sgx_pck_crl_der: self.collateral.sgx_pck_crl_der.clone(),
             },
         )
     }
@@ -148,42 +129,45 @@ fn get_collateral(
 
     // get the pck certificate
     let pck_cert = &certchain[0];
+    let pck_cert_issuer = &certchain[1];
 
     // get the SGX extension
     let sgx_extensions = extract_sgx_extension(pck_cert);
-    let mut collateral = IntelCollateral::new();
-    collateral.set_intel_root_ca_der(INTEL_ROOT_CA);
-    {
+    let (tcbinfo_bytes, sgx_tcb_signing_der) = {
         let fmspc = hex::encode_upper(sgx_extensions.fmspc);
         let res = http_get(format!("{base_url}/tcb?fmspc={fmspc}"))?;
         let issuer_chain =
             extract_raw_certs(get_header(&res, "TCB-Info-Issuer-Chain")?.as_bytes())?;
-        collateral.set_sgx_tcb_signing_der(&issuer_chain[0]);
-        collateral.set_tcbinfo_bytes(res.bytes()?.as_ref());
-    }
+        (res.bytes()?.to_vec(), issuer_chain[0].clone())
+    };
 
-    collateral.set_qeidentity_bytes(
-        http_get(format!("{base_url}/qe/identity"))?
-            .bytes()?
-            .as_ref(),
-    );
-    collateral.set_sgx_intel_root_ca_crl_der(
-        http_get(format!("{certs_service_url}/IntelSGXRootCA.der",))?
-            .bytes()?
-            .as_ref(),
-    );
-    collateral.set_sgx_processor_crl_der(
-        http_get(format!("{base_url}/pckcrl?ca=processor&encoding=der"))?
-            .bytes()?
-            .as_ref(),
-    );
-    collateral.set_sgx_platform_crl_der(
-        http_get(format!("{base_url}/pckcrl?ca=platform&encoding=der"))?
-            .bytes()?
-            .as_ref(),
-    );
+    let qeidentity_bytes = http_get(format!("{base_url}/qe/identity"))?
+        .bytes()?
+        .to_vec();
+    let sgx_intel_root_ca_crl_der = http_get(format!("{certs_service_url}/IntelSGXRootCA.der"))?
+        .bytes()?
+        .to_vec();
 
-    Ok(collateral)
+    let pck_crl_url = match get_x509_subject_cn(pck_cert_issuer).as_str() {
+        "Intel SGX PCK Platform CA" => format!("{base_url}/pckcrl?ca=platform&encoding=der"),
+        "Intel SGX PCK Processor CA" => format!("{base_url}/pckcrl?ca=processor&encoding=der"),
+        cn => {
+            return Err(Error::collateral(format!(
+                "Unknown PCK Cert Subject CN: {}",
+                cn
+            )));
+        }
+    };
+    let sgx_pck_crl_der = http_get(pck_crl_url)?.bytes()?.to_vec();
+
+    Ok(IntelCollateral {
+        tcbinfo_bytes,
+        qeidentity_bytes,
+        sgx_intel_root_ca_der: INTEL_ROOT_CA.to_vec(),
+        sgx_tcb_signing_der,
+        sgx_intel_root_ca_crl_der,
+        sgx_pck_crl_der,
+    })
 }
 
 fn get_header(res: &reqwest::blocking::Response, name: &str) -> Result<String, Error> {
