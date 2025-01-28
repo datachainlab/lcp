@@ -122,7 +122,8 @@ impl TryFrom<RawZKDCAPRegisterEnclaveKeyMessage> for ZKDCAPRegisterEnclaveKeyMes
     type Error = Error;
     fn try_from(value: RawZKDCAPRegisterEnclaveKeyMessage) -> Result<Self, Self::Error> {
         Ok(ZKDCAPRegisterEnclaveKeyMessage {
-            commit: VerifiedOutput::from_bytes(&value.commit),
+            commit: VerifiedOutput::from_bytes(&value.commit)
+                .map_err(Error::dcap_quote_verifier)?,
             proof: value.proof,
             operator_signature: (!value.operator_signature.is_empty())
                 .then_some(value.operator_signature),

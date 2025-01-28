@@ -79,6 +79,10 @@ define_error! {
         StringFromUtf8Error
         [TraceError<alloc::string::FromUtf8Error>]
         |_| { "FromUtf8 error" },
+
+        DcapQuoteVerifier
+        [TraceError<dcap_rs::Error>]
+        |_| { "DCAP quote verifier error" },
     }
 }
 

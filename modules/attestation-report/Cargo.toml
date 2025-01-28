@@ -16,8 +16,9 @@ hex = { version = "0.4", default-features = false, features = ["alloc"] }
 base64 = { version = "0.22.1", default-features = false, features = ["alloc"] }
 pem = { version = "2.0", default-features = false }
 webpki = { version = "0.22", features = ["alloc"] }
+anyhow = { version = "1", default-features = false }
 
-dcap-rs = { git = "https://github.com/bluele/dcap-rs", rev = "5618f4181e860e61748a202a7b53f6608339417a", optional = true }
+dcap-rs = { git = "https://github.com/bluele/dcap-rs", rev = "4ed73e00f2b65e62e5a82824f36c875650a3a6c3", optional = true }
 
 [dev-dependencies]
 tokio = { version = "1.0", default-features = false, features = ["macros"] }

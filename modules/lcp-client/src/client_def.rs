@@ -255,7 +255,7 @@ impl LCPClient {
         assert!(
             message
                 .commit
-                .validity_intersection
+                .validity
                 .validate_time(ctx.host_timestamp().as_unix_timestamp_secs()),
             "invalid validity intersection"
         );
@@ -279,10 +279,7 @@ impl LCPClient {
             ctx,
             &client_id,
             report_data.enclave_key(),
-            EKOperatorInfo::new(
-                message.commit.validity_intersection.validity_not_after_min,
-                operator,
-            ),
+            EKOperatorInfo::new(message.commit.validity.not_after_min, operator),
         );
         Ok(())
     }

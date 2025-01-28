@@ -192,6 +192,10 @@ define_error! {
         |e| {
             format_args!("Collateral: descr={}", e.descr)
         },
+
+        DcapQuoteVerifier
+        [TraceError<dcap_rs::Error>]
+        |_| { "DCAP quote verifier error" },
     }
 }
 

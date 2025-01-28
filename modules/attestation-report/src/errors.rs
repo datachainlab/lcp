@@ -74,7 +74,11 @@ define_error! {
 
         CryptoError
         [crypto::Error]
-        |_| { "Crypto error" }
+        |_| { "Crypto error" },
+
+        DcapQuoteVerifier
+        [TraceError<anyhow::Error>]
+        |_| { "DCAP quote verifier error" },
     }
 }
 

@@ -5,7 +5,7 @@ use dcap_rs::types::collaterals::IntelCollateral;
 use dcap_rs::types::quotes::version_3::QuoteV3;
 use dcap_rs::types::VerifiedOutput;
 use dcap_rs::utils::cert::{
-    extract_sgx_extension, get_x509_subject_cn, parse_certchain, parse_pem,
+    extract_sgx_extensions, get_x509_subject_cn, parse_certchain, parse_pem,
 };
 use dcap_rs::utils::quotes::version_3::verify_quote_dcapv3;
 use keymanager::EnclaveKeyManager;
@@ -46,14 +46,15 @@ pub(crate) fn dcap_ra(
     let raw_quote = rsgx_qe_get_quote(&ek_info.report).unwrap();
     info!("Successfully get the quote: {}", hex::encode(&raw_quote));
 
-    let quote = QuoteV3::from_bytes(&raw_quote);
+    let quote = QuoteV3::from_bytes(&raw_quote).map_err(Error::dcap_quote_verifier)?;
 
     let collateral = get_collateral(
         "https://api.trustedservices.intel.com/",
         "https://certificates.trustedservices.intel.com/",
         &quote,
     )?;
-    let output = verify_quote_dcapv3(&quote, &collateral, current_time.as_unix_timestamp_secs());
+    let output = verify_quote_dcapv3(&quote, &collateral, current_time.as_unix_timestamp_secs())
+        .map_err(Error::dcap_quote_verifier)?;
     info!("DCAP RA output: {:?}", output);
 
     Ok(DCAPRemoteAttestationResult {
@@ -76,7 +77,7 @@ impl DCAPRemoteAttestationResult {
             self.raw_quote.clone(),
             self.output.fmspc,
             self.output.tcb_status.to_string(),
-            self.output.advisory_ids.clone().unwrap_or_default(),
+            self.output.advisory_ids.clone(),
             Time::now(),
             DcapCollateral {
                 tcbinfo_bytes: self.collateral.tcbinfo_bytes.clone(),
@@ -120,7 +121,7 @@ fn get_collateral(
     let certchain_pems = parse_pem(&quote.signature.qe_cert_data.cert_data)
         .map_err(|e| Error::collateral(format!("cannot parse QE cert chain: {}", e)))?;
 
-    let certchain = parse_certchain(&certchain_pems);
+    let certchain = parse_certchain(&certchain_pems).map_err(Error::dcap_quote_verifier)?;
     if certchain.len() != 3 {
         return Err(Error::collateral(
             "QE Cert chain must have 3 certs".to_string(),
@@ -132,7 +133,7 @@ fn get_collateral(
     let pck_cert_issuer = &certchain[1];
 
     // get the SGX extension
-    let sgx_extensions = extract_sgx_extension(pck_cert);
+    let sgx_extensions = extract_sgx_extensions(pck_cert);
     let (tcbinfo_bytes, sgx_tcb_signing_der) = {
         let fmspc = hex::encode_upper(sgx_extensions.fmspc);
         let res = http_get(format!("{base_url}/tcb?fmspc={fmspc}"))?;
@@ -206,20 +207,22 @@ mod tests {
 
     #[test]
     fn test_quote() {
-        QuoteV3::from_bytes(&get_test_quote());
+        assert!(QuoteV3::from_bytes(&get_test_quote()).is_ok());
     }
 
     #[test]
     fn test_dcap_collateral() {
         let quote = get_test_quote();
-        let quote = QuoteV3::from_bytes(&quote);
+        let quote = QuoteV3::from_bytes(&quote).unwrap();
         let collateral = get_collateral(
             "https://api.trustedservices.intel.com/",
             "https://certificates.trustedservices.intel.com/",
             &quote,
         )
         .unwrap();
-        let output = verify_quote_dcapv3(&quote, &collateral, Time::now().as_unix_timestamp_secs());
+        let res = verify_quote_dcapv3(&quote, &collateral, Time::now().as_unix_timestamp_secs());
+        assert!(res.is_ok(), "{:?}", res);
+        let output = res.unwrap();
         assert_eq!(output.tee_type, SGX_TEE_TYPE);
     }
 
