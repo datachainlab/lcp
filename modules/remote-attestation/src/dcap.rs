@@ -19,10 +19,10 @@ use sgx_types::{sgx_qe_get_quote, sgx_qe_get_quote_size, sgx_quote3_error_t, sgx
 pub const INTEL_ROOT_CA: &[u8] =
     include_bytes!("../assets/Intel_SGX_Provisioning_Certification_RootCA.der");
 
-/// The SHA256 hash of the Intel Root CA certificate
+/// The Keccak-256 hash of the Intel Root CA certificate.
 pub const INTEL_ROOT_CA_HASH: [u8; 32] = [
-    68, 160, 25, 107, 43, 153, 248, 137, 184, 225, 73, 233, 91, 128, 122, 53, 14, 116, 36, 150, 67,
-    153, 232, 133, 167, 203, 184, 204, 250, 182, 116, 211,
+    161, 172, 199, 62, 180, 87, 148, 250, 23, 52, 241, 77, 136, 46, 145, 146, 91, 96, 6, 247, 157,
+    59, 178, 70, 13, 249, 208, 27, 51, 61, 112, 9,
 ];
 
 pub fn run_dcap_ra(
@@ -213,7 +213,7 @@ mod tests {
     use super::*;
     use dcap_rs::{
         constants::SGX_TEE_TYPE,
-        utils::{hash::sha256sum, quotes::version_3::verify_quote_dcapv3},
+        utils::{hash::keccak256sum, quotes::version_3::verify_quote_dcapv3},
     };
 
     #[test]
@@ -243,7 +243,7 @@ mod tests {
 
     #[test]
     fn test_dcap_intel_root_ca_hash() {
-        let h = sha256sum(INTEL_ROOT_CA);
+        let h = keccak256sum(INTEL_ROOT_CA);
         assert_eq!(h, INTEL_ROOT_CA_HASH);
     }
 }
