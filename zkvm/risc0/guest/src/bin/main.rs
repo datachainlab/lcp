@@ -6,11 +6,12 @@ use risc0_zkvm::guest::env;
 fn main() {
     let (quote, collaterals, current_time): (Vec<u8>, Vec<u8>, u64) = env::read();
 
-    let quote = QuoteV3::from_bytes(&quote);
-    let collaterals = IntelCollateral::from_bytes(&collaterals);
+    let quote = QuoteV3::from_bytes(&quote).unwrap();
+    let collaterals = IntelCollateral::from_bytes(&collaterals).unwrap();
 
     env::commit_slice(
         verify_quote_dcapv3(&quote, &collaterals, current_time)
+            .unwrap()
             .to_bytes()
             .as_slice(),
     );

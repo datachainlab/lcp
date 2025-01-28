@@ -724,6 +724,7 @@ version = "0.1.0"
 source = "git+https://github.com/bluele/dcap-rs?rev=4ed73e00f2b65e62e5a82824f36c875650a3a6c3#4ed73e00f2b65e62e5a82824f36c875650a3a6c3"
 dependencies = [
  "alloy-sol-types",
+ "anyhow",
  "chrono",
  "hex",
  "p256",
