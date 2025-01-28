@@ -8,6 +8,7 @@ use crate::message::{
 use alloy_sol_types::{sol, SolValue};
 use attestation_report::{IASSignedReport, ReportData};
 use crypto::{verify_signature_address, Address, Keccak256};
+use dcap_rs::constants::SGX_TEE_TYPE;
 use dcap_rs::types::quotes::body::QuoteBody;
 use hex_literal::hex;
 use light_client::commitments::{
@@ -16,7 +17,7 @@ use light_client::commitments::{
 };
 use light_client::types::{ClientId, Height, Time};
 use light_client::{HostClientKeeper, HostClientReader};
-use risc0_methods::DCAP_VERIFIER_ID;
+use risc0_methods::DCAP_QUOTE_VERIFIER_ID;
 use tiny_keccak::{Hasher, Keccak};
 
 pub const LCP_CLIENT_TYPE: &str = "0000-lcp";
@@ -236,7 +237,7 @@ impl LCPClient {
 
         zkvm::verifier::verify_groth16_proof(
             message.proof,
-            DCAP_VERIFIER_ID,
+            DCAP_QUOTE_VERIFIER_ID,
             message.commit.to_bytes(),
         )?;
 
@@ -252,6 +253,12 @@ impl LCPClient {
             client_state.mr_enclave.as_slice(),
             "mrenclave mismatch"
         );
+        assert_eq!(message.commit.quote_version, 3, "unexpected quote version");
+        assert_eq!(message.commit.tee_type, SGX_TEE_TYPE, "unexpected tee type");
+        assert_eq!(
+            message.commit.sgx_intel_root_ca_hash,
+            remote_attestation::dcap::INTEL_ROOT_CA_HASH,
+        );
         assert!(
             message
                 .commit
@@ -259,6 +266,17 @@ impl LCPClient {
                 .validate_time(ctx.host_timestamp().as_unix_timestamp_secs()),
             "invalid validity intersection"
         );
+        let tcb_status = message.commit.tcb_status.to_string();
+        assert!(
+            tcb_status == "UpToDate" || client_state.allowed_quote_statuses.contains(&tcb_status),
+            "unexpected tcb status"
+        );
+        for advisory_id in message.commit.advisory_ids.iter() {
+            assert!(
+                client_state.allowed_advisory_ids.contains(&advisory_id),
+                "unexpected advisory id"
+            );
+        }
 
         let operator = if let Some(operator_signature) = message.operator_signature {
             verify_signature_address(

@@ -4073,6 +4073,7 @@ dependencies = [
  "light-client",
  "mock-lc",
  "prost 0.11.9",
+ "remote-attestation",
  "risc0-methods",
  "serde",
  "serde_json",

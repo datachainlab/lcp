@@ -22,6 +22,8 @@ pub struct ClientState {
     pub key_expiration: Duration,
     pub latest_height: Height,
     pub frozen: bool,
+    pub allowed_quote_statuses: Vec<String>,
+    pub allowed_advisory_ids: Vec<String>,
     pub operators: Vec<Address>,
     pub operators_nonce: u64,
     pub operators_threshold_numerator: u64,
@@ -140,6 +142,8 @@ impl TryFrom<RawClientState> for ClientState {
             key_expiration: Duration::from_secs(raw.key_expiration),
             frozen: raw.frozen,
             latest_height: Height::new(height.revision_number, height.revision_height),
+            allowed_quote_statuses: raw.allowed_quote_statuses,
+            allowed_advisory_ids: raw.allowed_advisory_ids,
             operators: raw
                 .operators
                 .into_iter()

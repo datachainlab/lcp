@@ -35,15 +35,15 @@ fn main() {
     println!("debug: path={} image_id={:?}", guest.path, guest.image_id);
     let elf_value = guest.elf;
     let image_id = guest.image_id;
-    let mut elf_file = File::create("./artifacts/dcap-verifier").unwrap();
+    let mut elf_file = File::create("./artifacts/dcap-quote-verifier").unwrap();
     elf_file.write_all(&elf_value).unwrap();
     let mut methods_file = File::create("./src/methods.rs").unwrap();
     methods_file
         .write_all(
             format!(
                 r##"
-pub const DCAP_VERIFIER_ID: [u32; 8] = {image_id:?};
-pub const DCAP_VERIFIER_ELF: &[u8] = include_bytes!("../artifacts/dcap-verifier");
+pub const DCAP_QUOTE_VERIFIER_ID: [u32; 8] = {image_id:?};
+pub const DCAP_QUOTE_VERIFIER_ELF: &[u8] = include_bytes!("../artifacts/dcap-quote-verifier");
 "##
             )
             .as_bytes(),

@@ -1,3 +1,3 @@
 
-pub const DCAP_VERIFIER_ID: [u32; 8] = [1075776800, 826110901, 2982147044, 506791665, 820677255, 1939758155, 413010793, 3061573602];
-pub const DCAP_VERIFIER_ELF: &[u8] = include_bytes!("../artifacts/dcap-verifier");
+pub const DCAP_QUOTE_VERIFIER_ID: [u32; 8] = [1075776800, 826110901, 2982147044, 506791665, 820677255, 1939758155, 413010793, 3061573602];
+pub const DCAP_QUOTE_VERIFIER_ELF: &[u8] = include_bytes!("../artifacts/dcap-quote-verifier");
