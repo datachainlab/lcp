@@ -1,4 +1,4 @@
-use crate::client_state::{ClientState, ZKDCAPVerifierInfo};
+use crate::client_state::{ClientState, ZKDCAPVerifierInfo, ZKVMType};
 use crate::consensus_state::ConsensusState;
 use crate::errors::Error;
 use crate::message::{
@@ -17,7 +17,6 @@ use light_client::commitments::{
 };
 use light_client::types::{ClientId, Height, Time};
 use light_client::{HostClientKeeper, HostClientReader};
-use risc0_methods::DCAP_QUOTE_VERIFIER_ID;
 use tiny_keccak::{Hasher, Keccak};
 
 pub const LCP_CLIENT_TYPE: &str = "0000-lcp";
@@ -95,6 +94,17 @@ impl LCPClient {
         );
         // operators_nonce must be 0
         assert!(client_state.operators_nonce == 0);
+
+        if !client_state.zkdcap_verifier_infos.is_empty() {
+            assert!(
+                client_state.zkdcap_verifier_infos.len() == 1,
+                "only one verifier is supported"
+            );
+            assert!(
+                client_state.zkdcap_verifier_infos[0].zkvm_type == ZKVMType::Risc0,
+                "only Risc0 is supported"
+            );
+        }
 
         // An initial consensus state must be empty
         assert!(consensus_state.is_empty());
@@ -231,13 +241,14 @@ impl LCPClient {
         client_state: ClientState,
         message: ZKDCAPRegisterEnclaveKeyMessage,
     ) -> Result<(), Error> {
-        assert!(client_state.zkdcap_verifier_info.is_some());
-
         assert!(!client_state.frozen);
+        assert!(client_state.zkdcap_verifier_infos.len() == 1);
+        let zkdcap_verifier_info = &client_state.zkdcap_verifier_infos[0];
+        assert!(message.zkvm_type == ZKVMType::Risc0);
 
         zkvm::verifier::verify_groth16_proof(
             message.proof,
-            DCAP_QUOTE_VERIFIER_ID,
+            zkdcap_verifier_info.program_id,
             message.commit.to_bytes(),
         )?;
 
@@ -273,7 +284,7 @@ impl LCPClient {
         );
         for advisory_id in message.commit.advisory_ids.iter() {
             assert!(
-                client_state.allowed_advisory_ids.contains(&advisory_id),
+                client_state.allowed_advisory_ids.contains(advisory_id),
                 "unexpected advisory id"
             );
         }
@@ -281,7 +292,7 @@ impl LCPClient {
         let operator = if let Some(operator_signature) = message.operator_signature {
             verify_signature_address(
                 compute_eip712_zkdcap_register_enclave_key(
-                    client_state.zkdcap_verifier_info.unwrap(),
+                    zkdcap_verifier_info,
                     message.commit.hash(),
                 )
                 .as_ref(),
@@ -542,14 +553,14 @@ pub fn compute_eip712_register_enclave_key_hash(avr: &str) -> [u8; 32] {
 }
 
 pub fn compute_eip712_zkdcap_register_enclave_key(
-    zkdcap_verifier_info: ZKDCAPVerifierInfo,
+    zkdcap_verifier_info: &ZKDCAPVerifierInfo,
     commit_hash: [u8; 32],
 ) -> Vec<u8> {
-    // 0x1901 | DOMAIN_SEPARATOR_ZKDCAP_REGISTER_ENCLAVE_KEY | keccak256(keccak256("ZKDCAPRegisterEnclaveKey(bytes zkdcapVerifierInfo,bytes32 commitHash)") | keccak256(zkdcap_verifier_info) | commit_hash)
+    // 0x1901 | DOMAIN_SEPARATOR_ZKDCAP_REGISTER_ENCLAVE_KEY | keccak256(keccak256("ZKDCAPRegisterEnclaveKey(bytes zkDCAPVerifierInfo,bytes32 commitHash)") | keccak256(zkdcap_verifier_info) | commit_hash)
     let type_hash = {
         let mut h = Keccak::v256();
         h.update(&keccak256(
-            b"ZKDCAPRegisterEnclaveKey(bytes zkdcapVerifierInfo,bytes32 commitHash)",
+            b"ZKDCAPRegisterEnclaveKey(bytes zkDCAPVerifierInfo,bytes32 commitHash)",
         ));
         h.update(&keccak256(zkdcap_verifier_info.to_bytes().as_ref()));
         h.update(&commit_hash);

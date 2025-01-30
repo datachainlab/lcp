@@ -28,10 +28,10 @@ pub struct ClientState {
     pub operators_nonce: u64,
     pub operators_threshold_numerator: u64,
     pub operators_threshold_denominator: u64,
-    pub zkdcap_verifier_info: Option<ZKDCAPVerifierInfo>,
+    pub zkdcap_verifier_infos: Vec<ZKDCAPVerifierInfo>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub enum ZKVMType {
     #[default]
     Unspecified,
@@ -39,6 +39,13 @@ pub enum ZKVMType {
 }
 
 impl ZKVMType {
+    pub fn from_u8(value: u8) -> Result<Self, Error> {
+        match value {
+            0 => Ok(ZKVMType::Unspecified),
+            1 => Ok(ZKVMType::Risc0),
+            _ => Err(Error::invalid_zkdcap_verifier_info(vec![value])),
+        }
+    }
     pub fn as_u8(&self) -> u8 {
         match self {
             ZKVMType::Unspecified => 0,
@@ -124,10 +131,11 @@ impl From<ClientState> for RawClientState {
             operators_nonce: 0,
             operators_threshold_numerator: 0,
             operators_threshold_denominator: 0,
-            zkdcap_verifier_info: value
-                .zkdcap_verifier_info
+            zkdcap_verifier_infos: value
+                .zkdcap_verifier_infos
+                .iter()
                 .map(|info| info.to_bytes())
-                .unwrap_or_default(),
+                .collect(),
         }
     }
 }
@@ -152,11 +160,11 @@ impl TryFrom<RawClientState> for ClientState {
             operators_nonce: raw.operators_nonce,
             operators_threshold_numerator: raw.operators_threshold_numerator,
             operators_threshold_denominator: raw.operators_threshold_denominator,
-            zkdcap_verifier_info: if raw.zkdcap_verifier_info.is_empty() {
-                None
-            } else {
-                Some(ZKDCAPVerifierInfo::from_bytes(&raw.zkdcap_verifier_info)?)
-            },
+            zkdcap_verifier_infos: raw
+                .zkdcap_verifier_infos
+                .into_iter()
+                .map(|bytes| ZKDCAPVerifierInfo::from_bytes(&bytes))
+                .collect::<Result<_, _>>()?,
         })
     }
 }

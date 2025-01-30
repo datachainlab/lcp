@@ -1,3 +1,4 @@
+use crate::client_state::ZKVMType;
 use crate::errors::Error;
 use crate::prelude::*;
 use alloy_sol_types::{sol, SolValue};
@@ -111,6 +112,7 @@ impl From<RegisterEnclaveKeyMessage> for RawRegisterEnclaveKeyMessage {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ZKDCAPRegisterEnclaveKeyMessage {
+    pub zkvm_type: ZKVMType,
     pub commit: VerifiedOutput,
     pub proof: Vec<u8>,
     pub operator_signature: Option<Vec<u8>>,
@@ -122,6 +124,9 @@ impl TryFrom<RawZKDCAPRegisterEnclaveKeyMessage> for ZKDCAPRegisterEnclaveKeyMes
     type Error = Error;
     fn try_from(value: RawZKDCAPRegisterEnclaveKeyMessage) -> Result<Self, Self::Error> {
         Ok(ZKDCAPRegisterEnclaveKeyMessage {
+            zkvm_type: ZKVMType::from_u8(
+                u8::try_from(value.zkvm_type).map_err(Error::zk_vm_type_conversion)?,
+            )?,
             commit: VerifiedOutput::from_bytes(&value.commit)
                 .map_err(Error::dcap_quote_verifier)?,
             proof: value.proof,
@@ -134,6 +139,7 @@ impl TryFrom<RawZKDCAPRegisterEnclaveKeyMessage> for ZKDCAPRegisterEnclaveKeyMes
 impl From<ZKDCAPRegisterEnclaveKeyMessage> for RawZKDCAPRegisterEnclaveKeyMessage {
     fn from(value: ZKDCAPRegisterEnclaveKeyMessage) -> Self {
         RawZKDCAPRegisterEnclaveKeyMessage {
+            zkvm_type: value.zkvm_type as u32,
             commit: value.commit.to_bytes(),
             proof: value.proof,
             operator_signature: value.operator_signature.unwrap_or_default(),

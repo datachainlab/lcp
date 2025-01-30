@@ -20,9 +20,10 @@ message RegisterEnclaveKeyMessage {
 }
 
 message ZKDCAPRegisterEnclaveKeyMessage {
-  bytes commit = 1;
-  bytes proof = 2;
-  bytes operator_signature = 3;
+  uint32 zkvm_type = 1;
+  bytes commit = 2;
+  bytes proof = 3;
+  bytes operator_signature = 4;
 }
 
 message UpdateOperatorsMessage {
@@ -35,6 +36,9 @@ message UpdateOperatorsMessage {
 
 message ClientState {
   bytes mrenclave = 1;
+  // enclave key's expiration from the remote attestation time in seconds
+  //
+  // If the key is got from the DCAP/zkDCAP's quote, it should be the collateral's expiration time instead.
   uint64 key_expiration = 2;
   bool frozen = 3;
   ibc.core.client.v1.Height latest_height = 4 [(gogoproto.nullable) = false];
@@ -50,11 +54,11 @@ message ClientState {
   //
   // if empty, the zkDCAP is not enabled
   // otherwise, the zkDCAP is enabled
-  // the bytes layout is the following:
+  // The layout of each element is as follows:
   // 0: zkVM type (e.g. 1 for risc0)
   // 1-31: reserved
   // 32-64: guest program identifier
-  bytes zkdcap_verifier_info = 11;
+  repeated bytes zkdcap_verifier_infos = 11;
 }
 
 message ConsensusState {

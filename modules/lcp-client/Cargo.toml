@@ -18,7 +18,6 @@ remote-attestation = { path = "../remote-attestation", default-features = false 
 light-client = { path = "../light-client", default-features = false }
 crypto = { path = "../crypto", default-features = false }
 zkvm = { path = "../zkvm", default-features = false, features = ["verifier"] }
-risc0-methods = { path = "../../zkvm/risc0" }
 
 [dev-dependencies]
 sgx_types = { rev = "v1.1.6", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", features = ["extra_traits"] }

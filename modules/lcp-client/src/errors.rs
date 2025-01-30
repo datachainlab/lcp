@@ -83,6 +83,10 @@ define_error! {
         DcapQuoteVerifier
         [TraceError<dcap_rs::Error>]
         |_| { "DCAP quote verifier error" },
+
+        ZkVmTypeConversion
+        [TraceError<core::num::TryFromIntError>]
+        |_| { "ZkVmType conversion error" },
     }
 }
 
