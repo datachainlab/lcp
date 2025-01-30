@@ -20,6 +20,7 @@ pub const INTEL_ROOT_CA: &[u8] =
     include_bytes!("../assets/Intel_SGX_Provisioning_Certification_RootCA.der");
 
 /// The Keccak-256 hash of the Intel Root CA certificate.
+/// 0xa1acc73eb45794fa1734f14d882e91925b6006f79d3bb2460df9d01b333d7009
 pub const INTEL_ROOT_CA_HASH: [u8; 32] = [
     161, 172, 199, 62, 180, 87, 148, 250, 23, 52, 241, 77, 136, 46, 145, 146, 91, 96, 6, 247, 157,
     59, 178, 70, 13, 249, 208, 27, 51, 61, 112, 9,
@@ -63,7 +64,11 @@ pub(crate) fn dcap_ra(
     )?;
     let output = verify_quote_dcapv3(&quote, &collateral, current_time.as_unix_timestamp_secs())
         .map_err(Error::dcap_quote_verifier)?;
-    info!("DCAP RA output: {:?}", output);
+    info!(
+        "DCAP RA output: {:?} hex={}",
+        output,
+        hex::encode(output.to_bytes())
+    );
 
     Ok(DCAPRemoteAttestationResult {
         raw_quote,
