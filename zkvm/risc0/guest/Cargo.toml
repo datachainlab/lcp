@@ -8,7 +8,7 @@ name = "dcap_verifier"
 path = "src/bin/main.rs"
 
 [dependencies]
-risc0-zkvm = { version = "=1.2.2", default-features = false, features = ['std'] }
+risc0-zkvm = { version = "=1.2.2", default-features = false, features = ["std", "unstable"] }
 dcap-rs = { git = "https://github.com/bluele/dcap-rs", rev = "4ed73e00f2b65e62e5a82824f36c875650a3a6c3" }
 
 [profile.release]
@@ -17,4 +17,4 @@ lto = "thin"
 [patch.crates-io]
 crypto-bigint = { git = "https://github.com/risc0/RustCrypto-crypto-bigint", tag = "v0.5.5-risczero.0" }
 sha2 = { git = "https://github.com/risc0/RustCrypto-hashes", tag = "sha2-v0.10.8-risczero.0" }
-p256 = { git = "https://github.com/automata-network/RustCrypto-elliptic-curves.git" }
+p256 = { git = "https://github.com/risc0/RustCrypto-elliptic-curves", tag = "p256/v0.13.2-risczero.0" }
