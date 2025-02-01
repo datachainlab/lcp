@@ -8,7 +8,7 @@ name = "dcap_verifier"
 path = "src/bin/main.rs"
 
 [dependencies]
-risc0-zkvm = { version = "1.1", default-features = false, features = ['std'] }
+risc0-zkvm = { version = "=1.2.2", default-features = false, features = ['std'] }
 dcap-rs = { git = "https://github.com/bluele/dcap-rs", rev = "4ed73e00f2b65e62e5a82824f36c875650a3a6c3" }
 
 [profile.release]
