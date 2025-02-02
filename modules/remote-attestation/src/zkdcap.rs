@@ -3,7 +3,7 @@ use attestation_report::{Risc0ZKVMProof, ZKDCAPQuote, ZKVMProof};
 use crypto::Address;
 use keymanager::EnclaveKeyManager;
 use lcp_types::Time;
-use log::info;
+use log::*;
 use zkvm::{
     encode_seal,
     prover::{prove, Risc0ProverMode},
@@ -26,6 +26,13 @@ pub fn run_zkdcap_ra(
 
     let current_time = Time::now();
     let res = dcap_ra(key_manager, target_enclave_key, current_time)?;
+
+    debug!(
+        "proving with input: quote={}, collateral={}, current_time={}",
+        hex::encode(&res.raw_quote),
+        hex::encode(res.collateral.to_bytes()),
+        current_time
+    );
 
     let env = ExecutorEnv::builder()
         .write(&(
