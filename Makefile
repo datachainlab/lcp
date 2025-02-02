@@ -1,5 +1,4 @@
 ######## LCP Build Settings ########
-LCP_RISC0_BUILD ?= 0
 ZK_PROVER_CUDA ?= 0
 APP_CARGO_FLAGS ?=
 
@@ -118,7 +117,7 @@ $(App_Enclave_u_Object): app/Enclave_u.o
 	$(AR) rcsD $@ $^
 
 $(App_Path): $(App_Enclave_u_Object) $(App_SRC_Files)
-	@cd app && SGX_SDK=$(SGX_SDK) SGX_MODE=$(SGX_MODE) LCP_RISC0_BUILD=$(LCP_RISC0_BUILD) cargo build $(App_Rust_Flags)
+	@cd app && SGX_SDK=$(SGX_SDK) SGX_MODE=$(SGX_MODE) cargo build $(App_Rust_Flags)
 	@echo "Cargo  =>  $@"
 	mkdir -p bin
 	cp $(App_Rust_Path)/$(App_Name) ./bin

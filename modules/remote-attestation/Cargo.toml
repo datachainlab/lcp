@@ -25,7 +25,7 @@ reqwest = { version = "0.12.9", default-features = false, features = [
 ] }
 urlencoding = { version = "2" }
 
-dcap-rs = { git = "https://github.com/bluele/dcap-rs", rev = "4ed73e00f2b65e62e5a82824f36c875650a3a6c3" }
+dcap-quote-verifier = { git = "https://github.com/datachainlab/zkdcap", rev = "ff53632f49d2d8b00c9bcc456aeeeb139bacca9f" }
 
 lcp-types = { path = "../types" }
 crypto = { path = "../crypto", default-features = false }

@@ -81,7 +81,7 @@ define_error! {
         |_| { "FromUtf8 error" },
 
         DcapQuoteVerifier
-        [TraceError<dcap_rs::Error>]
+        [TraceError<dcap_quote_verifier::Error>]
         |_| { "DCAP quote verifier error" },
 
         ZkVmTypeConversion

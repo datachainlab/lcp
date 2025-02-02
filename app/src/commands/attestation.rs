@@ -277,7 +277,7 @@ impl ZKDCAPRemoteAttestation {
                     e
                 )
             }),
-            None => Ok(risc0_methods::DCAP_QUOTE_VERIFIER_ELF.to_vec()),
+            None => Ok(zkdcap_risc0::DCAP_QUOTE_VERIFIER_ELF.to_vec()),
         }
     }
 

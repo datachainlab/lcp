@@ -8,8 +8,8 @@ use crate::message::{
 use alloy_sol_types::{sol, SolValue};
 use attestation_report::{IASSignedReport, ReportData};
 use crypto::{verify_signature_address, Address, Keccak256};
-use dcap_rs::constants::SGX_TEE_TYPE;
-use dcap_rs::types::quotes::body::QuoteBody;
+use dcap_quote_verifier::constants::SGX_TEE_TYPE;
+use dcap_quote_verifier::types::quotes::body::QuoteBody;
 use hex_literal::hex;
 use light_client::commitments::{
     CommitmentPrefix, EthABIEncoder, MisbehaviourProxyMessage, ProxyMessage,

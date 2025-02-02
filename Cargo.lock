@@ -704,7 +704,7 @@ dependencies = [
  "base64 0.22.1",
  "chrono",
  "crypto",
- "dcap-rs",
+ "dcap-quote-verifier",
  "flex-error",
  "hex",
  "lcp-types",
@@ -1812,9 +1812,9 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e8566979429cf69b49a5c740c60791108e86440e8be149bbea4fe54d2c32d6e2"
 
 [[package]]
-name = "dcap-rs"
+name = "dcap-quote-verifier"
 version = "0.1.0"
-source = "git+https://github.com/bluele/dcap-rs?rev=4ed73e00f2b65e62e5a82824f36c875650a3a6c3#4ed73e00f2b65e62e5a82824f36c875650a3a6c3"
+source = "git+https://github.com/datachainlab/zkdcap?rev=ff53632f49d2d8b00c9bcc456aeeeb139bacca9f#ff53632f49d2d8b00c9bcc456aeeeb139bacca9f"
 dependencies = [
  "alloy-sol-types",
  "anyhow",
@@ -4050,11 +4050,11 @@ dependencies = [
  "lcp-types",
  "log",
  "remote-attestation",
- "risc0-methods",
  "serde",
  "serde_json",
  "service",
  "tokio",
+ "zkdcap-risc0",
 ]
 
 [[package]]
@@ -4067,7 +4067,7 @@ dependencies = [
  "chrono",
  "context",
  "crypto",
- "dcap-rs",
+ "dcap-quote-verifier",
  "flex-error",
  "hex-literal",
  "ibc",
@@ -4138,7 +4138,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4979f22fdb869068da03c9f7528f8297c6fd2606bc3a4affe42e6a823fdb8da4"
 dependencies = [
  "cfg-if 1.0.0",
- "windows-targets 0.52.6",
+ "windows-targets 0.48.5",
 ]
 
 [[package]]
@@ -5681,7 +5681,7 @@ dependencies = [
  "base64 0.22.1",
  "chrono",
  "crypto",
- "dcap-rs",
+ "dcap-quote-verifier",
  "flex-error",
  "hex",
  "httparse",
@@ -6082,13 +6082,6 @@ dependencies = [
  "stability",
  "tempfile",
  "tracing",
-]
-
-[[package]]
-name = "risc0-methods"
-version = "0.1.0"
-dependencies = [
- "risc0-build",
 ]
 
 [[package]]
@@ -8218,7 +8211,7 @@ version = "1.6.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "97fee6b57c6a41524a810daee9286c02d7752c4253064d0b05472833a438f675"
 dependencies = [
- "cfg-if 1.0.0",
+ "cfg-if 0.1.10",
  "static_assertions",
 ]
 
@@ -8643,7 +8636,7 @@ version = "0.1.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cf221c93e13a30d793f7645a0e7762c55d169dbb0a49671918a2319d289b10bb"
 dependencies = [
- "windows-sys 0.59.0",
+ "windows-sys 0.48.0",
 ]
 
 [[package]]
@@ -9034,6 +9027,15 @@ dependencies = [
  "memchr",
  "thiserror 2.0.6",
  "zopfli",
+]
+
+[[package]]
+name = "zkdcap-risc0"
+version = "0.1.0"
+source = "git+https://github.com/datachainlab/zkdcap?rev=ff53632f49d2d8b00c9bcc456aeeeb139bacca9f#ff53632f49d2d8b00c9bcc456aeeeb139bacca9f"
+dependencies = [
+ "risc0-binfmt",
+ "risc0-build",
 ]
 
 [[package]]

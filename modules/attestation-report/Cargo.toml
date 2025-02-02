@@ -18,7 +18,7 @@ pem = { version = "2.0", default-features = false }
 webpki = { version = "0.22", features = ["alloc"] }
 anyhow = { version = "1", default-features = false }
 
-dcap-rs = { git = "https://github.com/bluele/dcap-rs", rev = "4ed73e00f2b65e62e5a82824f36c875650a3a6c3", optional = true }
+dcap-quote-verifier = { git = "https://github.com/datachainlab/zkdcap", rev = "ff53632f49d2d8b00c9bcc456aeeeb139bacca9f", optional = true }
 
 [dev-dependencies]
 tokio = { version = "1.0", default-features = false, features = ["macros"] }
@@ -26,7 +26,7 @@ tokio = { version = "1.0", default-features = false, features = ["macros"] }
 [features]
 default = ["std"]
 std = [
-    "dcap-rs",
+    "dcap-quote-verifier",
     "webpki/std",
     "flex-error/std",
     "lcp-types/std",

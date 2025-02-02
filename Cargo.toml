@@ -29,6 +29,5 @@ members = [
 exclude = [
     "enclave",
     "enclave-modules",
-    "zkvm",
     "proto-compiler"
 ]

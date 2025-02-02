@@ -1,13 +1,13 @@
 use crate::errors::Error;
 use attestation_report::DCAPQuote;
 use crypto::Address;
-use dcap_rs::types::collaterals::IntelCollateral;
-use dcap_rs::types::quotes::version_3::QuoteV3;
-use dcap_rs::types::VerifiedOutput;
-use dcap_rs::utils::cert::{
+use dcap_quote_verifier::types::collaterals::IntelCollateral;
+use dcap_quote_verifier::types::quotes::version_3::QuoteV3;
+use dcap_quote_verifier::types::VerifiedOutput;
+use dcap_quote_verifier::utils::cert::{
     extract_sgx_extensions, get_x509_subject_cn, parse_certchain, parse_pem,
 };
-use dcap_rs::utils::quotes::version_3::verify_quote_dcapv3;
+use dcap_quote_verifier::utils::quotes::version_3::verify_quote_dcapv3;
 use keymanager::EnclaveKeyManager;
 use lcp_types::proto::lcp::service::enclave::v1::DcapCollateral;
 use lcp_types::Time;
@@ -216,7 +216,7 @@ fn http_get(url: String) -> Result<reqwest::blocking::Response, Error> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use dcap_rs::{
+    use dcap_quote_verifier::{
         constants::SGX_TEE_TYPE,
         utils::{hash::keccak256sum, quotes::version_3::verify_quote_dcapv3},
     };
