@@ -1,6 +1,7 @@
 use crate::Error;
 use risc0_zkvm::{
-    BonsaiProver, ExecutorEnv, LocalProver, ProveInfo, Prover, ProverOpts, VerifierContext,
+    BonsaiProver, Executor, ExecutorEnv, LocalProver, ProveInfo, Prover, ProverOpts,
+    VerifierContext,
 };
 use std::fmt::Display;
 
@@ -111,4 +112,8 @@ impl BonsaiProverOptions {
             .or_else(|| std::env::var("BONSAI_API_KEY").ok())
             .ok_or_else(Error::missing_bonsai_api_key)
     }
+}
+
+pub fn get_executor() -> impl Executor {
+    LocalProver::new("local")
 }

@@ -265,6 +265,11 @@ pub struct ZKDCAPRemoteAttestation {
     pub bonsai_api_url: Option<String>,
     #[clap(long = "bonsai_api_key", help = "Bonsai API key")]
     pub bonsai_api_key: Option<String>,
+    #[clap(
+        long = "disable_pre_execution",
+        help = "Disable pre-execution before proving"
+    )]
+    pub disable_pre_execution: bool,
 }
 
 impl ZKDCAPRemoteAttestation {
@@ -323,6 +328,7 @@ fn run_zkdcap_remote_attestation<E: EnclaveCommandAPI<S>, S: CommitStore>(
         Address::from_hex_string(&cmd.enclave_key)?,
         mode,
         cmd.get_zkvm_program()?.as_ref(),
+        cmd.disable_pre_execution,
     )?;
     Ok(())
 }

@@ -1,4 +1,5 @@
 use crate::{dcap::dcap_ra, errors::Error};
+use anyhow::anyhow;
 use attestation_report::{Risc0ZKVMProof, ZKDCAPQuote, ZKVMProof};
 use crypto::Address;
 use keymanager::EnclaveKeyManager;
@@ -6,8 +7,8 @@ use lcp_types::Time;
 use log::*;
 use zkvm::{
     encode_seal,
-    prover::{prove, Risc0ProverMode},
-    risc0_zkvm::{compute_image_id, ExecutorEnv},
+    prover::{get_executor, prove, Risc0ProverMode},
+    risc0_zkvm::{compute_image_id, Executor, ExecutorEnv},
     verifier::verify_groth16_proof,
 };
 
@@ -16,12 +17,13 @@ pub fn run_zkdcap_ra(
     target_enclave_key: Address,
     prover_mode: Risc0ProverMode,
     elf: &[u8],
+    disable_pre_execution: bool,
 ) -> Result<(), Error> {
-    let image_id = compute_image_id(elf).unwrap();
+    let image_id = compute_image_id(elf)
+        .map_err(|e| Error::anyhow(anyhow!("cannot compute image id: {}", e)))?;
     info!(
-        "Run zkDCAP verification with prover_mode={} image_id={}",
-        prover_mode,
-        hex::encode(image_id.as_bytes())
+        "run zkDCAP verification with prover_mode={} image_id={} enclave_key={}",
+        prover_mode, image_id, target_enclave_key
     );
 
     let current_time = Time::now();
@@ -34,31 +36,50 @@ pub fn run_zkdcap_ra(
         current_time
     );
 
-    let env = ExecutorEnv::builder()
-        .write(&(
-            res.raw_quote.clone(),
-            res.collateral.to_bytes(),
-            current_time.as_unix_timestamp_secs(),
-        ))
-        .unwrap()
-        .build()
-        .unwrap();
+    if !disable_pre_execution {
+        info!("running pre-execution");
+        let res = get_executor()
+            .execute(
+                build_env(
+                    &res.raw_quote,
+                    &res.collateral.to_bytes(),
+                    current_time.as_unix_timestamp_secs(),
+                )?,
+                elf,
+            )
+            .map_err(|e| Error::anyhow(anyhow!("pre-execution failed: {}", e)))?;
+        info!(
+            "pre-execution done: exit_code={:?} cycles={} ",
+            res.exit_code,
+            res.cycles()
+        );
+    }
 
     info!("proving with prover mode: {:?}", prover_mode);
-    let prover_info = prove(&prover_mode, env, elf).unwrap();
+    let prover_info = prove(
+        &prover_mode,
+        build_env(
+            &res.raw_quote,
+            &res.collateral.to_bytes(),
+            current_time.as_unix_timestamp_secs(),
+        )?,
+        elf,
+    )?;
     info!("proving done: stats: {:?}", prover_info.stats);
 
-    prover_info.receipt.verify(image_id).unwrap();
+    prover_info
+        .receipt
+        .verify(image_id)
+        .map_err(|e| Error::anyhow(anyhow!("receipt verification failed: {}", e.to_string())))?;
     info!("receipt verified");
 
-    let seal = encode_seal(&prover_info.receipt).unwrap();
+    let seal = encode_seal(&prover_info.receipt)?;
     if let zkvm::risc0_zkvm::InnerReceipt::Groth16(_) = prover_info.receipt.inner {
         verify_groth16_proof(
             seal.clone(),
             image_id,
             prover_info.receipt.journal.bytes.clone(),
-        )
-        .unwrap();
+        )?;
     } else {
         assert!(
             prover_mode.is_dev_mode(),
@@ -89,4 +110,19 @@ pub fn run_zkdcap_ra(
         })?;
 
     Ok(())
+}
+
+fn build_env<'a>(
+    quote: &[u8],
+    collateral: &[u8],
+    current_time: u64,
+) -> Result<ExecutorEnv<'a>, Error> {
+    ExecutorEnv::builder()
+        .write(&(quote, collateral, current_time))
+        .map_err(|e| Error::anyhow(anyhow!("cannot build env: {}", e)))
+        .and_then(|builder| {
+            builder
+                .build()
+                .map_err(|e| Error::anyhow(anyhow!("cannot build env: {}", e)))
+        })
 }

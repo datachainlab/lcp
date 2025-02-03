@@ -196,6 +196,10 @@ define_error! {
         DcapQuoteVerifier
         [TraceError<dcap_quote_verifier::Error>]
         |_| { "DCAP quote verifier error" },
+
+        Anyhow
+        [TraceError<anyhow::Error>]
+        |_| { "Anyhow error" },
     }
 }
 
@@ -214,5 +218,11 @@ impl From<lcp_types::TimeError> for Error {
 impl From<reqwest::Error> for Error {
     fn from(e: reqwest::Error) -> Self {
         Error::reqwest(e)
+    }
+}
+
+impl From<zkvm::Error> for Error {
+    fn from(e: zkvm::Error) -> Self {
+        Error::zkvm(e)
     }
 }

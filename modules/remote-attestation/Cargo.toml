@@ -24,6 +24,7 @@ reqwest = { version = "0.12.9", default-features = false, features = [
     "hickory-dns",
 ] }
 urlencoding = { version = "2" }
+anyhow = { version = "1" }
 
 dcap-quote-verifier = { git = "https://github.com/datachainlab/zkdcap", rev = "ff53632f49d2d8b00c9bcc456aeeeb139bacca9f" }
 
