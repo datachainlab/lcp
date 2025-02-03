@@ -18,6 +18,8 @@ pub fn run_zkdcap_ra(
     prover_mode: Risc0ProverMode,
     elf: &[u8],
     disable_pre_execution: bool,
+    pccs_url: &str,
+    certs_server_url: &str,
 ) -> Result<(), Error> {
     let image_id = compute_image_id(elf)
         .map_err(|e| Error::anyhow(anyhow!("cannot compute image id: {}", e)))?;
@@ -27,7 +29,13 @@ pub fn run_zkdcap_ra(
     );
 
     let current_time = Time::now();
-    let res = dcap_ra(key_manager, target_enclave_key, current_time)?;
+    let res = dcap_ra(
+        key_manager,
+        target_enclave_key,
+        current_time,
+        pccs_url,
+        certs_server_url,
+    )?;
 
     debug!(
         "proving with input: quote={}, collateral={}, current_time={}",

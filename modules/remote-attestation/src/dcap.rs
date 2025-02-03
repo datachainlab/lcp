@@ -29,9 +29,17 @@ pub const INTEL_ROOT_CA_HASH: [u8; 32] = [
 pub fn run_dcap_ra(
     key_manager: &EnclaveKeyManager,
     target_enclave_key: Address,
+    pccs_url: &str,
+    certs_service_url: &str,
 ) -> Result<(), Error> {
     let current_time = Time::now();
-    let result = dcap_ra(key_manager, target_enclave_key, current_time)?;
+    let result = dcap_ra(
+        key_manager,
+        target_enclave_key,
+        current_time,
+        pccs_url,
+        certs_service_url,
+    )?;
 
     key_manager
         .save_ra_quote(target_enclave_key, result.get_quote().into())
@@ -45,6 +53,8 @@ pub(crate) fn dcap_ra(
     key_manager: &EnclaveKeyManager,
     target_enclave_key: Address,
     current_time: Time,
+    pccs_url: &str,
+    certs_service_url: &str,
 ) -> Result<DCAPRemoteAttestationResult, Error> {
     let ek_info = key_manager.load(target_enclave_key).map_err(|e| {
         Error::key_manager(
@@ -57,11 +67,7 @@ pub(crate) fn dcap_ra(
 
     let quote = QuoteV3::from_bytes(&raw_quote).map_err(Error::dcap_quote_verifier)?;
 
-    let collateral = get_collateral(
-        "https://api.trustedservices.intel.com/",
-        "https://certificates.trustedservices.intel.com/",
-        &quote,
-    )?;
+    let collateral = get_collateral(pccs_url, certs_service_url, &quote)?;
     let output = verify_quote_dcapv3(&quote, &collateral, current_time.as_unix_timestamp_secs())
         .map_err(Error::dcap_quote_verifier)?;
     info!(

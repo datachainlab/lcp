@@ -219,6 +219,34 @@ fn run_simulate_remote_attestation<E: EnclaveCommandAPI<S>, S: CommitStore>(
 }
 
 #[derive(Clone, Debug, Parser, PartialEq)]
+pub struct SgxCollateralService {
+    #[clap(
+        long = "pcss_url",
+        help = "PCSS URL (default: https://api.trustedservices.intel.com/)"
+    )]
+    pub pcss_url: Option<String>,
+    #[clap(
+        long = "certs_service_url",
+        help = "Certs Service URL (default: https://certificates.trustedservices.intel.com/)"
+    )]
+    pub certs_service_url: Option<String>,
+}
+
+impl SgxCollateralService {
+    pub fn get_pcss_url(&self) -> String {
+        self.pcss_url
+            .clone()
+            .unwrap_or_else(|| "https://api.trustedservices.intel.com/".to_string())
+    }
+
+    pub fn get_certs_service_url(&self) -> String {
+        self.certs_service_url
+            .clone()
+            .unwrap_or_else(|| "https://certificates.trustedservices.intel.com/".to_string())
+    }
+}
+
+#[derive(Clone, Debug, Parser, PartialEq)]
 pub struct DCAPRemoteAttestation {
     /// Options for enclave
     #[clap(flatten)]
@@ -229,6 +257,8 @@ pub struct DCAPRemoteAttestation {
         help = "An enclave key attested by Remote Attestation"
     )]
     pub enclave_key: String,
+    #[clap(flatten)]
+    pub collateral_service: SgxCollateralService,
 }
 
 fn run_dcap_remote_attestation<E: EnclaveCommandAPI<S>, S: CommitStore>(
@@ -238,6 +268,8 @@ fn run_dcap_remote_attestation<E: EnclaveCommandAPI<S>, S: CommitStore>(
     dcap::run_dcap_ra(
         enclave.get_key_manager(),
         Address::from_hex_string(&cmd.enclave_key)?,
+        &cmd.collateral_service.get_pcss_url(),
+        &cmd.collateral_service.get_certs_service_url(),
     )?;
     Ok(())
 }
@@ -253,6 +285,8 @@ pub struct ZKDCAPRemoteAttestation {
         help = "An enclave key attested by Remote Attestation"
     )]
     pub enclave_key: String,
+    #[clap(flatten)]
+    pub collateral_service: SgxCollateralService,
     #[clap(long = "program_path", help = "Path to the zkVM guest program")]
     pub program_path: Option<PathBuf>,
     #[clap(
@@ -329,6 +363,8 @@ fn run_zkdcap_remote_attestation<E: EnclaveCommandAPI<S>, S: CommitStore>(
         mode,
         cmd.get_zkvm_program()?.as_ref(),
         cmd.disable_pre_execution,
+        &cmd.collateral_service.get_pcss_url(),
+        &cmd.collateral_service.get_certs_service_url(),
     )?;
     Ok(())
 }
