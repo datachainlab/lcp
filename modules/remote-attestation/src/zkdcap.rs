@@ -66,7 +66,8 @@ pub fn run_zkdcap_ra(
         );
     }
 
-    info!("proving with prover mode: {:?}", prover_mode);
+    info!("proving with prover mode: {}", prover_mode);
+    let now = std::time::Instant::now();
     let prover_info = prove(
         &prover_mode,
         build_env(
@@ -76,7 +77,11 @@ pub fn run_zkdcap_ra(
         )?,
         elf,
     )?;
-    info!("proving done: stats: {:?}", prover_info.stats);
+    info!(
+        "proving done: elapsed={}secs stats={:?}",
+        now.elapsed().as_secs(),
+        prover_info.stats
+    );
 
     prover_info
         .receipt
