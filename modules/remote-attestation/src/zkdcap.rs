@@ -95,7 +95,7 @@ pub fn run_zkdcap_ra(
         );
     }
 
-    let quote = res.get_quote();
+    let quote = res.get_ra_quote(current_time);
     key_manager
         .save_ra_quote(
             target_enclave_key,

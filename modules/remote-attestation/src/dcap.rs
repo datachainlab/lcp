@@ -42,7 +42,7 @@ pub fn run_dcap_ra(
     )?;
 
     key_manager
-        .save_ra_quote(target_enclave_key, result.get_quote().into())
+        .save_ra_quote(target_enclave_key, result.get_ra_quote(current_time).into())
         .map_err(|e| {
             Error::key_manager(format!("cannot save DCAP quote: {}", target_enclave_key), e)
         })?;
@@ -62,7 +62,9 @@ pub(crate) fn dcap_ra(
             e,
         )
     })?;
-    let raw_quote = rsgx_qe_get_quote(&ek_info.report).unwrap();
+    let raw_quote = rsgx_qe_get_quote(&ek_info.report)
+        .map_err(|status| Error::sgx_qe3_error(status, "failed to get quote".into()))?;
+
     info!("Successfully get the quote: {}", hex::encode(&raw_quote));
 
     let quote = QuoteV3::from_bytes(&raw_quote).map_err(Error::dcap_quote_verifier)?;
@@ -91,13 +93,13 @@ pub struct DCAPRemoteAttestationResult {
 }
 
 impl DCAPRemoteAttestationResult {
-    pub fn get_quote(&self) -> DCAPQuote {
+    pub fn get_ra_quote(&self, attested_at: Time) -> DCAPQuote {
         DCAPQuote::new(
             self.raw_quote.clone(),
             self.output.fmspc,
             self.output.tcb_status.to_string(),
             self.output.advisory_ids.clone(),
-            Time::now(),
+            attested_at,
             DcapCollateral {
                 tcbinfo_bytes: self.collateral.tcbinfo_bytes.clone(),
                 qeidentity_bytes: self.collateral.qeidentity_bytes.clone(),
