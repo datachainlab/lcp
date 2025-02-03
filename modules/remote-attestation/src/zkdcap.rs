@@ -12,6 +12,7 @@ use zkvm::{
     verifier::verify_groth16_proof,
 };
 
+#[allow(clippy::too_many_arguments)]
 pub fn run_zkdcap_ra(
     key_manager: &EnclaveKeyManager,
     target_enclave_key: Address,
@@ -20,6 +21,7 @@ pub fn run_zkdcap_ra(
     disable_pre_execution: bool,
     pccs_url: &str,
     certs_server_url: &str,
+    is_early_update: bool,
 ) -> Result<(), Error> {
     let image_id = compute_image_id(elf)
         .map_err(|e| Error::anyhow(anyhow!("cannot compute image id: {}", e)))?;
@@ -35,6 +37,7 @@ pub fn run_zkdcap_ra(
         current_time,
         pccs_url,
         certs_server_url,
+        is_early_update,
     )?;
 
     debug!(

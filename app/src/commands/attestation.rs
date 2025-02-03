@@ -230,6 +230,8 @@ pub struct SgxCollateralService {
         help = "Certs Service URL (default: https://certificates.trustedservices.intel.com/)"
     )]
     pub certs_service_url: Option<String>,
+    #[clap(long = "early_update", help = "Enable early update (default: false)")]
+    pub is_early_update: bool,
 }
 
 impl SgxCollateralService {
@@ -270,6 +272,7 @@ fn run_dcap_remote_attestation<E: EnclaveCommandAPI<S>, S: CommitStore>(
         Address::from_hex_string(&cmd.enclave_key)?,
         &cmd.collateral_service.get_pcss_url(),
         &cmd.collateral_service.get_certs_service_url(),
+        cmd.collateral_service.is_early_update,
     )?;
     Ok(())
 }
@@ -365,6 +368,7 @@ fn run_zkdcap_remote_attestation<E: EnclaveCommandAPI<S>, S: CommitStore>(
         cmd.disable_pre_execution,
         &cmd.collateral_service.get_pcss_url(),
         &cmd.collateral_service.get_certs_service_url(),
+        cmd.collateral_service.is_early_update,
     )?;
     Ok(())
 }

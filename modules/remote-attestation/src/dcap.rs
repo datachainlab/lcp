@@ -31,6 +31,7 @@ pub fn run_dcap_ra(
     target_enclave_key: Address,
     pccs_url: &str,
     certs_service_url: &str,
+    is_early_update: bool,
 ) -> Result<(), Error> {
     let current_time = Time::now();
     let result = dcap_ra(
@@ -39,6 +40,7 @@ pub fn run_dcap_ra(
         current_time,
         pccs_url,
         certs_service_url,
+        is_early_update,
     )?;
 
     key_manager
@@ -55,6 +57,7 @@ pub(crate) fn dcap_ra(
     current_time: Time,
     pccs_url: &str,
     certs_service_url: &str,
+    is_early_update: bool,
 ) -> Result<DCAPRemoteAttestationResult, Error> {
     let ek_info = key_manager.load(target_enclave_key).map_err(|e| {
         Error::key_manager(
@@ -69,7 +72,7 @@ pub(crate) fn dcap_ra(
 
     let quote = QuoteV3::from_bytes(&raw_quote).map_err(Error::dcap_quote_verifier)?;
 
-    let collateral = get_collateral(pccs_url, certs_service_url, &quote)?;
+    let collateral = get_collateral(pccs_url, certs_service_url, is_early_update, &quote)?;
     let output = verify_quote_dcapv3(&quote, &collateral, current_time.as_unix_timestamp_secs())
         .map_err(Error::dcap_quote_verifier)?;
     info!(
@@ -131,6 +134,7 @@ fn rsgx_qe_get_quote(app_report: &sgx_report_t) -> Result<Vec<u8>, sgx_quote3_er
 fn get_collateral(
     pccs_url: &str,
     certs_service_url: &str,
+    is_early_update: bool,
     quote: &QuoteV3,
 ) -> Result<IntelCollateral, Error> {
     let pccs_url = pccs_url.trim_end_matches('/');
@@ -149,6 +153,8 @@ fn get_collateral(
         ));
     }
 
+    let update_policy = if is_early_update { "early" } else { "standard" };
+
     // get the pck certificate
     let pck_cert = &certchain[0];
     let pck_cert_issuer = &certchain[1];
@@ -157,13 +163,15 @@ fn get_collateral(
     let sgx_extensions = extract_sgx_extensions(pck_cert);
     let (tcbinfo_bytes, sgx_tcb_signing_der) = {
         let fmspc = hex::encode_upper(sgx_extensions.fmspc);
-        let res = http_get(format!("{base_url}/tcb?fmspc={fmspc}"))?;
+        let res = http_get(format!(
+            "{base_url}/tcb?fmspc={fmspc}&update={update_policy}"
+        ))?;
         let issuer_chain =
             extract_raw_certs(get_header(&res, "TCB-Info-Issuer-Chain")?.as_bytes())?;
         (res.bytes()?.to_vec(), issuer_chain[0].clone())
     };
 
-    let qeidentity_bytes = http_get(format!("{base_url}/qe/identity"))?
+    let qeidentity_bytes = http_get(format!("{base_url}/qe/identity?update={update_policy}"))?
         .bytes()?
         .to_vec();
     let sgx_intel_root_ca_crl_der = http_get(format!("{certs_service_url}/IntelSGXRootCA.der"))?
@@ -241,6 +249,7 @@ mod tests {
         let collateral = get_collateral(
             "https://api.trustedservices.intel.com/",
             "https://certificates.trustedservices.intel.com/",
+            false,
             &quote,
         )
         .unwrap();
