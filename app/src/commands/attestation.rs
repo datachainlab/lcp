@@ -7,8 +7,11 @@ use clap::Parser;
 use crypto::Address;
 use enclave_api::{Enclave, EnclaveCommandAPI, EnclaveProtoAPI};
 use host::store::transaction::CommitStore;
-use remote_attestation::zkvm::prover::{BonsaiProverOptions, Risc0ProverMode};
 use remote_attestation::{dcap, ias, zkdcap, IASMode};
+use remote_attestation::{
+    dcap_simulation::DCAPRASimulationOpts,
+    zkvm::prover::{BonsaiProverOptions, Risc0ProverMode},
+};
 use std::{path::PathBuf, str::FromStr};
 
 /// `attestation` subcommand
@@ -21,8 +24,11 @@ pub enum AttestationCmd {
     DCAP(DCAPRemoteAttestation),
     #[clap(display_order = 3, about = "Remote Attestation with zkDCAP")]
     ZKDCAP(ZKDCAPRemoteAttestation),
+    #[clap(display_order = 4, about = "Simulate Remote Attestation with zkDCAP")]
+    #[allow(non_camel_case_types)]
+    ZKDCAP_SIM(ZKDCAPSIMRemoteAttestation),
     #[cfg(feature = "sgx-sw")]
-    #[clap(display_order = 4, about = "Simulate Remote Attestation")]
+    #[clap(display_order = 5, about = "Simulate Remote Attestation with IAS")]
     Simulate(SimulateRemoteAttestation),
 }
 
@@ -47,6 +53,10 @@ impl AttestationCmd {
                 cmd,
             ),
             AttestationCmd::ZKDCAP(cmd) => run_zkdcap_remote_attestation(
+                enclave_loader.load(opts, cmd.enclave.path.as_ref(), cmd.enclave.is_debug())?,
+                cmd,
+            ),
+            AttestationCmd::ZKDCAP_SIM(cmd) => run_zkdcap_ra_simulation(
                 enclave_loader.load(opts, cmd.enclave.path.as_ref(), cmd.enclave.is_debug())?,
                 cmd,
             ),
@@ -369,6 +379,100 @@ fn run_zkdcap_remote_attestation<E: EnclaveCommandAPI<S>, S: CommitStore>(
         &cmd.collateral_service.get_pcss_url(),
         &cmd.collateral_service.get_certs_service_url(),
         cmd.collateral_service.is_early_update,
+    )?;
+    Ok(())
+}
+
+#[derive(Clone, Debug, Parser, PartialEq)]
+pub struct ZKDCAPSIMRemoteAttestation {
+    /// Options for enclave
+    #[clap(flatten)]
+    pub enclave: EnclaveOpts,
+    /// An enclave key attested by Remote Attestation
+    #[clap(
+        long = "enclave_key",
+        help = "An enclave key attested by Remote Attestation"
+    )]
+    pub enclave_key: String,
+    #[clap(long = "program_path", help = "Path to the zkVM guest program")]
+    pub program_path: Option<PathBuf>,
+    #[clap(
+        long = "prove_mode",
+        default_value = "local",
+        help = "Prove mode (dev or local or bonsai)"
+    )]
+    pub prove_mode: ProveMode,
+    #[clap(long = "bonsai_api_url", help = "Bonsai API URL")]
+    pub bonsai_api_url: Option<String>,
+    #[clap(long = "bonsai_api_key", help = "Bonsai API key")]
+    pub bonsai_api_key: Option<String>,
+    #[clap(
+        long = "disable_pre_execution",
+        help = "Disable pre-execution before proving"
+    )]
+    pub disable_pre_execution: bool,
+}
+
+impl ZKDCAPSIMRemoteAttestation {
+    pub fn get_zkvm_program(&self) -> Result<Vec<u8>> {
+        match &self.program_path {
+            Some(path) => std::fs::read(path).map_err(|e| {
+                anyhow!(
+                    "failed to read zk program: path={} error={}",
+                    path.to_string_lossy(),
+                    e
+                )
+            }),
+            None => Ok(zkdcap_risc0::DCAP_QUOTE_VERIFIER_ELF.to_vec()),
+        }
+    }
+}
+
+const DCAP_SIM_ROOT_CA_PEM: &str = "-----BEGIN CERTIFICATE-----
+MIICkTCCAjegAwIBAgIVAL5tSIEVwJOfNdaHR1F0gIiTmyiqMAoGCCqGSM49BAMC
+MGgxGjAYBgNVBAMMEUludGVsIFNHWCBSb290IENBMRowGAYDVQQKDBFJbnRlbCBD
+b3Jwb3JhdGlvbjEUMBIGA1UEBwwLU2FudGEgQ2xhcmExCzAJBgNVBAgMAkNBMQsw
+CQYDVQQGEwJVUzAgFw03MDAxMDEwMDAwMDFaGA8yMTA2MDIwNzA2MjgxNVowaDEa
+MBgGA1UEAwwRSW50ZWwgU0dYIFJvb3QgQ0ExGjAYBgNVBAoMEUludGVsIENvcnBv
+cmF0aW9uMRQwEgYDVQQHDAtTYW50YSBDbGFyYTELMAkGA1UECAwCQ0ExCzAJBgNV
+BAYTAlVTMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAErzNPtZ16CUe39ujAYJlx
++ljzgWh3SV+aUhq6ud2NZ73170P2z1z7hU1Nh8yS4B8l5UN8dDNGW1JFdObRsKW1
+XKOBuzCBuDAdBgNVHQ4EFgQUvm1IgRXAk5811odHUXSAiJObKKowUgYDVR0fBEsw
+STBHoEWgQ4ZBaHR0cHM6Ly9jZXJ0aWZpY2F0ZXMudHJ1c3RlZHNlcnZpY2VzLmlu
+dGVsLmNvbS9JbnRlbFNHWFJvb3RDQS5kZXIwDgYDVR0PAQH/BAQDAgEGMBIGA1Ud
+EwEB/wQIMAYBAf8CAQEwHwYDVR0jBBgwFoAUvm1IgRXAk5811odHUXSAiJObKKow
+CgYIKoZIzj0EAwIDSAAwRQIhAOG0i/mfpYixAPEXGccrSap26H2hGP3nBqUMvrk1
+tcaJAiAFeiz8yEw5Ms6Dd2HxQKC+6zryaOc9OjmOt84XYNUGpg==
+-----END CERTIFICATE-----";
+
+const DCAP_SIM_ROOT_KEY_PKCS8: &str = "-----BEGIN PRIVATE KEY-----
+MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgDgmMEb6MJ3SP5FiS
+xdnehIogXGCRvkJiuZyuwUetx5+hRANCAASvM0+1nXoJR7f26MBgmXH6WPOBaHdJ
+X5pSGrq53Y1nvfXvQ/bPXPuFTU2HzJLgHyXlQ3x0M0ZbUkV05tGwpbVc
+-----END PRIVATE KEY-----";
+
+fn run_zkdcap_ra_simulation<E: EnclaveCommandAPI<S>, S: CommitStore>(
+    enclave: E,
+    cmd: &ZKDCAPSIMRemoteAttestation,
+) -> Result<()> {
+    let mode = match cmd.prove_mode {
+        ProveMode::Dev => Risc0ProverMode::Dev,
+        ProveMode::Local => Risc0ProverMode::Local,
+        ProveMode::Bonsai => Risc0ProverMode::Bonsai(BonsaiProverOptions {
+            api_url: cmd.bonsai_api_url.clone(),
+            api_key: cmd.bonsai_api_key.clone(),
+        }),
+    };
+    zkdcap::run_zkdcap_ra_simulation(
+        enclave.get_key_manager(),
+        Address::from_hex_string(&cmd.enclave_key)?,
+        mode,
+        cmd.get_zkvm_program()?.as_ref(),
+        cmd.disable_pre_execution,
+        DCAPRASimulationOpts::build_from_pems(
+            DCAP_SIM_ROOT_CA_PEM.as_bytes(),
+            DCAP_SIM_ROOT_KEY_PKCS8.as_bytes(),
+        )?,
     )?;
     Ok(())
 }

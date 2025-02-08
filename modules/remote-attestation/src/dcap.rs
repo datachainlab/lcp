@@ -1,15 +1,13 @@
+use crate::dcap_utils::DCAPRemoteAttestationResult;
 use crate::errors::Error;
-use attestation_report::DCAPQuote;
+use attestation_report::QEType;
 use crypto::Address;
-use dcap_quote_verifier::types::collaterals::IntelCollateral;
+use dcap_quote_verifier::cert::{get_x509_subject_cn, parse_certchain};
+use dcap_quote_verifier::sgx_extensions::extract_sgx_extensions;
 use dcap_quote_verifier::types::quotes::version_3::QuoteV3;
-use dcap_quote_verifier::types::VerifiedOutput;
-use dcap_quote_verifier::utils::cert::{
-    extract_sgx_extensions, get_x509_subject_cn, parse_certchain, parse_pem,
-};
-use dcap_quote_verifier::utils::quotes::version_3::verify_quote_dcapv3;
+use dcap_quote_verifier::types::utils::parse_pem;
+use dcap_quote_verifier::{collaterals::IntelCollateral, quotes::version_3::verify_quote_dcapv3};
 use keymanager::EnclaveKeyManager;
-use lcp_types::proto::lcp::service::enclave::v1::DcapCollateral;
 use lcp_types::Time;
 use log::*;
 use sgx_types::{sgx_qe_get_quote, sgx_qe_get_quote_size, sgx_quote3_error_t, sgx_report_t};
@@ -65,17 +63,22 @@ pub(crate) fn dcap_ra(
             e,
         )
     })?;
+    if ek_info.qe_type != QEType::QE3 {
+        return Err(Error::unexpected_qe_type(QEType::QE3, ek_info.qe_type));
+    }
+
     let raw_quote = rsgx_qe_get_quote(&ek_info.report)
         .map_err(|status| Error::sgx_qe3_error(status, "failed to get quote".into()))?;
 
-    info!("Successfully get the quote: {}", hex::encode(&raw_quote));
+    debug!("Successfully get the quote: {}", hex::encode(&raw_quote));
 
     let quote = QuoteV3::from_bytes(&raw_quote).map_err(Error::dcap_quote_verifier)?;
 
     let collateral = get_collateral(pccs_url, certs_service_url, is_early_update, &quote)?;
     let output = verify_quote_dcapv3(&quote, &collateral, current_time.as_unix_timestamp_secs())
         .map_err(Error::dcap_quote_verifier)?;
-    info!(
+
+    debug!(
         "DCAP RA output: {:?} hex={}",
         output,
         hex::encode(output.to_bytes())
@@ -86,33 +89,6 @@ pub(crate) fn dcap_ra(
         output,
         collateral,
     })
-}
-
-#[derive(Debug)]
-pub struct DCAPRemoteAttestationResult {
-    pub raw_quote: Vec<u8>,
-    pub output: VerifiedOutput,
-    pub collateral: IntelCollateral,
-}
-
-impl DCAPRemoteAttestationResult {
-    pub fn get_ra_quote(&self, attested_at: Time) -> DCAPQuote {
-        DCAPQuote::new(
-            self.raw_quote.clone(),
-            self.output.fmspc,
-            self.output.tcb_status.to_string(),
-            self.output.advisory_ids.clone(),
-            attested_at,
-            DcapCollateral {
-                tcbinfo_bytes: self.collateral.tcbinfo_bytes.clone(),
-                qeidentity_bytes: self.collateral.qeidentity_bytes.clone(),
-                sgx_intel_root_ca_der: self.collateral.sgx_intel_root_ca_der.clone(),
-                sgx_tcb_signing_der: self.collateral.sgx_tcb_signing_der.clone(),
-                sgx_intel_root_ca_crl_der: self.collateral.sgx_intel_root_ca_crl_der.clone(),
-                sgx_pck_crl_der: self.collateral.sgx_pck_crl_der.clone(),
-            },
-        )
-    }
 }
 
 fn rsgx_qe_get_quote(app_report: &sgx_report_t) -> Result<Vec<u8>, sgx_quote3_error_t> {
@@ -160,7 +136,7 @@ fn get_collateral(
     let pck_cert_issuer = &certchain[1];
 
     // get the SGX extension
-    let sgx_extensions = extract_sgx_extensions(pck_cert);
+    let sgx_extensions = extract_sgx_extensions(pck_cert).map_err(Error::dcap_quote_verifier)?;
     let (tcbinfo_bytes, sgx_tcb_signing_der) = {
         let fmspc = hex::encode_upper(sgx_extensions.fmspc);
         let res = http_get(format!(
@@ -232,10 +208,7 @@ fn http_get(url: String) -> Result<reqwest::blocking::Response, Error> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use dcap_quote_verifier::{
-        constants::SGX_TEE_TYPE,
-        utils::{hash::keccak256sum, quotes::version_3::verify_quote_dcapv3},
-    };
+    use dcap_quote_verifier::{crypto::keccak256sum, types::SGX_TEE_TYPE};
 
     #[test]
     fn test_quote() {

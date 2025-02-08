@@ -1812,20 +1812,45 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e8566979429cf69b49a5c740c60791108e86440e8be149bbea4fe54d2c32d6e2"
 
 [[package]]
+name = "dcap-collaterals"
+version = "0.1.0"
+source = "git+https://github.com/datachainlab/zkdcap?rev=2ffcdc241f707b80f43e4a38fddcd90cfee25888#2ffcdc241f707b80f43e4a38fddcd90cfee25888"
+dependencies = [
+ "anyhow",
+ "chrono",
+ "dcap-types",
+ "der 0.7.9",
+ "hex",
+ "openssl",
+ "serde_json",
+ "x509-parser",
+]
+
+[[package]]
 name = "dcap-quote-verifier"
 version = "0.1.0"
-source = "git+https://github.com/datachainlab/zkdcap?rev=ff53632f49d2d8b00c9bcc456aeeeb139bacca9f#ff53632f49d2d8b00c9bcc456aeeeb139bacca9f"
+source = "git+https://github.com/datachainlab/zkdcap?rev=2ffcdc241f707b80f43e4a38fddcd90cfee25888#2ffcdc241f707b80f43e4a38fddcd90cfee25888"
 dependencies = [
  "alloy-sol-types",
  "anyhow",
- "chrono",
+ "dcap-types",
  "hex",
  "p256",
- "serde",
  "serde_json",
  "sha2 0.10.8",
  "sha3",
- "time",
+ "x509-parser",
+]
+
+[[package]]
+name = "dcap-types"
+version = "0.1.0"
+source = "git+https://github.com/datachainlab/zkdcap?rev=2ffcdc241f707b80f43e4a38fddcd90cfee25888#2ffcdc241f707b80f43e4a38fddcd90cfee25888"
+dependencies = [
+ "anyhow",
+ "chrono",
+ "hex",
+ "serde",
  "x509-parser",
 ]
 
@@ -1855,6 +1880,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f55bf8e7b65898637379c1b74eb1551107c8294ed26d855ceb9fd1a09cfc9bc0"
 dependencies = [
  "const-oid",
+ "der_derive",
  "pem-rfc7468",
  "zeroize",
 ]
@@ -1871,6 +1897,17 @@ dependencies = [
  "num-bigint 0.4.6",
  "num-traits",
  "rusticata-macros",
+]
+
+[[package]]
+name = "der_derive"
+version = "0.7.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8034092389675178f570469e6c3b0465d3d30b4505c294a6550db47f3c17ad18"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.88",
 ]
 
 [[package]]
@@ -2542,12 +2579,21 @@ checksum = "f81ec6369c545a7d40e4589b5597581fa1c441fe1cce96dd1de43159910a36a2"
 
 [[package]]
 name = "foreign-types"
+version = "0.3.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f6f339eb8adc052cd2ca78910fda869aefa38d22d5cb648e6485e4d3fc06f3b1"
+dependencies = [
+ "foreign-types-shared 0.1.1",
+]
+
+[[package]]
+name = "foreign-types"
 version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d737d9aa519fb7b749cbc3b962edcf310a8dd1f4b67c91c4f83975dbdd17d965"
 dependencies = [
  "foreign-types-macros",
- "foreign-types-shared",
+ "foreign-types-shared 0.3.1",
 ]
 
 [[package]]
@@ -2560,6 +2606,12 @@ dependencies = [
  "quote",
  "syn 2.0.88",
 ]
+
+[[package]]
+name = "foreign-types-shared"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "00b0228411908ca8685dba7fc2cdd70ec9990a6e753e89b6ac91a84c40fbaf4b"
 
 [[package]]
 name = "foreign-types-shared"
@@ -2733,16 +2785,14 @@ dependencies = [
 
 [[package]]
 name = "git2"
-version = "0.19.0"
+version = "0.20.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b903b73e45dc0c6c596f2d37eccece7c1c8bb6e4407b001096387c63d0d93724"
+checksum = "3fda788993cc341f69012feba8bf45c0ba4f3291fcc08e214b4d5a7332d88aff"
 dependencies = [
  "bitflags 2.6.0",
  "libc",
  "libgit2-sys",
  "log",
- "openssl-probe",
- "openssl-sys",
  "url",
 ]
 
@@ -4119,15 +4169,13 @@ checksum = "433bfe06b8c75da9b2e3fbea6e5329ff87748f0b144ef75306e674c3f6f7c13f"
 
 [[package]]
 name = "libgit2-sys"
-version = "0.17.0+1.8.1"
+version = "0.18.0+1.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "10472326a8a6477c3c20a64547b0059e4b0d086869eee31e6d7da728a8eb7224"
+checksum = "e1a117465e7e1597e8febea8bb0c410f1c7fb93b1e1cddf34363f8390367ffec"
 dependencies = [
  "cc",
  "libc",
- "libssh2-sys",
  "libz-sys",
- "openssl-sys",
  "pkg-config",
 ]
 
@@ -4138,7 +4186,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4979f22fdb869068da03c9f7528f8297c6fd2606bc3a4affe42e6a823fdb8da4"
 dependencies = [
  "cfg-if 1.0.0",
- "windows-targets 0.48.5",
+ "windows-targets 0.52.6",
 ]
 
 [[package]]
@@ -4225,20 +4273,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "afc22eff61b133b115c6e8c74e818c628d6d5e7a502afea6f64dee076dd94326"
 dependencies = [
  "cc",
- "pkg-config",
- "vcpkg",
-]
-
-[[package]]
-name = "libssh2-sys"
-version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2dc8a030b787e2119a731f1951d6a773e2280c660f8ec4b0f5e1505a386e71ee"
-dependencies = [
- "cc",
- "libc",
- "libz-sys",
- "openssl-sys",
  "pkg-config",
  "vcpkg",
 ]
@@ -4428,7 +4462,7 @@ dependencies = [
  "bitflags 2.6.0",
  "block",
  "core-graphics-types",
- "foreign-types",
+ "foreign-types 0.5.0",
  "log",
  "objc",
  "paste",
@@ -4806,19 +4840,52 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c08d65885ee38876c4f86fa503fb49d7b507c2b62552df7c70b2fce627e06381"
 
 [[package]]
+name = "openssl"
+version = "0.10.64"
+source = "git+https://github.com/datachainlab/rust-openssl?rev=6fdf2f32721719d173bf909c97e982fe4e2e2819#6fdf2f32721719d173bf909c97e982fe4e2e2819"
+dependencies = [
+ "bitflags 2.6.0",
+ "cfg-if 1.0.0",
+ "foreign-types 0.3.2",
+ "libc",
+ "once_cell",
+ "openssl-macros",
+ "openssl-sys",
+]
+
+[[package]]
+name = "openssl-macros"
+version = "0.1.1"
+source = "git+https://github.com/datachainlab/rust-openssl?rev=6fdf2f32721719d173bf909c97e982fe4e2e2819#6fdf2f32721719d173bf909c97e982fe4e2e2819"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.88",
+]
+
+[[package]]
 name = "openssl-probe"
 version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ff011a302c396a5197692431fc1948019154afc178baf7d8e37367442a4601cf"
 
 [[package]]
-name = "openssl-sys"
-version = "0.9.104"
+name = "openssl-src"
+version = "300.4.1+3.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "45abf306cbf99debc8195b66b7346498d7b10c210de50418b5ccd7ceba08c741"
+checksum = "faa4eac4138c62414b5622d1b31c5c304f34b406b013c079c2bbc652fdd6678c"
+dependencies = [
+ "cc",
+]
+
+[[package]]
+name = "openssl-sys"
+version = "0.9.101"
+source = "git+https://github.com/datachainlab/rust-openssl?rev=6fdf2f32721719d173bf909c97e982fe4e2e2819#6fdf2f32721719d173bf909c97e982fe4e2e2819"
 dependencies = [
  "cc",
  "libc",
+ "openssl-src",
  "pkg-config",
  "vcpkg",
 ]
@@ -5682,6 +5749,7 @@ dependencies = [
  "base64 0.22.1",
  "chrono",
  "crypto",
+ "dcap-collaterals",
  "dcap-quote-verifier",
  "flex-error",
  "hex",
@@ -5694,6 +5762,7 @@ dependencies = [
  "reqwest 0.12.9",
  "rsa",
  "rustls 0.23.18",
+ "serde_json",
  "sgx_types",
  "sha2 0.10.8",
  "urlencoding",
@@ -8212,7 +8281,7 @@ version = "1.6.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "97fee6b57c6a41524a810daee9286c02d7752c4253064d0b05472833a438f675"
 dependencies = [
- "cfg-if 0.1.10",
+ "cfg-if 1.0.0",
  "static_assertions",
 ]
 
@@ -8637,7 +8706,7 @@ version = "0.1.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cf221c93e13a30d793f7645a0e7762c55d169dbb0a49671918a2319d289b10bb"
 dependencies = [
- "windows-sys 0.48.0",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -9033,7 +9102,7 @@ dependencies = [
 [[package]]
 name = "zkdcap-risc0"
 version = "0.1.0"
-source = "git+https://github.com/datachainlab/zkdcap?rev=ff53632f49d2d8b00c9bcc456aeeeb139bacca9f#ff53632f49d2d8b00c9bcc456aeeeb139bacca9f"
+source = "git+https://github.com/datachainlab/zkdcap?rev=2ffcdc241f707b80f43e4a38fddcd90cfee25888#2ffcdc241f707b80f43e4a38fddcd90cfee25888"
 dependencies = [
  "risc0-binfmt",
  "risc0-build",

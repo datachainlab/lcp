@@ -114,8 +114,8 @@ impl ZKDCAPQuote {
     }
 
     #[cfg(feature = "std")]
-    pub fn commit(&self) -> Result<dcap_quote_verifier::types::VerifiedOutput, Error> {
-        dcap_quote_verifier::types::VerifiedOutput::from_bytes(self.zkp.commit())
+    pub fn commit(&self) -> Result<dcap_quote_verifier::verifier::VerifiedOutput, Error> {
+        dcap_quote_verifier::verifier::VerifiedOutput::from_bytes(self.zkp.commit())
             .map_err(Error::dcap_quote_verifier)
     }
 }

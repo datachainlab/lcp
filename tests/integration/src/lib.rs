@@ -10,6 +10,7 @@ mod tests {
     use super::*;
     use crate::relayer::Relayer;
     use anyhow::bail;
+    use attestation_report::QEType;
     use commitments::UpdateStateProxyMessage;
     use crypto::Address;
     use ecall_commands::{
@@ -79,14 +80,14 @@ mod tests {
             info!("this test is running in HW mode");
         }
 
-        let (target_info, _) = remote_attestation::init_quote(false)?;
+        let (target_info, _) = remote_attestation::init_quote(QEType::QE)?;
         let operator = Address::from_hex_string("0x396e1ccc2f11cd6d2114c2449dad7751357e413e")?;
         let op_ek_addr = match enclave.generate_enclave_key(
             GenerateEnclaveKeyInput {
                 operator: Some(operator),
                 target_info,
             },
-            false,
+            QEType::QE,
         ) {
             Ok(res) => res.pub_key.as_address(),
             Err(e) => {
@@ -98,7 +99,7 @@ mod tests {
                 operator: None,
                 target_info,
             },
-            false,
+            QEType::QE,
         ) {
             Ok(res) => res.pub_key.as_address(),
             Err(e) => {
@@ -219,13 +220,13 @@ mod tests {
         enclave: &Enclave<store::memory::MemStore>,
     ) -> Result<(), anyhow::Error> {
         let operator = Address::from_hex_string("0x396e1ccc2f11cd6d2114c2449dad7751357e413e")?;
-        let (target_info, _) = remote_attestation::init_quote(false)?;
+        let (target_info, _) = remote_attestation::init_quote(QEType::QE)?;
         let signer = match enclave.generate_enclave_key(
             GenerateEnclaveKeyInput {
                 operator: Some(operator),
                 target_info,
             },
-            false,
+            QEType::QE,
         ) {
             Ok(res) => res.pub_key.as_address(),
             Err(e) => {

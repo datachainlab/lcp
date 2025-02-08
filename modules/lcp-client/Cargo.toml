@@ -11,7 +11,7 @@ flex-error = { version = "0.4.4", default-features = false }
 tiny-keccak = { version = "2.0" }
 hex-literal = { version = "0.4.1" }
 alloy-sol-types = { version = "0.8", default-features = false }
-dcap-quote-verifier = { git = "https://github.com/datachainlab/zkdcap", rev = "ff53632f49d2d8b00c9bcc456aeeeb139bacca9f" }
+dcap-quote-verifier = { git = "https://github.com/datachainlab/zkdcap", rev = "2ffcdc241f707b80f43e4a38fddcd90cfee25888" }
 
 attestation-report = { path = "../attestation-report", default-features = false }
 remote-attestation = { path = "../remote-attestation", default-features = false }

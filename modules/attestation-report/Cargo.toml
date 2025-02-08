@@ -18,7 +18,7 @@ pem = { version = "2.0", default-features = false }
 webpki = { version = "0.22", features = ["alloc"] }
 anyhow = { version = "1", default-features = false }
 
-dcap-quote-verifier = { git = "https://github.com/datachainlab/zkdcap", rev = "ff53632f49d2d8b00c9bcc456aeeeb139bacca9f", optional = true }
+dcap-quote-verifier = { git = "https://github.com/datachainlab/zkdcap", rev = "2ffcdc241f707b80f43e4a38fddcd90cfee25888", optional = true }
 
 [dev-dependencies]
 tokio = { version = "1.0", default-features = false, features = ["macros"] }

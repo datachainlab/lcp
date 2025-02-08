@@ -1,3 +1,4 @@
+use attestation_report::QEType;
 use flex_error::*;
 use lcp_types::Time;
 use sgx_types::{sgx_quote3_error_t, sgx_status_t};
@@ -153,6 +154,14 @@ define_error! {
             format_args!("UnexpectedQuoteError: {}", e.descr)
         },
 
+        UnexpectedQeType {
+            expected: QEType,
+            actual: QEType,
+        }
+        |e| {
+            format_args!("UnexpectedQeType: expected={} actual={}", e.expected, e.actual)
+        },
+
         SgxError {
             status: sgx_status_t,
             descr: String
@@ -191,6 +200,24 @@ define_error! {
         }
         |e| {
             format_args!("Collateral: descr={}", e.descr)
+        },
+
+        X509CertFromPem
+        {
+            pem: String,
+            descr: String
+        }
+        |e| {
+            format_args!("X509CertFromPem: pem={} descr={}", e.pem, e.descr)
+        },
+
+        EcPrivateKeyFromPem
+        {
+            pem: String,
+            descr: String
+        }
+        |e| {
+            format_args!("EcPrivateKeyFromPem: pem={} descr={}", e.pem, e.descr)
         },
 
         DcapQuoteVerifier

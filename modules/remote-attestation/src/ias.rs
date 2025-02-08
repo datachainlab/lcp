@@ -1,9 +1,10 @@
+use crate::common::init_quote;
 use crate::errors::Error;
 use crate::ias_utils::{
-    decode_spid, get_quote, get_report_from_intel, get_sigrl_from_intel, init_quote,
-    validate_qe_report, IASMode, SGX_QUOTE_SIGN_TYPE,
+    decode_spid, get_quote, get_report_from_intel, get_sigrl_from_intel, validate_qe_report,
+    IASMode, SGX_QUOTE_SIGN_TYPE,
 };
-use attestation_report::IASSignedReport;
+use attestation_report::{IASSignedReport, QEType};
 use crypto::Address;
 use keymanager::EnclaveKeyManager;
 use log::*;
@@ -23,7 +24,7 @@ pub fn run_ias_ra(
     })?;
 
     let spid = decode_spid(&spid)?;
-    let (target_info, epid_group_id) = init_quote(false)?;
+    let (target_info, epid_group_id) = init_quote(QEType::QE)?;
     // Now sigrl is the revocation list, a vec<u8>
     let sigrl = get_sigrl_from_intel(mode, epid_group_id, &ias_key)?;
     let (quote, qe_report) = get_quote(sigrl, ek_info.report, SGX_QUOTE_SIGN_TYPE, spid)?;

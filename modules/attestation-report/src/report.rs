@@ -2,6 +2,7 @@ use crate::dcap::ZKDCAPQuote;
 use crate::{dcap::DCAPQuote, errors::Error};
 use crate::{prelude::*, IASSignedReport};
 use core::fmt::{Debug, Display, Error as FmtError};
+use core::str::FromStr;
 use crypto::Address;
 use lcp_types::Time;
 use serde::{Deserialize, Serialize};
@@ -9,24 +10,51 @@ use sgx_types::{metadata::metadata_t, sgx_measurement_t, sgx_quote_t, sgx_report
 
 pub const REPORT_DATA_V1: u8 = 1;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub enum QEType {
-    IAS,
-    DCAP,
+    #[default]
+    QE,
+    QE3,
+    QE3SIM,
 }
 
 impl QEType {
     pub fn as_u32(&self) -> u32 {
         match self {
-            Self::IAS => 1,
-            Self::DCAP => 2,
+            Self::QE => 1,
+            Self::QE3 => 2,
+            Self::QE3SIM => 3,
         }
     }
     pub fn from_u32(v: u32) -> Result<Self, Error> {
         match v {
-            1 => Ok(Self::IAS),
-            2 => Ok(Self::DCAP),
+            1 => Ok(Self::QE),
+            2 => Ok(Self::QE3),
+            3 => Ok(Self::QE3SIM),
             _ => Err(Error::invalid_qe_type(v)),
+        }
+    }
+}
+
+impl Display for QEType {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        match self {
+            QEType::QE => write!(f, "QE"),
+            QEType::QE3 => write!(f, "QE3"),
+            QEType::QE3SIM => write!(f, "QE3SIM"),
+        }
+    }
+}
+
+impl FromStr for QEType {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_uppercase().as_str() {
+            "QE" => Ok(QEType::QE),
+            "QE3" => Ok(QEType::QE3),
+            "QE3SIM" => Ok(QEType::QE3SIM),
+            _ => Err(anyhow::anyhow!("Invalid QE type: {}", s)),
         }
     }
 }

@@ -4,7 +4,7 @@ use crate::prelude::*;
 use alloy_sol_types::{sol, SolValue};
 use attestation_report::IASSignedReport;
 use crypto::Address;
-use dcap_quote_verifier::types::VerifiedOutput;
+use dcap_quote_verifier::verifier::VerifiedOutput;
 use light_client::commitments::{Error as CommitmentError, EthABIEncoder, ProxyMessage};
 use light_client::types::proto::ibc::lightclients::lcp::v1::{
     RegisterEnclaveKeyMessage as RawRegisterEnclaveKeyMessage,

@@ -1,4 +1,9 @@
-use crate::{dcap::dcap_ra, errors::Error};
+use crate::{
+    dcap::dcap_ra,
+    dcap_simulation::{dcap_ra_simulation, DCAPRASimulationOpts},
+    dcap_utils::DCAPRemoteAttestationResult,
+    errors::Error,
+};
 use anyhow::anyhow;
 use attestation_report::{Risc0ZKVMProof, ZKDCAPQuote, ZKVMProof};
 use crypto::Address;
@@ -39,6 +44,58 @@ pub fn run_zkdcap_ra(
         certs_server_url,
         is_early_update,
     )?;
+
+    zkdcap_ra(
+        key_manager,
+        target_enclave_key,
+        prover_mode,
+        elf,
+        disable_pre_execution,
+        current_time,
+        res,
+    )
+}
+
+pub fn run_zkdcap_ra_simulation(
+    key_manager: &EnclaveKeyManager,
+    target_enclave_key: Address,
+    prover_mode: Risc0ProverMode,
+    elf: &[u8],
+    disable_pre_execution: bool,
+    opts: DCAPRASimulationOpts,
+) -> Result<(), Error> {
+    let image_id = compute_image_id(elf)
+        .map_err(|e| Error::anyhow(anyhow!("cannot compute image id: {}", e)))?;
+    info!(
+        "run zkDCAP simulation with prover_mode={} image_id={} enclave_key={}",
+        prover_mode, image_id, target_enclave_key
+    );
+
+    let current_time = Time::now();
+    let res = dcap_ra_simulation(key_manager, target_enclave_key, current_time, opts)?;
+
+    zkdcap_ra(
+        key_manager,
+        target_enclave_key,
+        prover_mode,
+        elf,
+        disable_pre_execution,
+        current_time,
+        res,
+    )
+}
+
+fn zkdcap_ra(
+    key_manager: &EnclaveKeyManager,
+    target_enclave_key: Address,
+    prover_mode: Risc0ProverMode,
+    elf: &[u8],
+    disable_pre_execution: bool,
+    current_time: Time,
+    res: DCAPRemoteAttestationResult,
+) -> Result<(), Error> {
+    let image_id = compute_image_id(elf)
+        .map_err(|e| Error::anyhow(anyhow!("cannot compute image id: {}", e)))?;
 
     debug!(
         "proving with input: quote={}, collateral={}, current_time={}",

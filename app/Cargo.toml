@@ -27,10 +27,10 @@ crypto = { path = "../modules/crypto" }
 keymanager = { path = "../modules/keymanager" }
 remote-attestation = { path = "../modules/remote-attestation" }
 attestation-report = { path = "../modules/attestation-report" }
-zkdcap-risc0 = { git = "https://github.com/datachainlab/zkdcap", rev = "ff53632f49d2d8b00c9bcc456aeeeb139bacca9f" }
+zkdcap-risc0 = { git = "https://github.com/datachainlab/zkdcap", rev = "2ffcdc241f707b80f43e4a38fddcd90cfee25888" }
 
 [build-dependencies]
-git2 = "0.19"
+git2 = { version = "0.20", default-features = false }
 
 [features]
 default = []

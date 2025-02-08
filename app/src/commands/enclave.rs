@@ -3,7 +3,7 @@ use crate::{
     opts::{EnclaveOpts, Opts},
 };
 use anyhow::{anyhow, Result};
-use attestation_report::RAQuote;
+use attestation_report::{QEType, RAQuote};
 use clap::Parser;
 use crypto::Address;
 use ecall_commands::GenerateEnclaveKeyInput;
@@ -68,8 +68,12 @@ pub struct GenerateKey {
     hain"
     )]
     pub operator: Option<String>,
-    #[clap(long = "target_qe3", help = "Create a report for QE3 instead of QE")]
-    pub target_qe3: bool,
+    #[clap(
+        long = "target_qe",
+        default_value = "QE",
+        help = "Create a report for the target QE: QE or QE3 or QE3SIM"
+    )]
+    pub target_qe: QEType,
 }
 
 impl GenerateKey {
@@ -86,14 +90,14 @@ fn run_generate_key<E: EnclaveCommandAPI<S>, S: CommitStore>(
     enclave: E,
     input: &GenerateKey,
 ) -> Result<()> {
-    let (target_info, _) = remote_attestation::init_quote(input.target_qe3)?;
+    let (target_info, _) = remote_attestation::init_quote(input.target_qe)?;
     let res = enclave
         .generate_enclave_key(
             GenerateEnclaveKeyInput {
                 target_info,
                 operator: input.get_operator()?,
             },
-            input.target_qe3,
+            input.target_qe,
         )
         .map_err(|e| anyhow!("failed to generate an enclave key: {:?}", e))?;
     println!("{}", res.pub_key.as_address());

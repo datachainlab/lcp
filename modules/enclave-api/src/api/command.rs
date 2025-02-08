@@ -15,7 +15,7 @@ pub trait EnclaveCommandAPI<S: CommitStore>: EnclavePrimitiveAPI<S> {
     fn generate_enclave_key(
         &self,
         input: GenerateEnclaveKeyInput,
-        is_target_qe3: bool,
+        target_qe_type: QEType,
     ) -> Result<GenerateEnclaveKeyResponse> {
         let res = match self.execute_command(
             Command::EnclaveManage(EnclaveManageCommand::GenerateEnclaveKey(input)),
@@ -24,15 +24,8 @@ pub trait EnclaveCommandAPI<S: CommitStore>: EnclavePrimitiveAPI<S> {
             CommandResponse::EnclaveManage(EnclaveManageResponse::GenerateEnclaveKey(res)) => res,
             _ => unreachable!(),
         };
-        self.get_key_manager().save(
-            res.sealed_ek.clone(),
-            res.report,
-            if is_target_qe3 {
-                QEType::DCAP
-            } else {
-                QEType::IAS
-            },
-        )?;
+        self.get_key_manager()
+            .save(res.sealed_ek.clone(), res.report, target_qe_type)?;
         Ok(res)
     }
 

@@ -464,7 +464,7 @@ mod tests {
             let report = create_report(mrenclave, address);
             let sealed_ek = create_sealed_sk();
             assert_eq!(km.all_keys().unwrap().len(), 0);
-            km.save(sealed_ek, report, QEType::IAS).unwrap();
+            km.save(sealed_ek, report, QEType::QE).unwrap();
             assert!(km.load(address).unwrap().ra_quote.is_none());
             assert_eq!(km.all_keys().unwrap().len(), 1);
             assert_eq!(
@@ -490,7 +490,7 @@ mod tests {
             let report = create_report(mrenclave, address);
             let sealed_ek = create_sealed_sk();
             assert_eq!(km.all_keys().unwrap().len(), 1);
-            km.save(sealed_ek, report, QEType::IAS).unwrap();
+            km.save(sealed_ek, report, QEType::QE).unwrap();
             assert!(km.load(address).unwrap().ra_quote.is_none());
             assert_eq!(km.all_keys().unwrap().len(), 2);
             assert_eq!(
@@ -536,7 +536,7 @@ mod tests {
         let sealed_ek = create_sealed_sk();
         let address = create_address();
         let report = create_report(mrenclave, address);
-        km.save(sealed_ek, report, QEType::IAS).unwrap();
+        km.save(sealed_ek, report, QEType::QE).unwrap();
         let key_info = km.load(address).unwrap();
         assert!(ProtoEnclaveKeyInfo::try_from(key_info).is_err());
         let ias_report = create_ias_report(get_time(Duration::minutes(1)));
