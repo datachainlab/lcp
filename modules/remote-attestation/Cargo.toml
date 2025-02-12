@@ -28,8 +28,8 @@ serde_json = { version = "1.0", features = ["preserve_order"] }
 rsa = { version = "0.9.2", features = ["pem"], optional = true }
 chrono = { version = "0.4.38", features = ["now"], optional = true }
 
-dcap-quote-verifier = { git = "https://github.com/datachainlab/zkdcap", rev = "2ffcdc241f707b80f43e4a38fddcd90cfee25888" }
-dcap-collaterals = { git = "https://github.com/datachainlab/zkdcap", rev = "2ffcdc241f707b80f43e4a38fddcd90cfee25888" }
+dcap-quote-verifier = { git = "https://github.com/datachainlab/zkdcap", rev = "fadd1c174c51e497462566636bc9496be69b4019" }
+dcap-collaterals = { git = "https://github.com/datachainlab/zkdcap", rev = "fadd1c174c51e497462566636bc9496be69b4019" }
 
 lcp-types = { path = "../types" }
 crypto = { path = "../crypto", default-features = false }
