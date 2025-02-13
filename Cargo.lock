@@ -1814,7 +1814,7 @@ checksum = "e8566979429cf69b49a5c740c60791108e86440e8be149bbea4fe54d2c32d6e2"
 [[package]]
 name = "dcap-collaterals"
 version = "0.1.0"
-source = "git+https://github.com/datachainlab/zkdcap?rev=fadd1c174c51e497462566636bc9496be69b4019#fadd1c174c51e497462566636bc9496be69b4019"
+source = "git+https://github.com/datachainlab/zkdcap?rev=add8a7057922996828cc6feca28c398147050dcb#add8a7057922996828cc6feca28c398147050dcb"
 dependencies = [
  "anyhow",
  "chrono",
@@ -1829,7 +1829,7 @@ dependencies = [
 [[package]]
 name = "dcap-quote-verifier"
 version = "0.1.0"
-source = "git+https://github.com/datachainlab/zkdcap?rev=fadd1c174c51e497462566636bc9496be69b4019#fadd1c174c51e497462566636bc9496be69b4019"
+source = "git+https://github.com/datachainlab/zkdcap?rev=add8a7057922996828cc6feca28c398147050dcb#add8a7057922996828cc6feca28c398147050dcb"
 dependencies = [
  "alloy-sol-types",
  "anyhow",
@@ -1845,7 +1845,7 @@ dependencies = [
 [[package]]
 name = "dcap-types"
 version = "0.1.0"
-source = "git+https://github.com/datachainlab/zkdcap?rev=fadd1c174c51e497462566636bc9496be69b4019#fadd1c174c51e497462566636bc9496be69b4019"
+source = "git+https://github.com/datachainlab/zkdcap?rev=add8a7057922996828cc6feca28c398147050dcb#add8a7057922996828cc6feca28c398147050dcb"
 dependencies = [
  "anyhow",
  "chrono",
@@ -3008,9 +3008,9 @@ checksum = "6fe2267d4ed49bc07b63801559be28c718ea06c4738b7a03c94df7386d2cde46"
 
 [[package]]
 name = "hickory-proto"
-version = "0.24.2"
+version = "0.24.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "447afdcdb8afb9d0a852af6dc65d9b285ce720ed7a59e42a8bf2e931c67bc1b5"
+checksum = "2ad3d6d98c648ed628df039541a5577bee1a7c83e9e16fe3dbedeea4cdfeb971"
 dependencies = [
  "async-trait",
  "cfg-if 1.0.0",
@@ -3032,9 +3032,9 @@ dependencies = [
 
 [[package]]
 name = "hickory-resolver"
-version = "0.24.2"
+version = "0.24.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0a2e2aba9c389ce5267d31cf1e4dace82390ae276b0b364ea55630b1fa1b44b4"
+checksum = "dcf287bde7b776e85d7188e6e5db7cf410a2f9531fe82817eb87feed034c8d14"
 dependencies = [
  "cfg-if 1.0.0",
  "futures-util",
@@ -9092,7 +9092,7 @@ dependencies = [
 [[package]]
 name = "zkdcap-risc0"
 version = "0.1.0"
-source = "git+https://github.com/datachainlab/zkdcap?rev=fadd1c174c51e497462566636bc9496be69b4019#fadd1c174c51e497462566636bc9496be69b4019"
+source = "git+https://github.com/datachainlab/zkdcap?rev=add8a7057922996828cc6feca28c398147050dcb#add8a7057922996828cc6feca28c398147050dcb"
 dependencies = [
  "risc0-binfmt",
  "risc0-build",
