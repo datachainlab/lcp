@@ -80,12 +80,12 @@ mod tests {
             info!("this test is running in HW mode");
         }
 
-        let (target_info, _) = remote_attestation::init_quote(QEType::QE)?;
+        let (qe_target_info, _) = remote_attestation::init_quote(QEType::QE)?;
         let operator = Address::from_hex_string("0x396e1ccc2f11cd6d2114c2449dad7751357e413e")?;
         let op_ek_addr = match enclave.generate_enclave_key(
             GenerateEnclaveKeyInput {
                 operator: Some(operator),
-                target_info,
+                target_info: qe_target_info,
             },
             QEType::QE,
         ) {
@@ -97,7 +97,7 @@ mod tests {
         let ek_addr = match enclave.generate_enclave_key(
             GenerateEnclaveKeyInput {
                 operator: None,
-                target_info,
+                target_info: qe_target_info,
             },
             QEType::QE,
         ) {
@@ -192,6 +192,7 @@ mod tests {
             use remote_attestation::zkvm::prover::Risc0ProverMode;
             use zkdcap_risc0::DCAP_QUOTE_VERIFIER_ELF;
 
+            let target_info = remote_attestation::init_quote(QEType::QE3SIM)?.0;
             let zkdcap_ek_addr = match enclave.generate_enclave_key(
                 GenerateEnclaveKeyInput {
                     operator: Some(operator),
@@ -228,6 +229,7 @@ mod tests {
             use remote_attestation::zkvm::prover::Risc0ProverMode;
             use zkdcap_risc0::DCAP_QUOTE_VERIFIER_ELF;
 
+            let target_info = remote_attestation::init_quote(QEType::QE3)?.0;
             let zkdcap_ek_addr = match enclave.generate_enclave_key(
                 GenerateEnclaveKeyInput {
                     operator: Some(operator),
