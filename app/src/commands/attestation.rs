@@ -7,7 +7,11 @@ use clap::Parser;
 use crypto::Address;
 use enclave_api::{Enclave, EnclaveCommandAPI, EnclaveProtoAPI};
 use host::store::transaction::CommitStore;
-use remote_attestation::{dcap, ias, zkdcap, IASMode};
+use remote_attestation::{
+    dcap,
+    dcap_simulation::{DCAP_SIM_ROOT_CA_PEM, DCAP_SIM_ROOT_KEY_PKCS8},
+    ias, zkdcap, IASMode,
+};
 use remote_attestation::{
     dcap_simulation::DCAPRASimulationOpts,
     zkvm::prover::{BonsaiProverOptions, Risc0ProverMode},
@@ -427,29 +431,6 @@ impl ZKDCAPSIMRemoteAttestation {
         }
     }
 }
-
-const DCAP_SIM_ROOT_CA_PEM: &str = "-----BEGIN CERTIFICATE-----
-MIICkTCCAjegAwIBAgIVAL5tSIEVwJOfNdaHR1F0gIiTmyiqMAoGCCqGSM49BAMC
-MGgxGjAYBgNVBAMMEUludGVsIFNHWCBSb290IENBMRowGAYDVQQKDBFJbnRlbCBD
-b3Jwb3JhdGlvbjEUMBIGA1UEBwwLU2FudGEgQ2xhcmExCzAJBgNVBAgMAkNBMQsw
-CQYDVQQGEwJVUzAgFw03MDAxMDEwMDAwMDFaGA8yMTA2MDIwNzA2MjgxNVowaDEa
-MBgGA1UEAwwRSW50ZWwgU0dYIFJvb3QgQ0ExGjAYBgNVBAoMEUludGVsIENvcnBv
-cmF0aW9uMRQwEgYDVQQHDAtTYW50YSBDbGFyYTELMAkGA1UECAwCQ0ExCzAJBgNV
-BAYTAlVTMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAErzNPtZ16CUe39ujAYJlx
-+ljzgWh3SV+aUhq6ud2NZ73170P2z1z7hU1Nh8yS4B8l5UN8dDNGW1JFdObRsKW1
-XKOBuzCBuDAdBgNVHQ4EFgQUvm1IgRXAk5811odHUXSAiJObKKowUgYDVR0fBEsw
-STBHoEWgQ4ZBaHR0cHM6Ly9jZXJ0aWZpY2F0ZXMudHJ1c3RlZHNlcnZpY2VzLmlu
-dGVsLmNvbS9JbnRlbFNHWFJvb3RDQS5kZXIwDgYDVR0PAQH/BAQDAgEGMBIGA1Ud
-EwEB/wQIMAYBAf8CAQEwHwYDVR0jBBgwFoAUvm1IgRXAk5811odHUXSAiJObKKow
-CgYIKoZIzj0EAwIDSAAwRQIhAOG0i/mfpYixAPEXGccrSap26H2hGP3nBqUMvrk1
-tcaJAiAFeiz8yEw5Ms6Dd2HxQKC+6zryaOc9OjmOt84XYNUGpg==
------END CERTIFICATE-----";
-
-const DCAP_SIM_ROOT_KEY_PKCS8: &str = "-----BEGIN PRIVATE KEY-----
-MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgDgmMEb6MJ3SP5FiS
-xdnehIogXGCRvkJiuZyuwUetx5+hRANCAASvM0+1nXoJR7f26MBgmXH6WPOBaHdJ
-X5pSGrq53Y1nvfXvQ/bPXPuFTU2HzJLgHyXlQ3x0M0ZbUkV05tGwpbVc
------END PRIVATE KEY-----";
 
 fn run_zkdcap_ra_simulation<E: EnclaveCommandAPI<S>, S: CommitStore>(
     enclave: E,

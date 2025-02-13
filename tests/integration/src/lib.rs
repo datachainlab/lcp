@@ -183,6 +183,77 @@ mod tests {
             assert!(report_data.operator().is_zero());
         }
 
+        {
+            use remote_attestation::dcap_simulation::DCAPRASimulationOpts;
+            use remote_attestation::dcap_simulation::{
+                DCAP_SIM_ROOT_CA_PEM, DCAP_SIM_ROOT_KEY_PKCS8,
+            };
+            use remote_attestation::zkdcap::run_zkdcap_ra_simulation;
+            use remote_attestation::zkvm::prover::Risc0ProverMode;
+            use zkdcap_risc0::DCAP_QUOTE_VERIFIER_ELF;
+
+            let zkdcap_ek_addr = match enclave.generate_enclave_key(
+                GenerateEnclaveKeyInput {
+                    operator: Some(operator),
+                    target_info,
+                },
+                QEType::QE3SIM,
+            ) {
+                Ok(res) => res.pub_key.as_address(),
+                Err(e) => {
+                    bail!("failed to generate an enclave key: {:?}!", e);
+                }
+            };
+
+            let res = run_zkdcap_ra_simulation(
+                enclave.get_key_manager(),
+                zkdcap_ek_addr,
+                Risc0ProverMode::Dev,
+                DCAP_QUOTE_VERIFIER_ELF,
+                false,
+                DCAPRASimulationOpts::build_from_pems(
+                    DCAP_SIM_ROOT_CA_PEM.as_bytes(),
+                    DCAP_SIM_ROOT_KEY_PKCS8.as_bytes(),
+                )?,
+            );
+            assert!(
+                res.is_ok(),
+                "zkDCAP Remote Attestation Simulation Failed {:?}",
+                res
+            );
+        }
+        #[cfg(not(feature = "sgx-sw"))]
+        {
+            use remote_attestation::zkdcap::run_zkdcap_ra;
+            use remote_attestation::zkvm::prover::Risc0ProverMode;
+            use zkdcap_risc0::DCAP_QUOTE_VERIFIER_ELF;
+
+            let zkdcap_ek_addr = match enclave.generate_enclave_key(
+                GenerateEnclaveKeyInput {
+                    operator: Some(operator),
+                    target_info,
+                },
+                QEType::QE3,
+            ) {
+                Ok(res) => res.pub_key.as_address(),
+                Err(e) => {
+                    bail!("failed to generate an enclave key: {:?}!", e);
+                }
+            };
+
+            let res = run_zkdcap_ra(
+                enclave.get_key_manager(),
+                zkdcap_ek_addr,
+                Risc0ProverMode::Dev,
+                DCAP_QUOTE_VERIFIER_ELF,
+                false,
+                "https://api.trustedservices.intel.com/",
+                "https://certificates.trustedservices.intel.com/",
+                false,
+            );
+            assert!(res.is_ok(), "zkDCAP Remote Attestation Failed {:?}", res);
+        }
+
         Ok(())
     }
 

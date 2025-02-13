@@ -27,6 +27,43 @@ use log::*;
 use serde_json::json;
 use sgx_types::{sgx_report_body_t, sgx_report_t};
 
+/// Root CA Certificate for DCAP Simulation
+///
+/// This is for testing only, do not use in production
+pub const DCAP_SIM_ROOT_CA_PEM: &str = "-----BEGIN CERTIFICATE-----
+MIICkTCCAjegAwIBAgIVAL5tSIEVwJOfNdaHR1F0gIiTmyiqMAoGCCqGSM49BAMC
+MGgxGjAYBgNVBAMMEUludGVsIFNHWCBSb290IENBMRowGAYDVQQKDBFJbnRlbCBD
+b3Jwb3JhdGlvbjEUMBIGA1UEBwwLU2FudGEgQ2xhcmExCzAJBgNVBAgMAkNBMQsw
+CQYDVQQGEwJVUzAgFw03MDAxMDEwMDAwMDFaGA8yMTA2MDIwNzA2MjgxNVowaDEa
+MBgGA1UEAwwRSW50ZWwgU0dYIFJvb3QgQ0ExGjAYBgNVBAoMEUludGVsIENvcnBv
+cmF0aW9uMRQwEgYDVQQHDAtTYW50YSBDbGFyYTELMAkGA1UECAwCQ0ExCzAJBgNV
+BAYTAlVTMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAErzNPtZ16CUe39ujAYJlx
++ljzgWh3SV+aUhq6ud2NZ73170P2z1z7hU1Nh8yS4B8l5UN8dDNGW1JFdObRsKW1
+XKOBuzCBuDAdBgNVHQ4EFgQUvm1IgRXAk5811odHUXSAiJObKKowUgYDVR0fBEsw
+STBHoEWgQ4ZBaHR0cHM6Ly9jZXJ0aWZpY2F0ZXMudHJ1c3RlZHNlcnZpY2VzLmlu
+dGVsLmNvbS9JbnRlbFNHWFJvb3RDQS5kZXIwDgYDVR0PAQH/BAQDAgEGMBIGA1Ud
+EwEB/wQIMAYBAf8CAQEwHwYDVR0jBBgwFoAUvm1IgRXAk5811odHUXSAiJObKKow
+CgYIKoZIzj0EAwIDSAAwRQIhAOG0i/mfpYixAPEXGccrSap26H2hGP3nBqUMvrk1
+tcaJAiAFeiz8yEw5Ms6Dd2HxQKC+6zryaOc9OjmOt84XYNUGpg==
+-----END CERTIFICATE-----";
+
+/// Root CA Private Key for DCAP Simulation
+///
+/// This is for testing only, do not use in production
+pub const DCAP_SIM_ROOT_KEY_PKCS8: &str = "-----BEGIN PRIVATE KEY-----
+MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgDgmMEb6MJ3SP5FiS
+xdnehIogXGCRvkJiuZyuwUetx5+hRANCAASvM0+1nXoJR7f26MBgmXH6WPOBaHdJ
+X5pSGrq53Y1nvfXvQ/bPXPuFTU2HzJLgHyXlQ3x0M0ZbUkV05tGwpbVc
+-----END PRIVATE KEY-----";
+
+/// The keccak256 hash of the DCAP Root CA Certificate
+///
+/// This is for testing only, do not use in production
+pub const DCAP_SIM_ROOT_CA_HASH: [u8; 32] = [
+    214, 31, 78, 61, 48, 1, 24, 153, 209, 97, 49, 212, 201, 64, 239, 31, 117, 236, 83, 215, 249,
+    167, 12, 187, 58, 171, 31, 90, 176, 35, 91, 43,
+];
+
 #[derive(Debug, Clone)]
 pub struct DCAPRASimulationOpts {
     root_cert: X509,
@@ -234,4 +271,22 @@ fn to_sgx_enclave_report(report_body: sgx_report_body_t) -> EnclaveReport {
         .isv_svn(report_body.isv_svn)
         .report_data(report_body.report_data.d)
         .build()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use dcap_quote_verifier::crypto::keccak256sum;
+
+    #[test]
+    fn test_dcap_sim_root_cert() {
+        let res = DCAPRASimulationOpts::build_from_pems(
+            DCAP_SIM_ROOT_CA_PEM.as_bytes(),
+            DCAP_SIM_ROOT_KEY_PKCS8.as_bytes(),
+        );
+        assert!(res.is_ok(), "{:?}", res);
+        let opts = res.unwrap();
+        let h = keccak256sum(opts.root_cert.to_der().unwrap().as_ref());
+        assert_eq!(h, DCAP_SIM_ROOT_CA_HASH);
+    }
 }

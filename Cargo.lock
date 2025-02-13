@@ -3903,6 +3903,7 @@ dependencies = [
  "tendermint-light-client-verifier 0.28.0",
  "tendermint-rpc",
  "tokio",
+ "zkdcap-risc0",
 ]
 
 [[package]]
