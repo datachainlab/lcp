@@ -7,6 +7,7 @@ use crate::{
 use anyhow::anyhow;
 use attestation_report::{Risc0ZKVMProof, ZKDCAPQuote, ZKVMProof};
 use crypto::Address;
+use dcap_quote_verifier::{collaterals::IntelCollateral, verifier::VerifiedOutput};
 use keymanager::EnclaveKeyManager;
 use lcp_types::Time;
 use log::*;
@@ -52,7 +53,8 @@ pub fn run_zkdcap_ra(
         elf,
         disable_pre_execution,
         current_time,
-        res,
+        res.raw_quote,
+        res.collateral,
     )
 }
 
@@ -81,10 +83,12 @@ pub fn run_zkdcap_ra_simulation(
         elf,
         disable_pre_execution,
         current_time,
-        res,
+        res.raw_quote,
+        res.collateral,
     )
 }
 
+#[allow(clippy::too_many_arguments)]
 fn zkdcap_ra(
     key_manager: &EnclaveKeyManager,
     target_enclave_key: Address,
@@ -92,15 +96,16 @@ fn zkdcap_ra(
     elf: &[u8],
     disable_pre_execution: bool,
     current_time: Time,
-    res: DCAPRemoteAttestationResult,
+    raw_quote: Vec<u8>,
+    collateral: IntelCollateral,
 ) -> Result<(), Error> {
     let image_id = compute_image_id(elf)
         .map_err(|e| Error::anyhow(anyhow!("cannot compute image id: {}", e)))?;
 
     debug!(
         "proving with input: quote={}, collateral={}, current_time={}",
-        hex::encode(&res.raw_quote),
-        hex::encode(res.collateral.to_bytes()),
+        hex::encode(&raw_quote),
+        hex::encode(collateral.to_bytes()),
         current_time
     );
 
@@ -109,8 +114,8 @@ fn zkdcap_ra(
         let res = get_executor()
             .execute(
                 build_env(
-                    &res.raw_quote,
-                    &res.collateral.to_bytes(),
+                    &raw_quote,
+                    &collateral.to_bytes(),
                     current_time.as_unix_timestamp_secs(),
                 )?,
                 elf,
@@ -128,8 +133,8 @@ fn zkdcap_ra(
     let prover_info = prove(
         &prover_mode,
         build_env(
-            &res.raw_quote,
-            &res.collateral.to_bytes(),
+            &raw_quote,
+            &collateral.to_bytes(),
             current_time.as_unix_timestamp_secs(),
         )?,
         elf,
@@ -160,7 +165,15 @@ fn zkdcap_ra(
         );
     }
 
-    let quote = res.get_ra_quote(current_time);
+    let output = VerifiedOutput::from_bytes(&prover_info.receipt.journal.bytes)
+        .map_err(|e| Error::anyhow(anyhow!("cannot parse receipt: {}", e)))?;
+
+    let quote = DCAPRemoteAttestationResult {
+        raw_quote,
+        output,
+        collateral,
+    }
+    .get_ra_quote(current_time);
     key_manager
         .save_ra_quote(
             target_enclave_key,
