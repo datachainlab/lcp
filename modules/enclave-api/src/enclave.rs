@@ -55,6 +55,8 @@ pub trait EnclaveInfo: Sync + Send {
     fn get_eid(&self) -> sgx_enclave_id_t;
     /// `metadata` returns the metadata of the enclave
     fn metadata(&self) -> SgxResult<metadata_t>;
+    /// `is_debug` returns true if the enclave is in debug mode
+    fn is_debug(&self) -> bool;
     /// `get_key_manager` returns a key manager for Enclave Keys
     fn get_key_manager(&self) -> &EnclaveKeyManager;
 }
@@ -67,6 +69,10 @@ impl<S: CommitStore> EnclaveInfo for Enclave<S> {
     /// `metadata` returns the metadata of the enclave
     fn metadata(&self) -> SgxResult<metadata_t> {
         host::sgx_get_metadata(&self.path)
+    }
+    /// `is_debug` returns true if the enclave is in debug mode
+    fn is_debug(&self) -> bool {
+        self.sgx_enclave.is_debug()
     }
     /// `get_keymanager` returns a key manager for Enclave Keys
     fn get_key_manager(&self) -> &EnclaveKeyManager {

@@ -4,7 +4,8 @@ use crypto::Address;
 use enclave_api::EnclaveProtoAPI;
 use lcp_proto::lcp::service::enclave::v1::{
     query_server::Query, EnclaveKeyInfo, QueryAvailableEnclaveKeysRequest,
-    QueryAvailableEnclaveKeysResponse, QueryEnclaveKeyRequest, QueryEnclaveKeyResponse,
+    QueryAvailableEnclaveKeysResponse, QueryEnclaveInfoRequest, QueryEnclaveInfoResponse,
+    QueryEnclaveKeyRequest, QueryEnclaveKeyResponse,
 };
 use lcp_types::Mrenclave;
 use store::transaction::CommitStore;
@@ -16,6 +17,22 @@ where
     S: CommitStore + 'static,
     E: EnclaveProtoAPI<S> + 'static,
 {
+    async fn enclave_info(
+        &self,
+        _req: Request<QueryEnclaveInfoRequest>,
+    ) -> Result<Response<QueryEnclaveInfoResponse>, Status> {
+        self.enclave
+            .metadata()
+            .map(|metadata| {
+                let res = QueryEnclaveInfoResponse {
+                    mrenclave: metadata.enclave_css.body.enclave_hash.m.to_vec(),
+                    enclave_debug: self.enclave.is_debug(),
+                };
+                Response::new(res)
+            })
+            .map_err(|e| Status::aborted(e.to_string()))
+    }
+
     async fn available_enclave_keys(
         &self,
         req: Request<QueryAvailableEnclaveKeysRequest>,
