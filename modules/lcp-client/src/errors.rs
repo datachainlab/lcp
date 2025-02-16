@@ -1,4 +1,4 @@
-use crate::prelude::*;
+use crate::{client_state::ZKVMType, prelude::*};
 use core::time::Duration;
 use flex_error::*;
 
@@ -46,6 +46,19 @@ define_error! {
         }
         |e| {
             format_args!("Invalid zkdcap_verifier_info: bytes={:?}", e.bytes)
+        },
+
+        UnexpectedZkvmType {
+            expected: ZKVMType,
+            actual: ZKVMType
+        }
+        |e| {
+            format_args!("Unexpected zkvm type: expected={:?} actual={:?}", e.expected, e.actual)
+        },
+
+        InvalidRisc0ProofFormat
+        |e| {
+            "Invalid Risc0 proof format"
         },
 
         AttestationReport

@@ -12,7 +12,7 @@ use keymanager::EnclaveKeyManager;
 use lcp_types::Time;
 use log::*;
 use zkvm::{
-    encode_seal,
+    encode_seal_selector,
     prover::{get_executor, prove, Risc0ProverMode},
     risc0_zkvm::{compute_image_id, Executor, ExecutorEnv},
     verifier::verify_groth16_proof,
@@ -151,9 +151,10 @@ fn zkdcap_ra(
         .map_err(|e| Error::anyhow(anyhow!("receipt verification failed: {}", e.to_string())))?;
     info!("receipt verified");
 
-    let seal = encode_seal(&prover_info.receipt)?;
+    let (selector, seal) = encode_seal_selector(&prover_info.receipt)?;
     if let zkvm::risc0_zkvm::InnerReceipt::Groth16(_) = prover_info.receipt.inner {
         verify_groth16_proof(
+            selector,
             seal.clone(),
             image_id,
             prover_info.receipt.journal.bytes.clone(),
@@ -181,6 +182,7 @@ fn zkdcap_ra(
                 quote,
                 ZKVMProof::Risc0(Risc0ZKVMProof {
                     image_id: image_id.into(),
+                    selector,
                     seal,
                     commit: prover_info.receipt.journal.bytes,
                 }),

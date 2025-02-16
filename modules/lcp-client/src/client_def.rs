@@ -245,9 +245,11 @@ impl LCPClient {
         assert!(client_state.zkdcap_verifier_infos.len() == 1);
         let zkdcap_verifier_info = &client_state.zkdcap_verifier_infos[0];
         assert!(message.zkvm_type == ZKVMType::Risc0);
+        let (selector, seal) = message.risc0_seal_selector()?;
 
         zkvm::verifier::verify_groth16_proof(
-            message.proof,
+            selector,
+            seal,
             zkdcap_verifier_info.program_id,
             message.commit.to_bytes(),
         )?;

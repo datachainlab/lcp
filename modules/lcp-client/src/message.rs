@@ -118,6 +118,20 @@ pub struct ZKDCAPRegisterEnclaveKeyMessage {
     pub operator_signature: Option<Vec<u8>>,
 }
 
+impl ZKDCAPRegisterEnclaveKeyMessage {
+    pub fn risc0_seal_selector(&self) -> Result<([u8; 4], Vec<u8>), Error> {
+        if self.zkvm_type != ZKVMType::Risc0 {
+            return Err(Error::unexpected_zkvm_type(ZKVMType::Risc0, self.zkvm_type));
+        }
+        if self.proof.len() < 4 {
+            return Err(Error::invalid_risc0_proof_format());
+        }
+        let mut selector = [0u8; 4];
+        selector.copy_from_slice(&self.proof[..4]);
+        Ok((selector, self.proof[4..].to_vec()))
+    }
+}
+
 impl Protobuf<RawZKDCAPRegisterEnclaveKeyMessage> for ZKDCAPRegisterEnclaveKeyMessage {}
 
 impl TryFrom<RawZKDCAPRegisterEnclaveKeyMessage> for ZKDCAPRegisterEnclaveKeyMessage {

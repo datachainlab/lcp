@@ -445,6 +445,7 @@ impl TryFrom<SealedEnclaveKeyInfo> for ProtoEnclaveKeyInfo {
                                 attestation_report::ZKVMProof::Risc0(proof) => {
                                     zkvm_proof::Proof::Risc0(Risc0ZkvmProof {
                                         image_id: proof.image_id.to_vec(),
+                                        selector: proof.selector.to_vec(),
                                         seal: proof.seal,
                                         commit: proof.commit,
                                     })

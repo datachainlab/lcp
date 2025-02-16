@@ -3,18 +3,17 @@ use crate::Error;
 use risc0_zkvm::sha::Digest;
 
 pub fn verify_groth16_proof(
+    selector: [u8; 4],
     seal: Vec<u8>,
     image_id: impl Into<Digest>,
     journal: Vec<u8>,
 ) -> Result<(), Error> {
-    let expected_selector = &seal[..4];
-    let data = &seal[4..];
-    let receipt = create_groth16_receipt(data.to_vec(), image_id, journal);
-    let selector = receipt.verifier_parameters.as_bytes()[..4].to_vec();
-    if expected_selector != selector {
+    let receipt = create_groth16_receipt(seal, image_id, journal);
+    let expected_selector = &receipt.verifier_parameters.as_bytes()[..4];
+    if selector != expected_selector {
         return Err(Error::unexpected_selector(
             expected_selector.to_vec(),
-            selector,
+            selector.to_vec(),
         ));
     }
     receipt

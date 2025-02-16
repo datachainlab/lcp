@@ -75,6 +75,9 @@ pub struct Risc0ZKVMProof {
     /// A small cryptographic identifier that indicates the method or boot image for zkVM execution
     #[serde_as(as = "serde_with::hex::Hex<serde_with::formats::Lowercase>")]
     pub image_id: [u8; 32],
+    /// selector indicating the zkVM version
+    #[serde_as(as = "serde_with::hex::Hex<serde_with::formats::Lowercase>")]
+    pub selector: [u8; 4],
     #[serde_as(as = "serde_with::hex::Hex<serde_with::formats::Lowercase>")]
     /// A Groth16 proof for the correct execution of the guest program.
     pub seal: Vec<u8>,
@@ -86,7 +89,7 @@ pub struct Risc0ZKVMProof {
 impl Risc0ZKVMProof {
     /// Returns true if the proof is a mock proof
     pub fn is_mock(&self) -> bool {
-        self.seal.len() >= 4 && self.seal[0..4] == [0, 0, 0, 0]
+        self.selector == [0u8; 4]
     }
 }
 
@@ -97,9 +100,6 @@ pub struct ZKDCAPQuote {
     pub dcap_quote: DCAPQuote,
     /// zkVM proof
     pub zkp: ZKVMProof,
-    /// if true, `zkp` is a mock proof
-    /// otherwise, `zkp` is a zkVM proof
-    mock: bool,
 }
 
 impl From<ZKDCAPQuote> for RAQuote {
@@ -111,16 +111,12 @@ impl From<ZKDCAPQuote> for RAQuote {
 impl ZKDCAPQuote {
     /// Creates a new ZKDCAPQuote
     pub fn new(dcap_quote: DCAPQuote, zkp: ZKVMProof) -> Self {
-        ZKDCAPQuote {
-            dcap_quote,
-            mock: zkp.is_mock(),
-            zkp,
-        }
+        ZKDCAPQuote { dcap_quote, zkp }
     }
 
     /// Returns true if the proof is a mock proof
     pub fn is_mock_zkp(&self) -> bool {
-        self.mock
+        self.zkp.is_mock()
     }
 
     /// Converts the quote to a JSON string
