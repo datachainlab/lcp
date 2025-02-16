@@ -6,6 +6,7 @@ use core::str::FromStr;
 use crypto::Address;
 use lcp_types::Time;
 use serde::{Deserialize, Serialize};
+use sgx_types::sgx_report_body_t;
 use sgx_types::{metadata::metadata_t, sgx_measurement_t, sgx_quote_t, sgx_report_data_t};
 
 pub const REPORT_DATA_V1: u8 = 1;
@@ -63,8 +64,8 @@ impl FromStr for QEType {
 pub enum RAType {
     IAS,
     DCAP,
-    ZKDCAP,
-    MockZKDCAP,
+    ZKDCAPRisc0,
+    MockZKDCAPRisc0,
 }
 
 impl RAType {
@@ -72,16 +73,16 @@ impl RAType {
         match self {
             Self::IAS => 1,
             Self::DCAP => 2,
-            Self::ZKDCAP => 3,
-            Self::MockZKDCAP => 4,
+            Self::ZKDCAPRisc0 => 3,
+            Self::MockZKDCAPRisc0 => 4,
         }
     }
     pub fn from_u32(v: u32) -> Result<Self, Error> {
         match v {
             1 => Ok(Self::IAS),
             2 => Ok(Self::DCAP),
-            3 => Ok(Self::ZKDCAP),
-            4 => Ok(Self::MockZKDCAP),
+            3 => Ok(Self::ZKDCAPRisc0),
+            4 => Ok(Self::MockZKDCAPRisc0),
             _ => Err(Error::invalid_ra_type(v)),
         }
     }
@@ -95,8 +96,8 @@ impl Display for RAType {
             match self {
                 Self::IAS => "ias",
                 Self::DCAP => "dcap",
-                Self::ZKDCAP => "zkdcap",
-                Self::MockZKDCAP => "mock_zkdcap",
+                Self::ZKDCAPRisc0 => "zkdcap_risc0",
+                Self::MockZKDCAPRisc0 => "mock_zkdcap_risc0",
             }
         )
     }
@@ -116,10 +117,11 @@ impl RAQuote {
             RAQuote::IAS(_) => RAType::IAS,
             RAQuote::DCAP(_) => RAType::DCAP,
             RAQuote::ZKDCAP(quote) => {
+                // currently only support Risc0
                 if quote.mock {
-                    RAType::MockZKDCAP
+                    RAType::MockZKDCAPRisc0
                 } else {
-                    RAType::ZKDCAP
+                    RAType::ZKDCAPRisc0
                 }
             }
         }
@@ -249,4 +251,9 @@ impl Quote {
             Ok(())
         }
     }
+}
+
+/// Checks if the enclave debug flag is enabled for the given report body
+pub fn is_enclave_debug_enabled(report_body: &sgx_report_body_t) -> bool {
+    report_body.attributes.flags & sgx_types::SGX_FLAGS_DEBUG != 0
 }

@@ -4,7 +4,9 @@
 pub struct QueryAvailableEnclaveKeysRequest {
     #[prost(bytes = "vec", tag = "1")]
     pub mrenclave: ::prost::alloc::vec::Vec<u8>,
-    #[prost(uint32, tag = "2")]
+    #[prost(bool, tag = "2")]
+    pub enclave_debug: bool,
+    #[prost(uint32, tag = "3")]
     pub ra_type: u32,
 }
 #[derive(::serde::Serialize, ::serde::Deserialize)]

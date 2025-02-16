@@ -27,6 +27,7 @@ where
             .get_key_manager()
             .available_keys(
                 Mrenclave::try_from(req.mrenclave).map_err(|e| Status::aborted(e.to_string()))?,
+                req.enclave_debug,
                 if req.ra_type == 0 {
                     None
                 } else {

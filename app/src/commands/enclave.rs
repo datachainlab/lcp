@@ -125,6 +125,7 @@ fn run_list_keys<E: EnclaveCommandAPI<S>, S: CommitStore>(
     let list = if input.available_only {
         km.available_keys(
             enclave.metadata()?.enclave_css.body.enclave_hash.m.into(),
+            input.enclave.is_debug(),
             None,
         )?
     } else {

@@ -23,7 +23,7 @@ mod prelude {
 pub use dcap::{DCAPQuote, Risc0ZKVMProof, ZKDCAPQuote, ZKVMProof};
 pub use errors::Error;
 pub use ias::{verify_ias_report, IASAttestationVerificationReport, IASSignedReport};
-pub use report::{QEType, Quote, RAQuote, RAType, ReportData};
+pub use report::{is_enclave_debug_enabled, QEType, Quote, RAQuote, RAType, ReportData};
 
 pub(crate) mod serde_base64 {
     use crate::prelude::*;
