@@ -1,8 +1,9 @@
 use crate::{prelude::*, TypeError};
 use core::fmt::Display;
 use core::ops::Deref;
-use sgx_types::{sgx_measurement_t, SGX_HASH_SIZE};
+use sgx_types::{metadata::metadata_t, sgx_measurement_t, SGX_HASH_SIZE};
 
+/// MRENCLAVE is a measurement of the enclave
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct Mrenclave(pub [u8; SGX_HASH_SIZE]);
 
@@ -58,5 +59,34 @@ impl Mrenclave {
         let mut bytes = [0u8; SGX_HASH_SIZE];
         hex::decode_to_slice(s, &mut bytes)?;
         Ok(Self(bytes))
+    }
+}
+
+/// EnclaveMetadata is the metadata of an enclave
+pub struct EnclaveMetadata(metadata_t);
+
+impl Deref for EnclaveMetadata {
+    type Target = metadata_t;
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl From<metadata_t> for EnclaveMetadata {
+    fn from(metadata: metadata_t) -> Self {
+        Self(metadata)
+    }
+}
+
+impl From<EnclaveMetadata> for metadata_t {
+    fn from(metadata: EnclaveMetadata) -> Self {
+        metadata.0
+    }
+}
+
+impl EnclaveMetadata {
+    /// Get the MRENCLAVE of the enclave from the metadata
+    pub fn mrenclave(&self) -> Mrenclave {
+        self.enclave_css.body.enclave_hash.m.into()
     }
 }
