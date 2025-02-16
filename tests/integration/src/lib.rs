@@ -212,7 +212,7 @@ mod tests {
                 Risc0ProverMode::Dev,
                 DCAP_QUOTE_VERIFIER_ELF,
                 false,
-                DCAPRASimulationOpts::build_from_pems(
+                DCAPRASimulationOpts::new(
                     DCAP_SIM_ROOT_CA_PEM.as_bytes(),
                     DCAP_SIM_ROOT_KEY_PKCS8.as_bytes(),
                 )?,

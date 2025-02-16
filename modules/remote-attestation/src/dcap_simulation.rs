@@ -1,5 +1,6 @@
 use crate::dcap_utils::DCAPRemoteAttestationResult;
 use crate::errors::Error;
+use anyhow::anyhow;
 use attestation_report::QEType;
 use crypto::Address;
 use dcap_collaterals::certs::{gen_crl, gen_pck_certchain, PckCa, RootCa};
@@ -20,12 +21,14 @@ use dcap_collaterals::{certs::gen_tcb_certchain, sgx_extensions::SgxExtensionsBu
 use dcap_quote_verifier::quotes::version_3::verify_quote_dcapv3;
 use dcap_quote_verifier::types::quotes::body::EnclaveReport;
 use dcap_quote_verifier::types::quotes::version_3::QuoteV3;
+use dcap_quote_verifier::types::Status;
 use dcap_quote_verifier::{collaterals::IntelCollateral, types::cert::SgxExtensionTcbLevel};
 use keymanager::EnclaveKeyManager;
 use lcp_types::Time;
 use log::*;
 use serde_json::json;
 use sgx_types::{sgx_report_body_t, sgx_report_t};
+use std::str::FromStr;
 
 /// Root CA Certificate for DCAP Simulation
 ///
@@ -68,10 +71,14 @@ pub const DCAP_SIM_ROOT_CA_HASH: [u8; 32] = [
 pub struct DCAPRASimulationOpts {
     root_cert: X509,
     root_key: PKey<Private>,
+
+    advisory_ids: Vec<String>,
+    isv_enclave_quote_status: Status,
 }
 
 impl DCAPRASimulationOpts {
-    pub fn build_from_pems(root_cert_pem: &[u8], root_key_pem: &[u8]) -> Result<Self, Error> {
+    /// Create a new DCAP RA Simulation Options
+    pub fn new(root_cert_pem: &[u8], root_key_pem: &[u8]) -> Result<Self, Error> {
         let root_cert = X509::from_pem(root_cert_pem).map_err(|e| {
             Error::x509_cert_from_pem(
                 String::from_utf8_lossy(root_cert_pem).to_string(),
@@ -87,6 +94,8 @@ impl DCAPRASimulationOpts {
         Ok(Self {
             root_cert,
             root_key,
+            advisory_ids: Default::default(),
+            isv_enclave_quote_status: Status::Ok,
         })
     }
 
@@ -96,6 +105,22 @@ impl DCAPRASimulationOpts {
 
     pub fn root_key(&self) -> &PKey<Private> {
         &self.root_key
+    }
+
+    pub fn with_advisory_ids(mut self, advisory_ids: Vec<String>) -> Self {
+        self.advisory_ids = advisory_ids;
+        self
+    }
+
+    pub fn with_isv_enclave_quote_status(mut self, status: &str) -> Result<Self, Error> {
+        self.isv_enclave_quote_status = Status::from_str(status).map_err(|e| {
+            Error::anyhow(anyhow!(
+                "cannot parse isv_enclave_quote_status: status={} error={}",
+                status,
+                e
+            ))
+        })?;
+        Ok(self)
     }
 }
 
@@ -213,15 +238,16 @@ pub(crate) fn simulate_gen_quote_and_collaterals(
     )
     .unwrap();
 
+    let advisory_ids: Vec<&str> = opts.advisory_ids.iter().map(|s| s.as_str()).collect();
     let target_tcb_levels = vec![TcbInfoV3TcbLevelItemBuilder::new(
         TcbInfoV3TcbLevelBuilder::new()
             .pcesvn(sgx_extensions.tcb.pcesvn)
             .sgxtcbcomponents(&sgx_extensions.tcb.sgxtcbcompsvns())
             .build(),
     )
-    .tcb_status("SWHardeningNeeded")
+    .tcb_status(&opts.isv_enclave_quote_status.to_string())
     .tcb_date_str("2024-03-13T00:00:00Z")
-    .advisory_ids(&["INTEL-SA-00334", "INTEL-SA-00615"])
+    .advisory_ids(&advisory_ids)
     .build()];
 
     // fmspc and tcb_levels must be consistent with the sgx extensions in the pck cert
@@ -280,7 +306,7 @@ mod tests {
 
     #[test]
     fn test_dcap_sim_root_cert() {
-        let res = DCAPRASimulationOpts::build_from_pems(
+        let res = DCAPRASimulationOpts::new(
             DCAP_SIM_ROOT_CA_PEM.as_bytes(),
             DCAP_SIM_ROOT_KEY_PKCS8.as_bytes(),
         );

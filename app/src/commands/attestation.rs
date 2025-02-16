@@ -415,6 +415,21 @@ pub struct ZKDCAPSIMRemoteAttestation {
         help = "Disable pre-execution before proving"
     )]
     pub disable_pre_execution: bool,
+    /// Intel security advisory IDs to include in the report
+    #[clap(
+        long = "advisory_ids",
+        value_delimiter = ',',
+        help = "Intel security advisory IDs to include in the report"
+    )]
+    pub advisory_ids: Vec<String>,
+
+    /// Quote status to include in the report
+    #[clap(
+        long = "isv_enclave_quote_status",
+        default_value = "UpToDate",
+        help = "Quote status to include in the report"
+    )]
+    pub isv_enclave_quote_status: String,
 }
 
 impl ZKDCAPSIMRemoteAttestation {
@@ -450,10 +465,12 @@ fn run_zkdcap_ra_simulation<E: EnclaveCommandAPI<S>, S: CommitStore>(
         mode,
         cmd.get_zkvm_program()?.as_ref(),
         cmd.disable_pre_execution,
-        DCAPRASimulationOpts::build_from_pems(
+        DCAPRASimulationOpts::new(
             DCAP_SIM_ROOT_CA_PEM.as_bytes(),
             DCAP_SIM_ROOT_KEY_PKCS8.as_bytes(),
-        )?,
+        )?
+        .with_advisory_ids(cmd.advisory_ids.clone())
+        .with_isv_enclave_quote_status(cmd.isv_enclave_quote_status.as_str())?,
     )?;
     Ok(())
 }
