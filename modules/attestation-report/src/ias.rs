@@ -1,6 +1,7 @@
+use crate::errors::Error;
 use crate::prelude::*;
 use crate::serde_base64;
-use crate::{errors::Error, Quote};
+use crate::ReportData;
 use base64::{engine::general_purpose::STANDARD as Base64Std, Engine};
 use chrono::prelude::DateTime;
 use core::fmt::Debug;
@@ -163,4 +164,17 @@ pub fn verify_ias_report(current_timestamp: Time, report: &IASSignedReport) -> R
         .map_err(|e| Error::web_pki(e.to_string()))?;
 
     Ok(())
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct Quote {
+    pub raw: sgx_quote_t,
+    pub status: String,
+    pub attestation_time: Time,
+}
+
+impl Quote {
+    pub fn report_data(&self) -> ReportData {
+        self.raw.report_body.report_data.into()
+    }
 }

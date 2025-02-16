@@ -6,6 +6,7 @@ use lcp_types::Time;
 use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
 
+/// DCAPQuote represents a quote, collateral, and supplementary data from the DCAP verification library
 #[serde_as]
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct DCAPQuote {
@@ -54,6 +55,7 @@ impl DCAPQuote {
     }
 }
 
+/// ZKVMProof represents a zkVM proof
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub enum ZKVMProof {
     Risc0(Risc0ZKVMProof),
@@ -67,6 +69,7 @@ impl ZKVMProof {
     }
 }
 
+/// Risc0ZKVMProof represents a zkVM proof for RISC Zero
 #[serde_as]
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Risc0ZKVMProof {
@@ -78,10 +81,15 @@ pub struct Risc0ZKVMProof {
     pub commit: Vec<u8>,
 }
 
+/// ZKDCAPQuote represents a DCAP quote with a zkVM proof
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct ZKDCAPQuote {
+    /// DCAP quote
     pub dcap_quote: DCAPQuote,
+    /// zkVM proof
     pub zkp: ZKVMProof,
+    /// if true, `zkp` is a mock proof
+    /// otherwise, `zkp` is a zkVM proof
     pub mock: bool,
 }
 

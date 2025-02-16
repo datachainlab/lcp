@@ -22,6 +22,9 @@ pub fn run_ias_ra(
             e,
         )
     })?;
+    if ek_info.qe_type != QEType::QE {
+        return Err(Error::unexpected_qe_type(QEType::QE, ek_info.qe_type));
+    }
 
     let spid = decode_spid(&spid)?;
     let (target_info, epid_group_id) = init_quote(QEType::QE)?;
