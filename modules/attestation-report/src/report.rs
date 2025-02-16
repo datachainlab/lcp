@@ -157,7 +157,7 @@ impl RAQuote {
             RAQuote::DCAP(_) => RAType::DCAP,
             RAQuote::ZKDCAP(quote) => {
                 // currently only support Risc0
-                if quote.mock {
+                if quote.is_mock_zkp() {
                     RAType::MockZKDCAPRisc0
                 } else {
                     RAType::ZKDCAPRisc0

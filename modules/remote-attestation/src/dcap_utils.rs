@@ -13,13 +13,13 @@ pub struct DCAPRemoteAttestationResult {
 
 impl DCAPRemoteAttestationResult {
     pub fn get_ra_quote(&self, attested_at: Time) -> DCAPQuote {
-        DCAPQuote::new(
-            self.raw_quote.clone(),
-            self.output.fmspc,
-            self.output.tcb_status.to_string(),
-            self.output.advisory_ids.clone(),
+        DCAPQuote {
+            raw: self.raw_quote.clone(),
+            fmspc: self.output.fmspc,
+            tcb_status: self.output.tcb_status.to_string(),
+            advisory_ids: self.output.advisory_ids.clone(),
             attested_at,
-            DcapCollateral {
+            collateral: DcapCollateral {
                 tcbinfo_bytes: self.collateral.tcbinfo_bytes.clone(),
                 qeidentity_bytes: self.collateral.qeidentity_bytes.clone(),
                 sgx_intel_root_ca_der: self.collateral.sgx_intel_root_ca_der.clone(),
@@ -27,6 +27,6 @@ impl DCAPRemoteAttestationResult {
                 sgx_intel_root_ca_crl_der: self.collateral.sgx_intel_root_ca_crl_der.clone(),
                 sgx_pck_crl_der: self.collateral.sgx_pck_crl_der.clone(),
             },
-        )
+        }
     }
 }

@@ -184,7 +184,6 @@ fn zkdcap_ra(
                     seal,
                     commit: prover_info.receipt.journal.bytes,
                 }),
-                prover_mode.is_dev_mode(),
             )
             .into(),
         )
