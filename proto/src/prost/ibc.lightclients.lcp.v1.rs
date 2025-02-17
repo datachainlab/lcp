@@ -24,7 +24,7 @@ pub struct ZkdcapRegisterEnclaveKeyMessage {
     #[prost(uint32, tag = "1")]
     pub zkvm_type: u32,
     #[prost(bytes = "vec", tag = "2")]
-    pub commit: ::prost::alloc::vec::Vec<u8>,
+    pub quote_verification_output: ::prost::alloc::vec::Vec<u8>,
     #[prost(bytes = "vec", tag = "3")]
     pub proof: ::prost::alloc::vec::Vec<u8>,
     #[prost(bytes = "vec", tag = "4")]

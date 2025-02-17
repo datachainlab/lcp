@@ -6,7 +6,7 @@ use dcap_quote_verifier::cert::{get_x509_subject_cn, parse_certchain};
 use dcap_quote_verifier::sgx_extensions::extract_sgx_extensions;
 use dcap_quote_verifier::types::quotes::version_3::QuoteV3;
 use dcap_quote_verifier::types::utils::parse_pem;
-use dcap_quote_verifier::{collaterals::IntelCollateral, quotes::version_3::verify_quote_dcapv3};
+use dcap_quote_verifier::{collaterals::IntelCollateral, quotes::version_3::verify_quote_v3};
 use keymanager::EnclaveKeyManager;
 use lcp_types::Time;
 use log::*;
@@ -75,7 +75,7 @@ pub(crate) fn dcap_ra(
     let quote = QuoteV3::from_bytes(&raw_quote).map_err(Error::dcap_quote_verifier)?;
 
     let collateral = get_collateral(pccs_url, certs_service_url, is_early_update, &quote)?;
-    let output = verify_quote_dcapv3(&quote, &collateral, current_time.as_unix_timestamp_secs())
+    let output = verify_quote_v3(&quote, &collateral, current_time.as_unix_timestamp_secs())
         .map_err(Error::dcap_quote_verifier)?;
 
     debug!(
@@ -226,7 +226,7 @@ mod tests {
             &quote,
         )
         .unwrap();
-        let res = verify_quote_dcapv3(&quote, &collateral, Time::now().as_unix_timestamp_secs());
+        let res = verify_quote_v3(&quote, &collateral, Time::now().as_unix_timestamp_secs());
         assert!(res.is_ok(), "{:?}", res);
         let output = res.unwrap();
         assert_eq!(output.tee_type, SGX_TEE_TYPE);

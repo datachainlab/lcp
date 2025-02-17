@@ -4,7 +4,7 @@ use crate::prelude::*;
 use alloy_sol_types::{sol, SolValue};
 use attestation_report::IASSignedReport;
 use crypto::Address;
-use dcap_quote_verifier::verifier::VerifiedOutput;
+use dcap_quote_verifier::verifier::QuoteVerificationOutput;
 use light_client::commitments::{Error as CommitmentError, EthABIEncoder, ProxyMessage};
 use light_client::types::proto::ibc::lightclients::lcp::v1::{
     RegisterEnclaveKeyMessage as RawRegisterEnclaveKeyMessage,
@@ -113,7 +113,7 @@ impl From<RegisterEnclaveKeyMessage> for RawRegisterEnclaveKeyMessage {
 #[derive(Debug, Clone, PartialEq)]
 pub struct ZKDCAPRegisterEnclaveKeyMessage {
     pub zkvm_type: ZKVMType,
-    pub commit: VerifiedOutput,
+    pub quote_verification_output: QuoteVerificationOutput,
     pub proof: Vec<u8>,
     pub operator_signature: Option<Vec<u8>>,
 }
@@ -141,8 +141,10 @@ impl TryFrom<RawZKDCAPRegisterEnclaveKeyMessage> for ZKDCAPRegisterEnclaveKeyMes
             zkvm_type: ZKVMType::from_u8(
                 u8::try_from(value.zkvm_type).map_err(Error::zk_vm_type_conversion)?,
             )?,
-            commit: VerifiedOutput::from_bytes(&value.commit)
-                .map_err(Error::dcap_quote_verifier)?,
+            quote_verification_output: QuoteVerificationOutput::from_bytes(
+                &value.quote_verification_output,
+            )
+            .map_err(Error::dcap_quote_verifier)?,
             proof: value.proof,
             operator_signature: (!value.operator_signature.is_empty())
                 .then_some(value.operator_signature),
@@ -154,7 +156,7 @@ impl From<ZKDCAPRegisterEnclaveKeyMessage> for RawZKDCAPRegisterEnclaveKeyMessag
     fn from(value: ZKDCAPRegisterEnclaveKeyMessage) -> Self {
         RawZKDCAPRegisterEnclaveKeyMessage {
             zkvm_type: value.zkvm_type as u32,
-            commit: value.commit.to_bytes(),
+            quote_verification_output: value.quote_verification_output.to_bytes(),
             proof: value.proof,
             operator_signature: value.operator_signature.unwrap_or_default(),
         }

@@ -447,7 +447,7 @@ impl TryFrom<SealedEnclaveKeyInfo> for ProtoEnclaveKeyInfo {
                                         image_id: proof.image_id.to_vec(),
                                         selector: proof.selector.to_vec(),
                                         seal: proof.seal,
-                                        commit: proof.commit,
+                                        output: proof.output,
                                     })
                                 }
                             }),

@@ -7,7 +7,7 @@ use crate::{
 use anyhow::anyhow;
 use attestation_report::{Risc0ZKVMProof, ZKDCAPQuote, ZKVMProof};
 use crypto::Address;
-use dcap_quote_verifier::{collaterals::IntelCollateral, verifier::VerifiedOutput};
+use dcap_quote_verifier::{collaterals::IntelCollateral, verifier::QuoteVerificationOutput};
 use keymanager::EnclaveKeyManager;
 use lcp_types::Time;
 use log::*;
@@ -166,7 +166,7 @@ fn zkdcap_ra(
         );
     }
 
-    let output = VerifiedOutput::from_bytes(&prover_info.receipt.journal.bytes)
+    let output = QuoteVerificationOutput::from_bytes(&prover_info.receipt.journal.bytes)
         .map_err(|e| Error::anyhow(anyhow!("cannot parse receipt: {}", e)))?;
 
     let quote = DCAPRemoteAttestationResult {
@@ -184,7 +184,7 @@ fn zkdcap_ra(
                     image_id: image_id.into(),
                     selector,
                     seal,
-                    commit: prover_info.receipt.journal.bytes,
+                    output: prover_info.receipt.journal.bytes,
                 }),
             )
             .into(),

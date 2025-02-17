@@ -1814,7 +1814,7 @@ checksum = "e8566979429cf69b49a5c740c60791108e86440e8be149bbea4fe54d2c32d6e2"
 [[package]]
 name = "dcap-collaterals"
 version = "0.1.0"
-source = "git+https://github.com/datachainlab/zkdcap?rev=e6fd9cf9e6ad0ff80b8e20247d1cafa6fed59c6e#e6fd9cf9e6ad0ff80b8e20247d1cafa6fed59c6e"
+source = "git+https://github.com/datachainlab/zkdcap?rev=54ab01c04ca8738b8568b4a6c74a493715af9d2b#54ab01c04ca8738b8568b4a6c74a493715af9d2b"
 dependencies = [
  "anyhow",
  "chrono",
@@ -1829,7 +1829,7 @@ dependencies = [
 [[package]]
 name = "dcap-quote-verifier"
 version = "0.1.0"
-source = "git+https://github.com/datachainlab/zkdcap?rev=e6fd9cf9e6ad0ff80b8e20247d1cafa6fed59c6e#e6fd9cf9e6ad0ff80b8e20247d1cafa6fed59c6e"
+source = "git+https://github.com/datachainlab/zkdcap?rev=54ab01c04ca8738b8568b4a6c74a493715af9d2b#54ab01c04ca8738b8568b4a6c74a493715af9d2b"
 dependencies = [
  "alloy-sol-types",
  "anyhow",
@@ -1845,7 +1845,7 @@ dependencies = [
 [[package]]
 name = "dcap-types"
 version = "0.1.0"
-source = "git+https://github.com/datachainlab/zkdcap?rev=e6fd9cf9e6ad0ff80b8e20247d1cafa6fed59c6e#e6fd9cf9e6ad0ff80b8e20247d1cafa6fed59c6e"
+source = "git+https://github.com/datachainlab/zkdcap?rev=54ab01c04ca8738b8568b4a6c74a493715af9d2b#54ab01c04ca8738b8568b4a6c74a493715af9d2b"
 dependencies = [
  "anyhow",
  "chrono",
@@ -9094,7 +9094,7 @@ dependencies = [
 [[package]]
 name = "zkdcap-risc0"
 version = "0.1.0"
-source = "git+https://github.com/datachainlab/zkdcap?rev=e6fd9cf9e6ad0ff80b8e20247d1cafa6fed59c6e#e6fd9cf9e6ad0ff80b8e20247d1cafa6fed59c6e"
+source = "git+https://github.com/datachainlab/zkdcap?rev=54ab01c04ca8738b8568b4a6c74a493715af9d2b#54ab01c04ca8738b8568b4a6c74a493715af9d2b"
 dependencies = [
  "risc0-binfmt",
  "risc0-build",

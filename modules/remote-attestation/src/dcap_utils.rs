@@ -1,13 +1,13 @@
 use attestation_report::DCAPQuote;
 use dcap_quote_verifier::collaterals::IntelCollateral;
-use dcap_quote_verifier::verifier::VerifiedOutput;
+use dcap_quote_verifier::verifier::QuoteVerificationOutput;
 use lcp_types::proto::lcp::service::enclave::v1::DcapCollateral;
 use lcp_types::Time;
 
 #[derive(Debug)]
 pub struct DCAPRemoteAttestationResult {
     pub raw_quote: Vec<u8>,
-    pub output: VerifiedOutput,
+    pub output: QuoteVerificationOutput,
     pub collateral: IntelCollateral,
 }
 

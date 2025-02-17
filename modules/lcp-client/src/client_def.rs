@@ -251,14 +251,15 @@ impl LCPClient {
             selector,
             seal,
             zkdcap_verifier_info.program_id,
-            message.commit.to_bytes(),
+            message.quote_verification_output.to_bytes(),
         )?;
 
-        let report = if let QuoteBody::SGXQuoteBody(report) = message.commit.quote_body {
-            report
-        } else {
-            return Err(Error::unexpected_quote_body());
-        };
+        let report =
+            if let QuoteBody::SGXQuoteBody(report) = message.quote_verification_output.quote_body {
+                report
+            } else {
+                return Err(Error::unexpected_quote_body());
+            };
         let report_data = ReportData(report.report_data);
 
         assert_eq!(
@@ -266,25 +267,31 @@ impl LCPClient {
             client_state.mr_enclave.as_slice(),
             "mrenclave mismatch"
         );
-        assert_eq!(message.commit.quote_version, 3, "unexpected quote version");
-        assert_eq!(message.commit.tee_type, SGX_TEE_TYPE, "unexpected tee type");
         assert_eq!(
-            message.commit.sgx_intel_root_ca_hash,
+            message.quote_verification_output.quote_version, 3,
+            "unexpected quote version"
+        );
+        assert_eq!(
+            message.quote_verification_output.tee_type, SGX_TEE_TYPE,
+            "unexpected tee type"
+        );
+        assert_eq!(
+            message.quote_verification_output.sgx_intel_root_ca_hash,
             remote_attestation::dcap::INTEL_ROOT_CA_HASH,
         );
         assert!(
             message
-                .commit
+                .quote_verification_output
                 .validity
                 .validate_time(ctx.host_timestamp().as_unix_timestamp_secs()),
             "invalid validity intersection"
         );
-        let tcb_status = message.commit.tcb_status.to_string();
+        let tcb_status = message.quote_verification_output.tcb_status.to_string();
         assert!(
             tcb_status == "UpToDate" || client_state.allowed_quote_statuses.contains(&tcb_status),
             "unexpected tcb status"
         );
-        for advisory_id in message.commit.advisory_ids.iter() {
+        for advisory_id in message.quote_verification_output.advisory_ids.iter() {
             assert!(
                 client_state.allowed_advisory_ids.contains(advisory_id),
                 "unexpected advisory id"
@@ -295,7 +302,7 @@ impl LCPClient {
             verify_signature_address(
                 compute_eip712_zkdcap_register_enclave_key(
                     zkdcap_verifier_info,
-                    message.commit.hash(),
+                    message.quote_verification_output.hash(),
                 )
                 .as_ref(),
                 operator_signature.as_ref(),
@@ -310,7 +317,10 @@ impl LCPClient {
             ctx,
             &client_id,
             report_data.enclave_key(),
-            EKOperatorInfo::new(message.commit.validity.not_after_min, operator),
+            EKOperatorInfo::new(
+                message.quote_verification_output.validity.not_after_min,
+                operator,
+            ),
         );
         Ok(())
     }

@@ -53,10 +53,10 @@ pub enum ZKVMProof {
 }
 
 impl ZKVMProof {
-    /// Returns the commit corresponding to the proof
-    pub fn commit(&self) -> &[u8] {
+    /// Returns the output of dcap-quote-verifier program executed inside the zkVM
+    pub fn output(&self) -> &[u8] {
         match self {
-            ZKVMProof::Risc0(ref proof) => &proof.commit,
+            ZKVMProof::Risc0(ref proof) => &proof.output,
         }
     }
 
@@ -81,9 +81,9 @@ pub struct Risc0ZKVMProof {
     #[serde_as(as = "serde_with::hex::Hex<serde_with::formats::Lowercase>")]
     /// A Groth16 proof for the correct execution of the guest program.
     pub seal: Vec<u8>,
-    /// The public outputs of dcap-quote-verifier program executed inside the zkVM
+    /// The output of dcap-quote-verifier program executed inside the zkVM
     #[serde_as(as = "serde_with::hex::Hex<serde_with::formats::Lowercase>")]
-    pub commit: Vec<u8>,
+    pub output: Vec<u8>,
 }
 
 impl Risc0ZKVMProof {
@@ -137,8 +137,8 @@ impl ZKDCAPQuote {
 
     /// Returns the commit corresponding to the zkVM proof
     #[cfg(feature = "std")]
-    pub fn commit(&self) -> Result<dcap_quote_verifier::verifier::VerifiedOutput, Error> {
-        dcap_quote_verifier::verifier::VerifiedOutput::from_bytes(self.zkp.commit())
+    pub fn commit(&self) -> Result<dcap_quote_verifier::verifier::QuoteVerificationOutput, Error> {
+        dcap_quote_verifier::verifier::QuoteVerificationOutput::from_bytes(self.zkp.output())
             .map_err(Error::dcap_quote_verifier)
     }
 }

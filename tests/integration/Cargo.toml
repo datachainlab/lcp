@@ -35,7 +35,7 @@ attestation-report = { path = "../../modules/attestation-report" }
 keymanager = { path = "../../modules/keymanager" }
 remote-attestation = { path = "../../modules/remote-attestation" }
 
-zkdcap-risc0 = { git = "https://github.com/datachainlab/zkdcap", rev = "e6fd9cf9e6ad0ff80b8e20247d1cafa6fed59c6e" }
+zkdcap-risc0 = { git = "https://github.com/datachainlab/zkdcap", rev = "54ab01c04ca8738b8568b4a6c74a493715af9d2b" }
 
 [features]
 default = []

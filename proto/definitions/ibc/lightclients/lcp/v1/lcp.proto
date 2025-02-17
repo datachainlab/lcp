@@ -21,7 +21,7 @@ message RegisterEnclaveKeyMessage {
 
 message ZKDCAPRegisterEnclaveKeyMessage {
   uint32 zkvm_type = 1;
-  bytes commit = 2;
+  bytes quote_verification_output = 2;
   bytes proof = 3;
   bytes operator_signature = 4;
 }

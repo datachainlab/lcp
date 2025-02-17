@@ -18,7 +18,7 @@ use dcap_collaterals::tcbinfo::{
 };
 use dcap_collaterals::utils::{gen_key, p256_prvkey_to_pubkey_bytes};
 use dcap_collaterals::{certs::gen_tcb_certchain, sgx_extensions::SgxExtensionsBuilder};
-use dcap_quote_verifier::quotes::version_3::verify_quote_dcapv3;
+use dcap_quote_verifier::quotes::version_3::verify_quote_v3;
 use dcap_quote_verifier::types::quotes::body::EnclaveReport;
 use dcap_quote_verifier::types::quotes::version_3::QuoteV3;
 use dcap_quote_verifier::types::Status;
@@ -166,7 +166,7 @@ pub(crate) fn dcap_ra_simulation(
         quote, collateral
     );
 
-    let output = verify_quote_dcapv3(&quote, &collateral, current_time.as_unix_timestamp_secs())
+    let output = verify_quote_v3(&quote, &collateral, current_time.as_unix_timestamp_secs())
         .map_err(Error::dcap_quote_verifier)?;
 
     Ok(DCAPRemoteAttestationResult {
