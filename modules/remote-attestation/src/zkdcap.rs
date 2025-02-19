@@ -1,7 +1,7 @@
 use crate::{
     dcap::dcap_ra,
     dcap_simulation::{dcap_ra_simulation, DCAPRASimulationOpts},
-    dcap_utils::DCAPRemoteAttestationResult,
+    dcap_utils::{CollateralService, DCAPRemoteAttestationResult},
     errors::Error,
 };
 use anyhow::anyhow;
@@ -18,16 +18,13 @@ use zkvm::{
     verifier::verify_groth16_proof,
 };
 
-#[allow(clippy::too_many_arguments)]
 pub fn run_zkdcap_ra(
     key_manager: &EnclaveKeyManager,
     target_enclave_key: Address,
     prover_mode: Risc0ProverMode,
     elf: &[u8],
     disable_pre_execution: bool,
-    pccs_url: &str,
-    certs_server_url: &str,
-    is_early_update: bool,
+    collateral_service: CollateralService,
 ) -> Result<(), Error> {
     let image_id = compute_image_id(elf)
         .map_err(|e| Error::anyhow(anyhow!("cannot compute image id: {}", e)))?;
@@ -41,9 +38,7 @@ pub fn run_zkdcap_ra(
         key_manager,
         target_enclave_key,
         current_time,
-        pccs_url,
-        certs_server_url,
-        is_early_update,
+        collateral_service,
     )?;
 
     zkdcap_ra(

@@ -10,6 +10,7 @@ use host::store::transaction::CommitStore;
 use remote_attestation::{
     dcap,
     dcap_simulation::{DCAP_SIM_ROOT_CA_PEM, DCAP_SIM_ROOT_KEY_PKCS8},
+    dcap_utils::CollateralService,
     ias, zkdcap, IASMode,
 };
 use remote_attestation::{
@@ -262,6 +263,16 @@ impl SgxCollateralService {
     }
 }
 
+impl From<SgxCollateralService> for CollateralService {
+    fn from(service: SgxCollateralService) -> Self {
+        Self {
+            pccs_url: service.get_pccs_url(),
+            certs_service_url: service.get_certs_service_url(),
+            is_early_update: service.is_early_update,
+        }
+    }
+}
+
 #[derive(Clone, Debug, Parser, PartialEq)]
 pub struct DCAPRemoteAttestation {
     /// Options for enclave
@@ -284,9 +295,7 @@ fn run_dcap_remote_attestation<E: EnclaveCommandAPI<S>, S: CommitStore>(
     dcap::run_dcap_ra(
         enclave.get_key_manager(),
         Address::from_hex_string(&cmd.enclave_key)?,
-        &cmd.collateral_service.get_pccs_url(),
-        &cmd.collateral_service.get_certs_service_url(),
-        cmd.collateral_service.is_early_update,
+        cmd.collateral_service.clone().into(),
     )?;
     Ok(())
 }
@@ -380,9 +389,7 @@ fn run_zkdcap_remote_attestation<E: EnclaveCommandAPI<S>, S: CommitStore>(
         mode,
         cmd.get_zkvm_program()?.as_ref(),
         cmd.disable_pre_execution,
-        &cmd.collateral_service.get_pccs_url(),
-        &cmd.collateral_service.get_certs_service_url(),
-        cmd.collateral_service.is_early_update,
+        cmd.collateral_service.clone().into(),
     )?;
     Ok(())
 }
