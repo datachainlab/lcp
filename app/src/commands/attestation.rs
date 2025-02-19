@@ -235,10 +235,10 @@ fn run_simulate_remote_attestation<E: EnclaveCommandAPI<S>, S: CommitStore>(
 #[derive(Clone, Debug, Parser, PartialEq)]
 pub struct SgxCollateralService {
     #[clap(
-        long = "pcss_url",
-        help = "PCSS URL (default: https://api.trustedservices.intel.com/)"
+        long = "pccs_url",
+        help = "PCCS URL (default: https://api.trustedservices.intel.com/)"
     )]
-    pub pcss_url: Option<String>,
+    pub pccs_url: Option<String>,
     #[clap(
         long = "certs_service_url",
         help = "Certs Service URL (default: https://certificates.trustedservices.intel.com/)"
@@ -249,8 +249,8 @@ pub struct SgxCollateralService {
 }
 
 impl SgxCollateralService {
-    pub fn get_pcss_url(&self) -> String {
-        self.pcss_url
+    pub fn get_pccs_url(&self) -> String {
+        self.pccs_url
             .clone()
             .unwrap_or_else(|| "https://api.trustedservices.intel.com/".to_string())
     }
@@ -284,7 +284,7 @@ fn run_dcap_remote_attestation<E: EnclaveCommandAPI<S>, S: CommitStore>(
     dcap::run_dcap_ra(
         enclave.get_key_manager(),
         Address::from_hex_string(&cmd.enclave_key)?,
-        &cmd.collateral_service.get_pcss_url(),
+        &cmd.collateral_service.get_pccs_url(),
         &cmd.collateral_service.get_certs_service_url(),
         cmd.collateral_service.is_early_update,
     )?;
@@ -380,7 +380,7 @@ fn run_zkdcap_remote_attestation<E: EnclaveCommandAPI<S>, S: CommitStore>(
         mode,
         cmd.get_zkvm_program()?.as_ref(),
         cmd.disable_pre_execution,
-        &cmd.collateral_service.get_pcss_url(),
+        &cmd.collateral_service.get_pccs_url(),
         &cmd.collateral_service.get_certs_service_url(),
         cmd.collateral_service.is_early_update,
     )?;
