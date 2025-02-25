@@ -286,7 +286,7 @@ impl LCPClient {
                 .validate_time(ctx.host_timestamp().as_unix_timestamp_secs()),
             "invalid validity intersection"
         );
-        let tcb_status = message.quote_verification_output.tcb_status.to_string();
+        let tcb_status = message.quote_verification_output.status.to_string();
         assert!(
             tcb_status == "UpToDate" || client_state.allowed_quote_statuses.contains(&tcb_status),
             "unexpected tcb status"
@@ -302,7 +302,7 @@ impl LCPClient {
             verify_signature_address(
                 compute_eip712_zkdcap_register_enclave_key(
                     zkdcap_verifier_info,
-                    message.quote_verification_output.hash(),
+                    keccak256(&message.quote_verification_output.to_bytes()),
                 )
                 .as_ref(),
                 operator_signature.as_ref(),

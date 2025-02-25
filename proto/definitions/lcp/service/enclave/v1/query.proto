@@ -52,7 +52,7 @@ message DCAPEnclaveKeyInfo {
   uint64 attestation_time = 4;
   string tcb_status = 5;
   repeated string advisory_ids = 6;
-  DCAPCollateral collateral = 7;
+  QVCollateral collateral = 7;
 }
 
 message ZKDCAPEncalveKeyInfo {
@@ -73,9 +73,9 @@ message Risc0ZKVMProof {
   bytes output = 4;
 }
 
-message DCAPCollateral {
-  bytes tcbinfo_bytes = 1;
-  bytes qeidentity_bytes = 2;
+message QVCollateral {
+  string tcb_info_json = 1;
+  string qe_identity_json = 2;
   bytes sgx_intel_root_ca_der = 3;
   bytes sgx_tcb_signing_der = 4;
   bytes sgx_intel_root_ca_crl_der = 5;

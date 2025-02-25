@@ -13,7 +13,7 @@ use dcap_collaterals::openssl::x509::X509;
 use dcap_collaterals::quote::{
     build_qe_cert_data, gen_quote_v3, sign_qe_report, QuoteHeaderBuilder,
 };
-use dcap_collaterals::tcbinfo::{
+use dcap_collaterals::tcb_info::{
     TcbInfoV3Builder, TcbInfoV3TcbLevelBuilder, TcbInfoV3TcbLevelItemBuilder,
 };
 use dcap_collaterals::utils::{gen_key, p256_prvkey_to_pubkey_bytes};
@@ -21,8 +21,8 @@ use dcap_collaterals::{certs::gen_tcb_certchain, sgx_extensions::SgxExtensionsBu
 use dcap_quote_verifier::quotes::version_3::verify_quote_v3;
 use dcap_quote_verifier::types::quotes::body::EnclaveReport;
 use dcap_quote_verifier::types::quotes::version_3::QuoteV3;
-use dcap_quote_verifier::types::Status;
-use dcap_quote_verifier::{collaterals::IntelCollateral, types::cert::SgxExtensionTcbLevel};
+use dcap_quote_verifier::verifier::Status;
+use dcap_quote_verifier::{collateral::QvCollateral, types::cert::SgxExtensionTcbLevel};
 use keymanager::EnclaveKeyManager;
 use lcp_types::Time;
 use log::*;
@@ -179,11 +179,11 @@ pub(crate) fn dcap_ra_simulation(
 pub(crate) fn simulate_gen_quote_and_collaterals(
     isv_enclave_report: &sgx_report_t,
     opts: DCAPRASimulationOpts,
-) -> Result<(QuoteV3, IntelCollateral), Error> {
+) -> Result<(QuoteV3, QvCollateral), Error> {
     let root_cert = opts.root_cert().clone();
     let root_key = opts.root_key().clone();
     let root_ca = RootCa {
-        crl: gen_crl(&root_cert, &root_key, &[], None).unwrap(),
+        crl: gen_crl(&root_cert, &root_key, vec![], None).unwrap(),
         cert: root_cert,
         key: root_key,
     };
@@ -270,9 +270,9 @@ pub(crate) fn simulate_gen_quote_and_collaterals(
         .build_and_sign(&tcb_certchain.key)
         .unwrap();
 
-    let collateral = IntelCollateral {
-        tcbinfo_bytes: serde_json::to_vec(&tcb_info).unwrap(),
-        qeidentity_bytes: serde_json::to_vec(&qe_identity).unwrap(),
+    let collateral = QvCollateral {
+        tcb_info_json: serde_json::to_vec(&tcb_info).unwrap(),
+        qe_identity_json: serde_json::to_vec(&qe_identity).unwrap(),
         sgx_intel_root_ca_der: root_ca.cert.to_der().unwrap(),
         sgx_tcb_signing_der: tcb_certchain.cert.to_der().unwrap(),
         sgx_intel_root_ca_crl_der: root_ca.crl.to_der().unwrap(),

@@ -225,7 +225,7 @@ mod tests {
         }
         #[cfg(not(feature = "sgx-sw"))]
         {
-            use remote_attestation::dcap_utils::CollateralService;
+            use remote_attestation::dcap_pcs::client::PCSClient;
             use remote_attestation::zkdcap::run_zkdcap_ra;
             use remote_attestation::zkvm::prover::Risc0ProverMode;
             use zkdcap_risc0::DCAP_QUOTE_VERIFIER_ELF;
@@ -250,7 +250,7 @@ mod tests {
                 Risc0ProverMode::Dev,
                 DCAP_QUOTE_VERIFIER_ELF,
                 false,
-                CollateralService::new(
+                PCSClient::new(
                     "https://api.trustedservices.intel.com/",
                     "https://certificates.trustedservices.intel.com/",
                     false,

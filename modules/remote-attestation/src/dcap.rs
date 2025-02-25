@@ -1,7 +1,9 @@
-use crate::dcap_utils::{CollateralService, DCAPRemoteAttestationResult};
+use crate::dcap_utils::DCAPRemoteAttestationResult;
 use crate::errors::Error;
+use anyhow::anyhow;
 use attestation_report::QEType;
 use crypto::Address;
+use dcap_pcs::client::PCSClient;
 use dcap_quote_verifier::quotes::version_3::verify_quote_v3;
 use dcap_quote_verifier::types::quotes::version_3::QuoteV3;
 use keymanager::EnclaveKeyManager;
@@ -24,15 +26,10 @@ pub const INTEL_ROOT_CA_HASH: [u8; 32] = [
 pub fn run_dcap_ra(
     key_manager: &EnclaveKeyManager,
     target_enclave_key: Address,
-    collateral_service: CollateralService,
+    pcs_client: PCSClient,
 ) -> Result<(), Error> {
     let current_time = Time::now();
-    let result = dcap_ra(
-        key_manager,
-        target_enclave_key,
-        current_time,
-        collateral_service,
-    )?;
+    let result = dcap_ra(key_manager, target_enclave_key, current_time, pcs_client)?;
 
     key_manager
         .save_ra_quote(target_enclave_key, result.get_ra_quote(current_time).into())
@@ -46,7 +43,7 @@ pub(crate) fn dcap_ra(
     key_manager: &EnclaveKeyManager,
     target_enclave_key: Address,
     current_time: Time,
-    collateral_service: CollateralService,
+    pcs_client: PCSClient,
 ) -> Result<DCAPRemoteAttestationResult, Error> {
     let ek_info = key_manager.load(target_enclave_key).map_err(|e| {
         Error::key_manager(
@@ -63,9 +60,11 @@ pub(crate) fn dcap_ra(
 
     debug!("Successfully get the quote: {}", hex::encode(&raw_quote));
 
-    let quote = QuoteV3::from_bytes(&raw_quote).map_err(Error::dcap_quote_verifier)?;
+    let (quote, _) = QuoteV3::from_bytes(&raw_quote).map_err(Error::dcap_quote_verifier)?;
 
-    let collateral = collateral_service.get_collateral(&quote.signature.qe_cert_data)?;
+    let collateral = pcs_client
+        .get_collateral(&quote.signature.qe_cert_data)
+        .map_err(|e| Error::anyhow(anyhow!("cannot get collateral data: {}", e)))?;
     let output = verify_quote_v3(&quote, &collateral, current_time.as_unix_timestamp_secs())
         .map_err(Error::dcap_quote_verifier)?;
 
@@ -111,13 +110,13 @@ mod tests {
     #[test]
     fn test_dcap_collateral() {
         let quote = get_test_quote();
-        let quote = QuoteV3::from_bytes(&quote).unwrap();
-        let service = CollateralService::new(
+        let (quote, _) = QuoteV3::from_bytes(&quote).unwrap();
+        let pcs_client = PCSClient::new(
             "https://api.trustedservices.intel.com/",
             "https://certificates.trustedservices.intel.com/",
             false,
         );
-        let collateral = service
+        let collateral = pcs_client
             .get_collateral(&quote.signature.qe_cert_data)
             .unwrap();
         let res = verify_quote_v3(&quote, &collateral, Time::now().as_unix_timestamp_secs());

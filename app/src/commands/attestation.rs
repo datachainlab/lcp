@@ -9,8 +9,8 @@ use enclave_api::{Enclave, EnclaveCommandAPI, EnclaveProtoAPI};
 use host::store::transaction::CommitStore;
 use remote_attestation::{
     dcap,
+    dcap_pcs::client::PCSClient,
     dcap_simulation::{DCAP_SIM_ROOT_CA_PEM, DCAP_SIM_ROOT_KEY_PKCS8},
-    dcap_utils::CollateralService,
     ias, zkdcap, IASMode,
 };
 use remote_attestation::{
@@ -263,13 +263,13 @@ impl SgxCollateralService {
     }
 }
 
-impl From<SgxCollateralService> for CollateralService {
+impl From<SgxCollateralService> for PCSClient {
     fn from(service: SgxCollateralService) -> Self {
-        Self {
-            pccs_url: service.get_pccs_url(),
-            certs_service_url: service.get_certs_service_url(),
-            is_early_update: service.is_early_update,
-        }
+        Self::new(
+            service.get_pccs_url().as_str(),
+            service.get_certs_service_url().as_str(),
+            service.is_early_update,
+        )
     }
 }
 

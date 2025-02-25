@@ -1,13 +1,14 @@
 use crate::{
     dcap::dcap_ra,
     dcap_simulation::{dcap_ra_simulation, DCAPRASimulationOpts},
-    dcap_utils::{CollateralService, DCAPRemoteAttestationResult},
+    dcap_utils::DCAPRemoteAttestationResult,
     errors::Error,
 };
 use anyhow::anyhow;
 use attestation_report::{Risc0ZKVMProof, ZKDCAPQuote, ZKVMProof};
 use crypto::Address;
-use dcap_quote_verifier::{collaterals::IntelCollateral, verifier::QuoteVerificationOutput};
+use dcap_pcs::client::PCSClient;
+use dcap_quote_verifier::{collateral::QvCollateral, verifier::QuoteVerificationOutput};
 use keymanager::EnclaveKeyManager;
 use lcp_types::Time;
 use log::*;
@@ -24,7 +25,7 @@ pub fn run_zkdcap_ra(
     prover_mode: Risc0ProverMode,
     elf: &[u8],
     disable_pre_execution: bool,
-    collateral_service: CollateralService,
+    pcs_client: PCSClient,
 ) -> Result<(), Error> {
     let image_id = compute_image_id(elf)
         .map_err(|e| Error::anyhow(anyhow!("cannot compute image id: {}", e)))?;
@@ -34,12 +35,7 @@ pub fn run_zkdcap_ra(
     );
 
     let current_time = Time::now();
-    let res = dcap_ra(
-        key_manager,
-        target_enclave_key,
-        current_time,
-        collateral_service,
-    )?;
+    let res = dcap_ra(key_manager, target_enclave_key, current_time, pcs_client)?;
 
     zkdcap_ra(
         key_manager,
@@ -92,7 +88,7 @@ fn zkdcap_ra(
     disable_pre_execution: bool,
     current_time: Time,
     raw_quote: Vec<u8>,
-    collateral: IntelCollateral,
+    collateral: QvCollateral,
 ) -> Result<(), Error> {
     let image_id = compute_image_id(elf)
         .map_err(|e| Error::anyhow(anyhow!("cannot compute image id: {}", e)))?;

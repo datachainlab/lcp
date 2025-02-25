@@ -156,7 +156,7 @@ fn run_list_keys<E: EnclaveCommandAPI<S>, S: CommitStore>(
                             "address": eki.address.to_hex_string(),
                             "attested": true,
                             "report_data": quote.report_data()?.to_string(),
-                            "isv_enclave_quote_status": quote.tcb_status,
+                            "isv_enclave_quote_status": quote.status,
                             "advisory_ids": quote.advisory_ids,
                             "attested_at": quote.attested_at.to_string(),
                         }});
@@ -167,7 +167,7 @@ fn run_list_keys<E: EnclaveCommandAPI<S>, S: CommitStore>(
                             "address": eki.address.to_hex_string(),
                             "attested": true,
                             "report_data": quote.dcap_quote.report_data()?.to_string(),
-                            "isv_enclave_quote_status": quote.dcap_quote.tcb_status,
+                            "isv_enclave_quote_status": quote.dcap_quote.status,
                             "advisory_ids": quote.dcap_quote.advisory_ids,
                             "attested_at": quote.dcap_quote.attested_at.to_string(),
                         }});

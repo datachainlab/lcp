@@ -1,7 +1,7 @@
 use crate::prelude::*;
 use crate::Error;
 use crate::RAQuote;
-use lcp_types::proto::lcp::service::enclave::v1::DcapCollateral;
+use lcp_types::proto::lcp::service::enclave::v1::QvCollateral;
 use lcp_types::Time;
 use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
@@ -17,13 +17,13 @@ pub struct DCAPQuote {
     #[serde_as(as = "serde_with::hex::Hex<serde_with::formats::Lowercase>")]
     pub fmspc: [u8; 6],
     /// TCB status of the processor/platform
-    pub tcb_status: String,
+    pub status: String,
     /// Advisory IDs of the processor/platform
     pub advisory_ids: Vec<String>,
     /// Time when the quote was attested
     pub attested_at: Time,
     /// Collateral data used to verify the quote
-    pub collateral: DcapCollateral,
+    pub collateral: QvCollateral,
 }
 
 impl DCAPQuote {
@@ -41,7 +41,7 @@ impl DCAPQuote {
     #[cfg(feature = "std")]
     pub fn report_data(&self) -> Result<crate::ReportData, Error> {
         use dcap_quote_verifier::types::quotes::version_3::QuoteV3;
-        let quote = QuoteV3::from_bytes(&self.raw).map_err(Error::dcap_quote_verifier)?;
+        let (quote, _) = QuoteV3::from_bytes(&self.raw).map_err(Error::dcap_quote_verifier)?;
         Ok(crate::ReportData(quote.isv_enclave_report.report_data))
     }
 }
