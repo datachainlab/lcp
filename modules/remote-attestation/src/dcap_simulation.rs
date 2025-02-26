@@ -74,6 +74,7 @@ pub struct DCAPRASimulationOpts {
 
     advisory_ids: Vec<String>,
     isv_enclave_quote_status: Status,
+    tcb_evaluation_data_number: u32,
 }
 
 impl DCAPRASimulationOpts {
@@ -96,6 +97,7 @@ impl DCAPRASimulationOpts {
             root_key,
             advisory_ids: Default::default(),
             isv_enclave_quote_status: Status::Ok,
+            tcb_evaluation_data_number: 1,
         })
     }
 
@@ -121,6 +123,11 @@ impl DCAPRASimulationOpts {
             ))
         })?;
         Ok(self)
+    }
+
+    pub fn with_tcb_evaluation_data_number(mut self, number: u32) -> Self {
+        self.tcb_evaluation_data_number = number;
+        self
     }
 }
 
@@ -253,11 +260,13 @@ pub(crate) fn simulate_gen_quote_and_collaterals(
     // fmspc and tcb_levels must be consistent with the sgx extensions in the pck cert
     let tcb_info = TcbInfoV3Builder::new(true)
         .fmspc([0, 96, 106, 0, 0, 0])
+        .tcb_evaluation_data_number(opts.tcb_evaluation_data_number)
         .tcb_levels(target_tcb_levels)
         .build_and_sign(&tcb_certchain.key)
         .unwrap();
 
     let qe_identity = EnclaveIdentityV2Builder::new(EnclaveIdentityId::QE)
+        .tcb_evaluation_data_number(opts.tcb_evaluation_data_number)
         .tcb_levels_json(json!([
         {
           "tcb": {

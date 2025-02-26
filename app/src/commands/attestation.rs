@@ -437,6 +437,14 @@ pub struct ZKDCAPSIMRemoteAttestation {
         help = "Quote status to include in the report"
     )]
     pub isv_enclave_quote_status: String,
+
+    /// TCB Evaluation Data Number for TCB Info and QE Identity
+    #[clap(
+        long = "tcb_eval_data_num",
+        default_value = "1",
+        help = "TCB Evaluation Data Number"
+    )]
+    pub tcb_eval_data_num: u32,
 }
 
 impl ZKDCAPSIMRemoteAttestation {
@@ -477,7 +485,8 @@ fn run_zkdcap_ra_simulation<E: EnclaveCommandAPI<S>, S: CommitStore>(
             DCAP_SIM_ROOT_KEY_PKCS8.as_bytes(),
         )?
         .with_advisory_ids(cmd.advisory_ids.clone())
-        .with_isv_enclave_quote_status(cmd.isv_enclave_quote_status.as_str())?,
+        .with_isv_enclave_quote_status(cmd.isv_enclave_quote_status.as_str())?
+        .with_tcb_evaluation_data_number(cmd.tcb_eval_data_num),
     )?;
     Ok(())
 }
