@@ -10,6 +10,7 @@ use attestation_report::{IASSignedReport, ReportData};
 use crypto::{verify_signature_address, Address, Keccak256};
 use dcap_quote_verifier::types::quotes::body::QuoteBody;
 use dcap_quote_verifier::types::SGX_TEE_TYPE;
+use dcap_quote_verifier::verifier::Status;
 use hex_literal::hex;
 use light_client::commitments::{
     CommitmentPrefix, EthABIEncoder, MisbehaviourProxyMessage, ProxyMessage,
@@ -246,20 +247,20 @@ impl LCPClient {
         let zkdcap_verifier_info = &client_state.zkdcap_verifier_infos[0];
         assert!(message.zkvm_type == ZKVMType::Risc0);
         let (selector, seal) = message.risc0_seal_selector()?;
+        let output = message.quote_verification_output;
 
         zkvm::verifier::verify_groth16_proof(
             selector,
             seal,
             zkdcap_verifier_info.program_id,
-            message.quote_verification_output.to_bytes(),
+            output.to_bytes(),
         )?;
 
-        let report =
-            if let QuoteBody::SGXQuoteBody(report) = message.quote_verification_output.quote_body {
-                report
-            } else {
-                return Err(Error::unexpected_quote_body());
-            };
+        let report = if let QuoteBody::SGXQuoteBody(report) = output.quote_body {
+            report
+        } else {
+            return Err(Error::unexpected_quote_body());
+        };
         let report_data = ReportData(report.report_data);
 
         assert_eq!(
@@ -267,31 +268,51 @@ impl LCPClient {
             client_state.mr_enclave.as_slice(),
             "mrenclave mismatch"
         );
+        assert_eq!(output.quote_version, 3, "unexpected quote version");
+        assert_eq!(output.tee_type, SGX_TEE_TYPE, "unexpected tee type");
         assert_eq!(
-            message.quote_verification_output.quote_version, 3,
-            "unexpected quote version"
-        );
-        assert_eq!(
-            message.quote_verification_output.tee_type, SGX_TEE_TYPE,
-            "unexpected tee type"
-        );
-        assert_eq!(
-            message.quote_verification_output.sgx_intel_root_ca_hash,
+            output.sgx_intel_root_ca_hash,
             remote_attestation::dcap::INTEL_ROOT_CA_HASH,
         );
+
+        #[allow(clippy::comparison_chain)]
+        #[allow(clippy::assertions_on_constants)]
+        let new_client_state = if client_state.latest_tcb_evaluation_data_number
+            < output.min_tcb_evaluation_data_number
+        {
+            Some(ClientState {
+                latest_tcb_evaluation_data_number: output.min_tcb_evaluation_data_number,
+                ..client_state.clone()
+            })
+        } else if client_state.latest_tcb_evaluation_data_number
+            > output.min_tcb_evaluation_data_number
+        {
+            if !client_state.allow_previous_tcb_evaluation_data_number
+                || client_state.latest_tcb_evaluation_data_number
+                    != output.min_tcb_evaluation_data_number + 1
+            {
+                assert!(false, "unexpected tcb evaluation data number");
+            }
+            None
+        } else {
+            None
+        };
+
         assert!(
-            message
-                .quote_verification_output
+            output
                 .validity
                 .validate_time(ctx.host_timestamp().as_unix_timestamp_secs()),
             "invalid validity intersection"
         );
-        let tcb_status = message.quote_verification_output.status.to_string();
+
         assert!(
-            tcb_status == "UpToDate" || client_state.allowed_quote_statuses.contains(&tcb_status),
+            output.status == Status::Ok
+                || client_state
+                    .allowed_quote_statuses
+                    .contains(&output.status.to_string()),
             "unexpected tcb status"
         );
-        for advisory_id in message.quote_verification_output.advisory_ids.iter() {
+        for advisory_id in output.advisory_ids.iter() {
             assert!(
                 client_state.allowed_advisory_ids.contains(advisory_id),
                 "unexpected advisory id"
@@ -302,7 +323,7 @@ impl LCPClient {
             verify_signature_address(
                 compute_eip712_zkdcap_register_enclave_key(
                     zkdcap_verifier_info,
-                    keccak256(&message.quote_verification_output.to_bytes()),
+                    keccak256(&output.to_bytes()),
                 )
                 .as_ref(),
                 operator_signature.as_ref(),
@@ -317,11 +338,11 @@ impl LCPClient {
             ctx,
             &client_id,
             report_data.enclave_key(),
-            EKOperatorInfo::new(
-                message.quote_verification_output.validity.not_after_min,
-                operator,
-            ),
+            EKOperatorInfo::new(output.validity.not_after_min, operator),
         );
+        if let Some(new_client_state) = new_client_state {
+            ctx.store_any_client_state(client_id, new_client_state.into())?;
+        }
         Ok(())
     }
 
@@ -566,16 +587,16 @@ pub fn compute_eip712_register_enclave_key_hash(avr: &str) -> [u8; 32] {
 
 pub fn compute_eip712_zkdcap_register_enclave_key(
     zkdcap_verifier_info: &ZKDCAPVerifierInfo,
-    commit_hash: [u8; 32],
+    output_hash: [u8; 32],
 ) -> Vec<u8> {
-    // 0x1901 | DOMAIN_SEPARATOR_ZKDCAP_REGISTER_ENCLAVE_KEY | keccak256(keccak256("ZKDCAPRegisterEnclaveKey(bytes zkDCAPVerifierInfo,bytes32 commitHash)") | keccak256(zkdcap_verifier_info) | commit_hash)
+    // 0x1901 | DOMAIN_SEPARATOR_ZKDCAP_REGISTER_ENCLAVE_KEY | keccak256(keccak256("ZKDCAPRegisterEnclaveKey(bytes zkDCAPVerifierInfo,bytes32 outputHash)") | keccak256(zkdcap_verifier_info) | output_hash)
     let type_hash = {
         let mut h = Keccak::v256();
         h.update(&keccak256(
-            b"ZKDCAPRegisterEnclaveKey(bytes zkDCAPVerifierInfo,bytes32 commitHash)",
+            b"ZKDCAPRegisterEnclaveKey(bytes zkDCAPVerifierInfo,bytes32 outputHash)",
         ));
         h.update(&keccak256(zkdcap_verifier_info.to_bytes().as_ref()));
-        h.update(&commit_hash);
+        h.update(&output_hash);
         let mut result = [0u8; 32];
         h.finalize(result.as_mut());
         result
