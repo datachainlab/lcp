@@ -271,8 +271,8 @@ pub(crate) fn simulate_gen_quote_and_collaterals(
         .unwrap();
 
     let collateral = QvCollateral {
-        tcb_info_json: serde_json::to_vec(&tcb_info).unwrap(),
-        qe_identity_json: serde_json::to_vec(&qe_identity).unwrap(),
+        tcb_info_json: serde_json::to_string(&tcb_info).unwrap(),
+        qe_identity_json: serde_json::to_string(&qe_identity).unwrap(),
         sgx_intel_root_ca_der: root_ca.cert.to_der().unwrap(),
         sgx_tcb_signing_der: tcb_certchain.cert.to_der().unwrap(),
         sgx_intel_root_ca_crl_der: root_ca.crl.to_der().unwrap(),

@@ -127,10 +127,10 @@ pub struct Risc0ZkvmProof {
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct QvCollateral {
-    #[prost(bytes = "vec", tag = "1")]
-    pub tcb_info_json: ::prost::alloc::vec::Vec<u8>,
-    #[prost(bytes = "vec", tag = "2")]
-    pub qe_identity_json: ::prost::alloc::vec::Vec<u8>,
+    #[prost(string, tag = "1")]
+    pub tcb_info_json: ::prost::alloc::string::String,
+    #[prost(string, tag = "2")]
+    pub qe_identity_json: ::prost::alloc::string::String,
     #[prost(bytes = "vec", tag = "3")]
     pub sgx_intel_root_ca_der: ::prost::alloc::vec::Vec<u8>,
     #[prost(bytes = "vec", tag = "4")]
