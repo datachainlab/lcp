@@ -102,7 +102,7 @@ impl LCPClient {
                 "only one verifier is supported"
             );
             assert!(
-                client_state.zkdcap_verifier_infos[0].zkvm_type == ZKVMType::Risc0,
+                client_state.zkdcap_verifier_infos[0].as_type() == ZKVMType::Risc0,
                 "only Risc0 is supported"
             );
         }
@@ -244,17 +244,15 @@ impl LCPClient {
     ) -> Result<(), Error> {
         assert!(!client_state.frozen);
         assert!(client_state.zkdcap_verifier_infos.len() == 1);
-        let zkdcap_verifier_info = &client_state.zkdcap_verifier_infos[0];
-        assert!(message.zkvm_type == ZKVMType::Risc0);
+        let risc0_program_id = match client_state.zkdcap_verifier_infos[0] {
+            ZKDCAPVerifierInfo::Risc0(info) => info,
+            vi => return Err(Error::unexpected_zkvm_type(ZKVMType::Risc0, vi.as_type())),
+        };
+
         let (selector, seal) = message.risc0_seal_selector()?;
         let output = message.quote_verification_output;
 
-        zkvm::verifier::verify_groth16_proof(
-            selector,
-            seal,
-            zkdcap_verifier_info.program_id,
-            output.to_bytes(),
-        )?;
+        zkvm::verifier::verify_groth16_proof(selector, seal, risc0_program_id, output.to_bytes())?;
 
         let report = if let QuoteBody::SGXQuoteBody(report) = output.quote_body {
             report
@@ -322,7 +320,7 @@ impl LCPClient {
         let operator = if let Some(operator_signature) = message.operator_signature {
             verify_signature_address(
                 compute_eip712_zkdcap_register_enclave_key(
-                    zkdcap_verifier_info,
+                    &client_state.zkdcap_verifier_infos[0],
                     keccak256(&output.to_bytes()),
                 )
                 .as_ref(),

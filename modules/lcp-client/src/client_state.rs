@@ -14,6 +14,7 @@ use light_client::types::{Any, Height};
 use prost::Message;
 use serde::{Deserialize, Serialize};
 
+/// The type URL for the client state protobuf message
 pub const LCP_CLIENT_STATE_TYPE_URL: &str = "/ibc.lightclients.lcp.v1.ClientState";
 
 #[derive(Clone, Debug, PartialEq, Eq, Default, Serialize, Deserialize)]
@@ -43,49 +44,62 @@ pub enum ZKVMType {
 impl ZKVMType {
     pub fn from_u8(value: u8) -> Result<Self, Error> {
         match value {
-            0 => Ok(ZKVMType::Unspecified),
-            1 => Ok(ZKVMType::Risc0),
+            0 => Ok(Self::Unspecified),
+            1 => Ok(Self::Risc0),
             _ => Err(Error::invalid_zkdcap_verifier_info(vec![value])),
         }
     }
-    pub fn as_u8(&self) -> u8 {
+    pub fn to_u8(&self) -> u8 {
         match self {
-            ZKVMType::Unspecified => 0,
-            ZKVMType::Risc0 => 1,
+            Self::Unspecified => 0,
+            Self::Risc0 => 1,
         }
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Default, Serialize, Deserialize)]
-pub struct ZKDCAPVerifierInfo {
-    pub zkvm_type: ZKVMType,
-    pub program_id: [u8; 32],
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default, Serialize, Deserialize)]
+pub enum ZKDCAPVerifierInfo {
+    #[default]
+    Unspecified,
+    Risc0([u8; 32]),
 }
 
 impl ZKDCAPVerifierInfo {
-    pub fn to_bytes(&self) -> Vec<u8> {
-        let mut bytes = Vec::with_capacity(64);
-        bytes.push(self.zkvm_type.as_u8());
-        bytes.extend_from_slice(&[0u8; 31]);
-        bytes.extend_from_slice(&self.program_id);
-        bytes
+    pub fn as_type(&self) -> ZKVMType {
+        match self {
+            Self::Unspecified => ZKVMType::Unspecified,
+            Self::Risc0(_) => ZKVMType::Risc0,
+        }
     }
 
     pub fn from_bytes(bytes: &[u8]) -> Result<Self, Error> {
-        if bytes.len() != 64 {
-            return Err(Error::invalid_zkdcap_verifier_info(bytes.to_vec()));
+        if bytes.is_empty() {
+            return Ok(Self::Unspecified);
         }
-        let zkvm_type = match bytes[0] {
-            0 => ZKVMType::Unspecified,
-            1 => ZKVMType::Risc0,
-            _ => return Err(Error::invalid_zkdcap_verifier_info(bytes.to_vec())),
-        };
-        let mut program_id = [0u8; 32];
-        program_id.copy_from_slice(&bytes[32..]);
-        Ok(ZKDCAPVerifierInfo {
-            zkvm_type,
-            program_id,
-        })
+        let zkvm_type = ZKVMType::from_u8(bytes[0])?;
+        match zkvm_type {
+            ZKVMType::Unspecified => Ok(Self::Unspecified),
+            ZKVMType::Risc0 => {
+                if bytes.len() != 64 {
+                    return Err(Error::invalid_zkdcap_verifier_info(bytes.to_vec()));
+                }
+                let mut image_id = [0u8; 32];
+                image_id.copy_from_slice(&bytes[32..]);
+                Ok(Self::Risc0(image_id))
+            }
+        }
+    }
+
+    pub fn to_bytes(&self) -> Vec<u8> {
+        match self {
+            Self::Unspecified => vec![0],
+            Self::Risc0(image_id) => {
+                let mut bytes = vec![ZKVMType::Risc0.to_u8()];
+                bytes.extend_from_slice([0u8; 31].as_ref());
+                bytes.extend_from_slice(image_id);
+                bytes
+            }
+        }
     }
 }
 

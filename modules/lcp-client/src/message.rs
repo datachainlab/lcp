@@ -119,10 +119,12 @@ pub struct ZKDCAPRegisterEnclaveKeyMessage {
 }
 
 impl ZKDCAPRegisterEnclaveKeyMessage {
+    /// Returns the selector and the proof for a RISC0 zkVM proof
     pub fn risc0_seal_selector(&self) -> Result<([u8; 4], Vec<u8>), Error> {
         if self.zkvm_type != ZKVMType::Risc0 {
             return Err(Error::unexpected_zkvm_type(ZKVMType::Risc0, self.zkvm_type));
         }
+        // The first 4 bytes of the proof are the selector
         if self.proof.len() < 4 {
             return Err(Error::invalid_risc0_proof_format());
         }
