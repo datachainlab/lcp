@@ -38,7 +38,7 @@ impl DCAPQuote {
     }
 
     /// Returns the report data from the quote
-    #[cfg(feature = "std")]
+    #[cfg(feature = "dcap-quote-parser")]
     pub fn report_data(&self) -> Result<crate::ReportData, Error> {
         use dcap_quote_verifier::types::quotes::version_3::QuoteV3;
         let (quote, _) = QuoteV3::from_bytes(&self.raw).map_err(Error::dcap_quote_verifier)?;
@@ -127,18 +127,5 @@ impl ZKDCAPQuote {
     /// Parses the quote from a JSON string
     pub fn from_json(json: &str) -> Result<Self, Error> {
         serde_json::from_str(json).map_err(Error::serde_json)
-    }
-
-    /// Returns the report data from the quote
-    #[cfg(feature = "std")]
-    pub fn report_data(&self) -> Result<crate::ReportData, Error> {
-        self.dcap_quote.report_data()
-    }
-
-    /// Returns the commit corresponding to the zkVM proof
-    #[cfg(feature = "std")]
-    pub fn commit(&self) -> Result<dcap_quote_verifier::verifier::QuoteVerificationOutput, Error> {
-        dcap_quote_verifier::verifier::QuoteVerificationOutput::from_bytes(self.zkp.output())
-            .map_err(Error::dcap_quote_verifier)
     }
 }

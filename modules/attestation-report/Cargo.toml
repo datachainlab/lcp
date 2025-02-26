@@ -26,9 +26,12 @@ tokio = { version = "1.0", default-features = false, features = ["macros"] }
 [features]
 default = ["std"]
 std = [
-    "dcap-quote-verifier",
     "webpki/std",
     "flex-error/std",
     "lcp-types/std",
     "serde_json/preserve_order"
+]
+dcap-quote-parser = [
+    "std",
+    "dcap-quote-verifier"
 ]
