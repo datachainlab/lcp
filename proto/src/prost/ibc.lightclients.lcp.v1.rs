@@ -106,17 +106,24 @@ pub struct ClientState {
     /// The denominator of the signature threshold for operator updates.
     #[prost(uint64, tag = "10")]
     pub operators_threshold_denominator: u64,
-    /// The latest TCB evaluation data number
+    /// The current TCB evaluation data number
     ///
-    /// The client updates this when receiving TCB evaluation data whose number is greater than the current number.
+    /// The client only accepts the zkDCAP output generated using collateral with a TCB evaluation data number equal to or greater than this number.
     #[prost(uint32, tag = "11")]
-    pub latest_tcb_evalulation_data_number: u32,
-    /// Indicates whether to allow the previous TCB evaluation data number.
+    pub current_tcb_evaluation_data_number: u32,
+    /// The grace period for updating to the latest TCB evaluation data number (in seconds)
     ///
-    /// If this is true, the client will accept the previous TCB evaluation data number (i.e., `latest_tcb_evalulation_data_number` - 1).
-    /// Otherwise, the client will only accept the latest TCB evaluation data number or greater.
-    #[prost(bool, tag = "12")]
-    pub allow_previous_tcb_evalulation_data_number: bool,
+    /// Note that this grace period is not affected for updates to non-latest numbers.
+    #[prost(uint32, tag = "12")]
+    pub tcb_evaluation_data_number_update_grace_period: u32,
+    /// The next TCB evaluation data number to be updated
+    ///
+    /// If this number is non-zero, `next_tcb_evaluation_data_number` must be greater than `current_tcb_evaluation_data_number`.
+    #[prost(uint32, tag = "13")]
+    pub next_tcb_evaluation_data_number: u32,
+    /// The update time of the next TCB evaluation data number (in UNIX time seconds)
+    #[prost(uint64, tag = "14")]
+    pub next_tcb_evaluation_data_number_update_time: u64,
     /// The verifier information for the zkDCAP
     ///
     /// The format is as follows:
@@ -127,7 +134,7 @@ pub struct ClientState {
     /// | 0 |  1 - 31  |  32 - 64  |
     /// |---|----------|-----------|
     /// | 1 | reserved | image id  |
-    #[prost(bytes = "vec", repeated, tag = "14")]
+    #[prost(bytes = "vec", repeated, tag = "15")]
     pub zkdcap_verifier_infos: ::prost::alloc::vec::Vec<::prost::alloc::vec::Vec<u8>>,
 }
 #[allow(clippy::derive_partial_eq_without_eq)]
@@ -139,7 +146,7 @@ pub struct ConsensusState {
     #[prost(bytes = "vec", tag = "1")]
     pub state_id: ::prost::alloc::vec::Vec<u8>,
     /// The timestamp of the target chain's block corresponding to the consensus height,
-    /// expressed in Unix time (seconds).
+    /// expressed in UNIX time (seconds).
     #[prost(uint64, tag = "2")]
     pub timestamp: u64,
 }

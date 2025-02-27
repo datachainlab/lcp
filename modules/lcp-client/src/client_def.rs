@@ -105,6 +105,16 @@ impl LCPClient {
                 client_state.zkdcap_verifier_infos[0].as_type() == ZKVMType::Risc0,
                 "only Risc0 is supported"
             );
+            assert!(
+                client_state.current_tcb_evaluation_data_number != 0,
+                "current_tcb_evaluation_data_number must not be 0"
+            );
+            assert_eq!(
+                client_state.next_tcb_evaluation_data_number == 0,
+                client_state.next_tcb_evaluation_data_number_update_time == 0,
+                "next_tcb_evaluation_data_number and next_tcb_evaluation_data_number_update_time must be both 0 or both non-zero"
+            );
+            assert!(client_state.next_tcb_evaluation_data_number == 0 || client_state.next_tcb_evaluation_data_number > client_state.current_tcb_evaluation_data_number, "next_tcb_evaluation_data_number must be greater than current_tcb_evaluation_data_number");
         }
 
         // An initial consensus state must be empty
@@ -273,28 +283,11 @@ impl LCPClient {
             remote_attestation::dcap::INTEL_ROOT_CA_HASH,
         );
 
-        #[allow(clippy::comparison_chain)]
-        #[allow(clippy::assertions_on_constants)]
-        let new_client_state = if client_state.latest_tcb_evaluation_data_number
-            < output.min_tcb_evaluation_data_number
-        {
-            Some(ClientState {
-                latest_tcb_evaluation_data_number: output.min_tcb_evaluation_data_number,
-                ..client_state.clone()
-            })
-        } else if client_state.latest_tcb_evaluation_data_number
-            > output.min_tcb_evaluation_data_number
-        {
-            if !client_state.allow_previous_tcb_evaluation_data_number
-                || client_state.latest_tcb_evaluation_data_number
-                    != output.min_tcb_evaluation_data_number + 1
-            {
-                assert!(false, "unexpected tcb evaluation data number");
-            }
-            None
-        } else {
-            None
-        };
+        self.check_and_update_tcb_evaluation_data_number(
+            ctx,
+            client_id.clone(),
+            output.min_tcb_evaluation_data_number,
+        )?;
 
         assert!(
             output
@@ -338,10 +331,120 @@ impl LCPClient {
             report_data.enclave_key(),
             EKOperatorInfo::new(output.validity.not_after_min, operator),
         );
-        if let Some(new_client_state) = new_client_state {
-            ctx.store_any_client_state(client_id, new_client_state.into())?;
-        }
         Ok(())
+    }
+
+    /// check_and_update_tcb_evaluation_data_number checks if the current or next TCB evaluation data number update is required.
+    #[allow(clippy::comparison_chain)]
+    fn check_and_update_tcb_evaluation_data_number(
+        &self,
+        ctx: &mut dyn HostClientKeeper,
+        client_id: ClientId,
+        output_tcb_evaluation_data_number: u32,
+    ) -> Result<(bool, bool), Error> {
+        let client_state = ClientState::try_from(ctx.client_state(&client_id)?)?;
+        let mut current_updated = false;
+
+        // check if the current or next TCB evaluation data number update is required
+        if client_state.next_tcb_evaluation_data_number != 0
+            && ctx.host_timestamp().as_unix_timestamp_secs()
+                >= client_state.next_tcb_evaluation_data_number_update_time
+        {
+            let mut new_client_state = client_state.clone();
+            new_client_state.current_tcb_evaluation_data_number =
+                client_state.next_tcb_evaluation_data_number;
+            new_client_state.next_tcb_evaluation_data_number = 0;
+            new_client_state.next_tcb_evaluation_data_number_update_time = 0;
+            current_updated = true;
+            // NOTE:
+            // - If the current number is updated again in a subsequent process, only one event is emitted
+            // - A new next TCB evaluation data number is not set, so the `next_updated` is false here
+            ctx.store_any_client_state(client_id.clone(), new_client_state.into())?;
+        }
+
+        if output_tcb_evaluation_data_number > client_state.current_tcb_evaluation_data_number {
+            if client_state.tcb_evaluation_data_number_update_grace_period == 0 {
+                // If the grace period is zero, the client immediately updates the current TCB evaluation data number
+                let mut new_client_state = client_state.clone();
+                new_client_state.current_tcb_evaluation_data_number =
+                    output_tcb_evaluation_data_number;
+                // If the grace period is zero, the `next_tcb_evaluation_data_number` and `next_tcb_evaluation_data_number_update_time` must always be zero
+                // Otherwise, there is an internal error in the client
+                assert!(
+                    new_client_state.next_tcb_evaluation_data_number == 0
+                        && new_client_state.next_tcb_evaluation_data_number_update_time == 0
+                );
+                ctx.store_any_client_state(client_id, new_client_state.into())?;
+                Ok((true, false))
+            } else {
+                // If the grace period is not zero, there may be a next TCB evaluation data number update in the client state
+
+                let next_update_time = ctx.host_timestamp().as_unix_timestamp_secs()
+                    + client_state.tcb_evaluation_data_number_update_grace_period as u64;
+
+                // If the next TCB evaluation data number is not set, the client sets the next TCB evaluation data number to the output's TCB evaluation data number
+                if client_state.next_tcb_evaluation_data_number == 0 {
+                    let mut new_client_state = client_state.clone();
+                    new_client_state.next_tcb_evaluation_data_number =
+                        output_tcb_evaluation_data_number;
+                    new_client_state.next_tcb_evaluation_data_number_update_time = next_update_time;
+                    ctx.store_any_client_state(client_id, new_client_state.into())?;
+                    return Ok((current_updated, true));
+                }
+
+                // If the next TCB evaluation data number is set, the client updates the next TCB evaluation data number
+
+                if output_tcb_evaluation_data_number > client_state.next_tcb_evaluation_data_number
+                {
+                    // Edge case 1. clientState.current_tcb_evaluation_data_number < clientState.next_tcb_evaluation_data_number < outputTcbEvaluationDataNumber
+                    //
+                    // In this case, the client immediately updates the current TCB evaluation data number with the `clientState.next_tcb_evaluation_data_number`
+                    // and updates the next TCB evaluation data number with the `outputTcbEvaluationDataNumber`
+                    //
+                    // This case can be caused by too long grace period values or multiple TCB Recovery Events with very short intervals.
+                    // Note that in this case the current number is updated ignoring the grace period setting.
+                    // However, the current number is still a non-latest number, so there should be no problem for the operator operating as expected.
+                    let mut new_client_state = client_state.clone();
+                    new_client_state.current_tcb_evaluation_data_number =
+                        client_state.next_tcb_evaluation_data_number;
+                    new_client_state.next_tcb_evaluation_data_number =
+                        output_tcb_evaluation_data_number;
+                    new_client_state.next_tcb_evaluation_data_number_update_time = next_update_time;
+                    ctx.store_any_client_state(client_id, new_client_state.into())?;
+                    Ok((true, true))
+                } else if output_tcb_evaluation_data_number
+                    < client_state.next_tcb_evaluation_data_number
+                {
+                    // Edge case 2. clientState.current_tcb_evaluation_data_number < outputTcbEvaluationDataNumber < clientState.next_tcb_evaluation_data_number
+                    //
+                    // In this case, the client immediately updates the current TCB evaluation data number with the `outputTcbEvaluationDataNumber`
+                    // and does not update the next TCB evaluation data number.
+                    //
+                    // This case can be caused by too long grace period values or multiple TCB Recovery Events with very short intervals.
+                    // Note that in this case the current number is updated ignoring the grace period setting.
+                    // However, the current number is still a non-latest number, so there should be no problem for the operator operating as expected.
+                    let mut new_client_state = client_state.clone();
+                    new_client_state.current_tcb_evaluation_data_number =
+                        output_tcb_evaluation_data_number;
+                    ctx.store_any_client_state(client_id, new_client_state.into())?;
+                    Ok((true, false))
+                } else {
+                    // General case. outputTcbEvaluationDataNumber == clientState.next_tcb_evaluation_data_number
+                    // In this case, the client already has the next TCB evaluation data number, so it does not need to be updated
+                    Ok((current_updated, false))
+                }
+            }
+        } else if output_tcb_evaluation_data_number
+            < client_state.current_tcb_evaluation_data_number
+        {
+            // The client must revert if the output's TCB evaluation data number is less than the current TCB evaluation data number
+            Err(Error::unexpected_tcb_evaluation_data_number(
+                client_state.current_tcb_evaluation_data_number,
+            ))
+        } else {
+            // nop: case outputTcbEvaluationDataNumber == clientState.current_tcb_evaluation_data_number
+            Ok((current_updated, false))
+        }
     }
 
     fn update_operators(

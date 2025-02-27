@@ -82,15 +82,20 @@ message ClientState {
   uint64 operators_threshold_numerator = 9;
   // The denominator of the signature threshold for operator updates.
   uint64 operators_threshold_denominator = 10;
-  // The latest TCB evaluation data number
+  // The current TCB evaluation data number
   //
-  // The client updates this when receiving TCB evaluation data whose number is greater than the current number.
-  uint32 latest_tcb_evalulation_data_number = 11;
-  // Indicates whether to allow the previous TCB evaluation data number.
+  // The client only accepts the zkDCAP output generated using collateral with a TCB evaluation data number equal to or greater than this number.
+  uint32 current_tcb_evaluation_data_number = 11;
+  // The grace period for updating to the latest TCB evaluation data number (in seconds)
   //
-  // If this is true, the client will accept the previous TCB evaluation data number (i.e., `latest_tcb_evalulation_data_number` - 1).
-  // Otherwise, the client will only accept the latest TCB evaluation data number or greater.
-  bool allow_previous_tcb_evalulation_data_number = 12;
+  // Note that this grace period is not affected for updates to non-latest numbers.
+  uint32 tcb_evaluation_data_number_update_grace_period = 12;
+  // The next TCB evaluation data number to be updated
+  //
+  // If this number is non-zero, `next_tcb_evaluation_data_number` must be greater than `current_tcb_evaluation_data_number`.
+  uint32 next_tcb_evaluation_data_number = 13;
+  // The update time of the next TCB evaluation data number (in UNIX time seconds)
+  uint64 next_tcb_evaluation_data_number_update_time = 14;
   // The verifier information for the zkDCAP
   //
   // The format is as follows:
@@ -101,7 +106,7 @@ message ClientState {
   // | 0 |  1 - 31  |  32 - 64  |
   // |---|----------|-----------|
   // | 1 | reserved | image id  |
-  repeated bytes zkdcap_verifier_infos = 14;
+  repeated bytes zkdcap_verifier_infos = 15;
 }
 
 message ConsensusState {
@@ -110,6 +115,6 @@ message ConsensusState {
   // Please check the state ID details: <https://docs.lcp.network/protocol/elc#state-id>
   bytes state_id = 1;
   // The timestamp of the target chain's block corresponding to the consensus height,
-  // expressed in Unix time (seconds).
+  // expressed in UNIX time (seconds).
   uint64 timestamp = 2;
 }

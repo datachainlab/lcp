@@ -61,6 +61,13 @@ define_error! {
             "Invalid Risc0 proof format"
         },
 
+        UnexpectedTcbEvaluationDataNumber {
+            number: u32
+        }
+        |e| {
+            format_args!("Unexpected TCB evaluation data number: number={}", e.number)
+        },
+
         AttestationReport
         [attestation_report::Error]
         |_| { "Attestation report error" },

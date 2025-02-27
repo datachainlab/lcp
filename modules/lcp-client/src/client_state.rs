@@ -29,8 +29,10 @@ pub struct ClientState {
     pub operators_nonce: u64,
     pub operators_threshold_numerator: u64,
     pub operators_threshold_denominator: u64,
-    pub latest_tcb_evaluation_data_number: u32,
-    pub allow_previous_tcb_evaluation_data_number: bool,
+    pub current_tcb_evaluation_data_number: u32,
+    pub tcb_evaluation_data_number_update_grace_period: u32,
+    pub next_tcb_evaluation_data_number: u32,
+    pub next_tcb_evaluation_data_number_update_time: u64,
     pub zkdcap_verifier_infos: Vec<ZKDCAPVerifierInfo>,
 }
 
@@ -147,9 +149,12 @@ impl From<ClientState> for RawClientState {
             operators_nonce: 0,
             operators_threshold_numerator: 0,
             operators_threshold_denominator: 0,
-            latest_tcb_evalulation_data_number: value.latest_tcb_evaluation_data_number,
-            allow_previous_tcb_evalulation_data_number: value
-                .allow_previous_tcb_evaluation_data_number,
+            current_tcb_evaluation_data_number: value.current_tcb_evaluation_data_number,
+            tcb_evaluation_data_number_update_grace_period: value
+                .tcb_evaluation_data_number_update_grace_period,
+            next_tcb_evaluation_data_number: value.next_tcb_evaluation_data_number,
+            next_tcb_evaluation_data_number_update_time: value
+                .next_tcb_evaluation_data_number_update_time,
             zkdcap_verifier_infos: value
                 .zkdcap_verifier_infos
                 .iter()
@@ -179,9 +184,12 @@ impl TryFrom<RawClientState> for ClientState {
             operators_nonce: raw.operators_nonce,
             operators_threshold_numerator: raw.operators_threshold_numerator,
             operators_threshold_denominator: raw.operators_threshold_denominator,
-            latest_tcb_evaluation_data_number: raw.latest_tcb_evalulation_data_number,
-            allow_previous_tcb_evaluation_data_number: raw
-                .allow_previous_tcb_evalulation_data_number,
+            current_tcb_evaluation_data_number: raw.current_tcb_evaluation_data_number,
+            tcb_evaluation_data_number_update_grace_period: raw
+                .tcb_evaluation_data_number_update_grace_period,
+            next_tcb_evaluation_data_number: raw.next_tcb_evaluation_data_number,
+            next_tcb_evaluation_data_number_update_time: raw
+                .next_tcb_evaluation_data_number_update_time,
             zkdcap_verifier_infos: raw
                 .zkdcap_verifier_infos
                 .into_iter()
