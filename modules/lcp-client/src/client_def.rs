@@ -325,11 +325,20 @@ impl LCPClient {
         let expected_operator = report_data.operator();
         // check if the operator matches the expected operator in the report data
         assert!(expected_operator.is_zero() || operator == expected_operator);
+
+        let expired_at = if client_state.key_expiration.is_zero() {
+            output.validity.not_after_min
+        } else {
+            core::cmp::min(
+                output.validity.not_before_max + client_state.key_expiration.as_secs(),
+                output.validity.not_after_min,
+            )
+        };
         self.set_enclave_operator_info(
             ctx,
             &client_id,
             report_data.enclave_key(),
-            EKOperatorInfo::new(output.validity.not_after_min, operator),
+            EKOperatorInfo::new(expired_at, operator),
         );
         Ok(())
     }
