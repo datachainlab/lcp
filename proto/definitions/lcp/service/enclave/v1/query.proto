@@ -49,10 +49,15 @@ message DCAPEnclaveKeyInfo {
   bytes enclave_key_address = 1;
   bytes quote = 2;
   bytes fmspc = 3;
-  uint64 attestation_time = 4;
+  Validity validity = 4;
   string tcb_status = 5;
   repeated string advisory_ids = 6;
   QVCollateral collateral = 7;
+}
+
+message Validity {
+  uint64 not_before = 1;
+  uint64 not_after = 2;
 }
 
 message ZKDCAPEncalveKeyInfo {

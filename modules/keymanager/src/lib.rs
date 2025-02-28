@@ -412,22 +412,18 @@ impl TryFrom<SealedEnclaveKeyInfo> for ProtoEnclaveKeyInfo {
                     })),
                 })
             }
-            Some(RAQuote::DCAP(dcap)) => {
-                let attestation_time = dcap.attested_at.as_unix_timestamp_secs();
-                Ok(ProtoEnclaveKeyInfo {
-                    key_info: Some(enclave_key_info::KeyInfo::Dcap(DcapEnclaveKeyInfo {
-                        enclave_key_address: value.address.into(),
-                        quote: dcap.raw,
-                        fmspc: dcap.fmspc.to_vec(),
-                        attestation_time,
-                        tcb_status: dcap.status,
-                        advisory_ids: dcap.advisory_ids,
-                        collateral: Some(dcap.collateral),
-                    })),
-                })
-            }
+            Some(RAQuote::DCAP(dcap)) => Ok(ProtoEnclaveKeyInfo {
+                key_info: Some(enclave_key_info::KeyInfo::Dcap(DcapEnclaveKeyInfo {
+                    enclave_key_address: value.address.into(),
+                    quote: dcap.raw,
+                    fmspc: dcap.fmspc.to_vec(),
+                    validity: dcap.validity.into(),
+                    tcb_status: dcap.status,
+                    advisory_ids: dcap.advisory_ids,
+                    collateral: Some(dcap.collateral),
+                })),
+            }),
             Some(RAQuote::ZKDCAP(zkquote)) => {
-                let attestation_time = zkquote.dcap_quote.attested_at.as_unix_timestamp_secs();
                 let dcap = zkquote.dcap_quote;
                 Ok(ProtoEnclaveKeyInfo {
                     key_info: Some(enclave_key_info::KeyInfo::Zkdcap(ZkdcapEncalveKeyInfo {
@@ -435,7 +431,7 @@ impl TryFrom<SealedEnclaveKeyInfo> for ProtoEnclaveKeyInfo {
                             enclave_key_address: value.address.into(),
                             quote: dcap.raw,
                             fmspc: dcap.fmspc.to_vec(),
-                            attestation_time,
+                            validity: dcap.validity.into(),
                             tcb_status: dcap.status,
                             advisory_ids: dcap.advisory_ids,
                             collateral: Some(dcap.collateral),

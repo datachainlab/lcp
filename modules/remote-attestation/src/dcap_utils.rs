@@ -1,8 +1,10 @@
 use attestation_report::DCAPQuote;
 use dcap_quote_verifier::collateral::QvCollateral;
 use dcap_quote_verifier::verifier::QuoteVerificationOutput;
-use lcp_types::proto::lcp::service::enclave::v1::QvCollateral as ProtoQvCollateral;
-use lcp_types::Time;
+use lcp_types::{
+    proto::lcp::service::enclave::v1::{QvCollateral as ProtoQvCollateral, Validity},
+    Time,
+};
 
 #[derive(Debug)]
 pub struct DCAPRemoteAttestationResult {
@@ -18,6 +20,10 @@ impl DCAPRemoteAttestationResult {
             fmspc: self.output.fmspc,
             status: self.output.status.to_string(),
             advisory_ids: self.output.advisory_ids.clone(),
+            validity: Validity {
+                not_before: self.output.validity.not_before_max,
+                not_after: self.output.validity.not_after_min,
+            },
             attested_at,
             collateral: ProtoQvCollateral {
                 tcb_info_json: self.collateral.tcb_info_json.clone(),
