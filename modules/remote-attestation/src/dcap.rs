@@ -68,10 +68,12 @@ pub(crate) fn dcap_ra(
     let output = verify_quote_v3(&quote, &collateral, current_time.as_unix_timestamp_secs())
         .map_err(Error::dcap_quote_verifier)?;
 
-    debug!(
-        "DCAP RA output: {:?} hex={}",
-        output,
-        hex::encode(output.to_bytes())
+    info!(
+        "DCAP RA done: status={} advisory_ids={:?} validity={} raw={}",
+        output.status,
+        output.advisory_ids,
+        output.validity,
+        hex::encode(quote.to_bytes())
     );
 
     Ok(DCAPRemoteAttestationResult {

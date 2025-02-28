@@ -3,7 +3,7 @@ use crate::errors::Error;
 use anyhow::anyhow;
 use attestation_report::QEType;
 use crypto::Address;
-use dcap_collaterals::certs::{gen_crl, gen_pck_certchain, PckCa, RootCa};
+use dcap_collaterals::certs::{gen_crl, gen_pck_certchain, PckCa, RootCa, Validity};
 use dcap_collaterals::enclave_identity::{EnclaveIdentityId, EnclaveIdentityV2Builder};
 use dcap_collaterals::enclave_report::{
     build_qe_auth_data, build_qe_report_data, EnclaveReportBuilder,
@@ -109,6 +109,14 @@ impl DCAPRASimulationOpts {
         &self.root_key
     }
 
+    pub fn tcb_info_validity(&self) -> Validity {
+        // TODO make this configurable
+        Validity::new_with_duration(
+            Time::now().as_unix_timestamp_secs().try_into().unwrap(),
+            i32::MAX as i64,
+        )
+    }
+
     pub fn with_advisory_ids(mut self, advisory_ids: Vec<String>) -> Self {
         self.advisory_ids = advisory_ids;
         self
@@ -175,6 +183,14 @@ pub(crate) fn dcap_ra_simulation(
 
     let output = verify_quote_v3(&quote, &collateral, current_time.as_unix_timestamp_secs())
         .map_err(Error::dcap_quote_verifier)?;
+
+    info!(
+        "DCAP RA simulation done: status={} advisory_ids={:?} validity={} raw={}",
+        output.status,
+        output.advisory_ids,
+        output.validity,
+        hex::encode(quote.to_bytes())
+    );
 
     Ok(DCAPRemoteAttestationResult {
         raw_quote: quote.to_bytes(),
@@ -259,6 +275,8 @@ pub(crate) fn simulate_gen_quote_and_collaterals(
 
     // fmspc and tcb_levels must be consistent with the sgx extensions in the pck cert
     let tcb_info = TcbInfoV3Builder::new(true)
+        .issue_date(opts.tcb_info_validity().not_before)
+        .next_update(opts.tcb_info_validity().not_after)
         .fmspc([0, 96, 106, 0, 0, 0])
         .tcb_evaluation_data_number(opts.tcb_evaluation_data_number)
         .tcb_levels(target_tcb_levels)
@@ -266,6 +284,8 @@ pub(crate) fn simulate_gen_quote_and_collaterals(
         .unwrap();
 
     let qe_identity = EnclaveIdentityV2Builder::new(EnclaveIdentityId::QE)
+        .issue_date(opts.tcb_info_validity().not_before)
+        .next_update(opts.tcb_info_validity().not_after)
         .tcb_evaluation_data_number(opts.tcb_evaluation_data_number)
         .tcb_levels_json(json!([
         {
