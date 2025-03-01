@@ -70,7 +70,7 @@ pub struct ClientState {
     pub mrenclave: ::prost::alloc::vec::Vec<u8>,
     /// The `key_expiration` is used to determine the validity period of the EK.
     ///
-    /// Calculation logic differs slightly between IAS and DCAP:
+    /// The logic for calculating EK validity periods slightly differs between IAS and DCAP:
     ///
     /// IAS:
     /// - This value must be greater than 0.
@@ -82,7 +82,7 @@ pub struct ClientState {
     ///    min(`qv_output.validity.not_before` + key_expiration, `output.validity.not_after`)
     ///
     /// Considerations:
-    /// - Operators should fetch the latest collateral from PCS to ensure the EK validity starts close to the current time.
+    /// - Operators should fetch the latest collateral from Intel Provisioning Certification Service (PCS) to ensure the EK validity starts close to the current time.
     /// - When the EK expires and the TCB evaluation data number has been updated, operators might not be immediately ready
     ///    to operate with the newly accepted TCB status, resulting in availability risks.
     ///    To mitigate this risk, operators should set an appropriate `tcb_evaluation_data_number_update_grace_period`.
@@ -117,7 +117,7 @@ pub struct ClientState {
     /// If this field is empty, operator signatures are not required, allowing any entity to act as an operator.
     ///
     /// Operational assumptions:
-    /// - At least one operator (incl. actors not included in `operators`) is expected to promptly reference and report the latest TCB evaluation data number.
+    /// - At least one operator (including entities not listed in the `operators` field) is expected to promptly reference and report the latest TCB evaluation data number.
     ///    - If no operator promptly reports the latest TCB number, the client continues accepting attestations based on outdated collateral for up to 12 months.
     /// - Not all operators may immediately prepare an SGX environment compatible with the latest TCB level.
     ///    - The `tcb_evaluation_data_number_update_grace_period` ensures that all operators have a guaranteed minimum period to update their SGX environments, maintaining overall availability.
@@ -137,7 +137,7 @@ pub struct ClientState {
     /// The client only accepts the zkDCAP output generated using collateral with a TCB evaluation data number equal to or greater than this number.
     #[prost(uint32, tag = "11")]
     pub current_tcb_evaluation_data_number: u32,
-    /// The grace period for updating to the latest TCB evaluation data number (in seconds)
+    /// The grace period (in seconds) for operators to update their SGX environments to support a newly observed TCB evaluation data number.
     ///
     /// Notes:
     /// - A shorter grace period could increase availability risk if operators are not given sufficient time
@@ -145,13 +145,10 @@ pub struct ClientState {
     /// - Conversely, a longer grace period could delay the adoption of the latest TCB level, potentially increasing security risks.
     /// - Operators must carefully consider their operational preparation needs and security posture when configuring this value.
     ///
-    /// Relationship among `tcb_evaluation_data_number_update_grace_period`,
-    /// `next_tcb_evaluation_data_number`, and `next_tcb_evaluation_data_number_update_time`:
-    ///
-    /// When a new TCB evaluation data number greater than the current one is observed:
+    /// When a new TCB evaluation data number greater than the current number is observed:
     ///
     /// - If the grace period is zero:
-    ///    - The current TCB evaluation data number is updated immediately.
+    ///    - The current number is updated immediately.
     ///
     /// - If the grace period is non-zero:
     ///    - The new number is reserved as `next_tcb_evaluation_data_number`.
@@ -167,8 +164,8 @@ pub struct ClientState {
     ///      - Immediate activation of newly observed number, preserving the reserved next number.
     ///
     /// These edge cases can occur due to excessively long grace periods or frequent TCB Recovery Events occurring within shorter intervals than the typical 6-month update frequency.
-    /// However, since we assume that the operators can prepare for non-latest TCB, the practical availability impact of these edge cases is considered limited.
-    /// In addition, given a well-configured grace period aligned with typical TCB update intervals, the client will never skip the grace period for the each TCB number.
+    /// Note that we assume operators can maintain an appropriate TCB status based on previous TCB collateral. Therefore, we expect that immediate updates in these edge cases do not cause operational issues.
+    /// Additionally, with a well-configured grace period aligned with typical TCB update intervals, the client will never skip the configured grace period for any TCB number update.
     #[prost(uint32, tag = "12")]
     pub tcb_evaluation_data_number_update_grace_period: u32,
     /// Next TCB evaluation data number scheduled to be updated
@@ -188,15 +185,17 @@ pub struct ClientState {
     pub next_tcb_evaluation_data_number_update_time: u64,
     /// Contains verifier-specific information for zkDCAP proofs.
     ///
-    /// The format is as follows:
-    /// 0: zkVM type
-    /// 1-N: arbitrary data for each zkVM type
+    /// Data format:
+    /// - First byte (0): zkVM type identifier.
+    /// - Remaining bytes (1–N): zkVM-specific data.
     ///
-    /// Currently, only RISC Zero zkVM (type=1) is supported.
-    /// The format of the risc0 zkVM is as follows:
-    /// | 0 |  1 - 31  |  32 - 64  |
-    /// |---|----------|-----------|
-    /// | 1 | reserved | image id  |
+    /// Currently, only RISC Zero zkVM (type=1) is supported, with the following format:
+    ///
+    /// | Byte(s) | Description                 |
+    /// |---------|-----------------------------|
+    /// | 0       | zkVM type (fixed as 1)      |
+    /// | 1–31    | Reserved (set as zero)      |
+    /// | 32–63   | Image ID                    |
     #[prost(bytes = "vec", repeated, tag = "15")]
     pub zkdcap_verifier_infos: ::prost::alloc::vec::Vec<::prost::alloc::vec::Vec<u8>>,
 }

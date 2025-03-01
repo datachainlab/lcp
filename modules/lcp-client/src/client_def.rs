@@ -352,7 +352,7 @@ impl LCPClient {
 
     /// check_and_update_tcb_evaluation_data_number checks if the current or next TCB evaluation data number update is required.
     ///
-    /// The update logic aligns strictly with the proto definition in `LCP.proto`:
+    /// The update logic aligns strictly with the proto definition in `proto/definitions/ibc/lightclients/lcp/v1/lcp.proto`:
     /// - If the reserved next number's update time has arrived, it immediately replaces the current number.
     /// - Observing a number greater than the current number triggers updates depending on the configured grace period:
     ///   - Zero grace period: Immediate update; no next number reserved.
