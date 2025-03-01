@@ -65,12 +65,27 @@ pub struct UpdateOperatorsMessage {
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ClientState {
-    /// The MRENCLAVE of the enclave in running on the target platform
+    /// This value strictly identifies the allowed enclave.
     #[prost(bytes = "vec", tag = "1")]
     pub mrenclave: ::prost::alloc::vec::Vec<u8>,
-    /// The expiration period (in seconds) of the enclave key from the time of remote attestation.
+    /// The `key_expiration` is used to determine the validity period of the EK.
     ///
-    /// This is used only for IAS.
+    /// Calculation logic differs slightly between IAS and DCAP:
+    ///
+    /// IAS:
+    /// - This value must be greater than 0.
+    /// - The EK validity ends at `ias_report.timestamp + key_expiration`.
+    ///
+    /// DCAP:
+    /// - If the value is 0, the EK validity ends at `output.validity.not_after`.
+    /// - If the value is greater than 0, the EK validity ends at:
+    ///    min(`qv_output.validity.not_before` + key_expiration, `output.validity.not_after`)
+    ///
+    /// Considerations:
+    /// - Operators should fetch the latest collateral from PCS to ensure the EK validity starts close to the current time.
+    /// - When the EK expires and the TCB evaluation data number has been updated, operators might not be immediately ready
+    ///    to operate with the newly accepted TCB status, resulting in availability risks.
+    ///    To mitigate this risk, operators should set an appropriate `tcb_evaluation_data_number_update_grace_period`.
     #[prost(uint64, tag = "2")]
     pub key_expiration: u64,
     /// Indicates whether the client is frozen.
@@ -81,20 +96,31 @@ pub struct ClientState {
     pub latest_height: ::core::option::Option<
         super::super::super::core::client::v1::Height,
     >,
-    /// The set of quote statuses that the client accepts for the target enclave.
+    /// Determines which SGX enclave quote statuses are acceptable.
+    ///
+    /// Operators must configure this carefully based on their operational
+    /// security posture and environment-specific considerations.
     ///
     /// e.g. IAS: SW_HARDENING_NEEDED, CONFIGURATION_AND_SW_HARDENING_NEEDED
     ///       DCAP: SWHardeningNeeded, ConfigurationAndSWHardeningNeeded
     #[prost(string, repeated, tag = "5")]
     pub allowed_quote_statuses: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
-    /// The set of Security Advisory IDs that the client allows.
+    /// Specifies Security Advisory IDs that operators explicitly allow.
+    ///
+    /// Operators must carefully consider the security implications of allowing specific advisories.
     ///
     /// e.g. INTEL-SA-00001, INTEL-SA-00002
     #[prost(string, repeated, tag = "6")]
     pub allowed_advisory_ids: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
-    /// A list of LCP operator addresses associated with this client.
+    /// A list of LCP operator addresses (ethereum format) associated with this client.
     ///
-    /// Please check LCP operator details: <<https://docs.lcp.network/protocol/lcp-client#lcp-operator>>
+    /// If this field is empty, operator signatures are not required, allowing any entity to act as an operator.
+    ///
+    /// Operational assumptions:
+    /// - At least one operator (incl. actors not included in `operators`) is expected to promptly reference and report the latest TCB evaluation data number.
+    ///    - If no operator promptly reports the latest TCB number, the client continues accepting attestations based on outdated collateral for up to 12 months.
+    /// - Not all operators may immediately prepare an SGX environment compatible with the latest TCB level.
+    ///    - The `tcb_evaluation_data_number_update_grace_period` ensures that all operators have a guaranteed minimum period to update their SGX environments, maintaining overall availability.
     #[prost(bytes = "vec", repeated, tag = "7")]
     pub operators: ::prost::alloc::vec::Vec<::prost::alloc::vec::Vec<u8>>,
     /// The current nonce used in operator updates.
@@ -113,23 +139,60 @@ pub struct ClientState {
     pub current_tcb_evaluation_data_number: u32,
     /// The grace period for updating to the latest TCB evaluation data number (in seconds)
     ///
-    /// Note that this grace period is not affected for updates to non-latest numbers.
+    /// Notes:
+    /// - A shorter grace period could increase availability risk if operators are not given sufficient time
+    ///    to prepare the new SGX environment compatible with the updated TCB level.
+    /// - Conversely, a longer grace period could delay the adoption of the latest TCB level, potentially increasing security risks.
+    /// - Operators must carefully consider their operational preparation needs and security posture when configuring this value.
+    ///
+    /// Relationship among `tcb_evaluation_data_number_update_grace_period`,
+    /// `next_tcb_evaluation_data_number`, and `next_tcb_evaluation_data_number_update_time`:
+    ///
+    /// When a new TCB evaluation data number greater than the current one is observed:
+    ///
+    /// - If the grace period is zero:
+    ///    - The current TCB evaluation data number is updated immediately.
+    ///
+    /// - If the grace period is non-zero:
+    ///    - The new number is reserved as `next_tcb_evaluation_data_number`.
+    ///    - `next_tcb_evaluation_data_number_update_time` is set to current timestamp plus the grace period.
+    ///
+    /// Edge cases:
+    ///
+    ///    - Edge case 1 (current < next < newly observed number):
+    ///      - Immediate activation of reserved next number, bypassing the remaining grace period.
+    ///      - Newly observed number is reserved as the next number.
+    ///
+    ///    - Edge case 2 (current < newly observed number < next):
+    ///      - Immediate activation of newly observed number, preserving the reserved next number.
+    ///
+    /// These edge cases can occur due to excessively long grace periods or frequent TCB Recovery Events occurring within shorter intervals than the typical 6-month update frequency.
+    /// However, since we assume that the operators can prepare for non-latest TCB, the practical availability impact of these edge cases is considered limited.
+    /// In addition, given a well-configured grace period aligned with typical TCB update intervals, the client will never skip the grace period for the each TCB number.
     #[prost(uint32, tag = "12")]
     pub tcb_evaluation_data_number_update_grace_period: u32,
-    /// The next TCB evaluation data number to be updated
+    /// Next TCB evaluation data number scheduled to be updated
     ///
-    /// If this number is non-zero, `next_tcb_evaluation_data_number` must be greater than `current_tcb_evaluation_data_number`.
+    /// Notes:
+    /// - Must be zero if and only if `next_tcb_evaluation_data_number_update_time` is zero.
+    /// - When `tcb_evaluation_data_number_update_grace_period` is zero, this field must always be zero.
+    /// - If this is non-zero, this number must be always greater than the `current_tcb_evaluation_data_number`.
     #[prost(uint32, tag = "13")]
     pub next_tcb_evaluation_data_number: u32,
-    /// The update time of the next TCB evaluation data number (in UNIX time seconds)
+    /// Scheduled update time of the next TCB evaluation data number (UNIX time seconds)
+    ///
+    /// Notes:
+    /// - Must be zero if and only if `next_tcb_evaluation_data_number` is zero.
+    /// - When `tcb_evaluation_data_number_update_grace_period` is zero, this field must always be zero.
     #[prost(uint64, tag = "14")]
     pub next_tcb_evaluation_data_number_update_time: u64,
-    /// The verifier information for the zkDCAP
+    /// Contains verifier-specific information for zkDCAP proofs.
     ///
     /// The format is as follows:
     /// 0: zkVM type
     /// 1-N: arbitrary data for each zkVM type
     ///
+    /// Currently, only RISC Zero zkVM (type=1) is supported.
     /// The format of the risc0 zkVM is as follows:
     /// | 0 |  1 - 31  |  32 - 64  |
     /// |---|----------|-----------|

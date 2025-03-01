@@ -72,8 +72,6 @@ impl LCPClient {
         client_state: ClientState,
         consensus_state: ConsensusState,
     ) -> Result<(), Error> {
-        // key_expiration must not be 0
-        assert!(!client_state.key_expiration.is_zero());
         // An initial client state's latest height must be empty
         assert!(client_state.latest_height.is_zero());
         // mr_enclave length must be 32
@@ -115,6 +113,11 @@ impl LCPClient {
                 "next_tcb_evaluation_data_number and next_tcb_evaluation_data_number_update_time must be both 0 or both non-zero"
             );
             assert!(client_state.next_tcb_evaluation_data_number == 0 || client_state.next_tcb_evaluation_data_number > client_state.current_tcb_evaluation_data_number, "next_tcb_evaluation_data_number must be greater than current_tcb_evaluation_data_number");
+        } else {
+            assert!(
+                !client_state.key_expiration.is_zero(),
+                "key_expiration must not be 0 if DCAP/zkDCAP is not supported"
+            );
         }
 
         // An initial consensus state must be empty
@@ -283,11 +286,15 @@ impl LCPClient {
             remote_attestation::dcap::INTEL_ROOT_CA_HASH,
         );
 
-        self.check_and_update_tcb_evaluation_data_number(
-            ctx,
-            client_id.clone(),
-            output.min_tcb_evaluation_data_number,
-        )?;
+        let (client_state, current_updated, next_updated) = self
+            .check_and_update_tcb_evaluation_data_number(
+                ctx,
+                client_id.clone(),
+                output.min_tcb_evaluation_data_number,
+            )?;
+        if current_updated || next_updated {
+            ctx.store_any_client_state(client_id.clone(), client_state.clone().into())?;
+        }
 
         assert!(
             output
@@ -344,115 +351,94 @@ impl LCPClient {
     }
 
     /// check_and_update_tcb_evaluation_data_number checks if the current or next TCB evaluation data number update is required.
+    ///
+    /// The update logic aligns strictly with the proto definition in `LCP.proto`:
+    /// - If the reserved next number's update time has arrived, it immediately replaces the current number.
+    /// - Observing a number greater than the current number triggers updates depending on the configured grace period:
+    ///   - Zero grace period: Immediate update; no next number reserved.
+    ///   - Non-zero grace period:
+    ///     - If no next number reserved yet, reserve the observed number.
+    ///     - If a next number is already reserved:
+    ///       - General case: No action required if the observed number matches the reserved number.
+    ///       - Edge case 1 (current < next < observed): Immediate update of current number to reserved number; reserve newly observed number.
+    ///       - Edge case 2 (current < observed < next): Immediate update of current number to observed number; reserved number unchanged.
+    ///
     #[allow(clippy::comparison_chain)]
     fn check_and_update_tcb_evaluation_data_number(
         &self,
         ctx: &mut dyn HostClientKeeper,
         client_id: ClientId,
         output_tcb_evaluation_data_number: u32,
-    ) -> Result<(bool, bool), Error> {
-        let client_state = ClientState::try_from(ctx.client_state(&client_id)?)?;
+    ) -> Result<(ClientState, bool, bool), Error> {
+        let mut client_state = ClientState::try_from(ctx.client_state(&client_id)?)?;
         let mut current_updated = false;
 
-        // check if the current or next TCB evaluation data number update is required
+        // Check if the reserved next TCB number is due for update.
         if client_state.next_tcb_evaluation_data_number != 0
             && ctx.host_timestamp().as_unix_timestamp_secs()
                 >= client_state.next_tcb_evaluation_data_number_update_time
         {
-            let mut new_client_state = client_state.clone();
-            new_client_state.current_tcb_evaluation_data_number =
+            client_state.current_tcb_evaluation_data_number =
                 client_state.next_tcb_evaluation_data_number;
-            new_client_state.next_tcb_evaluation_data_number = 0;
-            new_client_state.next_tcb_evaluation_data_number_update_time = 0;
+            client_state.next_tcb_evaluation_data_number = 0;
+            client_state.next_tcb_evaluation_data_number_update_time = 0;
             current_updated = true;
-            // NOTE:
-            // - If the current number is updated again in a subsequent process, only one event is emitted
-            // - A new next TCB evaluation data number is not set, so the `next_updated` is false here
-            ctx.store_any_client_state(client_id.clone(), new_client_state.into())?;
+            // No new next number reservation here.
         }
 
         if output_tcb_evaluation_data_number > client_state.current_tcb_evaluation_data_number {
             if client_state.tcb_evaluation_data_number_update_grace_period == 0 {
-                // If the grace period is zero, the client immediately updates the current TCB evaluation data number
-                let mut new_client_state = client_state.clone();
-                new_client_state.current_tcb_evaluation_data_number =
-                    output_tcb_evaluation_data_number;
-                // If the grace period is zero, the `next_tcb_evaluation_data_number` and `next_tcb_evaluation_data_number_update_time` must always be zero
-                // Otherwise, there is an internal error in the client
+                // Immediate update due to zero grace period.
+                client_state.current_tcb_evaluation_data_number = output_tcb_evaluation_data_number;
+                // Sanity check: No next number should be reserved if grace period is zero.
                 assert!(
-                    new_client_state.next_tcb_evaluation_data_number == 0
-                        && new_client_state.next_tcb_evaluation_data_number_update_time == 0
+                    client_state.next_tcb_evaluation_data_number == 0
+                        && client_state.next_tcb_evaluation_data_number_update_time == 0
                 );
-                ctx.store_any_client_state(client_id, new_client_state.into())?;
-                Ok((true, false))
+                Ok((client_state, true, false))
             } else {
-                // If the grace period is not zero, there may be a next TCB evaluation data number update in the client state
-
                 let next_update_time = ctx.host_timestamp().as_unix_timestamp_secs()
                     + client_state.tcb_evaluation_data_number_update_grace_period as u64;
 
-                // If the next TCB evaluation data number is not set, the client sets the next TCB evaluation data number to the output's TCB evaluation data number
                 if client_state.next_tcb_evaluation_data_number == 0 {
-                    let mut new_client_state = client_state.clone();
-                    new_client_state.next_tcb_evaluation_data_number =
+                    // No reserved number yet; reserve now.
+                    client_state.next_tcb_evaluation_data_number =
                         output_tcb_evaluation_data_number;
-                    new_client_state.next_tcb_evaluation_data_number_update_time = next_update_time;
-                    ctx.store_any_client_state(client_id, new_client_state.into())?;
-                    return Ok((current_updated, true));
+                    client_state.next_tcb_evaluation_data_number_update_time = next_update_time;
+                    return Ok((client_state, current_updated, true));
                 }
-
-                // If the next TCB evaluation data number is set, the client updates the next TCB evaluation data number
 
                 if output_tcb_evaluation_data_number > client_state.next_tcb_evaluation_data_number
                 {
-                    // Edge case 1. clientState.current_tcb_evaluation_data_number < clientState.next_tcb_evaluation_data_number < outputTcbEvaluationDataNumber
-                    //
-                    // In this case, the client immediately updates the current TCB evaluation data number with the `clientState.next_tcb_evaluation_data_number`
-                    // and updates the next TCB evaluation data number with the `outputTcbEvaluationDataNumber`
-                    //
-                    // This case can be caused by too long grace period values or multiple TCB Recovery Events with very short intervals.
-                    // Note that in this case the current number is updated ignoring the grace period setting.
-                    // However, the current number is still a non-latest number, so there should be no problem for the operator operating as expected.
-                    let mut new_client_state = client_state.clone();
-                    new_client_state.current_tcb_evaluation_data_number =
+                    // Edge case 1: Immediate update to previously reserved next number.
+                    client_state.current_tcb_evaluation_data_number =
                         client_state.next_tcb_evaluation_data_number;
-                    new_client_state.next_tcb_evaluation_data_number =
+                    client_state.next_tcb_evaluation_data_number =
                         output_tcb_evaluation_data_number;
-                    new_client_state.next_tcb_evaluation_data_number_update_time = next_update_time;
-                    ctx.store_any_client_state(client_id, new_client_state.into())?;
-                    Ok((true, true))
+                    client_state.next_tcb_evaluation_data_number_update_time = next_update_time;
+                    Ok((client_state, true, true))
                 } else if output_tcb_evaluation_data_number
                     < client_state.next_tcb_evaluation_data_number
                 {
-                    // Edge case 2. clientState.current_tcb_evaluation_data_number < outputTcbEvaluationDataNumber < clientState.next_tcb_evaluation_data_number
-                    //
-                    // In this case, the client immediately updates the current TCB evaluation data number with the `outputTcbEvaluationDataNumber`
-                    // and does not update the next TCB evaluation data number.
-                    //
-                    // This case can be caused by too long grace period values or multiple TCB Recovery Events with very short intervals.
-                    // Note that in this case the current number is updated ignoring the grace period setting.
-                    // However, the current number is still a non-latest number, so there should be no problem for the operator operating as expected.
-                    let mut new_client_state = client_state.clone();
-                    new_client_state.current_tcb_evaluation_data_number =
+                    // Edge case 2: Immediate update to the newly observed number, keep existing reservation.
+                    client_state.current_tcb_evaluation_data_number =
                         output_tcb_evaluation_data_number;
-                    ctx.store_any_client_state(client_id, new_client_state.into())?;
-                    Ok((true, false))
+                    Ok((client_state, true, false))
                 } else {
-                    // General case. outputTcbEvaluationDataNumber == clientState.next_tcb_evaluation_data_number
-                    // In this case, the client already has the next TCB evaluation data number, so it does not need to be updated
-                    Ok((current_updated, false))
+                    // General case: The observed number is already reserved; no action required.
+                    Ok((client_state, current_updated, false))
                 }
             }
         } else if output_tcb_evaluation_data_number
             < client_state.current_tcb_evaluation_data_number
         {
-            // The client must revert if the output's TCB evaluation data number is less than the current TCB evaluation data number
+            // Reverting due to invalid backward update.
             Err(Error::unexpected_tcb_evaluation_data_number(
                 client_state.current_tcb_evaluation_data_number,
             ))
         } else {
-            // nop: case outputTcbEvaluationDataNumber == clientState.current_tcb_evaluation_data_number
-            Ok((current_updated, false))
+            // Observed number matches current; no updates necessary.
+            Ok((client_state, current_updated, false))
         }
     }
 
