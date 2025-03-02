@@ -63,7 +63,7 @@ pub(crate) fn dcap_ra(
     let (quote, _) = QuoteV3::from_bytes(&raw_quote).map_err(Error::dcap_quote_verifier)?;
 
     let collateral = pcs_client
-        .get_collateral(&quote.signature.qe_cert_data)
+        .get_collateral(true, &quote.signature.qe_cert_data)
         .map_err(|e| Error::anyhow(anyhow!("cannot get collateral data: {}", e)))?;
     let output = verify_quote_v3(&quote, &collateral, current_time.as_unix_timestamp_secs())
         .map_err(Error::dcap_quote_verifier)?;
@@ -119,7 +119,7 @@ mod tests {
             false,
         );
         let collateral = pcs_client
-            .get_collateral(&quote.signature.qe_cert_data)
+            .get_collateral(true, &quote.signature.qe_cert_data)
             .unwrap();
         let res = verify_quote_v3(&quote, &collateral, Time::now().as_unix_timestamp_secs());
         assert!(res.is_ok(), "{:?}", res);

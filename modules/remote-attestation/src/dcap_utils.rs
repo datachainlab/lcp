@@ -21,8 +21,8 @@ impl DCAPRemoteAttestationResult {
             status: self.output.status.to_string(),
             advisory_ids: self.output.advisory_ids.clone(),
             validity: Validity {
-                not_before: self.output.validity.not_before_max,
-                not_after: self.output.validity.not_after_min,
+                not_before: self.output.validity.not_before,
+                not_after: self.output.validity.not_after,
             },
             attested_at,
             collateral: ProtoQvCollateral {

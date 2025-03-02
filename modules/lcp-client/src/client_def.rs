@@ -296,11 +296,11 @@ impl LCPClient {
             ctx.store_any_client_state(client_id.clone(), client_state.clone().into())?;
         }
 
+        let host_timestamp = ctx.host_timestamp().as_unix_timestamp_secs();
         assert!(
-            output
-                .validity
-                .validate_time(ctx.host_timestamp().as_unix_timestamp_secs()),
-            "invalid validity intersection"
+            output.validity.not_before <= host_timestamp
+                && host_timestamp <= output.validity.not_after,
+            "output validity check failed"
         );
 
         assert!(
@@ -334,11 +334,11 @@ impl LCPClient {
         assert!(expected_operator.is_zero() || operator == expected_operator);
 
         let expired_at = if client_state.key_expiration.is_zero() {
-            output.validity.not_after_min
+            output.validity.not_after
         } else {
             core::cmp::min(
-                output.validity.not_before_max + client_state.key_expiration.as_secs(),
-                output.validity.not_after_min,
+                output.validity.not_before + client_state.key_expiration.as_secs(),
+                output.validity.not_after,
             )
         };
         self.set_enclave_operator_info(
