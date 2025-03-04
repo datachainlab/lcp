@@ -165,9 +165,9 @@ fn zkdcap_ra(
         output,
         collateral,
     }
-    .get_ra_quote(current_time);
+    .to_ra_quote();
     key_manager
-        .save_ra_quote(
+        .update_ra_quote(
             target_enclave_key,
             ZKDCAPQuote::new(
                 quote,

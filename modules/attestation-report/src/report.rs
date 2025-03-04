@@ -3,6 +3,7 @@ use crate::{dcap::DCAPQuote, errors::Error};
 use crate::{prelude::*, IASSignedReport};
 use core::fmt::{Debug, Display, Error as FmtError};
 use core::str::FromStr;
+use core::time::Duration;
 use crypto::Address;
 use lcp_types::Time;
 use serde::{Deserialize, Serialize};
@@ -166,12 +167,40 @@ impl RAQuote {
         }
     }
 
-    /// Returns the attestation time of the quote
-    pub fn attested_at(&self) -> Result<Time, Error> {
+    /// valid_from returns the time when the RA quote is valid
+    pub fn valid_from(&self) -> Result<Time, Error> {
         match self {
-            RAQuote::IAS(report) => report.get_avr()?.attestation_time(),
-            RAQuote::DCAP(quote) => Ok(quote.attested_at),
-            RAQuote::ZKDCAP(quote) => Ok(quote.dcap_quote.attested_at),
+            // NOTE: For IAS quote, we use the attestation time as the valid from time
+            RAQuote::IAS(report) => Ok(report.get_avr()?.attestation_time()?),
+            RAQuote::DCAP(quote) => Ok(Time::from_unix_timestamp(
+                quote.validity.not_before.try_into().unwrap(),
+                0,
+            )?),
+            RAQuote::ZKDCAP(quote) => Ok(Time::from_unix_timestamp(
+                quote.dcap_quote.validity.not_before.try_into().unwrap(),
+                0,
+            )?),
+        }
+    }
+
+    /// valid_to returns the time when the RA quote is no longer valid
+    pub fn valid_to(&self) -> Result<Time, Error> {
+        match self {
+            // NOTE: SGX collateral is valid for 30 days, so we assume the IAS quote also has the same validity period here
+            //       However, the actual validity period should be specified by a quote verifier
+            //       ref. https://www.intel.com/content/www/us/en/developer/articles/technical/grace-periods-for-intel-sgx-dcap.html
+            RAQuote::IAS(report) => {
+                Ok((report.get_avr()?.attestation_time()?
+                    + Duration::from_secs(60 * 60 * 24 * 30))?)
+            }
+            RAQuote::DCAP(quote) => Ok(Time::from_unix_timestamp(
+                quote.validity.not_after.try_into().unwrap(),
+                0,
+            )?),
+            RAQuote::ZKDCAP(quote) => Ok(Time::from_unix_timestamp(
+                quote.dcap_quote.validity.not_after.try_into().unwrap(),
+                0,
+            )?),
         }
     }
 

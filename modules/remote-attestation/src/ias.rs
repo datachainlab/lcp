@@ -40,7 +40,7 @@ pub fn run_ias_ra(
         signed_report.get_avr()?.parse_quote()?.report_data()
     );
     key_manager
-        .save_ra_quote(target_enclave_key, signed_report.clone().into())
+        .update_ra_quote(target_enclave_key, signed_report.clone().into())
         .map_err(|e| {
             Error::key_manager(format!("cannot save IAS AVR: {}", target_enclave_key), e)
         })?;

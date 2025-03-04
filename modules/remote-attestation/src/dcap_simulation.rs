@@ -148,7 +148,7 @@ pub fn run_dcap_ra_simulation(
     let res = dcap_ra_simulation(key_manager, target_enclave_key, current_time, opts)?;
 
     key_manager
-        .save_ra_quote(target_enclave_key, res.get_ra_quote(current_time).into())
+        .update_ra_quote(target_enclave_key, res.to_ra_quote().into())
         .map_err(|e| {
             Error::key_manager(
                 format!("cannot save DCAP Simulation Quote: {}", target_enclave_key),

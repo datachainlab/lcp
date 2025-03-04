@@ -9,6 +9,7 @@ use crypto::Address;
 use ecall_commands::GenerateEnclaveKeyInput;
 use enclave_api::{Enclave, EnclaveCommandAPI, EnclaveProtoAPI};
 use host::store::transaction::CommitStore;
+use keymanager::PrunePolicy;
 use lcp_types::Mrenclave;
 use log::*;
 use serde_json::json;
@@ -133,46 +134,45 @@ fn run_list_keys<E: EnclaveCommandAPI<S>, S: CommitStore>(
     };
     let mut list_json = Vec::new();
     for eki in list {
-        match eki.ra_quote {
+        match eki.ra_quote.as_ref() {
             Some(ra_quote) => {
-                let ra_type = ra_quote.ra_type();
-                match ra_quote {
+                let (report_data, isv_enclave_quote_status, advisory_ids) = match ra_quote {
                     RAQuote::IAS(report) => {
                         let avr = report.get_avr()?;
                         let report_data = avr.parse_quote()?.report_data();
-                        list_json.push(json! {{
-                            "ra_type": ra_type.to_string(),
-                            "address": eki.address.to_hex_string(),
-                            "attested": true,
-                            "report_data": report_data.to_string(),
-                            "isv_enclave_quote_status": avr.isv_enclave_quote_status,
-                            "advisory_ids": avr.advisory_ids,
-                            "attested_at": avr.timestamp
-                        }});
+                        (
+                            report_data.to_string(),
+                            avr.isv_enclave_quote_status,
+                            avr.advisory_ids,
+                        )
                     }
                     RAQuote::DCAP(quote) => {
-                        list_json.push(json! {{
-                            "ra_type": ra_type.to_string(),
-                            "address": eki.address.to_hex_string(),
-                            "attested": true,
-                            "report_data": quote.report_data()?.to_string(),
-                            "isv_enclave_quote_status": quote.status,
-                            "advisory_ids": quote.advisory_ids,
-                            "attested_at": quote.attested_at.to_string(),
-                        }});
+                        let report_data = quote.report_data()?.to_string();
+                        (
+                            report_data,
+                            quote.status.clone(),
+                            quote.advisory_ids.clone(),
+                        )
                     }
                     RAQuote::ZKDCAP(quote) => {
-                        list_json.push(json! {{
-                            "ra_type": ra_type.to_string(),
-                            "address": eki.address.to_hex_string(),
-                            "attested": true,
-                            "report_data": quote.dcap_quote.report_data()?.to_string(),
-                            "isv_enclave_quote_status": quote.dcap_quote.status,
-                            "advisory_ids": quote.dcap_quote.advisory_ids,
-                            "attested_at": quote.dcap_quote.attested_at.to_string(),
-                        }});
+                        let report_data = quote.dcap_quote.report_data()?.to_string();
+                        (
+                            report_data,
+                            quote.dcap_quote.status.clone(),
+                            quote.dcap_quote.advisory_ids.clone(),
+                        )
                     }
-                }
+                };
+                list_json.push(json! {{
+                    "ra_type": ra_quote.ra_type().to_string(),
+                    "address": eki.address.to_hex_string(),
+                    "attested": true,
+                    "report_data": report_data,
+                    "isv_enclave_quote_status": isv_enclave_quote_status,
+                    "advisory_ids": advisory_ids,
+                    "valid_from": ra_quote.valid_from()?.as_unix_timestamp_secs(),
+                    "valid_to": ra_quote.valid_to()?.as_unix_timestamp_secs(),
+                }});
             }
             None => {
                 list_json.push(json! {{
@@ -186,14 +186,25 @@ fn run_list_keys<E: EnclaveCommandAPI<S>, S: CommitStore>(
     Ok(())
 }
 
+/// This command prunes expired enclave keys from the key manager.
+///
+/// The command has two options:
+/// 1. `expiration_period` - Prune keys without a `valid_to` timestamp older than this period.
+/// 2. `expired_valid_to` - Prune keys with a set `valid_to` timestamp if it is earlier than or equal to the current local time.
+///
+/// If neither option is specified, the command prunes keys without a `valid_to` timestamp older than 30 days.
 #[derive(Clone, Debug, Parser, PartialEq)]
 pub struct PruneKeys {
-    /// Options for enclave
+    /// Options for enclave.
     #[clap(flatten)]
     pub enclave: EnclaveOpts,
-    /// expiration in seconds from attested_at
-    #[clap(long = "expiration", help = "expiration in seconds from attested_at")]
-    pub expiration: u64,
+    /// Expiration period in seconds. Keys without a `valid_to` timestamp older than this period will be pruned.
+    /// Default value is 30 days.
+    #[clap(long)]
+    pub expiration_period: Option<u64>,
+    /// Prune keys with a set `valid_to` timestamp if it is earlier than or equal to the current local time.
+    #[clap(long)]
+    pub expired_valid_to: Option<bool>,
 }
 
 fn run_prune_keys<E: EnclaveCommandAPI<S>, S: CommitStore>(
@@ -201,8 +212,19 @@ fn run_prune_keys<E: EnclaveCommandAPI<S>, S: CommitStore>(
     input: &PruneKeys,
 ) -> Result<()> {
     let km = enclave.get_key_manager();
-    let count = km.prune(input.expiration)?;
-    info!("pruned {} expired enclave keys", count);
+    let count = match (input.expiration_period, input.expired_valid_to) {
+        (Some(_), Some(_)) => {
+            return Err(anyhow!(
+                "Only one of `expiration_period` or `expired_valid_to` can be specified"
+            ));
+        }
+        (None, Some(true)) => km.prune(None, PrunePolicy::ValidTo)?,
+        (Some(expiration_period), None) => {
+            km.prune(None, PrunePolicy::ExpiredCreatedAt(expiration_period))?
+        }
+        _ => km.prune(None, PrunePolicy::ExpiredCreatedAt(30 * 24 * 60 * 60))?,
+    };
+    info!("Pruned {} expired enclave keys", count);
     Ok(())
 }
 

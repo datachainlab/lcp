@@ -32,7 +32,7 @@ pub fn run_dcap_ra(
     let result = dcap_ra(key_manager, target_enclave_key, current_time, pcs_client)?;
 
     key_manager
-        .save_ra_quote(target_enclave_key, result.get_ra_quote(current_time).into())
+        .update_ra_quote(target_enclave_key, result.to_ra_quote().into())
         .map_err(|e| {
             Error::key_manager(format!("cannot save DCAP quote: {}", target_enclave_key), e)
         })?;

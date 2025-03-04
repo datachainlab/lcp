@@ -2,7 +2,6 @@ use crate::prelude::*;
 use crate::Error;
 use crate::RAQuote;
 use lcp_types::proto::lcp::service::enclave::v1::{QvCollateral, Validity};
-use lcp_types::Time;
 use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
 
@@ -22,8 +21,6 @@ pub struct DCAPQuote {
     pub validity: Validity,
     /// Advisory IDs of the processor/platform
     pub advisory_ids: Vec<String>,
-    /// Time when the quote was attested
-    pub attested_at: Time,
     /// Collateral data used to verify the quote
     pub collateral: QvCollateral,
 }
