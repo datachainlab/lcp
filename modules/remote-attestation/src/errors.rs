@@ -159,7 +159,7 @@ define_error! {
             actual: QEType,
         }
         |e| {
-            format_args!("UnexpectedQeType: expected={} actual={}", e.expected, e.actual)
+            format_args!("Unexpected QE type: expected={:?} actual={:?}", e.expected, e.actual)
         },
 
         SgxError {
