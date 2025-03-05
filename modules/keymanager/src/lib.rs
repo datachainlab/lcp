@@ -211,7 +211,7 @@ impl EnclaveKeyManager {
         }
     }
 
-    /// Returns a list of available enclave keys
+    /// Returns a list of attested enclave keys
     ///
     /// The order of the returned keys is by the `valid_to` timestamp in descending order.
     ///
@@ -221,7 +221,7 @@ impl EnclaveKeyManager {
     /// * `ra_type` - The type of remote attestation. If None, all available keys are returned.
     ///
     /// # Returns
-    /// Returns a list of available enclave keys
+    /// Returns a list of attested enclave keys
     pub fn available_keys(
         &self,
         mrenclave: Mrenclave,
@@ -563,6 +563,69 @@ mod tests {
                 )
                 .is_err());
         }
+    }
+
+    #[test]
+    fn test_all_keys() {
+        let km = EnclaveKeyManager::new_in_memory().unwrap();
+        let mrenclave = create_mrenclave();
+        let sealed_ek = create_sealed_sk();
+        let address1 = create_address();
+        let report1 = create_report(mrenclave, address1, false);
+        let address2 = create_address();
+        let report2 = create_report(mrenclave, address2, false);
+        let address3 = create_address();
+        let report3 = create_report(mrenclave, address3, false);
+        km.save(sealed_ek.clone(), report1, QEType::QE3).unwrap();
+        km.save(sealed_ek.clone(), report2, QEType::QE3).unwrap();
+        km.save(sealed_ek.clone(), report3, QEType::QE3).unwrap();
+        let keys = km.all_keys().unwrap();
+        assert_eq!(keys.len(), 3);
+        assert_eq!(keys[0].address, address1);
+        assert_eq!(keys[1].address, address2);
+        assert_eq!(keys[2].address, address3);
+    }
+
+    #[test]
+    fn test_available_keys() {
+        let km = EnclaveKeyManager::new_in_memory().unwrap();
+        let mrenclave = create_mrenclave();
+        let sealed_ek = create_sealed_sk();
+        let address1 = create_address();
+        let report1 = create_report(mrenclave, address1, false);
+        let address2 = create_address();
+        let report2 = create_report(mrenclave, address2, false);
+        let address3 = create_address();
+        let report3 = create_report(mrenclave, address3, false);
+        km.save(sealed_ek.clone(), report1, QEType::QE3).unwrap();
+        km.save(sealed_ek.clone(), report2, QEType::QE3).unwrap();
+        km.save(sealed_ek.clone(), report3, QEType::QE3).unwrap();
+        let keys = km.available_keys(mrenclave, false, None).unwrap();
+        assert_eq!(keys.len(), 0);
+        let dcap_quote = RAQuote::DCAP(create_dcap_quote(get_time2(Duration::days(30))));
+        km.update_ra_quote(address1, dcap_quote).unwrap();
+        let keys = km
+            .available_keys(mrenclave, false, Some(RAType::DCAP))
+            .unwrap();
+        assert_eq!(keys.len(), 1);
+        assert_eq!(keys[0].address, address1);
+        let dcap_quote = RAQuote::DCAP(create_dcap_quote(get_time2(Duration::days(29))));
+        km.update_ra_quote(address2, dcap_quote).unwrap();
+        let keys = km
+            .available_keys(mrenclave, false, Some(RAType::DCAP))
+            .unwrap();
+        assert_eq!(keys.len(), 2);
+        assert_eq!(keys[0].address, address1);
+        assert_eq!(keys[1].address, address2);
+        let dcap_quote = RAQuote::DCAP(create_dcap_quote(get_time2(Duration::days(31))));
+        km.update_ra_quote(address3, dcap_quote).unwrap();
+        let keys = km
+            .available_keys(mrenclave, false, Some(RAType::DCAP))
+            .unwrap();
+        assert_eq!(keys.len(), 3);
+        assert_eq!(keys[0].address, address3);
+        assert_eq!(keys[1].address, address1);
+        assert_eq!(keys[2].address, address2);
     }
 
     #[test]
