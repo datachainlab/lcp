@@ -23,6 +23,7 @@ pub const INTEL_ROOT_CA_HASH: [u8; 32] = [
     59, 178, 70, 13, 249, 208, 27, 51, 61, 112, 9,
 ];
 
+/// Run DCAP remote attestation
 pub fn run_dcap_ra(
     key_manager: &EnclaveKeyManager,
     target_enclave_key: Address,

@@ -67,6 +67,7 @@ pub const DCAP_SIM_ROOT_CA_HASH: [u8; 32] = [
     167, 12, 187, 58, 171, 31, 90, 176, 35, 91, 43,
 ];
 
+/// DCAP RA Simulation Options
 #[derive(Debug, Clone)]
 pub struct DCAPRASimulationOpts {
     root_cert: X509,

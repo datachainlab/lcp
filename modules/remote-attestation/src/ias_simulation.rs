@@ -8,6 +8,7 @@ use keymanager::EnclaveKeyManager;
 use log::*;
 use rsa::signature::{SignatureEncoding, Signer};
 
+/// Run IAS RA simulation
 pub fn run_ias_ra_simulation(
     key_manager: &EnclaveKeyManager,
     target_enclave_key: Address,
