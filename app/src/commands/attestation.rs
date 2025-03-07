@@ -245,8 +245,30 @@ pub struct SgxCollateralService {
         help = "Certs Service URL (default: https://certificates.trustedservices.intel.com/)"
     )]
     pub certs_service_url: Option<String>,
-    #[clap(long = "early_update", help = "Enable early update (default: false)")]
-    pub is_early_update: bool,
+    #[clap(
+        long = "update_policy",
+        default_value = "early",
+        help = "Update policy (early(default) or standard)"
+    )]
+    pub update_policy: UpdatePolicy,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum UpdatePolicy {
+    Early,
+    Standard,
+}
+
+impl FromStr for UpdatePolicy {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_lowercase().as_str() {
+            "early" => Ok(Self::Early),
+            "standard" => Ok(Self::Standard),
+            _ => Err(anyhow!("invalid update policy: {}", s)),
+        }
+    }
 }
 
 impl SgxCollateralService {
@@ -268,7 +290,7 @@ impl From<SgxCollateralService> for PCSClient {
         Self::new(
             service.get_pccs_url().as_str(),
             service.get_certs_service_url().as_str(),
-            service.is_early_update,
+            service.update_policy == UpdatePolicy::Early,
         )
     }
 }
