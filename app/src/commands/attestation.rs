@@ -10,8 +10,9 @@ use host::store::transaction::CommitStore;
 use remote_attestation::{
     dcap,
     dcap_pcs::client::PCSClient,
+    dcap_quote_verifier::verifier::Status,
     dcap_simulation::{DCAP_SIM_ROOT_CA_PEM, DCAP_SIM_ROOT_KEY_PKCS8},
-    dcap_utils::ValidatedPCSClient,
+    dcap_utils::{QVResultAllowList, ValidatedPCSClient},
     ias, zkdcap, IASMode,
 };
 use remote_attestation::{
@@ -327,6 +328,7 @@ fn run_dcap_remote_attestation<E: EnclaveCommandAPI<S>, S: CommitStore>(
         enclave.get_key_manager(),
         Address::from_hex_string(&cmd.enclave_key)?,
         cmd.collateral_service.clone().into(),
+        Default::default(),
     )?;
     Ok(())
 }
@@ -344,6 +346,18 @@ pub struct ZKDCAPRemoteAttestation {
     pub enclave_key: String,
     #[clap(flatten)]
     pub collateral_service: SgxCollateralService,
+    #[clap(
+        long = "allowed_tcb_statuses",
+        value_delimiter = ',',
+        help = "Allowed TCB status list"
+    )]
+    pub allowed_tcb_statuses: Vec<Status>,
+    #[clap(
+        long = "allowed_advisory_ids",
+        value_delimiter = ',',
+        help = "Allowed advisory ID list"
+    )]
+    pub allowed_advisory_ids: Vec<String>,
     #[clap(long = "program_path", help = "Path to the zkVM guest program")]
     pub program_path: Option<PathBuf>,
     #[clap(
@@ -421,6 +435,10 @@ fn run_zkdcap_remote_attestation<E: EnclaveCommandAPI<S>, S: CommitStore>(
         cmd.get_zkvm_program()?.as_ref(),
         cmd.disable_pre_execution,
         cmd.collateral_service.clone().into(),
+        QVResultAllowList::new(
+            cmd.allowed_tcb_statuses.clone(),
+            cmd.allowed_advisory_ids.clone(),
+        ),
     )?;
     Ok(())
 }

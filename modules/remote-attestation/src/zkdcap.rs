@@ -1,7 +1,7 @@
 use crate::{
     dcap::dcap_ra,
     dcap_simulation::{dcap_ra_simulation, DCAPRASimulationOpts},
-    dcap_utils::{DCAPRemoteAttestationResult, ValidatedPCSClient},
+    dcap_utils::{DCAPRemoteAttestationResult, QVResultAllowList, ValidatedPCSClient},
     errors::Error,
 };
 use anyhow::anyhow;
@@ -34,6 +34,7 @@ pub fn run_zkdcap_ra(
     elf: &[u8],
     disable_pre_execution: bool,
     pcs_client: ValidatedPCSClient,
+    allow_list: QVResultAllowList,
 ) -> Result<(), Error> {
     let image_id = compute_image_id(elf)
         .map_err(|e| Error::anyhow(anyhow!("cannot compute image id: {}", e)))?;
@@ -43,7 +44,13 @@ pub fn run_zkdcap_ra(
     );
 
     let current_time = Time::now();
-    let res = dcap_ra(key_manager, target_enclave_key, current_time, pcs_client)?;
+    let res = dcap_ra(
+        key_manager,
+        target_enclave_key,
+        current_time,
+        pcs_client,
+        allow_list,
+    )?;
 
     zkdcap_ra(
         key_manager,

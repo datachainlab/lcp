@@ -1,4 +1,4 @@
-use crate::dcap_utils::{DCAPRemoteAttestationResult, ValidatedPCSClient};
+use crate::dcap_utils::{DCAPRemoteAttestationResult, QVResultAllowList, ValidatedPCSClient};
 use crate::errors::Error;
 use anyhow::anyhow;
 use attestation_report::QEType;
@@ -27,9 +27,16 @@ pub fn run_dcap_ra(
     key_manager: &EnclaveKeyManager,
     target_enclave_key: Address,
     pcs_client: ValidatedPCSClient,
+    allow_list: QVResultAllowList,
 ) -> Result<(), Error> {
     let current_time = Time::now();
-    let result = dcap_ra(key_manager, target_enclave_key, current_time, pcs_client)?;
+    let result = dcap_ra(
+        key_manager,
+        target_enclave_key,
+        current_time,
+        pcs_client,
+        allow_list,
+    )?;
 
     key_manager
         .update_ra_quote(target_enclave_key, result.to_ra_quote().into())
@@ -44,6 +51,7 @@ pub(crate) fn dcap_ra(
     target_enclave_key: Address,
     current_time: Time,
     pcs_client: ValidatedPCSClient,
+    allow_list: QVResultAllowList,
 ) -> Result<DCAPRemoteAttestationResult, Error> {
     let ek_info = key_manager.load(target_enclave_key).map_err(|e| {
         Error::key_manager(
@@ -87,6 +95,13 @@ pub(crate) fn dcap_ra(
         "DCAP RA done: status={} advisory_ids={:?} validity={} min_tcb_evaluation_data_number={}",
         output.status, output.advisory_ids, output.validity, output.min_tcb_evaluation_data_number,
     );
+
+    if let Some(false) = allow_list.is_allowed_tcb_status(output.status) {
+        return Err(Error::tcb_status_not_allowed(output.status));
+    }
+    if let Some(false) = allow_list.is_allowed_advisory_ids(&output.advisory_ids) {
+        return Err(Error::advisory_ids_not_allowed(output.advisory_ids.clone()));
+    }
 
     Ok(DCAPRemoteAttestationResult {
         raw_quote,

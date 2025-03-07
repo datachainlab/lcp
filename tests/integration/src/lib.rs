@@ -38,7 +38,6 @@ mod tests {
     use lcp_proto::protobuf::Protobuf;
     use lcp_types::{ClientId, Height};
     use log::*;
-    use remote_attestation::dcap_utils::ValidatedPCSClient;
     use std::str::FromStr;
     use std::sync::{Arc, RwLock};
     use store::{host::HostStore, memory::MemStore};
@@ -227,6 +226,7 @@ mod tests {
         #[cfg(not(feature = "sgx-sw"))]
         {
             use remote_attestation::dcap_pcs::client::PCSClient;
+            use remote_attestation::dcap_utils::ValidatedPCSClient;
             use remote_attestation::zkdcap::run_zkdcap_ra;
             use remote_attestation::zkvm::prover::Risc0ProverMode;
             use zkdcap_risc0::DCAP_QUOTE_VERIFIER_ELF;
@@ -259,6 +259,7 @@ mod tests {
                     ),
                     None,
                 ),
+                Default::default(),
             );
             assert!(res.is_ok(), "zkDCAP Remote Attestation Failed {:?}", res);
         }

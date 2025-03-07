@@ -1,6 +1,6 @@
 use attestation_report::DCAPQuote;
 use dcap_pcs::client::PCSClient;
-use dcap_quote_verifier::verifier::QuoteVerificationOutput;
+use dcap_quote_verifier::verifier::{QuoteVerificationOutput, Status};
 use dcap_quote_verifier::{collateral::QvCollateral, types::quotes::CertData};
 use lcp_types::proto::lcp::service::enclave::v1::{QvCollateral as ProtoQvCollateral, Validity};
 use std::ops::Deref;
@@ -58,6 +58,38 @@ impl Deref for ValidatedPCSClient {
 
     fn deref(&self) -> &Self::Target {
         &self.client
+    }
+}
+
+/// A list of TCB statuses and advisory IDs that are allowed.
+#[derive(Debug, Clone, Default)]
+pub struct QVResultAllowList {
+    pub tcb_statuses: Vec<Status>,
+    pub advisory_ids: Vec<String>,
+}
+
+impl QVResultAllowList {
+    pub fn new(tcb_statuses: Vec<Status>, advisory_ids: Vec<String>) -> Self {
+        Self {
+            tcb_statuses,
+            advisory_ids,
+        }
+    }
+
+    pub fn is_allowed_tcb_status(&self, tcb_status: Status) -> Option<bool> {
+        if self.tcb_statuses.is_empty() {
+            None
+        } else {
+            Some(self.tcb_statuses.contains(&tcb_status))
+        }
+    }
+
+    pub fn is_allowed_advisory_ids(&self, advisory_ids: &[String]) -> Option<bool> {
+        if self.advisory_ids.is_empty() {
+            None
+        } else {
+            Some(advisory_ids.iter().all(|id| self.advisory_ids.contains(id)))
+        }
     }
 }
 
