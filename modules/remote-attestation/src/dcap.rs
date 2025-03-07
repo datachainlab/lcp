@@ -58,22 +58,34 @@ pub(crate) fn dcap_ra(
     let raw_quote = rsgx_qe_get_quote(&ek_info.report)
         .map_err(|status| Error::sgx_qe3_error(status, "failed to get quote".into()))?;
 
-    debug!("Successfully get the quote: {}", hex::encode(&raw_quote));
+    trace!("successfully get the quote: {}", hex::encode(&raw_quote));
 
     let (quote, _) = QuoteV3::from_bytes(&raw_quote).map_err(Error::dcap_quote_verifier)?;
 
     let collateral = pcs_client
         .get_collateral(true, &quote.signature.qe_cert_data)
         .map_err(|e| Error::anyhow(anyhow!("cannot get collateral data: {}", e)))?;
+
+    info!(
+        "TCB evaluation data numbers: TCBInfo={} QEIdentity={}",
+        collateral
+            .get_tcb_info_v3()
+            .map_err(Error::dcap_quote_verifier)?
+            .tcb_info
+            .tcb_evaluation_data_number,
+        collateral
+            .get_qe_identity_v2()
+            .map_err(Error::dcap_quote_verifier)?
+            .enclave_identity
+            .tcb_evaluation_data_number
+    );
+
     let output = verify_quote_v3(&quote, &collateral, current_time.as_unix_timestamp_secs())
         .map_err(Error::dcap_quote_verifier)?;
 
     info!(
-        "DCAP RA done: status={} advisory_ids={:?} validity={} raw={}",
-        output.status,
-        output.advisory_ids,
-        output.validity,
-        hex::encode(quote.to_bytes())
+        "DCAP RA done: status={} advisory_ids={:?} validity={} min_tcb_evaluation_data_number={}",
+        output.status, output.advisory_ids, output.validity, output.min_tcb_evaluation_data_number,
     );
 
     Ok(DCAPRemoteAttestationResult {

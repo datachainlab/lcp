@@ -139,6 +139,7 @@ impl DCAPRASimulationOpts {
     }
 }
 
+/// Run DCAP remote attestation simulation
 pub fn run_dcap_ra_simulation(
     key_manager: &EnclaveKeyManager,
     target_enclave_key: Address,
@@ -185,11 +186,8 @@ pub(crate) fn dcap_ra_simulation(
         .map_err(Error::dcap_quote_verifier)?;
 
     info!(
-        "DCAP RA simulation done: status={} advisory_ids={:?} validity={} raw={}",
-        output.status,
-        output.advisory_ids,
-        output.validity,
-        hex::encode(quote.to_bytes())
+        "DCAP RA simulation done: status={} advisory_ids={:?} validity={} min_tcb_evaluation_data_number={}",
+        output.status, output.advisory_ids, output.validity, output.min_tcb_evaluation_data_number
     );
 
     Ok(DCAPRemoteAttestationResult {

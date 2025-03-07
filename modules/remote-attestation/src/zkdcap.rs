@@ -19,6 +19,15 @@ use zkvm::{
     verifier::verify_groth16_proof,
 };
 
+/// Run zkDCAP remote attestation.
+///
+/// The attestation process consists of the following steps:
+/// 1. Get a DCAP/ECDSA quote from the Quoting Enclave.
+/// 2. Get a verification collateral from the PCS or PCCS.
+/// 3. Run pre-execution with the quote and collateral on the zkVM executor(if `disable_pre_execution` is false).
+/// 4. Run the prover with the quote and collateral on the zkVM prover(local or bonsai).
+/// 5. Verify the receipt and the proof.
+/// 6. Save the zkDCAP quote associated with the target enclave key in the key manager.
 pub fn run_zkdcap_ra(
     key_manager: &EnclaveKeyManager,
     target_enclave_key: Address,
@@ -30,7 +39,7 @@ pub fn run_zkdcap_ra(
     let image_id = compute_image_id(elf)
         .map_err(|e| Error::anyhow(anyhow!("cannot compute image id: {}", e)))?;
     info!(
-        "run zkDCAP verification with prover_mode={} image_id={} enclave_key={}",
+        "run zkDCAP attestation with prover_mode={} image_id={} enclave_key={}",
         prover_mode, image_id, target_enclave_key
     );
 
@@ -49,6 +58,14 @@ pub fn run_zkdcap_ra(
     )
 }
 
+/// Run zkDCAP remote attestation simulation.
+///
+/// The attestation process consists of the following steps:
+/// 1. Generate a dummy DCAP/ECDSA quote and a verification collateral for simulation.
+/// 2. Run pre-execution with the quote and collateral on the zkVM executor(if `disable_pre_execution` is false).
+/// 3. Run the prover with the quote and collateral on the zkVM prover(local or bonsai).
+/// 4. Verify the receipt and the proof.
+/// 5. Save the zkDCAP quote associated with the target enclave key in the key manager.
 pub fn run_zkdcap_ra_simulation(
     key_manager: &EnclaveKeyManager,
     target_enclave_key: Address,
@@ -60,7 +77,7 @@ pub fn run_zkdcap_ra_simulation(
     let image_id = compute_image_id(elf)
         .map_err(|e| Error::anyhow(anyhow!("cannot compute image id: {}", e)))?;
     info!(
-        "run zkDCAP simulation with prover_mode={} image_id={} enclave_key={}",
+        "simulate zkDCAP attestation with prover_mode={} image_id={} enclave_key={}",
         prover_mode, image_id, target_enclave_key
     );
 
