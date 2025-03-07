@@ -1,9 +1,8 @@
-use crate::dcap_utils::DCAPRemoteAttestationResult;
+use crate::dcap_utils::{DCAPRemoteAttestationResult, ValidatedPCSClient};
 use crate::errors::Error;
 use anyhow::anyhow;
 use attestation_report::QEType;
 use crypto::Address;
-use dcap_pcs::client::PCSClient;
 use dcap_quote_verifier::quotes::version_3::verify_quote_v3;
 use dcap_quote_verifier::types::quotes::version_3::QuoteV3;
 use keymanager::EnclaveKeyManager;
@@ -27,7 +26,7 @@ pub const INTEL_ROOT_CA_HASH: [u8; 32] = [
 pub fn run_dcap_ra(
     key_manager: &EnclaveKeyManager,
     target_enclave_key: Address,
-    pcs_client: PCSClient,
+    pcs_client: ValidatedPCSClient,
 ) -> Result<(), Error> {
     let current_time = Time::now();
     let result = dcap_ra(key_manager, target_enclave_key, current_time, pcs_client)?;
@@ -44,7 +43,7 @@ pub(crate) fn dcap_ra(
     key_manager: &EnclaveKeyManager,
     target_enclave_key: Address,
     current_time: Time,
-    pcs_client: PCSClient,
+    pcs_client: ValidatedPCSClient,
 ) -> Result<DCAPRemoteAttestationResult, Error> {
     let ek_info = key_manager.load(target_enclave_key).map_err(|e| {
         Error::key_manager(
@@ -64,7 +63,7 @@ pub(crate) fn dcap_ra(
     let (quote, _) = QuoteV3::from_bytes(&raw_quote).map_err(Error::dcap_quote_verifier)?;
 
     let collateral = pcs_client
-        .get_collateral(true, &quote.signature.qe_cert_data)
+        .validate_and_get_collateral(true, &quote.signature.qe_cert_data)
         .map_err(|e| Error::anyhow(anyhow!("cannot get collateral data: {}", e)))?;
 
     info!(
@@ -115,6 +114,7 @@ fn rsgx_qe_get_quote(app_report: &sgx_report_t) -> Result<Vec<u8>, sgx_quote3_er
 #[cfg(test)]
 mod tests {
     use super::*;
+    use dcap_pcs::client::PCSClient;
     use dcap_quote_verifier::{crypto::keccak256sum, types::SGX_TEE_TYPE};
 
     #[test]

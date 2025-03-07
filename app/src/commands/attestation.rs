@@ -11,6 +11,7 @@ use remote_attestation::{
     dcap,
     dcap_pcs::client::PCSClient,
     dcap_simulation::{DCAP_SIM_ROOT_CA_PEM, DCAP_SIM_ROOT_KEY_PKCS8},
+    dcap_utils::ValidatedPCSClient,
     ias, zkdcap, IASMode,
 };
 use remote_attestation::{
@@ -251,6 +252,11 @@ pub struct SgxCollateralService {
         help = "Update policy (early(default) or standard)"
     )]
     pub update_policy: UpdatePolicy,
+    #[clap(
+        long = "expected_tcb_evaluation_data_number",
+        help = "Expected TCB Evaluation Data Number for TCB Info and QE Identity"
+    )]
+    pub expected_tcb_evaluation_data_number: Option<u32>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -285,12 +291,15 @@ impl SgxCollateralService {
     }
 }
 
-impl From<SgxCollateralService> for PCSClient {
+impl From<SgxCollateralService> for ValidatedPCSClient {
     fn from(service: SgxCollateralService) -> Self {
         Self::new(
-            service.get_pccs_url().as_str(),
-            service.get_certs_service_url().as_str(),
-            service.update_policy == UpdatePolicy::Early,
+            PCSClient::new(
+                service.get_pccs_url().as_str(),
+                service.get_certs_service_url().as_str(),
+                service.update_policy == UpdatePolicy::Early,
+            ),
+            service.expected_tcb_evaluation_data_number,
         )
     }
 }

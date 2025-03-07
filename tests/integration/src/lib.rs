@@ -38,6 +38,7 @@ mod tests {
     use lcp_proto::protobuf::Protobuf;
     use lcp_types::{ClientId, Height};
     use log::*;
+    use remote_attestation::dcap_utils::ValidatedPCSClient;
     use std::str::FromStr;
     use std::sync::{Arc, RwLock};
     use store::{host::HostStore, memory::MemStore};
@@ -250,10 +251,13 @@ mod tests {
                 Risc0ProverMode::Dev,
                 DCAP_QUOTE_VERIFIER_ELF,
                 false,
-                PCSClient::new(
-                    "https://api.trustedservices.intel.com/",
-                    "https://certificates.trustedservices.intel.com/",
-                    false,
+                ValidatedPCSClient::new(
+                    PCSClient::new(
+                        "https://api.trustedservices.intel.com/",
+                        "https://certificates.trustedservices.intel.com/",
+                        false,
+                    ),
+                    None,
                 ),
             );
             assert!(res.is_ok(), "zkDCAP Remote Attestation Failed {:?}", res);
