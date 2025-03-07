@@ -10,7 +10,7 @@ pub mod ias_simulation;
 mod ias_utils;
 pub mod zkdcap;
 
-pub use common::init_quote;
+pub use common::get_target_qe_info;
 pub use dcap_pcs;
 pub use ias_utils::{validate_qe_report, IASMode, IAS_HOSTNAME};
 #[cfg(feature = "sgx-sw")]

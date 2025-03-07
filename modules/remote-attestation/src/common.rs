@@ -5,7 +5,15 @@ use sgx_types::{
     sgx_target_info_t,
 };
 
-pub fn init_quote(
+/// Get target QE info
+///
+/// # Arguments
+/// - `target_qe_type` - QE type(QE, QE3, QE3SIM)
+///
+/// # Returns
+/// - `sgx_target_info_t` - Target info
+/// - `sgx_epid_group_id_t` - If `target_qe_type` is QE, return epid group id. Otherwise, return default value
+pub fn get_target_qe_info(
     target_qe_type: QEType,
 ) -> Result<(sgx_target_info_t, sgx_epid_group_id_t), Error> {
     let mut target_info = sgx_target_info_t::default();

@@ -1,6 +1,6 @@
 use crate::errors::Error;
+use crate::get_target_qe_info;
 use crate::ias_utils::{get_quote, validate_qe_report, SGX_QUOTE_SIGN_TYPE};
-use crate::init_quote;
 use attestation_report::{IASAttestationVerificationReport, IASSignedReport, QEType};
 use base64::{engine::general_purpose::STANDARD as Base64Std, Engine};
 use crypto::Address;
@@ -17,7 +17,7 @@ pub fn run_ias_ra_simulation(
     signing_key: rsa::pkcs1v15::SigningKey<sha2::Sha256>,
     signing_cert: Vec<u8>,
 ) -> Result<IASSignedReport, Error> {
-    let (target_info, _) = init_quote(QEType::QE)?;
+    let (target_info, _) = get_target_qe_info(QEType::QE)?;
     let ek_info = key_manager.load(target_enclave_key).map_err(|e| {
         Error::key_manager(
             format!("cannot load enclave key: {}", target_enclave_key),

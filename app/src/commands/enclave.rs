@@ -91,7 +91,7 @@ fn run_generate_key<E: EnclaveCommandAPI<S>, S: CommitStore>(
     enclave: E,
     input: &GenerateKey,
 ) -> Result<()> {
-    let (target_info, _) = remote_attestation::init_quote(input.target_qe)?;
+    let (target_info, _) = remote_attestation::get_target_qe_info(input.target_qe)?;
     let res = enclave
         .generate_enclave_key(
             GenerateEnclaveKeyInput {

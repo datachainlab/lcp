@@ -1,4 +1,4 @@
-use crate::common::init_quote;
+use crate::common::get_target_qe_info;
 use crate::errors::Error;
 use crate::ias_utils::{
     decode_spid, get_quote, get_report_from_intel, get_sigrl_from_intel, validate_qe_report,
@@ -27,7 +27,7 @@ pub fn run_ias_ra(
     }
 
     let spid = decode_spid(&spid)?;
-    let (target_info, epid_group_id) = init_quote(QEType::QE)?;
+    let (target_info, epid_group_id) = get_target_qe_info(QEType::QE)?;
     // Now sigrl is the revocation list, a vec<u8>
     let sigrl = get_sigrl_from_intel(mode, epid_group_id, &ias_key)?;
     let (quote, qe_report) = get_quote(sigrl, ek_info.report, SGX_QUOTE_SIGN_TYPE, spid)?;
