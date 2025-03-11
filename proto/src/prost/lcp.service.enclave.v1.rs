@@ -47,7 +47,7 @@ pub mod enclave_key_info {
         #[prost(message, tag = "2")]
         Dcap(super::DcapEnclaveKeyInfo),
         #[prost(message, tag = "3")]
-        Zkdcap(super::ZkdcapEncalveKeyInfo),
+        Zkdcap(super::ZkdcapEnclaveKeyInfo),
     }
 }
 #[derive(::serde::Serialize, ::serde::Deserialize)]
@@ -96,7 +96,7 @@ pub struct Validity {
 #[derive(::serde::Serialize, ::serde::Deserialize)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
-pub struct ZkdcapEncalveKeyInfo {
+pub struct ZkdcapEnclaveKeyInfo {
     #[prost(message, optional, tag = "1")]
     pub dcap: ::core::option::Option<DcapEnclaveKeyInfo>,
     #[prost(message, optional, tag = "2")]

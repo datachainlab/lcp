@@ -33,7 +33,7 @@ message EnclaveKeyInfo {
   oneof key_info {
     IASEnclaveKeyInfo ias = 1;
     DCAPEnclaveKeyInfo dcap = 2;
-    ZKDCAPEncalveKeyInfo zkdcap = 3;
+    ZKDCAPEnclaveKeyInfo zkdcap = 3;
   }
 }
 
@@ -60,7 +60,7 @@ message Validity {
   uint64 not_after = 2;
 }
 
-message ZKDCAPEncalveKeyInfo {
+message ZKDCAPEnclaveKeyInfo {
   DCAPEnclaveKeyInfo dcap = 1;
   ZKVMProof zkp = 2;
 }

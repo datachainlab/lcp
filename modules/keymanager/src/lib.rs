@@ -7,7 +7,7 @@ use lcp_types::{
     deserialize_bytes,
     proto::lcp::service::enclave::v1::{
         enclave_key_info, zkvm_proof, DcapEnclaveKeyInfo, EnclaveKeyInfo as ProtoEnclaveKeyInfo,
-        IasEnclaveKeyInfo, Risc0ZkvmProof, ZkdcapEncalveKeyInfo, ZkvmProof,
+        IasEnclaveKeyInfo, Risc0ZkvmProof, ZkdcapEnclaveKeyInfo, ZkvmProof,
     },
     serialize_bytes, BytesTransmuter, Mrenclave, Time,
 };
@@ -489,7 +489,7 @@ impl TryFrom<SealedEnclaveKeyInfo> for ProtoEnclaveKeyInfo {
             Some(RAQuote::ZKDCAP(zkquote)) => {
                 let dcap = zkquote.dcap_quote;
                 Ok(ProtoEnclaveKeyInfo {
-                    key_info: Some(enclave_key_info::KeyInfo::Zkdcap(ZkdcapEncalveKeyInfo {
+                    key_info: Some(enclave_key_info::KeyInfo::Zkdcap(ZkdcapEnclaveKeyInfo {
                         dcap: Some(DcapEnclaveKeyInfo {
                             enclave_key_address: value.address.into(),
                             quote: dcap.raw,
