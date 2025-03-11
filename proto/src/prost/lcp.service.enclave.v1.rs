@@ -1,7 +1,9 @@
+/// Request for getting the enclave information.
 #[derive(::serde::Serialize, ::serde::Deserialize)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct QueryEnclaveInfoRequest {}
+/// Response for getting the enclave information.
 #[derive(::serde::Serialize, ::serde::Deserialize)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -11,17 +13,29 @@ pub struct QueryEnclaveInfoResponse {
     #[prost(bool, tag = "2")]
     pub enclave_debug: bool,
 }
+/// Request for getting the attested enclave keys corresponding to the specified MRENCLAVE.
 #[derive(::serde::Serialize, ::serde::Deserialize)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct QueryAvailableEnclaveKeysRequest {
+    /// MRENCLAVE of the enclave that generates the EK.
     #[prost(bytes = "vec", tag = "1")]
     pub mrenclave: ::prost::alloc::vec::Vec<u8>,
+    /// Debug flag of the enclave that generates the EK.
     #[prost(bool, tag = "2")]
     pub enclave_debug: bool,
+    /// Remote attestation type.
+    ///
+    /// | Type            | Value |
+    /// |-----------------|-------|
+    /// | IAS             |   1   |
+    /// | DCAP            |   2   |
+    /// | ZKDCAPRisc0     |   3   |
+    /// | MockZKDCAPRisc0 |   4   |
     #[prost(uint32, tag = "3")]
     pub ra_type: u32,
 }
+/// Response for getting the attested enclave keys.
 #[derive(::serde::Serialize, ::serde::Deserialize)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -29,6 +43,7 @@ pub struct QueryAvailableEnclaveKeysResponse {
     #[prost(message, repeated, tag = "1")]
     pub keys: ::prost::alloc::vec::Vec<EnclaveKeyInfo>,
 }
+/// Enclave key information contains the RA type specific information.
 #[derive(::serde::Serialize, ::serde::Deserialize)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -50,6 +65,7 @@ pub mod enclave_key_info {
         Zkdcap(super::ZkdcapEnclaveKeyInfo),
     }
 }
+/// Enclave key information with IAS report.
 #[derive(::serde::Serialize, ::serde::Deserialize)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -65,6 +81,7 @@ pub struct IasEnclaveKeyInfo {
     #[prost(bytes = "vec", tag = "5")]
     pub signing_cert: ::prost::alloc::vec::Vec<u8>,
 }
+/// Enclave key information with DCAP quote and supplemental data.
 #[derive(::serde::Serialize, ::serde::Deserialize)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -84,6 +101,7 @@ pub struct DcapEnclaveKeyInfo {
     #[prost(message, optional, tag = "7")]
     pub collateral: ::core::option::Option<QvCollateral>,
 }
+/// Validity Period
 #[derive(::serde::Serialize, ::serde::Deserialize)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -93,6 +111,7 @@ pub struct Validity {
     #[prost(uint64, tag = "2")]
     pub not_after: u64,
 }
+/// Enclave key information with zkDCAP proof and DCAP attestation info.
 #[derive(::serde::Serialize, ::serde::Deserialize)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -102,6 +121,7 @@ pub struct ZkdcapEnclaveKeyInfo {
     #[prost(message, optional, tag = "2")]
     pub zkp: ::core::option::Option<ZkvmProof>,
 }
+/// ZKVM proof
 #[derive(::serde::Serialize, ::serde::Deserialize)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -119,6 +139,7 @@ pub mod zkvm_proof {
         Risc0(super::Risc0ZkvmProof),
     }
 }
+/// RISC Zero zkVM proof for zkDCAP
 #[derive(::serde::Serialize, ::serde::Deserialize)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -132,6 +153,7 @@ pub struct Risc0ZkvmProof {
     #[prost(bytes = "vec", tag = "4")]
     pub output: ::prost::alloc::vec::Vec<u8>,
 }
+/// Collateral information for the DCAP quote verification.
 #[derive(::serde::Serialize, ::serde::Deserialize)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -149,6 +171,7 @@ pub struct QvCollateral {
     #[prost(bytes = "vec", tag = "6")]
     pub sgx_pck_crl_der: ::prost::alloc::vec::Vec<u8>,
 }
+/// Request for getting the enclave key information.
 #[derive(::serde::Serialize, ::serde::Deserialize)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -156,6 +179,7 @@ pub struct QueryEnclaveKeyRequest {
     #[prost(bytes = "vec", tag = "1")]
     pub enclave_key_address: ::prost::alloc::vec::Vec<u8>,
 }
+/// Response for getting the enclave key information.
 #[derive(::serde::Serialize, ::serde::Deserialize)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -233,6 +257,7 @@ pub mod query_client {
             self.inner = self.inner.accept_compressed(encoding);
             self
         }
+        /// Get the enclave information loaded in the service.
         pub async fn enclave_info(
             &mut self,
             request: impl tonic::IntoRequest<super::QueryEnclaveInfoRequest>,
@@ -252,6 +277,8 @@ pub mod query_client {
             );
             self.inner.unary(request.into_request(), path, codec).await
         }
+        /// Get the available enclave keys for matching the
+        /// specified MRENCLAVE and debug flag and RA type.
         pub async fn available_enclave_keys(
             &mut self,
             request: impl tonic::IntoRequest<super::QueryAvailableEnclaveKeysRequest>,
@@ -274,6 +301,7 @@ pub mod query_client {
             );
             self.inner.unary(request.into_request(), path, codec).await
         }
+        /// Get the enclave key information for the specified enclave key address.
         pub async fn enclave_key(
             &mut self,
             request: impl tonic::IntoRequest<super::QueryEnclaveKeyRequest>,
@@ -303,10 +331,13 @@ pub mod query_server {
     /// Generated trait containing gRPC methods that should be implemented for use with QueryServer.
     #[async_trait]
     pub trait Query: Send + Sync + 'static {
+        /// Get the enclave information loaded in the service.
         async fn enclave_info(
             &self,
             request: tonic::Request<super::QueryEnclaveInfoRequest>,
         ) -> Result<tonic::Response<super::QueryEnclaveInfoResponse>, tonic::Status>;
+        /// Get the available enclave keys for matching the
+        /// specified MRENCLAVE and debug flag and RA type.
         async fn available_enclave_keys(
             &self,
             request: tonic::Request<super::QueryAvailableEnclaveKeysRequest>,
@@ -314,6 +345,7 @@ pub mod query_server {
             tonic::Response<super::QueryAvailableEnclaveKeysResponse>,
             tonic::Status,
         >;
+        /// Get the enclave key information for the specified enclave key address.
         async fn enclave_key(
             &self,
             request: tonic::Request<super::QueryEnclaveKeyRequest>,

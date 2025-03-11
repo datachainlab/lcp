@@ -7,28 +7,47 @@ option go_package = "github.com/datachainlab/lcp/go/relay/enclave";
 option (gogoproto.goproto_getters_all) = false;
 
 service Query {
+  // Get the enclave information loaded in the service.
   rpc EnclaveInfo(QueryEnclaveInfoRequest) returns (QueryEnclaveInfoResponse);
+  // Get the available enclave keys for matching the
+  // specified MRENCLAVE and debug flag and RA type.
   rpc AvailableEnclaveKeys(QueryAvailableEnclaveKeysRequest) returns (QueryAvailableEnclaveKeysResponse);
+  // Get the enclave key information for the specified enclave key address.
   rpc EnclaveKey(QueryEnclaveKeyRequest) returns (QueryEnclaveKeyResponse);
 }
 
+// Request for getting the enclave information.
 message QueryEnclaveInfoRequest {}
 
+// Response for getting the enclave information.
 message QueryEnclaveInfoResponse {
   bytes mrenclave = 1;
   bool enclave_debug = 2;
 }
 
+// Request for getting the attested enclave keys corresponding to the specified MRENCLAVE.
 message QueryAvailableEnclaveKeysRequest {
+  // MRENCLAVE of the enclave that generates the EK.
   bytes mrenclave = 1;
+  // Debug flag of the enclave that generates the EK.
   bool enclave_debug = 2;
+  // Remote attestation type.
+  //
+  // | Type            | Value |
+  // |-----------------|-------|
+  // | IAS             |   1   |
+  // | DCAP            |   2   |
+  // | ZKDCAPRisc0     |   3   |
+  // | MockZKDCAPRisc0 |   4   |
   uint32 ra_type = 3;
 }
 
+// Response for getting the attested enclave keys.
 message QueryAvailableEnclaveKeysResponse {
   repeated EnclaveKeyInfo keys = 1;
 }
 
+// Enclave key information contains the RA type specific information.
 message EnclaveKeyInfo {
   oneof key_info {
     IASEnclaveKeyInfo ias = 1;
@@ -37,6 +56,7 @@ message EnclaveKeyInfo {
   }
 }
 
+// Enclave key information with IAS report.
 message IASEnclaveKeyInfo {
   bytes enclave_key_address = 1;
   string report = 2;
@@ -45,6 +65,7 @@ message IASEnclaveKeyInfo {
   bytes signing_cert = 5;
 }
 
+// Enclave key information with DCAP quote and supplemental data.
 message DCAPEnclaveKeyInfo {
   bytes enclave_key_address = 1;
   bytes quote = 2;
@@ -55,22 +76,26 @@ message DCAPEnclaveKeyInfo {
   QVCollateral collateral = 7;
 }
 
+// Validity Period
 message Validity {
   uint64 not_before = 1;
   uint64 not_after = 2;
 }
 
+// Enclave key information with zkDCAP proof and DCAP attestation info.
 message ZKDCAPEnclaveKeyInfo {
   DCAPEnclaveKeyInfo dcap = 1;
   ZKVMProof zkp = 2;
 }
 
+// ZKVM proof
 message ZKVMProof {
   oneof proof {
     Risc0ZKVMProof risc0 = 1;
   }
 }
 
+// RISC Zero zkVM proof for zkDCAP
 message Risc0ZKVMProof {
   bytes image_id = 1;
   bytes selector = 2;
@@ -78,6 +103,7 @@ message Risc0ZKVMProof {
   bytes output = 4;
 }
 
+// Collateral information for the DCAP quote verification.
 message QVCollateral {
   string tcb_info_json = 1;
   string qe_identity_json = 2;
@@ -87,10 +113,12 @@ message QVCollateral {
   bytes sgx_pck_crl_der = 6;
 }
 
+// Request for getting the enclave key information.
 message QueryEnclaveKeyRequest {
   bytes enclave_key_address = 1;
 }
 
+// Response for getting the enclave key information.
 message QueryEnclaveKeyResponse {
   EnclaveKeyInfo key = 1;
 }
