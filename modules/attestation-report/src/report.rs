@@ -230,7 +230,7 @@ impl From<DCAPQuote> for RAQuote {
 /// ReportData is a 64-byte value that is embedded in the Quote
 ///
 /// The format of the report data is as follows:
-/// | version: 1 byte | enclave key: 20 bytes | operator: 20 bytes | nonce: 22 bytes |
+/// | version: 1 byte | enclave key: 20 bytes | operator: 20 bytes | reserved: 23 bytes |
 #[derive(Debug, Clone, PartialEq)]
 pub struct ReportData(pub [u8; 64]);
 
