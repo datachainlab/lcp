@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 sgx_types = { rev = "v1.1.6", git = "https://github.com/apache/incubator-teaclave-sgx-sdk" }
-bincode = { version = "2.0.0-rc.3", default-features = false, features = ["serde", "alloc"] }
+bincode = { version = "=2.0.0-rc.3", default-features = false, features = ["serde", "alloc"] }
 flex-error = { version = "0.4.4", default-features = false }
 ocall-commands = { path = "../../modules/ocall-commands", default-features = false }
 store = { path = "../../modules/store", default-features = false }

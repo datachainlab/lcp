@@ -30,3 +30,6 @@ exclude = [
     "enclave-modules",
     "proto-compiler"
 ]
+
+[workspace.dependencies]
+bincode = "=2.0.0-rc.3"
