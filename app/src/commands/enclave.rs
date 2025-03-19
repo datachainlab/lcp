@@ -166,6 +166,7 @@ fn run_list_keys<E: EnclaveCommandAPI<S>, S: CommitStore>(
                 list_json.push(json! {{
                     "ra_type": ra_quote.ra_type().to_string(),
                     "address": eki.address.to_hex_string(),
+                    "qe_type": eki.qe_type.to_string(),
                     "attested": true,
                     "report_data": report_data,
                     "isv_enclave_quote_status": isv_enclave_quote_status,
@@ -177,6 +178,7 @@ fn run_list_keys<E: EnclaveCommandAPI<S>, S: CommitStore>(
             None => {
                 list_json.push(json! {{
                     "address": eki.address.to_hex_string(),
+                    "qe_type": eki.qe_type.to_string(),
                     "attested": false,
                 }});
             }
