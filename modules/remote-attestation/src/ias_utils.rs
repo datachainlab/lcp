@@ -1,12 +1,12 @@
 use crate::errors::Error;
-use attestation_report::SignedAttestationVerificationReport;
+use attestation_report::IASSignedReport;
 use base64::{engine::general_purpose::STANDARD as Base64Std, Engine};
 use log::*;
 use rand::RngCore;
 use rustls::RootCertStore;
 use sgx_types::{
-    sgx_calc_quote_size, sgx_epid_group_id_t, sgx_get_quote, sgx_init_quote, sgx_quote_nonce_t,
-    sgx_quote_sign_type_t, sgx_quote_t, sgx_report_t, sgx_spid_t, sgx_status_t, sgx_target_info_t,
+    sgx_calc_quote_size, sgx_get_quote, sgx_quote_nonce_t, sgx_quote_sign_type_t, sgx_quote_t,
+    sgx_report_t, sgx_spid_t, sgx_status_t, sgx_target_info_t,
 };
 use sha2::{Digest, Sha256};
 use std::fmt::Display;
@@ -49,15 +49,6 @@ impl IASMode {
             IASMode::Development => "/sgx/dev/attestation/v4/report",
             IASMode::Production => "/sgx/attestation/v4/report",
         }
-    }
-}
-
-pub fn init_quote() -> Result<(sgx_target_info_t, sgx_epid_group_id_t), Error> {
-    let mut target_info = sgx_target_info_t::default();
-    let mut epid_group_id = sgx_epid_group_id_t::default();
-    match unsafe { sgx_init_quote(&mut target_info, &mut epid_group_id) } {
-        sgx_status_t::SGX_SUCCESS => Ok((target_info, epid_group_id)),
-        s => Err(Error::sgx_error(s, "failed to sgx_init_quote".into())),
     }
 }
 
@@ -190,7 +181,7 @@ pub(crate) fn get_report_from_intel(
     mode: IASMode,
     quote: Vec<u8>,
     ias_key: &str,
-) -> Result<SignedAttestationVerificationReport, Error> {
+) -> Result<IASSignedReport, Error> {
     info!("using IAS mode: {}", mode);
     let config = make_ias_client_config();
     let encoded_quote = Base64Std.encode(&quote[..]);
@@ -255,7 +246,26 @@ pub fn validate_qe_report(
     Ok(())
 }
 
-fn parse_response_attn_report(resp: &[u8]) -> Result<SignedAttestationVerificationReport, Error> {
+pub(crate) fn decode_spid(spid_str: &str) -> Result<sgx_spid_t, Error> {
+    let spid_str = spid_str.trim();
+    if spid_str.len() != 32 {
+        return Err(Error::invalid_spid(format!(
+            "invalid length: {}",
+            spid_str.len()
+        )));
+    }
+    let decoded_vec = match hex::decode(spid_str) {
+        Ok(v) => v,
+        Err(_) => {
+            return Err(Error::invalid_spid("failed to decode".to_string()));
+        }
+    };
+    let mut spid = sgx_spid_t::default();
+    spid.id.copy_from_slice(&decoded_vec[..16]);
+    Ok(spid)
+}
+
+fn parse_response_attn_report(resp: &[u8]) -> Result<IASSignedReport, Error> {
     trace!("parse_response_attn_report");
     let mut headers = [httparse::EMPTY_HEADER; 16];
     let mut respp = httparse::Response::new(&mut headers);
@@ -337,7 +347,7 @@ fn parse_response_attn_report(resp: &[u8]) -> Result<SignedAttestationVerificati
     let signing_cert = Base64Std
         .decode(&sig_cert)
         .map_err(|e| Error::base64_decode(e, "Signing Certificate".to_string()))?;
-    Ok(SignedAttestationVerificationReport {
+    Ok(IASSignedReport {
         avr: attn_report,
         signature,
         signing_cert,
@@ -430,24 +440,4 @@ fn lookup_ipv4(host: &str, port: u16) -> Result<SocketAddr, Error> {
         }
     }
     Err(Error::cannot_lookup_address(host.to_string(), port))
-}
-
-pub(crate) fn decode_spid(spid_str: &str) -> Result<sgx_spid_t, Error> {
-    let spid_str = spid_str.trim();
-    if spid_str.len() != 32 {
-        return Err(Error::invalid_spid(format!(
-            "invalid length: {}",
-            spid_str.len()
-        )));
-    }
-    let decoded_vec = match hex::decode(spid_str) {
-        Ok(v) => v,
-        Err(_) => {
-            return Err(Error::invalid_spid("failed to decode".to_string()));
-        }
-    };
-    let mut spid = sgx_spid_t::default();
-    // the length of `decoded_vec` is 16 because each byte is represented by 2 characters
-    spid.id.copy_from_slice(&decoded_vec);
-    Ok(spid)
 }

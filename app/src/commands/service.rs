@@ -2,7 +2,7 @@ use crate::enclave::EnclaveLoader;
 use crate::opts::{EnclaveOpts, Opts};
 use anyhow::Result;
 use clap::Parser;
-use enclave_api::{Enclave, EnclaveProtoAPI};
+use enclave_api::{Enclave, EnclaveInfo, EnclaveProtoAPI};
 use host::store::transaction::CommitStore;
 use log::*;
 use service::{run_service, AppService};
@@ -49,7 +49,8 @@ impl ServiceCmd {
                 let addr = cmd.address.parse()?;
                 let enclave =
                     enclave_loader.load(opts, cmd.enclave.path.as_ref(), cmd.enclave.is_debug())?;
-
+                let metadata = enclave.metadata()?;
+                let mrenclave = metadata.mrenclave().to_hex_string();
                 let mut rb = Builder::new_multi_thread();
                 let rb = if let Some(threads) = cmd.threads {
                     rb.worker_threads(threads)
@@ -59,7 +60,7 @@ impl ServiceCmd {
                 let rt = Arc::new(rb.enable_all().build()?);
                 let srv = AppService::new(opts.get_home(), enclave);
 
-                info!("start service: addr={addr}");
+                info!("start service: addr={addr} mrenclave={mrenclave}");
                 run_service(srv, rt, addr)
             }
         }

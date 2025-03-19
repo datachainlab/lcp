@@ -20,15 +20,30 @@ mod prelude {
     pub use core::iter::FromIterator;
 }
 
+pub use dcap::{DCAPQuote, Risc0ZKVMProof, ZKDCAPQuote, ZKVMProof};
 pub use errors::Error;
+pub use ias::{verify_ias_report, IASAttestationVerificationReport, IASSignedReport};
+pub use report::{is_enclave_debug_enabled, QEType, RAQuote, RAType, ReportData};
+
+pub(crate) mod serde_base64 {
+    use crate::prelude::*;
+    use base64::{engine::general_purpose::STANDARD as Base64Std, Engine};
+    use serde::{Deserialize, Deserializer, Serialize, Serializer};
+
+    pub fn serialize<S: Serializer>(v: &Vec<u8>, s: S) -> Result<S::Ok, S::Error> {
+        let base64 = Base64Std.encode(v);
+        String::serialize(&base64, s)
+    }
+
+    pub fn deserialize<'de, D: Deserializer<'de>>(d: D) -> Result<Vec<u8>, D::Error> {
+        let base64 = String::deserialize(d)?;
+        Base64Std
+            .decode(base64.as_bytes())
+            .map_err(serde::de::Error::custom)
+    }
+}
+
+mod dcap;
 mod errors;
-
-pub use report::{
-    AttestationVerificationReport, Quote, ReportData, SignedAttestationVerificationReport,
-};
+mod ias;
 mod report;
-
-#[cfg(feature = "std")]
-pub use verification::verify_report;
-#[cfg(feature = "std")]
-mod verification;

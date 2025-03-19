@@ -1,4 +1,4 @@
-use crate::prelude::*;
+use crate::{client_state::ZKVMType, prelude::*};
 use core::time::Duration;
 use flex_error::*;
 
@@ -19,6 +19,11 @@ define_error! {
             format_args!("unexpected header type: type_url={}", e.type_url)
         },
 
+        UnexpectedQuoteBody
+        |e| {
+            "unexpected quote body"
+        },
+
         ExpiredAvr {
             current_timestamp: light_client::types::Time,
             attestation_time: light_client::types::Time,
@@ -34,6 +39,33 @@ define_error! {
         }
         |e| {
             format_args!("Mrenclave mismatch: expected={:?} actual={:?}", e.expected, e.actual)
+        },
+
+        InvalidZkdcapVerifierInfo {
+            bytes: Vec<u8>
+        }
+        |e| {
+            format_args!("Invalid zkdcap_verifier_info: bytes={:?}", e.bytes)
+        },
+
+        UnexpectedZkvmType {
+            expected: ZKVMType,
+            actual: ZKVMType
+        }
+        |e| {
+            format_args!("Unexpected zkvm type: expected={:?} actual={:?}", e.expected, e.actual)
+        },
+
+        InvalidRisc0ProofFormat
+        |e| {
+            "Invalid Risc0 proof format"
+        },
+
+        UnexpectedTcbEvaluationDataNumber {
+            number: u32
+        }
+        |e| {
+            format_args!("Unexpected TCB evaluation data number: number={}", e.number)
         },
 
         AttestationReport
@@ -56,6 +88,10 @@ define_error! {
         [light_client::commitments::Error]
         |_| { "Commitment proof error" },
 
+        Zkvm
+        [zkvm::Error]
+        |_| { "Zkvm error" },
+
         IbcProto
         [TraceError<light_client::types::proto::protobuf::Error>]
         |_| { "IBCProto error" },
@@ -63,6 +99,14 @@ define_error! {
         StringFromUtf8Error
         [TraceError<alloc::string::FromUtf8Error>]
         |_| { "FromUtf8 error" },
+
+        DcapQuoteVerifier
+        [TraceError<dcap_quote_verifier::Error>]
+        |_| { "DCAP quote verifier error" },
+
+        ZkVmTypeConversion
+        [TraceError<core::num::TryFromIntError>]
+        |_| { "ZkVmType conversion error" },
     }
 }
 
@@ -93,6 +137,12 @@ impl From<light_client::Error> for Error {
 impl From<light_client::commitments::Error> for Error {
     fn from(value: light_client::commitments::Error) -> Self {
         Self::commitment_proof(value)
+    }
+}
+
+impl From<zkvm::Error> for Error {
+    fn from(value: zkvm::Error) -> Self {
+        Self::zkvm(value)
     }
 }
 

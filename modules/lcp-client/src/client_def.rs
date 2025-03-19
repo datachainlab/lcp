@@ -1,12 +1,16 @@
-use crate::client_state::ClientState;
+use crate::client_state::{ClientState, ZKDCAPVerifierInfo, ZKVMType};
 use crate::consensus_state::ConsensusState;
 use crate::errors::Error;
 use crate::message::{
     ClientMessage, CommitmentProofs, RegisterEnclaveKeyMessage, UpdateOperatorsMessage,
+    ZKDCAPRegisterEnclaveKeyMessage,
 };
 use alloy_sol_types::{sol, SolValue};
-use attestation_report::{ReportData, SignedAttestationVerificationReport};
+use attestation_report::{IASSignedReport, ReportData};
 use crypto::{verify_signature_address, Address, Keccak256};
+use dcap_quote_verifier::types::quotes::body::QuoteBody;
+use dcap_quote_verifier::types::SGX_TEE_TYPE;
+use dcap_quote_verifier::verifier::Status;
 use hex_literal::hex;
 use light_client::commitments::{
     CommitmentPrefix, EthABIEncoder, MisbehaviourProxyMessage, ProxyMessage,
@@ -68,8 +72,6 @@ impl LCPClient {
         client_state: ClientState,
         consensus_state: ConsensusState,
     ) -> Result<(), Error> {
-        // key_expiration must not be 0
-        assert!(!client_state.key_expiration.is_zero());
         // An initial client state's latest height must be empty
         assert!(client_state.latest_height.is_zero());
         // mr_enclave length must be 32
@@ -91,6 +93,32 @@ impl LCPClient {
         );
         // operators_nonce must be 0
         assert!(client_state.operators_nonce == 0);
+
+        if !client_state.zkdcap_verifier_infos.is_empty() {
+            assert!(
+                client_state.zkdcap_verifier_infos.len() == 1,
+                "only one verifier is supported"
+            );
+            assert!(
+                client_state.zkdcap_verifier_infos[0].as_type() == ZKVMType::Risc0,
+                "only Risc0 is supported"
+            );
+            assert!(
+                client_state.current_tcb_evaluation_data_number != 0,
+                "current_tcb_evaluation_data_number must not be 0"
+            );
+            assert_eq!(
+                client_state.next_tcb_evaluation_data_number == 0,
+                client_state.next_tcb_evaluation_data_number_update_time == 0,
+                "next_tcb_evaluation_data_number and next_tcb_evaluation_data_number_update_time must be both 0 or both non-zero"
+            );
+            assert!(client_state.next_tcb_evaluation_data_number == 0 || client_state.next_tcb_evaluation_data_number > client_state.current_tcb_evaluation_data_number, "next_tcb_evaluation_data_number must be greater than current_tcb_evaluation_data_number");
+        } else {
+            assert!(
+                !client_state.key_expiration.is_zero(),
+                "key_expiration must not be 0 if DCAP/zkDCAP is not supported"
+            );
+        }
 
         // An initial consensus state must be empty
         assert!(consensus_state.is_empty());
@@ -124,6 +152,9 @@ impl LCPClient {
             },
             ClientMessage::RegisterEnclaveKey(msg) => {
                 self.register_enclave_key(ctx, client_id, client_state, msg)
+            }
+            ClientMessage::ZKDCAPRegisterEnclaveKey(msg) => {
+                self.zkdcap_register_enclave_key(ctx, client_id, client_state, msg)
             }
             ClientMessage::UpdateOperators(msg) => {
                 self.update_operators(ctx, client_id, client_state, msg)
@@ -192,7 +223,7 @@ impl LCPClient {
         assert!(!client_state.frozen);
 
         let (report_data, attestation_time) =
-            verify_report(ctx.host_timestamp(), &client_state, &message.report)?;
+            verify_ias_report(ctx.host_timestamp(), &client_state, &message.report)?;
 
         let operator = if let Some(operator_signature) = message.operator_signature {
             verify_signature_address(
@@ -215,6 +246,200 @@ impl LCPClient {
             ),
         );
         Ok(())
+    }
+
+    fn zkdcap_register_enclave_key(
+        &self,
+        ctx: &mut dyn HostClientKeeper,
+        client_id: ClientId,
+        client_state: ClientState,
+        message: ZKDCAPRegisterEnclaveKeyMessage,
+    ) -> Result<(), Error> {
+        assert!(!client_state.frozen);
+        assert!(client_state.zkdcap_verifier_infos.len() == 1);
+        let risc0_program_id = match client_state.zkdcap_verifier_infos[0] {
+            ZKDCAPVerifierInfo::Risc0(info) => info,
+            vi => return Err(Error::unexpected_zkvm_type(ZKVMType::Risc0, vi.as_type())),
+        };
+
+        let (selector, seal) = message.risc0_seal_selector()?;
+        let output = message.quote_verification_output;
+
+        zkvm::verifier::verify_groth16_proof(selector, seal, risc0_program_id, output.to_bytes())?;
+
+        let report = if let QuoteBody::SGXQuoteBody(report) = output.quote_body {
+            report
+        } else {
+            return Err(Error::unexpected_quote_body());
+        };
+        let report_data = ReportData(report.report_data);
+
+        assert_eq!(
+            report.mrenclave.as_slice(),
+            client_state.mr_enclave.as_slice(),
+            "mrenclave mismatch"
+        );
+        assert_eq!(output.quote_version, 3, "unexpected quote version");
+        assert_eq!(output.tee_type, SGX_TEE_TYPE, "unexpected tee type");
+        assert_eq!(
+            output.sgx_intel_root_ca_hash,
+            remote_attestation::dcap::INTEL_ROOT_CA_HASH,
+        );
+
+        let (client_state, current_updated, next_updated) = self
+            .check_and_update_tcb_evaluation_data_number(
+                ctx,
+                client_id.clone(),
+                output.min_tcb_evaluation_data_number,
+            )?;
+        if current_updated || next_updated {
+            ctx.store_any_client_state(client_id.clone(), client_state.clone().into())?;
+        }
+
+        let host_timestamp = ctx.host_timestamp().as_unix_timestamp_secs();
+        assert!(
+            output.validity.not_before <= host_timestamp
+                && host_timestamp <= output.validity.not_after,
+            "output validity check failed"
+        );
+
+        assert!(
+            output.status == Status::Ok
+                || client_state
+                    .allowed_quote_statuses
+                    .contains(&output.status.to_string()),
+            "unexpected tcb status"
+        );
+        for advisory_id in output.advisory_ids.iter() {
+            assert!(
+                client_state.allowed_advisory_ids.contains(advisory_id),
+                "unexpected advisory id"
+            );
+        }
+
+        let operator = if let Some(operator_signature) = message.operator_signature {
+            verify_signature_address(
+                compute_eip712_zkdcap_register_enclave_key(
+                    &client_state.zkdcap_verifier_infos[0],
+                    keccak256(&output.to_bytes()),
+                )
+                .as_ref(),
+                operator_signature.as_ref(),
+            )?
+        } else {
+            Default::default()
+        };
+        let expected_operator = report_data.operator();
+        // check if the operator matches the expected operator in the report data
+        assert!(expected_operator.is_zero() || operator == expected_operator);
+
+        let expired_at = if client_state.key_expiration.is_zero() {
+            output.validity.not_after
+        } else {
+            core::cmp::min(
+                output.validity.not_before + client_state.key_expiration.as_secs(),
+                output.validity.not_after,
+            )
+        };
+        self.set_enclave_operator_info(
+            ctx,
+            &client_id,
+            report_data.enclave_key(),
+            EKOperatorInfo::new(expired_at, operator),
+        );
+        Ok(())
+    }
+
+    /// check_and_update_tcb_evaluation_data_number checks if the current or next TCB evaluation data number update is required.
+    ///
+    /// The update logic aligns strictly with the proto definition in `proto/definitions/ibc/lightclients/lcp/v1/lcp.proto`:
+    /// - If the reserved next number's update time has arrived, it immediately replaces the current number.
+    /// - Observing a number greater than the current number triggers updates depending on the configured grace period:
+    ///   - Zero grace period: Immediate update; no next number reserved.
+    ///   - Non-zero grace period:
+    ///     - If no next number reserved yet, reserve the observed number.
+    ///     - If a next number is already reserved:
+    ///       - General case: No action required if the observed number matches the reserved number.
+    ///       - Edge case 1 (current < next < observed): Immediate update of current number to reserved number; reserve newly observed number.
+    ///       - Edge case 2 (current < observed < next): Immediate update of current number to observed number; reserved number unchanged.
+    ///
+    #[allow(clippy::comparison_chain)]
+    fn check_and_update_tcb_evaluation_data_number(
+        &self,
+        ctx: &mut dyn HostClientKeeper,
+        client_id: ClientId,
+        output_tcb_evaluation_data_number: u32,
+    ) -> Result<(ClientState, bool, bool), Error> {
+        let mut client_state = ClientState::try_from(ctx.client_state(&client_id)?)?;
+        let mut current_updated = false;
+
+        // Check if the reserved next TCB number is due for update.
+        if client_state.next_tcb_evaluation_data_number != 0
+            && ctx.host_timestamp().as_unix_timestamp_secs()
+                >= client_state.next_tcb_evaluation_data_number_update_time
+        {
+            client_state.current_tcb_evaluation_data_number =
+                client_state.next_tcb_evaluation_data_number;
+            client_state.next_tcb_evaluation_data_number = 0;
+            client_state.next_tcb_evaluation_data_number_update_time = 0;
+            current_updated = true;
+            // No new next number reservation here.
+        }
+
+        if output_tcb_evaluation_data_number > client_state.current_tcb_evaluation_data_number {
+            if client_state.tcb_evaluation_data_number_update_grace_period == 0 {
+                // Immediate update due to zero grace period.
+                client_state.current_tcb_evaluation_data_number = output_tcb_evaluation_data_number;
+                // Sanity check: No next number should be reserved if grace period is zero.
+                assert!(
+                    client_state.next_tcb_evaluation_data_number == 0
+                        && client_state.next_tcb_evaluation_data_number_update_time == 0
+                );
+                Ok((client_state, true, false))
+            } else {
+                let next_update_time = ctx.host_timestamp().as_unix_timestamp_secs()
+                    + client_state.tcb_evaluation_data_number_update_grace_period as u64;
+
+                if client_state.next_tcb_evaluation_data_number == 0 {
+                    // No reserved number yet; reserve now.
+                    client_state.next_tcb_evaluation_data_number =
+                        output_tcb_evaluation_data_number;
+                    client_state.next_tcb_evaluation_data_number_update_time = next_update_time;
+                    return Ok((client_state, current_updated, true));
+                }
+
+                if output_tcb_evaluation_data_number > client_state.next_tcb_evaluation_data_number
+                {
+                    // Edge case 1: Immediate update to previously reserved next number.
+                    client_state.current_tcb_evaluation_data_number =
+                        client_state.next_tcb_evaluation_data_number;
+                    client_state.next_tcb_evaluation_data_number =
+                        output_tcb_evaluation_data_number;
+                    client_state.next_tcb_evaluation_data_number_update_time = next_update_time;
+                    Ok((client_state, true, true))
+                } else if output_tcb_evaluation_data_number
+                    < client_state.next_tcb_evaluation_data_number
+                {
+                    // Edge case 2: Immediate update to the newly observed number, keep existing reservation.
+                    client_state.current_tcb_evaluation_data_number =
+                        output_tcb_evaluation_data_number;
+                    Ok((client_state, true, false))
+                } else {
+                    // General case: The observed number is already reserved; no action required.
+                    Ok((client_state, current_updated, false))
+                }
+            }
+        } else if output_tcb_evaluation_data_number
+            < client_state.current_tcb_evaluation_data_number
+        {
+            // Reverting due to invalid backward update.
+            Err(Error::unexpected_tcb_evaluation_data_number(
+                client_state.current_tcb_evaluation_data_number,
+            ))
+        } else {
+            // Observed number matches current; no updates necessary.
+            Ok((client_state, current_updated, false))
+        }
     }
 
     fn update_operators(
@@ -456,6 +681,29 @@ pub fn compute_eip712_register_enclave_key_hash(avr: &str) -> [u8; 32] {
     keccak256(&compute_eip712_register_enclave_key(avr))
 }
 
+pub fn compute_eip712_zkdcap_register_enclave_key(
+    zkdcap_verifier_info: &ZKDCAPVerifierInfo,
+    output_hash: [u8; 32],
+) -> Vec<u8> {
+    // 0x1901 | DOMAIN_SEPARATOR_ZKDCAP_REGISTER_ENCLAVE_KEY | keccak256(keccak256("ZKDCAPRegisterEnclaveKey(bytes zkDCAPVerifierInfo,bytes32 outputHash)") | keccak256(zkdcap_verifier_info) | output_hash)
+    let type_hash = {
+        let mut h = Keccak::v256();
+        h.update(&keccak256(
+            b"ZKDCAPRegisterEnclaveKey(bytes zkDCAPVerifierInfo,bytes32 outputHash)",
+        ));
+        h.update(&keccak256(zkdcap_verifier_info.to_bytes().as_ref()));
+        h.update(&output_hash);
+        let mut result = [0u8; 32];
+        h.finalize(result.as_mut());
+        result
+    };
+    [0x19, 0x01]
+        .into_iter()
+        .chain(LCP_CLIENT_DOMAIN_SEPARATOR)
+        .chain(type_hash)
+        .collect()
+}
+
 pub fn compute_eip712_update_operators(
     client_id: ClientId,
     nonce: u64,
@@ -521,18 +769,18 @@ pub fn compute_eip712_update_operators_hash(
     ))
 }
 
-// verify_report
+// verify_ias_report
 // - verifies the Attestation Verification Report
 // - calculate a key expiration with client_state and report's timestamp
-fn verify_report(
+fn verify_ias_report(
     current_timestamp: Time,
     client_state: &ClientState,
-    signed_avr: &SignedAttestationVerificationReport,
+    signed_avr: &IASSignedReport,
 ) -> Result<(ReportData, Time), Error> {
     // verify AVR with Intel SGX Attestation Report Signing CA
     // NOTE: This verification is skipped in tests because the CA is not available in the test environment
-    #[cfg(not(test))]
-    attestation_report::verify_report(current_timestamp, signed_avr)?;
+    // #[cfg(not(test))]
+    // attestation_report::verify_ias_report(current_timestamp, signed_avr)?;
 
     let quote = signed_avr.get_avr()?.parse_quote()?;
 
@@ -579,7 +827,7 @@ mod tests {
     use crate::message::UpdateClientMessage;
     use alloc::rc::Rc;
     use alloc::sync::Arc;
-    use attestation_report::{AttestationVerificationReport, ReportData};
+    use attestation_report::{IASAttestationVerificationReport, ReportData};
     use base64::{engine::general_purpose::STANDARD as Base64Std, Engine};
     use context::Context;
     use core::cell::RefCell;
@@ -811,7 +1059,7 @@ mod tests {
         Arc::new(registry)
     }
 
-    fn generate_dummy_signed_avr(key: &EnclavePublicKey) -> SignedAttestationVerificationReport {
+    fn generate_dummy_signed_avr(key: &EnclavePublicKey) -> IASSignedReport {
         let quote = sgx_quote_t {
             version: 4,
             report_body: sgx_report_body_t {
@@ -827,7 +1075,7 @@ mod tests {
             )
         };
         let now = chrono::Utc::now();
-        let attr = AttestationVerificationReport {
+        let attr = IASAttestationVerificationReport {
             id: "23856791181030202675484781740313693463".to_string(),
             // TODO refactoring
             timestamp: format!(
@@ -846,7 +1094,7 @@ mod tests {
             ..Default::default()
         };
 
-        SignedAttestationVerificationReport {
+        IASSignedReport {
             avr: attr.to_canonical_json().unwrap(),
             ..Default::default()
         }

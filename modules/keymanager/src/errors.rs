@@ -1,3 +1,4 @@
+use crypto::Address;
 use flex_error::*;
 
 define_error! {
@@ -8,10 +9,18 @@ define_error! {
 
         UnattestedEnclaveKey
         {
-            descr: String
+            address: Address
         }
         |e| {
-            format_args!("Unattested enclave key: descr={}", e.descr)
+            format_args!("Unattested enclave key: address={}", e.address)
+        },
+
+        UnattestedEnclaveKeyNotFound
+        {
+            address: Address
+        }
+        |e| {
+            format_args!("Unattested enclave key not found: address={}", e.address)
         },
 
         Crypto

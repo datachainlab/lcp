@@ -14,3 +14,4 @@ crypto = { path = "../crypto" }
 enclave-api = { path = "../enclave-api" }
 lcp-proto = { path = "../../proto", default-features = false, features = ["server"] }
 store = { path = "../store", default-features = false }
+attestation-report = { path = "../attestation-report" }

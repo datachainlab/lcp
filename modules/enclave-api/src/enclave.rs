@@ -1,6 +1,7 @@
 use crate::errors::Result;
 use keymanager::EnclaveKeyManager;
-use sgx_types::{metadata::metadata_t, sgx_enclave_id_t, SgxResult};
+use lcp_types::EnclaveMetadata;
+use sgx_types::{sgx_enclave_id_t, SgxResult};
 use sgx_urts::SgxEnclave;
 use std::path::PathBuf;
 use std::sync::{Arc, RwLock};
@@ -54,7 +55,9 @@ pub trait EnclaveInfo: Sync + Send {
     /// `get_eid` returns the enclave id
     fn get_eid(&self) -> sgx_enclave_id_t;
     /// `metadata` returns the metadata of the enclave
-    fn metadata(&self) -> SgxResult<metadata_t>;
+    fn metadata(&self) -> SgxResult<EnclaveMetadata>;
+    /// `is_debug` returns true if the enclave is in debug mode
+    fn is_debug(&self) -> bool;
     /// `get_key_manager` returns a key manager for Enclave Keys
     fn get_key_manager(&self) -> &EnclaveKeyManager;
 }
@@ -65,8 +68,12 @@ impl<S: CommitStore> EnclaveInfo for Enclave<S> {
         self.sgx_enclave.geteid()
     }
     /// `metadata` returns the metadata of the enclave
-    fn metadata(&self) -> SgxResult<metadata_t> {
+    fn metadata(&self) -> SgxResult<EnclaveMetadata> {
         host::sgx_get_metadata(&self.path)
+    }
+    /// `is_debug` returns true if the enclave is in debug mode
+    fn is_debug(&self) -> bool {
+        self.sgx_enclave.is_debug()
     }
     /// `get_keymanager` returns a key manager for Enclave Keys
     fn get_key_manager(&self) -> &EnclaveKeyManager {

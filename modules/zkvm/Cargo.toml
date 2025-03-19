@@ -1,0 +1,18 @@
+[package]
+name = "zkvm"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+risc0-zkvm = { version = "1.2.4", default-features = false }
+flex-error = { version = "0.4.4", default-features = false }
+
+[features]
+default = ["prover", "verifier"]
+prover = [
+    "risc0-zkvm/client",
+    "risc0-zkvm/prove",
+    "risc0-zkvm/bonsai",
+]
+verifier = []
+cuda = ["prover", "risc0-zkvm/cuda"]

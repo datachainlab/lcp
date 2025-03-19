@@ -9,7 +9,7 @@ pub use height::Height;
 pub use host::ClientId;
 /// re-export
 pub use lcp_proto as proto;
-pub use sgx::Mrenclave;
+pub use sgx::{EnclaveMetadata, Mrenclave};
 pub use time::{nanos_to_duration, Time, MAX_UNIX_TIMESTAMP_NANOS};
 pub use transmuter::{deserialize_bytes, serialize_bytes, BytesTransmuter};
 

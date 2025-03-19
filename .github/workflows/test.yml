@@ -46,9 +46,7 @@ jobs:
             ./enclave
           cache-directories: |
             ~/.cargo/registry/src/**/librocksdb-sys-*
-      - run: curl -LO https://download.01.org/intel-sgx/sgx-linux/2.19/distro/ubuntu22.04-server/sgx_linux_x64_sdk_2.19.100.3.bin
-      - run: chmod +x ./sgx_linux_x64_sdk_2.19.100.3.bin
-      - run: echo -e 'no\n/opt' | ./sgx_linux_x64_sdk_2.19.100.3.bin
-      - run: source /opt/sgxsdk/environment && make -B
-      - run: source /opt/sgxsdk/environment && make test
-      - run: source /opt/sgxsdk/environment && make integration-test
+      - run: sudo bash .github/scripts/install_sgx_sdk.sh /opt/intel
+      - run: source /opt/intel/sgxsdk/environment && make -B
+      - run: source /opt/intel/sgxsdk/environment && make test
+      - run: source /opt/intel/sgxsdk/environment && make integration-test

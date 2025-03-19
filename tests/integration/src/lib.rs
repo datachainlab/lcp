@@ -10,13 +10,14 @@ mod tests {
     use super::*;
     use crate::relayer::Relayer;
     use anyhow::bail;
+    use attestation_report::QEType;
     use commitments::UpdateStateProxyMessage;
     use crypto::Address;
     use ecall_commands::{
         AggregateMessagesInput, CommitmentProofPair, GenerateEnclaveKeyInput, InitClientInput,
         UpdateClientInput, VerifyMembershipInput,
     };
-    use enclave_api::{Enclave, EnclaveCommandAPI};
+    use enclave_api::{Enclave, EnclaveCommandAPI, EnclaveInfo};
     use host_environment::Environment;
     use ibc::{
         core::{
@@ -79,21 +80,27 @@ mod tests {
             info!("this test is running in HW mode");
         }
 
-        let (target_info, _) = remote_attestation::init_quote()?;
+        let (qe_target_info, _) = remote_attestation::get_target_qe_info(QEType::QE)?;
         let operator = Address::from_hex_string("0x396e1ccc2f11cd6d2114c2449dad7751357e413e")?;
-        let op_ek_addr = match enclave.generate_enclave_key(GenerateEnclaveKeyInput {
-            operator: Some(operator),
-            target_info,
-        }) {
+        let op_ek_addr = match enclave.generate_enclave_key(
+            GenerateEnclaveKeyInput {
+                operator: Some(operator),
+                target_info: qe_target_info,
+            },
+            QEType::QE,
+        ) {
             Ok(res) => res.pub_key.as_address(),
             Err(e) => {
                 bail!("failed to generate an enclave key: {:?}!", e);
             }
         };
-        let ek_addr = match enclave.generate_enclave_key(GenerateEnclaveKeyInput {
-            operator: None,
-            target_info,
-        }) {
+        let ek_addr = match enclave.generate_enclave_key(
+            GenerateEnclaveKeyInput {
+                operator: None,
+                target_info: qe_target_info,
+            },
+            QEType::QE,
+        ) {
             Ok(res) => res.pub_key.as_address(),
             Err(e) => {
                 bail!("failed to generate an enclave key: {:?}!", e);
@@ -104,7 +111,7 @@ mod tests {
         {
             use remote_attestation::ias::run_ias_ra;
             let res = match run_ias_ra(
-                enclave,
+                enclave.get_key_manager(),
                 op_ek_addr,
                 remote_attestation::IASMode::Production,
                 std::env::var("SPID")?,
@@ -120,7 +127,7 @@ mod tests {
             assert_eq!(report_data.operator(), operator);
 
             let res = match run_ias_ra(
-                enclave,
+                enclave.get_key_manager(),
                 ek_addr,
                 remote_attestation::IASMode::Production,
                 std::env::var("SPID")?,
@@ -142,7 +149,7 @@ mod tests {
             use remote_attestation::sha2::Sha256;
 
             let res = match run_ias_ra_simulation(
-                enclave,
+                enclave.get_key_manager(),
                 op_ek_addr,
                 vec![],
                 "OK".to_string(),
@@ -159,7 +166,7 @@ mod tests {
             assert_eq!(report_data.operator(), operator);
 
             let res = match run_ias_ra_simulation(
-                enclave,
+                enclave.get_key_manager(),
                 ek_addr,
                 vec![],
                 "OK".to_string(),
@@ -174,6 +181,87 @@ mod tests {
             let report_data = res.parse_quote()?.report_data();
             assert_eq!(report_data.enclave_key(), ek_addr);
             assert!(report_data.operator().is_zero());
+        }
+
+        {
+            use remote_attestation::dcap_simulation::DCAPRASimulationOpts;
+            use remote_attestation::dcap_simulation::{
+                DCAP_SIM_ROOT_CA_PEM, DCAP_SIM_ROOT_KEY_PKCS8,
+            };
+            use remote_attestation::zkdcap::run_zkdcap_ra_simulation;
+            use remote_attestation::zkvm::prover::Risc0ProverMode;
+            use zkdcap_risc0::DCAP_QUOTE_VERIFIER_ELF;
+
+            let target_info = remote_attestation::get_target_qe_info(QEType::QE3SIM)?.0;
+            let zkdcap_ek_addr = match enclave.generate_enclave_key(
+                GenerateEnclaveKeyInput {
+                    operator: Some(operator),
+                    target_info,
+                },
+                QEType::QE3SIM,
+            ) {
+                Ok(res) => res.pub_key.as_address(),
+                Err(e) => {
+                    bail!("failed to generate an enclave key: {:?}!", e);
+                }
+            };
+
+            let res = run_zkdcap_ra_simulation(
+                enclave.get_key_manager(),
+                zkdcap_ek_addr,
+                Risc0ProverMode::Dev,
+                DCAP_QUOTE_VERIFIER_ELF,
+                false,
+                DCAPRASimulationOpts::new(
+                    DCAP_SIM_ROOT_CA_PEM.as_bytes(),
+                    DCAP_SIM_ROOT_KEY_PKCS8.as_bytes(),
+                )?,
+            );
+            assert!(
+                res.is_ok(),
+                "zkDCAP Remote Attestation Simulation Failed {:?}",
+                res
+            );
+        }
+        #[cfg(not(feature = "sgx-sw"))]
+        {
+            use remote_attestation::dcap_pcs::client::PCSClient;
+            use remote_attestation::dcap_utils::ValidatedPCSClient;
+            use remote_attestation::zkdcap::run_zkdcap_ra;
+            use remote_attestation::zkvm::prover::Risc0ProverMode;
+            use zkdcap_risc0::DCAP_QUOTE_VERIFIER_ELF;
+
+            let target_info = remote_attestation::get_target_qe_info(QEType::QE3)?.0;
+            let zkdcap_ek_addr = match enclave.generate_enclave_key(
+                GenerateEnclaveKeyInput {
+                    operator: Some(operator),
+                    target_info,
+                },
+                QEType::QE3,
+            ) {
+                Ok(res) => res.pub_key.as_address(),
+                Err(e) => {
+                    bail!("failed to generate an enclave key: {:?}!", e);
+                }
+            };
+
+            let res = run_zkdcap_ra(
+                enclave.get_key_manager(),
+                zkdcap_ek_addr,
+                Risc0ProverMode::Dev,
+                DCAP_QUOTE_VERIFIER_ELF,
+                false,
+                ValidatedPCSClient::new(
+                    PCSClient::new(
+                        "https://api.trustedservices.intel.com/",
+                        "https://certificates.trustedservices.intel.com/",
+                        false,
+                    ),
+                    None,
+                ),
+                Default::default(),
+            );
+            assert!(res.is_ok(), "zkDCAP Remote Attestation Failed {:?}", res);
         }
 
         Ok(())
@@ -213,11 +301,14 @@ mod tests {
         enclave: &Enclave<store::memory::MemStore>,
     ) -> Result<(), anyhow::Error> {
         let operator = Address::from_hex_string("0x396e1ccc2f11cd6d2114c2449dad7751357e413e")?;
-        let (target_info, _) = remote_attestation::init_quote()?;
-        let signer = match enclave.generate_enclave_key(GenerateEnclaveKeyInput {
-            operator: Some(operator),
-            target_info,
-        }) {
+        let (target_info, _) = remote_attestation::get_target_qe_info(QEType::QE)?;
+        let signer = match enclave.generate_enclave_key(
+            GenerateEnclaveKeyInput {
+                operator: Some(operator),
+                target_info,
+            },
+            QEType::QE,
+        ) {
             Ok(res) => res.pub_key.as_address(),
             Err(e) => {
                 bail!("failed to generate an enclave key: {:?}!", e);

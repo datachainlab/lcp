@@ -1,39 +1,20 @@
+######## LCP Build Settings ########
+ZK_PROVER_CUDA ?= 0
+APP_CARGO_FLAGS ?=
+
 ######## SGX SDK Settings ########
 SGX_SDK ?= /opt/sgxsdk
 SGX_MODE ?= HW
-SGX_ARCH ?= x64
 SGX_DEBUG ?= 0
-SGX_PRERELEASE ?= 0
-SGX_PRODUCTION ?= 0
+SGX_ENCLAVE_CONFIG ?= "enclave/Enclave.config.xml"
+SGX_SIGN_KEY ?= "enclave/Enclave_private.pem"
+
+SGX_COMMON_CFLAGS := -m64
+SGX_LIBRARY_PATH := $(SGX_SDK)/lib64
+SGX_ENCLAVE_SIGNER := $(SGX_SDK)/bin/x64/sgx_sign
+SGX_EDGER8R := $(SGX_SDK)/bin/x64/sgx_edger8r
 
 include buildenv.mk
-
-ifeq ($(shell getconf LONG_BIT), 32)
-	SGX_ARCH := x86
-else ifeq ($(findstring -m32, $(CXXFLAGS)), -m32)
-	SGX_ARCH := x86
-endif
-
-ifeq ($(SGX_ARCH), x86)
-	SGX_COMMON_CFLAGS := -m32
-	SGX_LIBRARY_PATH := $(SGX_SDK)/lib
-	SGX_ENCLAVE_SIGNER := $(SGX_SDK)/bin/x86/sgx_sign
-	SGX_EDGER8R := $(SGX_SDK)/bin/x86/sgx_edger8r
-else
-	SGX_COMMON_CFLAGS := -m64
-	SGX_LIBRARY_PATH := $(SGX_SDK)/lib64
-	SGX_ENCLAVE_SIGNER := $(SGX_SDK)/bin/x64/sgx_sign
-	SGX_EDGER8R := $(SGX_SDK)/bin/x64/sgx_edger8r
-endif
-
-ifeq ($(SGX_DEBUG), 1)
-ifeq ($(SGX_PRERELEASE), 1)
-$(error Cannot set SGX_DEBUG and SGX_PRERELEASE at the same time!!)
-endif
-ifeq ($(SGX_PRODUCTION), 1)
-$(error Cannot set SGX_DEBUG and SGX_PRODUCTION at the same time!!)
-endif
-endif
 
 ifeq ($(SGX_DEBUG), 1)
 	# we build with cargo --release, even in SGX DEBUG mode
@@ -49,20 +30,6 @@ endif
 
 SGX_COMMON_CFLAGS += -fstack-protector
 
-APP_CARGO_FEATURES     = --features=default
-ifeq ($(SGX_PRODUCTION), 1)
-	SGX_ENCLAVE_MODE = "Production Mode"
-	SGX_ENCLAVE_CONFIG = $(SGX_ENCLAVE_CONFIG)
-	SGX_SIGN_KEY = $(SGX_COMMERCIAL_KEY)
-else
-	SGX_ENCLAVE_MODE = "Development Mode"
-	SGX_ENCLAVE_CONFIG = "enclave/Enclave.config.xml"
-	SGX_SIGN_KEY = "enclave/Enclave_private.pem"
-	ifneq ($(SGX_MODE), HW)
-		APP_CARGO_FEATURES     = --features=default,sgx-sw
-	endif
-endif
-
 ######## CUSTOM Settings ########
 
 CUSTOM_LIBRARY_PATH := ./lib
@@ -74,16 +41,24 @@ Enclave_EDL_Files := enclave/Enclave_t.c enclave/Enclave_t.h app/Enclave_u.c app
 
 ######## APP Settings ########
 
-App_Rust_Flags := $(CARGO_TARGET) $(APP_CARGO_FEATURES)
+APP_CARGO_FEATURES = --features=default
+ifneq ($(SGX_MODE), HW)
+	APP_CARGO_FEATURES = --features=default,sgx-sw
+endif
+
+ifeq ($(ZK_PROVER_CUDA), 1)
+	APP_CARGO_FEATURES = --features=default,cuda
+endif
+
+App_Rust_Flags := $(CARGO_TARGET) $(APP_CARGO_FEATURES) $(APP_CARGO_FLAGS)
 App_SRC_Files := $(shell find app/ -type f -name '*.rs') $(shell find app/ -type f -name 'Cargo.toml')
 App_Include_Paths := -I ./app -I./include -I$(SGX_SDK)/include
 App_C_Flags := $(SGX_COMMON_CFLAGS) -fPIC -Wno-attributes $(App_Include_Paths)
 
 App_Rust_Path := ./target/$(OUTPUT_PATH)
-App_Enclave_u_Object :=lib/libEnclave_u.a
+App_Enclave_u_Object := $(CUSTOM_LIBRARY_PATH)/libEnclave_u.a
 App_Name := lcp
-App_Dir := ./bin
-App_Path := $(App_Dir)/$(App_Name)
+App_Path := $(CUSTOM_BIN_PATH)/$(App_Name)
 
 ######## Enclave Settings ########
 
@@ -108,14 +83,10 @@ RustEnclave_Link_Flags := -Wl,--no-undefined -nostdlib -nodefaultlibs -nostartfi
 	-Wl,--start-group -lsgx_tcxx -lsgx_tstdc -l$(Service_Library_Name) -l$(Crypto_Library_Name) $(RustEnclave_Link_Libs) -Wl,--end-group \
 	-Wl,--version-script=enclave/Enclave.lds \
 	$(ENCLAVE_LDFLAGS)
-RUSTFLAGS :="-C target-feature=+avx2"
 
+RustEnclave_RUSTFLAGS :="-C target-feature=+avx2"
 RustEnclave_Name := enclave/enclave.so
 Signed_RustEnclave_Name := bin/enclave.signed.so
-
-######## Test Settings ########
-
-GAIAD_VERSION ?= v7.0.3
 
 ######## Targets ########
 
@@ -124,7 +95,7 @@ all: $(App_Path) $(Signed_RustEnclave_Name)
 
 .PHONY: clean
 clean:
-	@rm -f $(App_Dir)/* $(RustEnclave_Name) $(Signed_RustEnclave_Name) enclave/*_t.* app/*_u.* lib/*.a
+	@rm -f $(CUSTOM_LIBRARY_PATH)/* $(CUSTOM_BIN_PATH)/* $(RustEnclave_Name) $(Signed_RustEnclave_Name) enclave/*_t.* app/*_u.*
 	@cargo clean
 	@cd enclave && cargo clean
 	@cd enclave-modules && cargo clean
@@ -132,8 +103,8 @@ clean:
 ######## EDL Objects ########
 
 $(Enclave_EDL_Files): $(SGX_EDGER8R) enclave/Enclave.edl
-	$(SGX_EDGER8R) --trusted enclave/Enclave.edl --search-path $(SGX_SDK)/include --trusted-dir enclave
-	$(SGX_EDGER8R) --untrusted enclave/Enclave.edl --search-path $(SGX_SDK)/include --untrusted-dir app
+	@$(SGX_EDGER8R) --trusted enclave/Enclave.edl --search-path $(SGX_SDK)/include --trusted-dir enclave
+	@$(SGX_EDGER8R) --untrusted enclave/Enclave.edl --search-path $(SGX_SDK)/include --untrusted-dir app
 	@echo "GEN  =>  $(Enclave_EDL_Files)"
 
 ######## App Objects ########
@@ -163,12 +134,12 @@ $(RustEnclave_Name): enclave enclave/Enclave_t.o
 
 $(Signed_RustEnclave_Name): $(RustEnclave_Name)
 	mkdir -p bin
-	@$(SGX_ENCLAVE_SIGNER) sign -key enclave/Enclave_private.pem -enclave $(RustEnclave_Name) -out $@ -config enclave/Enclave.config.xml
+	@$(SGX_ENCLAVE_SIGNER) sign -key enclave/Enclave_private.pem -enclave $(RustEnclave_Name) -out $@ -config $(SGX_ENCLAVE_CONFIG)
 	@echo "SIGN =>  $@"
 
 .PHONY: enclave
 enclave:
-	@cd enclave && RUSTFLAGS=$(RUSTFLAGS) cargo build $(CARGO_TARGET)
+	@cd enclave && RUSTFLAGS=$(RustEnclave_RUSTFLAGS) cargo build $(CARGO_TARGET)
 	@cp enclave/target/$(OUTPUT_PATH)/libproxy_enclave.a ./lib/libenclave.a
 
 ######## Code generator ########
@@ -214,9 +185,11 @@ TEST_ENCLAVE_RUSTFLAGS="-L $(SGX_SDK)/lib64"
 TEST_ENCLAVE_CARGO=RUSTFLAGS=$(TEST_ENCLAVE_RUSTFLAGS) cargo -Z unstable-options -C enclave-modules
 TEST_ENCLAVE_CARGO_TEST=$(TEST_ENCLAVE_CARGO) test $(CARGO_TARGET)
 
+GAIAD_VERSION ?= v7.0.3
+
 .PHONY: test
 test:
-	@cargo test $(CARGO_TARGET) --lib --workspace --exclude integration-test
+	@cargo test $(CARGO_TARGET) --workspace --exclude integration-test
 	@$(TEST_ENCLAVE_CARGO_TEST) -p ecall-handler
 	@$(TEST_ENCLAVE_CARGO_TEST) -p enclave-environment
 	@$(TEST_ENCLAVE_CARGO_TEST) -p host-api

@@ -23,12 +23,20 @@ define_error! {
             format_args!("unexpected report data version: expected={} actual={}", e.expected, e.actual)
         },
 
-        InvalidReportDataSize
+        InvalidQeType
         {
-            size: usize
+            qe_type: u32
         }
         |e| {
-            format_args!("invalid report data size: size must be >= 20, but got {}", e.size)
+            format_args!("Invalid QE type: qe_type={}", e.qe_type)
+        },
+
+        InvalidRaType
+        {
+            ra_type: u32
+        }
+        |e| {
+            format_args!("Invalid RA type: ra_type={}", e.ra_type)
         },
 
         MrenclaveMismatch
@@ -38,14 +46,6 @@ define_error! {
         }
         |e| {
             format_args!("Mrenclave mismatch error: expected={} actual={}", e.expected, e.actual)
-        },
-
-        WebPki
-        {
-            descr: String
-        }
-        |e| {
-            format_args!("WebPKI error: descr={}", e.descr)
         },
 
         SerdeJson
@@ -60,13 +60,25 @@ define_error! {
         [TraceError<chrono::ParseError>]
         |_| { "chrono parse error" },
 
+        WebPki
+        {
+            descr: String
+        }
+        |e| {
+            format_args!("WebPKI error: descr={}", e.descr)
+        },
+
         TimeError
         [lcp_types::TimeError]
         |_| { "Time error" },
 
         CryptoError
         [crypto::Error]
-        |_| { "Crypto error" }
+        |_| { "Crypto error" },
+
+        DcapQuoteVerifier
+        [TraceError<anyhow::Error>]
+        |_| { "DCAP quote verifier error" },
     }
 }
 
