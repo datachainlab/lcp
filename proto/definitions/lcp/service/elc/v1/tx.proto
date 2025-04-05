@@ -16,6 +16,9 @@ service Msg {
   // UpdateClient defines a rpc handler method for MsgUpdateClient.
   rpc UpdateClient(MsgUpdateClient) returns (MsgUpdateClientResponse);
 
+  // StreamingUpdateClient defines a rpc handler method for MsgUpdateClient.
+  rpc StreamingUpdateClient(stream MsgUpdateClient) returns (MsgUpdateClientResponse);
+
   // AggregateMessages defines a rpc handler method for MsgAggregateMessages
   rpc AggregateMessages(MsgAggregateMessages) returns (MsgAggregateMessagesResponse);
 

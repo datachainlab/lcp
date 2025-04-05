@@ -7,7 +7,7 @@ use lcp_proto::lcp::service::elc::v1::{
     MsgVerifyNonMembershipResponse, QueryClientRequest, QueryClientResponse,
 };
 use store::transaction::CommitStore;
-use tonic::{Request, Response, Status};
+use tonic::{Request, Response, Status, Streaming};
 
 #[tonic::async_trait]
 impl<E, S> Msg for AppService<E, S>
@@ -30,6 +30,35 @@ where
         request: Request<MsgUpdateClient>,
     ) -> Result<Response<MsgUpdateClientResponse>, Status> {
         match self.enclave.proto_update_client(request.into_inner()) {
+            Ok(res) => Ok(Response::new(res)),
+            Err(e) => Err(Status::aborted(e.to_string())),
+        }
+    }
+
+    async fn streaming_update_client(
+        &self,
+        request: Request<Streaming<MsgUpdateClient>>,
+    ) -> Result<Response<MsgUpdateClientResponse>, Status> {
+        let mut complete = MsgUpdateClient {
+            signer: vec![],
+            client_id: "".to_string(),
+            include_state: false,
+            header: None,
+        };
+
+        let mut stream = request.into_inner();
+        while let Some(chunk) = stream.message().await? {
+            if let Some(header) = &mut complete.header {
+                let any_header = chunk
+                    .header
+                    .ok_or(Status::invalid_argument("header value is required"))?;
+                header.value.extend(any_header.value);
+            } else {
+                complete = chunk;
+            }
+        }
+
+        match self.enclave.proto_update_client(complete) {
             Ok(res) => Ok(Response::new(res)),
             Err(e) => Err(Status::aborted(e.to_string())),
         }
