@@ -16,6 +16,9 @@ service Msg {
   // UpdateClient defines a rpc handler method for MsgUpdateClient.
   rpc UpdateClient(MsgUpdateClient) returns (MsgUpdateClientResponse);
 
+  // UpdateClientStream defines a rpc handler method for MsgUpdateClient.
+  rpc UpdateClientStream(stream MsgUpdateClientStreamChunk) returns (MsgUpdateClientResponse);
+
   // AggregateMessages defines a rpc handler method for MsgAggregateMessages
   rpc AggregateMessages(MsgAggregateMessages) returns (MsgAggregateMessagesResponse);
 
@@ -133,4 +136,22 @@ message MsgVerifyNonMembershipResponse {
 
   bytes message = 1;
   bytes signature = 2;
+}
+
+message MsgUpdateClientStreamChunk {
+  oneof chunk {
+    UpdateClientStreamInit init = 1;
+    UpdateClientStreamHeaderChunk header_chunk = 2;
+  }
+}
+
+message UpdateClientStreamInit {
+  string client_id = 1;
+  bool include_state = 2;
+  bytes signer = 3;
+  string type_url = 4;
+}
+
+message UpdateClientStreamHeaderChunk {
+  bytes data = 1;
 }
