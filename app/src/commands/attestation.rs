@@ -248,34 +248,15 @@ pub struct SgxCollateralService {
     )]
     pub certs_service_url: Option<String>,
     #[clap(
-        long = "update_policy",
-        default_value = "early",
-        help = "Update policy (early(default) or standard)"
+        long = "tcb_evaluation_data_number",
+        help = "TCB Evaluation Data Number for TCB Info and QE Identity (default: Latest TCB Evaluation Data Number)"
     )]
-    pub update_policy: UpdatePolicy,
+    pub tcb_evaluation_data_number: Option<u32>,
     #[clap(
         long = "expected_tcb_evaluation_data_number",
         help = "Expected TCB Evaluation Data Number for TCB Info and QE Identity"
     )]
     pub expected_tcb_evaluation_data_number: Option<u32>,
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub enum UpdatePolicy {
-    Early,
-    Standard,
-}
-
-impl FromStr for UpdatePolicy {
-    type Err = anyhow::Error;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s.to_lowercase().as_str() {
-            "early" => Ok(Self::Early),
-            "standard" => Ok(Self::Standard),
-            _ => Err(anyhow!("invalid update policy: {}", s)),
-        }
-    }
 }
 
 impl SgxCollateralService {
@@ -298,7 +279,7 @@ impl From<SgxCollateralService> for ValidatedPCSClient {
             PCSClient::new(
                 service.get_pccs_url().as_str(),
                 service.get_certs_service_url().as_str(),
-                service.update_policy == UpdatePolicy::Early,
+                service.tcb_evaluation_data_number,
             ),
             service.expected_tcb_evaluation_data_number,
         )
