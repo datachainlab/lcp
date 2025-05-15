@@ -255,7 +255,7 @@ mod tests {
                     PCSClient::new(
                         "https://api.trustedservices.intel.com/",
                         "https://certificates.trustedservices.intel.com/",
-                        false,
+                        None,
                     ),
                     None,
                 ),

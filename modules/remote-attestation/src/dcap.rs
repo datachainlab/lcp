@@ -144,7 +144,7 @@ mod tests {
         let pcs_client = PCSClient::new(
             "https://api.trustedservices.intel.com/",
             "https://certificates.trustedservices.intel.com/",
-            false,
+            None,
         );
         let collateral = pcs_client
             .get_collateral(true, &quote.signature.qe_cert_data)
