@@ -7,13 +7,11 @@ if [ $# -eq 0 ]; then
 fi
 SDK_DIR_PREFIX=$1
 
-DCAP_VERSION=1.21.100.3-jammy1
+DCAP_VERSION=1.23.100.0-jammy1
 # create tmp dir
 TMP_DIR=$(mktemp -d)
 echo "Created temp dir: $TMP_DIR"
 cd $TMP_DIR
-# clone the repo
-git clone --recursive https://github.com/intel/SGXDataCenterAttestationPrimitives  -b dcap_1.21_reproducible --depth 1
 
 wget https://download.01.org/intel-sgx/sgx-dcap/1.21/linux/distro/ubuntu22.04-server/sgx_linux_x64_sdk_2.24.100.3.bin -O sgx_linux_x64_sdk.bin
 chmod a+x sgx_linux_x64_sdk.bin
