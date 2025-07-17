@@ -1,10 +1,13 @@
 use crate::errors::TypeError;
 use crate::prelude::*;
+use core::fmt::{Debug, Formatter, Result as DebugResult};
 use core::ops::Deref;
 use lcp_proto::{google::protobuf::Any as ProtoAny, protobuf::Protobuf};
 use serde::{Deserialize, Serialize};
 
-#[derive(Default, Clone, Debug, PartialEq, Serialize, Deserialize)]
+const MAX_VALUE_LENGTH_FOR_DEBUG: usize = 4096;
+
+#[derive(Default, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(transparent)]
 pub struct Any(#[serde(with = "ProtoAnyDef")] ProtoAny);
 
@@ -15,6 +18,26 @@ impl Any {
 
     pub fn to_proto(self) -> ProtoAny {
         self.into()
+    }
+}
+
+impl Debug for Any {
+    fn fmt(&self, f: &mut Formatter<'_>) -> DebugResult {
+        let mut debug = f.debug_struct("Any");
+        debug.field("type_url", &self.type_url);
+        if self.value.len() > MAX_VALUE_LENGTH_FOR_DEBUG {
+            debug.field(
+                "value",
+                &format_args!(
+                    "{:?} … ({} bytes total)",
+                    &self.value[..MAX_VALUE_LENGTH_FOR_DEBUG],
+                    self.value.len()
+                ),
+            );
+        } else {
+            debug.field("value", &self.value);
+        }
+        debug.finish()
     }
 }
 
@@ -109,6 +132,31 @@ mod tests {
 
             let any3 = Any::decode_vec(&bz).unwrap();
             assert_eq!(any1, any3);
+        }
+    }
+
+    #[test]
+    fn test_debug_any() {
+        let type_url = "type_url".to_string();
+        let base = Any::new(type_url.clone(), [0u8; MAX_VALUE_LENGTH_FOR_DEBUG].to_vec());
+        let base_str = format!("{:?}", base);
+        {
+            let value = [0u8; MAX_VALUE_LENGTH_FOR_DEBUG + 1].to_vec();
+            let value_str = format!("{:?}", Any::new(type_url.clone(), value));
+            assert_ne!(value_str, base_str);
+            assert!(
+                value_str.contains(&format!("({} bytes total)", MAX_VALUE_LENGTH_FOR_DEBUG + 1))
+            );
+        }
+        {
+            let value = [0u8; MAX_VALUE_LENGTH_FOR_DEBUG].to_vec();
+            assert_eq!(base_str, format!("{:?}", Any::new(type_url.clone(), value)));
+        }
+        {
+            let value = [0u8; MAX_VALUE_LENGTH_FOR_DEBUG - 1].to_vec();
+            let value_str = format!("{:?}", Any::new(type_url.clone(), value));
+            assert_ne!(value_str, base_str);
+            assert!(!value_str.contains("bytes total"));
         }
     }
 }
