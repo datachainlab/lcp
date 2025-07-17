@@ -1,31 +1,30 @@
 ######## LCP Build Settings ########
-ZK_PROVER_CUDA ?= 0
+ZK_PROVER_CUDA  ?= 0
 APP_CARGO_FLAGS ?=
 
 ######## SGX SDK Settings ########
-SGX_SDK ?= /opt/sgxsdk
-SGX_MODE ?= HW
-SGX_DEBUG ?= 0
+SGX_SDK            ?= /opt/sgxsdk
+SGX_MODE           ?= HW
+SGX_DEBUG          ?= 0
 SGX_ENCLAVE_CONFIG ?= "enclave/Enclave.config.xml"
-SGX_SIGN_KEY ?= "enclave/Enclave_private.pem"
+SGX_SIGN_KEY       ?= "enclave/Enclave_private.pem"
 
-SGX_COMMON_CFLAGS := -m64
-SGX_LIBRARY_PATH := $(SGX_SDK)/lib64
+SGX_COMMON_CFLAGS  := -m64
+SGX_LIBRARY_PATH   := $(SGX_SDK)/lib64
 SGX_ENCLAVE_SIGNER := $(SGX_SDK)/bin/x64/sgx_sign
-SGX_EDGER8R := $(SGX_SDK)/bin/x64/sgx_edger8r
+SGX_EDGER8R        := $(SGX_SDK)/bin/x64/sgx_edger8r
 
 include buildenv.mk
 
 ifeq ($(SGX_DEBUG), 1)
-	# we build with cargo --release, even in SGX DEBUG mode
 	SGX_COMMON_CFLAGS += -O0 -g -ggdb
-	# cargo sets this automatically, cannot use 'debug'
-	OUTPUT_PATH := release
-	CARGO_TARGET := --release
+	# debug build
+	CARGO_TARGET      :=
+	OUTPUT_PATH       := debug
 else
 	SGX_COMMON_CFLAGS += -O2
-	OUTPUT_PATH := release
-	CARGO_TARGET := --release
+	CARGO_TARGET      := --release
+	OUTPUT_PATH       := release
 endif
 
 SGX_COMMON_CFLAGS += -fstack-protector
