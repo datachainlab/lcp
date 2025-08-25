@@ -173,7 +173,7 @@ impl EnclaveKeyManager {
                 .to_hex_string(),
             sealed_key.to_vec(),
             Mrenclave::from(report.body.mr_enclave).to_hex_string(),
-            serialize_bytes(&report),
+            serialize_bytes(&report).as_slice(),
             is_enclave_debug_enabled(&report.body),
             qe_type.as_u32()
         ])?;
