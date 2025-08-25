@@ -15,11 +15,11 @@ impl Environment {
         Self { home, store }
     }
 
-    pub fn get_store(&self) -> RwLockReadGuard<HostStore> {
+    pub fn get_store(&self) -> RwLockReadGuard<'_, HostStore> {
         self.store.read().unwrap()
     }
 
-    pub fn get_mut_store(&self) -> RwLockWriteGuard<HostStore> {
+    pub fn get_mut_store(&self) -> RwLockWriteGuard<'_, HostStore> {
         self.store.write().unwrap()
     }
 }

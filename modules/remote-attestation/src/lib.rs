@@ -1,4 +1,5 @@
-#[allow(clippy::doc_lazy_continuation)]
+#![allow(clippy::doc_lazy_continuation)]
+#![allow(clippy::result_large_err)]
 pub mod common;
 pub mod dcap;
 pub mod dcap_simulation;

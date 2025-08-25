@@ -6,6 +6,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![deny(warnings, trivial_casts, trivial_numeric_casts, unused_import_braces)]
 #![allow(clippy::large_enum_variant)]
+#![allow(clippy::doc_overindented_list_items)]
 #![allow(rustdoc::bare_urls)]
 #![forbid(unsafe_code)]
 
