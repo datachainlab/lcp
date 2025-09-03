@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-risc0-zkvm = { version = "3.0.1", default-features = false }
+risc0-zkvm = { version = "3.0.3", default-features = false }
 flex-error = { version = "0.4.4", default-features = false }
 
 [features]
