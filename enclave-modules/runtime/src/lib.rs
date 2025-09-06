@@ -46,7 +46,6 @@ fn begin_panic_handler(info: &core::panic::PanicInfo<'_>) -> ! {
 
 #[cfg(not(test))]
 #[lang = "eh_personality"]
-#[no_mangle]
 unsafe extern "C" fn rust_eh_personality() {}
 
 static HOOK: AtomicPtr<()> = AtomicPtr::new(ptr::null_mut());

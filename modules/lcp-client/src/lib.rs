@@ -1,4 +1,5 @@
 #![allow(unused_variables)]
+#![allow(clippy::result_large_err)]
 #![cfg_attr(not(feature = "std"), no_std)]
 extern crate alloc;
 
