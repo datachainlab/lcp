@@ -25,17 +25,17 @@ use lcp_proto::{google::protobuf::Any as ProtoAny, protobuf::Protobuf};
 use lcp_types::Any;
 use std::str::FromStr;
 
-/// WARNING: The following converters are very inefficient, so they should not be used except for testing purpose.
-/// ibc-relayer(hermes) has owned ibc crate, not cosmos/ibc-rs. Therefore, the following converters are required for now.
+// WARNING: The following converters are very inefficient, so they should not be used except for testing purpose.
+// ibc-relayer(hermes) has owned ibc crate, not cosmos/ibc-rs. Therefore, the following converters are required for now.
 
-/// relayer-types to lcp types
+// relayer-types to lcp types
 
 pub(crate) fn relayer_header_to_any(value: RHeader) -> Any {
     let any = IBCRelayerAny::from(value);
     Any::new(any.type_url, any.value)
 }
 
-/// relayer-types to ibc
+// relayer-types to ibc
 
 pub(crate) fn to_ibc_channel(value: RChannelEnd) -> ChannelEnd {
     ChannelEnd::decode_vec(&value.encode_vec().unwrap()).unwrap()
@@ -63,7 +63,7 @@ pub(crate) fn to_ibc_consensus_state(value: RTendermintConsensusState) -> Tender
     .unwrap()
 }
 
-/// ibc to relayer-types
+// ibc to relayer-types
 
 pub(crate) fn to_relayer_chain_id(value: ChainId) -> RChainId {
     RChainId::from_str(value.as_str()).unwrap()

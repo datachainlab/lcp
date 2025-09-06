@@ -1,4 +1,5 @@
 #![allow(clippy::large_enum_variant)]
+#![allow(clippy::result_large_err)]
 #![no_std]
 extern crate alloc;
 

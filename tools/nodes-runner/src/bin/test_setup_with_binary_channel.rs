@@ -25,6 +25,7 @@
         -k $NODE_A_WALLETS_USER1_KEY_ID -d $NODE_A_DENOM
     ```
 */
+#![allow(clippy::result_large_err)]
 
 use ibc_relayer::keyring::Store;
 use ibc_test_framework::prelude::*;

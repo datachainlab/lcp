@@ -61,7 +61,7 @@ impl ServiceCmd {
                 let srv = AppService::new(opts.get_home(), enclave);
 
                 info!("start service: addr={addr} mrenclave={mrenclave}");
-                run_service(srv, rt, addr)
+                rt.block_on(async { run_service(srv, addr).await })
             }
         }
     }

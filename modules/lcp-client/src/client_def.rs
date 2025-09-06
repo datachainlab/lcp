@@ -233,6 +233,17 @@ impl LCPClient {
         } else {
             Default::default()
         };
+        if !client_state.operators.is_empty() {
+            assert!(
+                !operator.is_zero(),
+                "operator must be non-zero if operators are not empty"
+            );
+            assert!(
+                client_state.operators.contains(&operator),
+                "operator must be in the operators list"
+            );
+        }
+
         let expected_operator = report_data.operator();
         // check if the operator matches the expected operator in the report data
         assert!(expected_operator.is_zero() || operator == expected_operator);

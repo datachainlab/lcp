@@ -1,7 +1,7 @@
 #![no_std]
+#![allow(clippy::result_large_err)]
+#![allow(unused_imports)]
 extern crate alloc;
-
-#[allow(unused_imports)]
 
 mod prelude {
     pub use core::prelude::v1::*;
