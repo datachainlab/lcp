@@ -2553,6 +2553,7 @@ dependencies = [
  "log",
  "sgx_types",
  "sgx_urts",
+ "sha2 0.10.8",
  "store",
 ]
 
@@ -7765,6 +7766,7 @@ dependencies = [
  "lcp-proto",
  "lcp-types",
  "log",
+ "sha2 0.10.8",
  "store",
  "tokio",
  "tonic 0.9.2",

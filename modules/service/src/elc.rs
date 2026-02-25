@@ -1,4 +1,5 @@
 use crate::service::AppService;
+use core::fmt::Write;
 use enclave_api::EnclaveProtoAPI;
 use lcp_proto::google::protobuf::Any;
 use lcp_proto::lcp::service::elc::v1::msg_update_client_stream_chunk::Chunk;
@@ -9,6 +10,7 @@ use lcp_proto::lcp::service::elc::v1::{
     MsgVerifyNonMembership, MsgVerifyNonMembershipResponse, QueryClientRequest,
     QueryClientResponse,
 };
+use sha2::{Digest, Sha256};
 use store::transaction::CommitStore;
 use tonic::{Request, Response, Status, Streaming};
 
@@ -63,11 +65,13 @@ where
 
         // accumulate header chunks
         let mut header_bytes = Vec::new();
+        let mut header_chunk_count = 0usize;
 
         while let Some(chunk_msg) = stream.message().await? {
             match chunk_msg.chunk {
                 Some(Chunk::HeaderChunk(header_chunk)) => {
                     header_bytes.extend(header_chunk.data);
+                    header_chunk_count += 1;
                 }
                 Some(Chunk::Init(_)) => {
                     return Err(Status::invalid_argument(
@@ -84,6 +88,21 @@ where
             return Err(Status::invalid_argument("no header data received"));
         }
 
+        let client_id = init.client_id.clone();
+        let include_state = init.include_state;
+        let type_url = init.type_url.clone();
+        let header_len = header_bytes.len();
+        let header_sha256 = sha256_hex(&header_bytes);
+        log::debug!(
+            "update_client_stream assembled: client_id={} include_state={} type_url={} chunk_count={} header_len={} header_sha256={}",
+            client_id,
+            include_state,
+            type_url,
+            header_chunk_count,
+            header_len,
+            header_sha256
+        );
+
         // create MsgUpdateClient from Init and collected header data
         let msg = MsgUpdateClient {
             client_id: init.client_id,
@@ -97,7 +116,19 @@ where
 
         match self.enclave.proto_update_client(msg) {
             Ok(res) => Ok(Response::new(res)),
-            Err(e) => Err(Status::aborted(e.to_string())),
+            Err(e) => {
+                log::error!(
+                    "update_client_stream failed: client_id={} include_state={} type_url={} chunk_count={} header_len={} header_sha256={} err={}",
+                    client_id,
+                    include_state,
+                    type_url,
+                    header_chunk_count,
+                    header_len,
+                    header_sha256,
+                    e
+                );
+                Err(Status::aborted(e.to_string()))
+            }
         }
     }
 
@@ -133,6 +164,15 @@ where
             Err(e) => Err(Status::aborted(e.to_string())),
         }
     }
+}
+
+fn sha256_hex(bytes: &[u8]) -> String {
+    let digest = Sha256::digest(bytes);
+    let mut out = String::with_capacity(digest.len() * 2);
+    for b in digest {
+        let _ = write!(&mut out, "{:02x}", b);
+    }
+    out
 }
 
 #[tonic::async_trait]

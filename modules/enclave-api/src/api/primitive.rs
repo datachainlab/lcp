@@ -2,19 +2,35 @@ use crate::{
     enclave::{EnclaveInfo, HostStoreTxManager},
     ffi, Error, Result,
 };
-use ecall_commands::{Command, CommandContext, CommandResponse, ECallCommand, EnclaveKeySelector};
+use core::fmt::Write;
+use ecall_commands::{
+    Command, CommandContext, CommandResponse, ECallCommand, EnclaveKeySelector, LightClientCommand,
+    LightClientExecuteCommand,
+};
 use lcp_types::Time;
 use log::*;
 use sgx_types::{sgx_enclave_id_t, sgx_status_t};
+use sha2::{Digest, Sha256};
 use store::transaction::{CommitStore, Tx};
 
 pub trait EnclavePrimitiveAPI<S: CommitStore>: EnclaveInfo + HostStoreTxManager<S> {
     /// execute_command runs a given command in the enclave
     fn execute_command(&self, cmd: Command, update_key: Option<String>) -> Result<CommandResponse> {
+        let update_client_probe = extract_update_client_probe(&cmd);
         debug!(
             "prepare command: inner={:?} update_key={:?}",
             cmd, update_key
         );
+        if let Some(probe) = update_client_probe.as_ref() {
+            debug!(
+                "prepare update_client command: client_id={} include_state={} type_url={} header_len={} header_sha256={}",
+                probe.client_id,
+                probe.include_state,
+                probe.type_url,
+                probe.header_len,
+                probe.header_sha256
+            );
+        }
         let current_timestamp = Time::now();
         let tx = self.begin_tx(update_key)?;
 
@@ -31,12 +47,36 @@ pub trait EnclavePrimitiveAPI<S: CommitStore>: EnclaveInfo + HostStoreTxManager<
         match raw_execute_command(self.get_eid(), ecmd) {
             Ok(res) => {
                 self.commit_tx(tx)?;
-                debug!("execute_command succeeded: res={:?}", res);
+                if let Some(probe) = update_client_probe.as_ref() {
+                    debug!(
+                        "execute_command succeeded (update_client): client_id={} include_state={} type_url={} header_len={} header_sha256={} res={:?}",
+                        probe.client_id,
+                        probe.include_state,
+                        probe.type_url,
+                        probe.header_len,
+                        probe.header_sha256,
+                        res
+                    );
+                } else {
+                    debug!("execute_command succeeded: res={:?}", res);
+                }
                 Ok(res)
             }
             Err(e) => {
                 self.rollback_tx(tx);
-                debug!("execute_command failed: err={:?}", e);
+                if let Some(probe) = update_client_probe.as_ref() {
+                    error!(
+                        "execute_command failed (update_client): client_id={} include_state={} type_url={} header_len={} header_sha256={} err={:?}",
+                        probe.client_id,
+                        probe.include_state,
+                        probe.type_url,
+                        probe.header_len,
+                        probe.header_sha256,
+                        e
+                    );
+                } else {
+                    debug!("execute_command failed: err={:?}", e);
+                }
                 Err(e)
             }
         }
@@ -84,4 +124,39 @@ fn raw_execute_command(eid: sgx_enclave_id_t, cmd: ECallCommand) -> Result<Comma
             unreachable!()
         }
     }
+}
+
+#[derive(Debug)]
+struct UpdateClientProbe {
+    client_id: String,
+    include_state: bool,
+    type_url: String,
+    header_len: usize,
+    header_sha256: String,
+}
+
+fn extract_update_client_probe(cmd: &Command) -> Option<UpdateClientProbe> {
+    let input = match cmd {
+        Command::LightClient(LightClientCommand::Execute(
+            LightClientExecuteCommand::UpdateClient(input),
+        )) => input,
+        _ => return None,
+    };
+
+    Some(UpdateClientProbe {
+        client_id: input.client_id.to_string(),
+        include_state: input.include_state,
+        type_url: input.any_header.type_url.clone(),
+        header_len: input.any_header.value.len(),
+        header_sha256: sha256_hex(&input.any_header.value),
+    })
+}
+
+fn sha256_hex(bytes: &[u8]) -> String {
+    let digest = Sha256::digest(bytes);
+    let mut out = String::with_capacity(digest.len() * 2);
+    for b in digest {
+        let _ = write!(&mut out, "{:02x}", b);
+    }
+    out
 }
