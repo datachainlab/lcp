@@ -9,6 +9,8 @@ use lcp_proto::lcp::service::elc::v1::{
     MsgVerifyNonMembership, MsgVerifyNonMembershipResponse, QueryClientRequest,
     QueryClientResponse,
 };
+use log::info;
+use prost::Message as ProstMessage;
 use store::transaction::CommitStore;
 use tonic::{Request, Response, Status, Streaming};
 
@@ -32,8 +34,22 @@ where
         &self,
         request: Request<MsgUpdateClient>,
     ) -> Result<Response<MsgUpdateClientResponse>, Status> {
-        match self.enclave.proto_update_client(request.into_inner()) {
-            Ok(res) => Ok(Response::new(res)),
+        let req = request.into_inner();
+        let client_id = req.client_id.clone();
+        let include_state = req.include_state;
+        let header_bytes = req.header.as_ref().map_or(0, |header| header.value.len());
+
+        match self.enclave.proto_update_client(req) {
+            Ok(res) => {
+                log_update_client_response(
+                    "update_client",
+                    &client_id,
+                    include_state,
+                    header_bytes,
+                    &res,
+                );
+                Ok(Response::new(res))
+            }
             Err(e) => Err(Status::aborted(e.to_string())),
         }
     }
@@ -95,8 +111,21 @@ where
             }),
         };
 
+        let client_id = msg.client_id.clone();
+        let include_state = msg.include_state;
+        let header_bytes_len = msg.header.as_ref().map_or(0, |header| header.value.len());
+
         match self.enclave.proto_update_client(msg) {
-            Ok(res) => Ok(Response::new(res)),
+            Ok(res) => {
+                log_update_client_response(
+                    "update_client_stream",
+                    &client_id,
+                    include_state,
+                    header_bytes_len,
+                    &res,
+                );
+                Ok(Response::new(res))
+            }
             Err(e) => Err(Status::aborted(e.to_string())),
         }
     }
@@ -133,6 +162,29 @@ where
             Err(e) => Err(Status::aborted(e.to_string())),
         }
     }
+}
+
+fn log_update_client_response(
+    method: &str,
+    client_id: &str,
+    include_state: bool,
+    header_bytes: usize,
+    response: &MsgUpdateClientResponse,
+) {
+    const DEFAULT_GRPC_MAX_RECV_MSG_SIZE: usize = 4 * 1024 * 1024;
+
+    let encoded_len = response.encoded_len();
+    info!(
+        "UpdateClient response ready: method={} client_id={} include_state={} header_bytes={} response_encoded_len={} response_message_bytes={} response_signature_bytes={} response_exceeds_default_4mb={}",
+        method,
+        client_id,
+        include_state,
+        header_bytes,
+        encoded_len,
+        response.message.len(),
+        response.signature.len(),
+        encoded_len > DEFAULT_GRPC_MAX_RECV_MSG_SIZE,
+    );
 }
 
 #[tonic::async_trait]
