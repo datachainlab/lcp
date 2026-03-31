@@ -12,6 +12,9 @@ enclave
     };
     untrusted
     {
+        sgx_status_t ocall_get_time_ms(
+            [out] uint64_t* time_ms
+        );
         sgx_status_t ocall_execute_command(
             [in, count=command_len] const uint8_t* command,
             uint32_t command_len,

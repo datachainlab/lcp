@@ -5,6 +5,7 @@ use once_cell::race::OnceBox;
 use sgx_types::sgx_status_t;
 use sgx_types::*;
 use std::slice;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 /// Error indicating that `set_environment` was unable to set the provided Environment
 #[derive(Debug, Clone, Copy)]
@@ -60,6 +61,37 @@ pub extern "C" fn ocall_execute_command(
         output_buf_maxlen,
         output_len,
     )
+}
+
+#[cfg(not(feature = "test"))]
+#[no_mangle]
+pub extern "C" fn ocall_get_time_ms(time_ms: &mut u64) -> sgx_types::sgx_status_t {
+    _ocall_get_time_ms(time_ms)
+}
+
+#[cfg(feature = "test")]
+#[no_mangle]
+pub extern "C" fn ocall_get_time_ms(
+    ret_val: *mut sgx_status_t,
+    time_ms: &mut u64,
+) -> sgx_types::sgx_status_t {
+    unsafe {
+        *ret_val = sgx_status_t::SGX_SUCCESS;
+    }
+    _ocall_get_time_ms(time_ms)
+}
+
+fn _ocall_get_time_ms(time_ms: &mut u64) -> sgx_types::sgx_status_t {
+    match SystemTime::now().duration_since(UNIX_EPOCH) {
+        Ok(duration) => {
+            *time_ms = duration.as_millis() as u64;
+            sgx_status_t::SGX_SUCCESS
+        }
+        Err(e) => {
+            error!("failed to get current time: {:?}", e);
+            sgx_status_t::SGX_ERROR_UNEXPECTED
+        }
+    }
 }
 
 fn _ocall_execute_command(
