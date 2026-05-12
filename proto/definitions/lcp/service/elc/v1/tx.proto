@@ -19,6 +19,10 @@ service Msg {
   // UpdateClientStream defines a rpc handler method for MsgUpdateClient.
   rpc UpdateClientStream(stream MsgUpdateClientStreamChunk) returns (MsgUpdateClientResponse);
 
+  // SpeculativeUpdateClientBatchStream defines a client-streaming rpc
+  // handler method for explicit-state speculative UpdateClient batch execution.
+  rpc SpeculativeUpdateClientBatchStream(stream MsgSpeculativeUpdateClientBatchStreamChunk) returns (ExecuteSpeculativeUpdateClientBatchResponse);
+
   // AggregateMessages defines a rpc handler method for MsgAggregateMessages
   rpc AggregateMessages(MsgAggregateMessages) returns (MsgAggregateMessagesResponse);
 
@@ -154,4 +158,110 @@ message UpdateClientStreamInit {
 
 message UpdateClientStreamHeaderChunk {
   bytes data = 1;
+}
+
+message ExplicitStateRef {
+  // Expected state metadata before executing a speculative unit. When provided,
+  // prev_height and prev_state_id are checked against the transition observed
+  // from the enclave response.
+  ibc.core.client.v1.Height prev_height = 1;
+  bytes prev_state_id = 2;
+  // Client and consensus states to seed into the unit's isolated speculative
+  // transaction before executing UpdateClient.
+  google.protobuf.Any client_state = 3;
+  google.protobuf.Any consensus_state = 4;
+}
+
+// MsgSpeculativeUpdateClientBatchStreamChunk transports one explicit-state
+// speculative UpdateClient batch. A single stream starts with exactly one
+// batch-level init message and then sends zero or more units in order:
+//
+//   init,
+//   unit_init, unit_header_chunk..., unit_end,
+//   unit_init, unit_header_chunk..., unit_end, ...
+//
+// The first implementation does not interleave chunks from multiple units.
+message MsgSpeculativeUpdateClientBatchStreamChunk {
+  oneof chunk {
+    // Declares the batch-level client_id. All following units in this RPC
+    // stream are executed for this client_id.
+    SpeculativeUpdateClientBatchStreamInit init = 1;
+    // Starts one speculative UpdateClient unit and carries all unit metadata
+    // except the header bytes.
+    SpeculativeUpdateClientUnitInit unit_init = 2;
+    // Carries one bounded slice of the currently open unit's header bytes.
+    SpeculativeUpdateClientUnitHeaderChunk unit_header_chunk = 3;
+    // Closes the currently open unit. The receiver reconstructs a
+    // MsgUpdateClient from unit_init plus all accumulated header chunks.
+    SpeculativeUpdateClientUnitEnd unit_end = 4;
+    // Explicitly terminates the batch. EOF without this chunk is treated as a
+    // truncated stream and must not stitch a partial prefix.
+    SpeculativeUpdateClientBatchEnd batch_end = 5;
+  }
+}
+
+message SpeculativeUpdateClientBatchStreamInit {
+  // Target client for the whole batch stream. Mixed-client batches are not
+  // supported; unit messages do not carry their own client_id.
+  string client_id = 1;
+}
+
+// SpeculativeUpdateClientUnitInit starts a single speculative UpdateClient work
+// unit. Units form a linear chain in stream order: the first unit starts from
+// its explicit base_state, and each following unit is rebased onto the previous
+// unit's observed post state before execution.
+message SpeculativeUpdateClientUnitInit {
+  reserved 6;
+
+  // Unique unit identifier within this batch. It is used for diagnostics and
+  // response correlation; it does not define execution dependencies.
+  string unit_id = 1;
+  // Type URL for the google.protobuf.Any header reconstructed from the
+  // following header chunks.
+  string type_url = 2;
+  bool include_state = 3;
+  bytes signer = 4;
+  // Explicit state used as the starting view for this unit's isolated
+  // speculative transaction.
+  ExplicitStateRef base_state = 5 [(gogoproto.nullable) = false];
+}
+
+message SpeculativeUpdateClientUnitHeaderChunk {
+  // Must match the currently open unit_id. This allows the receiver to detect
+  // misplaced chunks even though chunks are not interleaved.
+  string unit_id = 1;
+  // Raw bytes appended to the reconstructed google.protobuf.Any header value.
+  bytes data = 2;
+}
+
+message SpeculativeUpdateClientUnitEnd {
+  // Must match the currently open unit_id.
+  string unit_id = 1;
+}
+
+message SpeculativeUpdateClientBatchEnd {}
+
+// ObservedStateTransition is decoded from the enclave UpdateClient response.
+// It records the actual state transition used by a speculative unit, not merely
+// caller-provided expectations. The service compares prev_* with base_state and
+// the previous unit's post_* values before stitching.
+message ObservedStateTransition {
+  ibc.core.client.v1.Height prev_height = 1;
+  bytes prev_state_id = 2;
+  ibc.core.client.v1.Height post_height = 3 [(gogoproto.nullable) = false];
+  bytes post_state_id = 4;
+}
+
+// Per-unit result returned only after the batch has been validated and its
+// merged write set has been applied to the canonical store.
+message StitchedSpeculativeUpdateClientUnitResult {
+  MsgUpdateClientResponse response = 1 [(gogoproto.nullable) = false];
+  ObservedStateTransition observed_transition = 2 [(gogoproto.nullable) = false];
+}
+
+message ExecuteSpeculativeUpdateClientBatchResponse {
+  // The batch-level client_id from the request stream.
+  string client_id = 1;
+  // Unit results in the same order as accepted request units.
+  repeated StitchedSpeculativeUpdateClientUnitResult units = 2;
 }
