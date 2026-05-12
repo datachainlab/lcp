@@ -1,4 +1,4 @@
-use crate::{EnclavePrimitiveAPI, Result};
+use crate::{CommitStoreAccessor, EnclavePrimitiveAPI, Result, SpeculativeEnclavePrimitiveAPI};
 use attestation_report::QEType;
 use ecall_commands::{
     AggregateMessagesInput, AggregateMessagesResponse, Command, CommandResponse,
@@ -8,7 +8,30 @@ use ecall_commands::{
     QueryClientResponse, UpdateClientInput, UpdateClientResponse, VerifyMembershipInput,
     VerifyMembershipResponse, VerifyNonMembershipInput, VerifyNonMembershipResponse,
 };
-use store::transaction::CommitStore;
+use lcp_types::{store_key, Any, Height};
+use log::debug;
+use store::transaction::{CommitStore, TxAccessor};
+use store::TxId;
+use store::WriteSet;
+
+#[derive(Debug)]
+pub struct SpeculativeUpdateClientInput {
+    pub update: UpdateClientInput,
+    pub base_state: Option<SpeculativeBaseState>,
+}
+
+#[derive(Debug, Clone)]
+pub struct SpeculativeBaseState {
+    pub prev_height: Option<Height>,
+    pub client_state: Any,
+    pub consensus_state: Any,
+}
+
+#[derive(Debug)]
+pub struct SpeculativeUpdateClientResponse {
+    pub response: UpdateClientResponse,
+    pub write_set: WriteSet,
+}
 
 pub trait EnclaveCommandAPI<S: CommitStore>: EnclavePrimitiveAPI<S> {
     /// generate_enclave_key generates a new key and perform remote attestation to generates an AVR
@@ -45,12 +68,12 @@ pub trait EnclaveCommandAPI<S: CommitStore>: EnclavePrimitiveAPI<S> {
 
     /// update_client updates the ELC instance corresponding to client_id
     fn update_client(&self, input: UpdateClientInput) -> Result<UpdateClientResponse> {
-        let update_key = Some(input.client_id.to_string());
+        let update_key = input.client_id.to_string();
         match self.execute_command(
             Command::LightClient(LightClientCommand::Execute(
                 LightClientExecuteCommand::UpdateClient(input),
             )),
-            update_key,
+            Some(update_key),
         )? {
             CommandResponse::LightClient(LightClientResponse::UpdateClient(res)) => Ok(res),
             _ => unreachable!(),
@@ -114,4 +137,77 @@ pub trait EnclaveCommandAPI<S: CommitStore>: EnclavePrimitiveAPI<S> {
             _ => unreachable!(),
         }
     }
+}
+
+pub trait SpeculativeEnclaveCommandAPI<S: CommitStore + TxAccessor>:
+    EnclaveCommandAPI<S> + SpeculativeEnclavePrimitiveAPI<S>
+{
+    /// speculative_update_client executes `UpdateClient` against an isolated host-side view and
+    /// returns both the response and the speculative write set for later stitching.
+    fn speculative_update_client(
+        &self,
+        input: SpeculativeUpdateClientInput,
+    ) -> Result<SpeculativeUpdateClientResponse>
+    where
+        Self: Sized,
+    {
+        debug!(
+            "prepare speculative command with base state: has_base_state={}",
+            input.base_state.is_some()
+        );
+        let client_id = input.update.client_id.to_string();
+        let base_state = input.base_state;
+
+        let cmd = Command::LightClient(LightClientCommand::Execute(
+            LightClientExecuteCommand::UpdateClient(input.update),
+        ));
+        let (res, write_set) = self.execute_command_speculatively_with_seed(cmd, |tx_id| {
+            if let Some(base_state) = base_state.as_ref() {
+                seed_speculative_base_state(self, tx_id, &client_id, base_state)?;
+            }
+            Ok(())
+        })?;
+
+        match res {
+            CommandResponse::LightClient(LightClientResponse::UpdateClient(response)) => {
+                Ok(SpeculativeUpdateClientResponse {
+                    response,
+                    write_set,
+                })
+            }
+            _ => unreachable!(),
+        }
+    }
+}
+
+fn seed_speculative_base_state<S: CommitStore + TxAccessor>(
+    enclave: &(impl CommitStoreAccessor<S> + ?Sized),
+    tx_id: TxId,
+    client_id: &str,
+    base_state: &SpeculativeBaseState,
+) -> Result<()> {
+    let client_state_key = store_key::client_state_bytes(client_id);
+    let client_state_value =
+        bincode::serde::encode_to_vec(&base_state.client_state, bincode::config::standard())
+            .map_err(crate::errors::Error::bincode_encode)?;
+    enclave.use_mut_store(|store| store.tx_set(tx_id, client_state_key, client_state_value))?;
+
+    // The client state is always seeded, but the consensus state is keyed by
+    // the predecessor height and is therefore only seeded when prev_height is
+    // present. Callers may still preserve explicit prev_state_id metadata above
+    // this layer; that identifier is validation metadata, not a store key.
+    if let Some(prev_height) = base_state.prev_height {
+        debug_assert!(
+            !base_state.consensus_state.type_url.is_empty(),
+            "seeded consensus state should carry a concrete type"
+        );
+        let consensus_state_key = store_key::consensus_state_bytes(client_id, &prev_height);
+        let consensus_state_value =
+            bincode::serde::encode_to_vec(&base_state.consensus_state, bincode::config::standard())
+                .map_err(crate::errors::Error::bincode_encode)?;
+        enclave.use_mut_store(|store| {
+            store.tx_set(tx_id, consensus_state_key, consensus_state_value)
+        })?;
+    }
+    Ok(())
 }
