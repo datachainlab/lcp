@@ -1,5 +1,6 @@
+use crate::overlay::OverlayKVS;
 use crate::transaction::{CommitStore, CreatedTx, Tx, TxAccessor, UpdateKey};
-use crate::{Error, KVStore, Result, TxId};
+use crate::{Error, KVStore, Result, TxId, WriteSet};
 use core::marker::PhantomData;
 use log::*;
 use ouroboros::self_referencing;
@@ -65,8 +66,7 @@ impl RocksDBStore {
         f: impl FnOnce(StoreTransaction) -> T,
     ) -> T {
         self.with_mut(|fields| {
-            if tx.is_update_tx() {
-                let update_key = tx.borrow_update_key().as_ref().unwrap();
+            if let RocksDBTxKind::Update(update_key) = tx.borrow_kind() {
                 let v = fields.mutex.get(update_key).expect("invariant violation");
                 if Rc::strong_count(v) == 2 {
                     // "2" indicates `v` and an entry of `mutex` only exist
@@ -157,6 +157,20 @@ impl CommitStore for RocksDBStore {
         })
     }
 
+    fn create_speculative_transaction(&mut self) -> Result<Self::Tx> {
+        debug!("create speculative tx");
+        self.with_mut(|fields| {
+            if matches!(fields.db, InnerDB::ReadOnlyDB(_)) {
+                return Err(Error::not_supported_operation(
+                    "create_speculative_transaction is only available for writable RocksDB stores"
+                        .to_string(),
+                ));
+            }
+            fields.latest_tx_id.safe_incr()?;
+            Ok(RocksDBTx::new_speculative_tx(*fields.latest_tx_id))
+        })
+    }
+
     fn begin(&mut self, tx: &<Self::Tx as CreatedTx>::PreparedTx) -> Result<()> {
         debug!("begin tx: {:?}", tx.get_id());
         self.with_mut(|fields| {
@@ -177,6 +191,12 @@ impl CommitStore for RocksDBStore {
                             }
                             .build(),
                         )
+                    } else if tx.is_speculative_tx() {
+                        StoreTransaction::Speculative(SpeculativeTransaction {
+                            overlay: OverlayKVS::new(TransactionSnapshotKVS {
+                                snapshot: db.snapshot(),
+                            }),
+                        })
                     } else {
                         StoreTransaction::Read(ReadTransaction {
                             snapshot: db.snapshot(),
@@ -194,6 +214,17 @@ impl CommitStore for RocksDBStore {
     fn commit(&mut self, tx: <Self::Tx as CreatedTx>::PreparedTx) -> Result<()> {
         debug!("commit tx: {:?}", tx.get_id());
         self.finalize_tx(tx, |stx| stx.commit())
+    }
+
+    fn take_write_set(&mut self, tx: <Self::Tx as CreatedTx>::PreparedTx) -> Result<WriteSet> {
+        debug!("take write set: {:?}", tx.get_id());
+        self.finalize_tx(tx, |stx| {
+            stx.into_overlay_writes().ok_or_else(|| {
+                Error::not_supported_operation(
+                    "take_write_set is only available for speculative transactions".to_string(),
+                )
+            })
+        })
     }
 
     fn rollback(&mut self, tx: <Self::Tx as CreatedTx>::PreparedTx) {
@@ -240,6 +271,7 @@ pub enum StoreTransaction<'a> {
     Read(ReadTransaction<'a>),
     Update(UpdateTransaction<'a>),
     ReadSnapshot(ReadSnapshot<'a>),
+    Speculative(SpeculativeTransaction<'a>),
 }
 
 #[allow(clippy::single_match)]
@@ -257,6 +289,15 @@ impl<'a> StoreTransaction<'a> {
             _ => {}
         }
     }
+
+    fn into_overlay_writes(self) -> Option<WriteSet> {
+        match self {
+            StoreTransaction::Speculative(stx) => Some(stx.into_overlay_writes()),
+            StoreTransaction::Read(_)
+            | StoreTransaction::ReadSnapshot(_)
+            | StoreTransaction::Update(_) => None,
+        }
+    }
 }
 
 impl<'a> KVStore for StoreTransaction<'a> {
@@ -265,6 +306,7 @@ impl<'a> KVStore for StoreTransaction<'a> {
             StoreTransaction::Read(stx) => stx.set(key, value),
             StoreTransaction::Update(stx) => stx.set(key, value),
             StoreTransaction::ReadSnapshot(stx) => stx.set(key, value),
+            StoreTransaction::Speculative(stx) => stx.set(key, value),
         }
     }
 
@@ -273,6 +315,7 @@ impl<'a> KVStore for StoreTransaction<'a> {
             StoreTransaction::Read(stx) => stx.get(key),
             StoreTransaction::Update(stx) => stx.get(key),
             StoreTransaction::ReadSnapshot(stx) => stx.get(key),
+            StoreTransaction::Speculative(stx) => stx.get(key),
         }
     }
 
@@ -281,6 +324,7 @@ impl<'a> KVStore for StoreTransaction<'a> {
             StoreTransaction::Read(stx) => stx.remove(key),
             StoreTransaction::Update(stx) => stx.remove(key),
             StoreTransaction::ReadSnapshot(stx) => stx.remove(key),
+            StoreTransaction::Speculative(stx) => stx.remove(key),
         }
     }
 }
@@ -309,6 +353,35 @@ impl<'a> KVStore for ReadTransaction<'a> {
 
     fn remove(&mut self, key: &[u8]) {
         self.buffer.insert(key.to_vec(), None);
+    }
+}
+
+/// SpeculativeTransaction is an isolated writable view over a transaction snapshot.
+///
+/// All read operations are performed against the overlay first and then the snapshot.
+/// All write operations are accumulated into the overlay and can be extracted as a WriteSet.
+pub struct SpeculativeTransaction<'a> {
+    overlay: OverlayKVS<TransactionSnapshotKVS<'a>>,
+}
+
+impl<'a> SpeculativeTransaction<'a> {
+    fn into_overlay_writes(self) -> WriteSet {
+        let (_, writes) = self.overlay.into_parts();
+        writes
+    }
+}
+
+impl<'a> KVStore for SpeculativeTransaction<'a> {
+    fn set(&mut self, key: Vec<u8>, value: Vec<u8>) {
+        self.overlay.set(key, value);
+    }
+
+    fn get(&self, key: &[u8]) -> Option<Vec<u8>> {
+        self.overlay.get(key)
+    }
+
+    fn remove(&mut self, key: &[u8]) {
+        self.overlay.remove(key);
     }
 }
 
@@ -378,11 +451,37 @@ impl<'a> KVStore for ReadSnapshot<'a> {
     }
 }
 
+pub struct TransactionSnapshotKVS<'a> {
+    snapshot: SnapshotWithThreadMode<'a, TransactionDB>,
+}
+
+impl<'a> KVStore for TransactionSnapshotKVS<'a> {
+    fn set(&mut self, _key: Vec<u8>, _value: Vec<u8>) {
+        unreachable!("TransactionSnapshotKVS is read-only")
+    }
+
+    fn get(&self, key: &[u8]) -> Option<Vec<u8>> {
+        self.snapshot.get(key).unwrap()
+    }
+
+    fn remove(&mut self, _key: &[u8]) {
+        unreachable!("TransactionSnapshotKVS is read-only")
+    }
+}
+
+/// RocksDBTxKind describes the transaction mode without allowing invalid
+/// read/update/speculative flag combinations.
+pub enum RocksDBTxKind {
+    Read,
+    Update(UpdateKey),
+    Speculative,
+}
+
 /// RocksDBTx is a transaction handle corresponding to `StoreTransaction`
 #[self_referencing]
 pub struct RocksDBTx<T> {
     pub id: TxId,
-    pub update_key: Option<UpdateKey>,
+    pub kind: RocksDBTxKind,
     pub mutex: Option<Rc<Mutex<()>>>,
     #[borrows(mutex)]
     #[covariant]
@@ -410,7 +509,7 @@ impl CreatedTx for RocksDBTx<CreatedRocksDBTx> {
         let fields = self.into_heads();
         let tx = RocksDBTxBuilder {
             id: fields.id,
-            update_key: fields.update_key,
+            kind: fields.kind,
             mutex: fields.mutex,
             mutex_guard_builder: |m| {
                 if update {
@@ -436,7 +535,7 @@ impl<T> RocksDBTx<T> {
     pub fn new_read_tx(id: TxId) -> Self {
         RocksDBTxBuilder {
             id,
-            update_key: None,
+            kind: RocksDBTxKind::Read,
             mutex: None,
             mutex_guard_builder: |_| None,
             marker: Default::default(),
@@ -447,7 +546,7 @@ impl<T> RocksDBTx<T> {
     pub fn new_update_tx(id: TxId, update_key: UpdateKey, mutex: Rc<Mutex<()>>) -> Self {
         RocksDBTxBuilder {
             id,
-            update_key: Some(update_key),
+            kind: RocksDBTxKind::Update(update_key),
             mutex: Some(mutex),
             mutex_guard_builder: |_| None,
             marker: Default::default(),
@@ -455,8 +554,23 @@ impl<T> RocksDBTx<T> {
         .build()
     }
 
+    pub fn new_speculative_tx(id: TxId) -> Self {
+        RocksDBTxBuilder {
+            id,
+            kind: RocksDBTxKind::Speculative,
+            mutex: None,
+            mutex_guard_builder: |_| None,
+            marker: Default::default(),
+        }
+        .build()
+    }
+
     pub fn is_update_tx(&self) -> bool {
-        self.borrow_update_key().is_some()
+        matches!(self.borrow_kind(), RocksDBTxKind::Update(_))
+    }
+
+    pub fn is_speculative_tx(&self) -> bool {
+        matches!(self.borrow_kind(), RocksDBTxKind::Speculative)
     }
 }
 
@@ -554,6 +668,39 @@ mod tests {
             store.rollback(tx);
             assert_eq!(store.borrow_mutex().len(), 0);
             assert!(store.get(&key(0)).eq(&None));
+        }
+
+        // case6: extract speculative writes without mutating canonical DB
+        {
+            let tx = store.create_speculative_transaction().unwrap();
+            let tx = tx.prepare().unwrap();
+            store.begin(&tx).unwrap();
+            store.tx_set(tx.get_id(), key(1), value(1)).unwrap();
+            store.tx_remove(tx.get_id(), &key(0)).unwrap();
+
+            let writes = store.take_write_set(tx).unwrap();
+            assert_eq!(writes.get(&key(1)), Some(&Some(value(1))));
+            assert_eq!(writes.get(&key(0)), Some(&None));
+            assert_eq!(store.get(&key(1)), None);
+            assert_eq!(store.get(&key(0)), None);
+            assert_eq!(store.borrow_mutex().len(), 0);
+        }
+
+        // case7: ordinary read transactions keep their legacy buffer but do not expose write sets
+        {
+            let tx = store.create_transaction(None).unwrap();
+            let tx = tx.prepare().unwrap();
+            store.begin(&tx).unwrap();
+            store.tx_set(tx.get_id(), key(2), value(2)).unwrap();
+            assert_eq!(store.tx_get(tx.get_id(), &key(2)).unwrap(), Some(value(2)));
+            assert!(store.take_write_set(tx).is_err());
+            assert_eq!(store.get(&key(2)), None);
+        }
+
+        // case8: read-only stores do not support speculative write extraction
+        {
+            let mut read_only_store = RocksDBStore::open_read_only(tmp_dir.as_ref());
+            assert!(read_only_store.create_speculative_transaction().is_err());
         }
     }
 

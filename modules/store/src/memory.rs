@@ -1,7 +1,7 @@
 use crate::prelude::*;
 use crate::store::TxId;
 use crate::transaction::{CommitStore, CreatedTx, Tx, TxAccessor};
-use crate::{KVStore, Result};
+use crate::{KVStore, Result, WriteSet};
 use std::collections::HashMap;
 use std::sync::Mutex;
 
@@ -53,6 +53,10 @@ impl CommitStore for MemStore {
 
     fn commit(&mut self, tx: <Self::Tx as CreatedTx>::PreparedTx) -> Result<()> {
         self.0.lock().unwrap().commit(tx)
+    }
+
+    fn take_write_set(&mut self, tx: <Self::Tx as CreatedTx>::PreparedTx) -> Result<WriteSet> {
+        self.0.lock().unwrap().take_write_set(tx)
     }
 
     fn rollback(&mut self, tx: <Self::Tx as CreatedTx>::PreparedTx) {
@@ -140,6 +144,14 @@ impl CommitStore for InnerMemStore {
             };
         }
         Ok(())
+    }
+
+    fn take_write_set(&mut self, _tx: <Self::Tx as CreatedTx>::PreparedTx) -> Result<WriteSet> {
+        assert!(self.running_tx_exists);
+        self.running_tx_exists = false;
+        let data = HashMap::<Vec<u8>, Option<Vec<u8>>>::default();
+        let uncommitted_data = std::mem::replace(&mut self.uncommitted_data, data);
+        Ok(uncommitted_data.into_iter().collect())
     }
 
     fn rollback(&mut self, _tx: <Self::Tx as CreatedTx>::PreparedTx) {
