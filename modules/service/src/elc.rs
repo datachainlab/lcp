@@ -1,28 +1,35 @@
-use crate::service::AppService;
-use enclave_api::EnclaveProtoAPI;
+use crate::service::{AppService, ElcService};
+use crate::speculative::stream::{
+    decode_speculative_batch_stream_init, encode_stitched_batch_result,
+    SpeculativeBatchStreamDecoder,
+};
+use enclave_api::{EnclaveProtoAPI, SpeculativeEnclaveCommandAPI};
 use lcp_proto::google::protobuf::Any;
 use lcp_proto::lcp::service::elc::v1::msg_update_client_stream_chunk::Chunk;
 use lcp_proto::lcp::service::elc::v1::{
-    msg_server::Msg, query_server::Query, MsgAggregateMessages, MsgAggregateMessagesResponse,
-    MsgCreateClient, MsgCreateClientResponse, MsgUpdateClient, MsgUpdateClientResponse,
+    msg_server::Msg, query_server::Query, ExecuteSpeculativeUpdateClientBatchResponse,
+    MsgAggregateMessages, MsgAggregateMessagesResponse, MsgCreateClient, MsgCreateClientResponse,
+    MsgSpeculativeUpdateClientBatchStreamChunk, MsgUpdateClient, MsgUpdateClientResponse,
     MsgUpdateClientStreamChunk, MsgVerifyMembership, MsgVerifyMembershipResponse,
     MsgVerifyNonMembership, MsgVerifyNonMembershipResponse, QueryClientRequest,
     QueryClientResponse,
 };
-use store::transaction::CommitStore;
+use log::debug;
+use std::sync::mpsc;
+use store::transaction::{CommitStore, TxAccessor};
 use tonic::{Request, Response, Status, Streaming};
 
 #[tonic::async_trait]
-impl<E, S> Msg for AppService<E, S>
+impl<E, S> Msg for ElcService<E, S>
 where
-    S: CommitStore + 'static,
-    E: EnclaveProtoAPI<S> + 'static,
+    S: CommitStore + TxAccessor + Send + 'static,
+    E: EnclaveProtoAPI<S> + SpeculativeEnclaveCommandAPI<S> + Send + Sync + 'static,
 {
     async fn create_client(
         &self,
         request: Request<MsgCreateClient>,
     ) -> Result<Response<MsgCreateClientResponse>, Status> {
-        match self.enclave.proto_create_client(request.into_inner()) {
+        match self.app.enclave.proto_create_client(request.into_inner()) {
             Ok(res) => Ok(Response::new(res)),
             Err(e) => Err(Status::aborted(e.to_string())),
         }
@@ -32,7 +39,7 @@ where
         &self,
         request: Request<MsgUpdateClient>,
     ) -> Result<Response<MsgUpdateClientResponse>, Status> {
-        match self.enclave.proto_update_client(request.into_inner()) {
+        match self.app.enclave.proto_update_client(request.into_inner()) {
             Ok(res) => Ok(Response::new(res)),
             Err(e) => Err(Status::aborted(e.to_string())),
         }
@@ -95,9 +102,54 @@ where
             }),
         };
 
-        match self.enclave.proto_update_client(msg) {
+        match self.app.enclave.proto_update_client(msg) {
             Ok(res) => Ok(Response::new(res)),
             Err(e) => Err(Status::aborted(e.to_string())),
+        }
+    }
+
+    async fn speculative_update_client_batch_stream(
+        &self,
+        request: Request<Streaming<MsgSpeculativeUpdateClientBatchStreamChunk>>,
+    ) -> Result<Response<ExecuteSpeculativeUpdateClientBatchResponse>, Status> {
+        let mut stream = request.into_inner();
+        let init = decode_speculative_batch_stream_init(&mut stream).await?;
+        let client_id = init.client_id;
+        let (tx, rx) = mpsc::channel();
+        let app = self.app.clone();
+        let speculative = self.speculative.clone();
+        let scheduler_client_id = client_id.clone();
+        let scheduler = tokio::task::spawn_blocking(move || {
+            speculative.execute_serialized_speculative_update_client_stream(
+                &app,
+                scheduler_client_id,
+                rx,
+            )
+        });
+        let mut decoder = SpeculativeBatchStreamDecoder::new(client_id.clone());
+        let mut units = 0usize;
+
+        while let Some(chunk_msg) = stream.message().await? {
+            if let Some(unit) = decoder.push_chunk(chunk_msg.chunk)? {
+                units += 1;
+                tx.send(unit).map_err(|_| {
+                    Status::aborted("speculative batch scheduler stopped before stream ended")
+                })?;
+            }
+        }
+        decoder.finish()?;
+        drop(tx);
+
+        debug!(
+            "received speculative update client batch stream: client_id={} units={}",
+            client_id, units
+        );
+        let result = scheduler
+            .await
+            .map_err(|e| Status::aborted(format!("speculative batch worker failed: {e}")))?;
+        match result {
+            Ok(res) => Ok(Response::new(encode_stitched_batch_result(res))),
+            Err(e) => Err(Status::aborted(format!("{:?}: {}", e.kind, e.detail))),
         }
     }
 
@@ -105,7 +157,11 @@ where
         &self,
         request: Request<MsgAggregateMessages>,
     ) -> Result<Response<MsgAggregateMessagesResponse>, Status> {
-        match self.enclave.proto_aggregate_messages(request.into_inner()) {
+        match self
+            .app
+            .enclave
+            .proto_aggregate_messages(request.into_inner())
+        {
             Ok(res) => Ok(Response::new(res)),
             Err(e) => Err(Status::aborted(e.to_string())),
         }
@@ -115,7 +171,11 @@ where
         &self,
         request: Request<MsgVerifyMembership>,
     ) -> Result<Response<MsgVerifyMembershipResponse>, Status> {
-        match self.enclave.proto_verify_membership(request.into_inner()) {
+        match self
+            .app
+            .enclave
+            .proto_verify_membership(request.into_inner())
+        {
             Ok(res) => Ok(Response::new(res)),
             Err(e) => Err(Status::aborted(e.to_string())),
         }
@@ -126,6 +186,7 @@ where
         request: Request<MsgVerifyNonMembership>,
     ) -> Result<Response<MsgVerifyNonMembershipResponse>, Status> {
         match self
+            .app
             .enclave
             .proto_verify_non_membership(request.into_inner())
         {
@@ -138,7 +199,7 @@ where
 #[tonic::async_trait]
 impl<E, S> Query for AppService<E, S>
 where
-    S: CommitStore + 'static,
+    S: CommitStore + TxAccessor + 'static,
     E: EnclaveProtoAPI<S> + 'static,
 {
     async fn client(
