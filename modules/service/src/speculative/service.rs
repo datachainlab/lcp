@@ -11,9 +11,7 @@ use super::types::{
     SpeculativeUpdateClientRequest, SpeculativeUpdateClientResult, StitchedUpdateClientBatchResult,
     StitchedUpdateClientResult,
 };
-use super::validation::{
-    validate_linear_batch_requests, validate_linear_transitions,
-};
+use super::validation::{validate_linear_batch_requests, validate_linear_transitions};
 use crate::service::AppService;
 use commitments::ProxyMessage;
 use enclave_api::{
