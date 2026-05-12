@@ -7,6 +7,14 @@ use std::path::PathBuf;
 
 pub trait EnclaveLoader<S: CommitStore> {
     fn load(&self, opts: &Opts, path: Option<&PathBuf>, debug: bool) -> Result<Enclave<S>>;
+
+    fn load_with_ecall_concurrency(
+        &self,
+        opts: &Opts,
+        path: Option<&PathBuf>,
+        debug: bool,
+        ecall_concurrency: usize,
+    ) -> Result<Enclave<S>>;
 }
 
 #[derive(Debug)]
@@ -17,6 +25,16 @@ where
     Enclave<S>: EnclaveProtoAPI<S>,
 {
     fn load(&self, opts: &Opts, path: Option<&PathBuf>, debug: bool) -> Result<Enclave<S>> {
+        self.load_with_ecall_concurrency(opts, path, debug, Enclave::<S>::DEFAULT_ECALL_CONCURRENCY)
+    }
+
+    fn load_with_ecall_concurrency(
+        &self,
+        opts: &Opts,
+        path: Option<&PathBuf>,
+        debug: bool,
+        ecall_concurrency: usize,
+    ) -> Result<Enclave<S>> {
         let path = if let Some(path) = path {
             path.clone()
         } else {
@@ -24,7 +42,13 @@ where
         };
         let env = host::get_environment().unwrap();
         let km = EnclaveKeyManager::new(&env.home)?;
-        match Enclave::create(&path, debug, km, env.store.clone()) {
+        match Enclave::create_with_ecall_concurrency(
+            &path,
+            debug,
+            km,
+            env.store.clone(),
+            ecall_concurrency,
+        ) {
             Ok(enclave) => Ok(enclave),
             Err(x) => {
                 bail!(
