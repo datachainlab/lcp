@@ -27,6 +27,10 @@ fn sha256_hex(bytes: &[u8]) -> String {
     hex::encode(sha2::Sha256::digest(bytes))
 }
 
+fn speculative_request_header_len(req: &SpeculativeUpdateClientRequest) -> Option<usize> {
+    Some(req.update.header.as_ref()?.value.len())
+}
+
 fn speculative_request_header_digest(
     req: &SpeculativeUpdateClientRequest,
 ) -> Option<(usize, String)> {
@@ -294,14 +298,13 @@ fn streaming_speculative_worker<E, S>(
         };
 
         let unit_id = req.request().unit_id.clone();
-        let header_digest = speculative_request_header_digest(req.request());
-        if let Some((header_bytes, header_sha256)) = header_digest.as_ref() {
+        let header_bytes = speculative_request_header_len(req.request());
+        if let Some(header_bytes) = header_bytes {
             info!(
-                "execute speculative update client unit: client_id={} unit_id={} header_bytes={} header_sha256={}",
+                "execute speculative update client unit: client_id={} unit_id={} header_bytes={}",
                 req.request().update.client_id,
                 unit_id,
-                header_bytes,
-                header_sha256
+                header_bytes
             );
         }
         let result = speculative
@@ -311,7 +314,7 @@ fn streaming_speculative_worker<E, S>(
             .map_err(|e| SpeculativeBatchFailure {
                 kind: SpeculativeBatchFailureKind::SpeculativeExecutionFailed,
                 unit_id: Some(unit_id),
-                detail: match header_digest {
+                detail: match speculative_request_header_digest(req.request()) {
                     Some((header_bytes, header_sha256)) => format!(
                         "{}; header_bytes={} header_sha256={}",
                         e, header_bytes, header_sha256
