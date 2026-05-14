@@ -1,7 +1,6 @@
 use crate::{
     ExplicitStateRef, ObservedStateTransition, SpeculativeUpdateClientRequest,
-    StitchedUpdateClientBatchResult, StitchedUpdateClientResult,
-    MAX_SPECULATIVE_BATCH_HEADER_BYTES, MAX_SPECULATIVE_UNIT_HEADER_BYTES,
+    StitchedUpdateClientBatchResult, StitchedUpdateClientResult, MAX_SPECULATIVE_UNIT_HEADER_BYTES,
 };
 #[cfg(test)]
 use crate::{SpeculativeUpdateClientBatch, MAX_SPECULATIVE_BATCH_UNITS};
@@ -19,9 +18,178 @@ use lcp_types::Height;
 use log::info;
 use sha2::Digest;
 use std::collections::HashSet;
+use std::sync::{Arc, Condvar, Mutex};
 use tonic::{Status, Streaming};
 
 pub(crate) const MAX_SPECULATIVE_BATCH_HEADER_CHUNK_BYTES: usize = 4 * 1024 * 1024;
+
+/// Tracks the peak resident header payload bytes for one speculative batch
+/// stream. Reservations are attached to decoded units and released when those
+/// units are dropped after execution; this intentionally bounds in-memory
+/// pressure instead of the total bytes carried by the whole stream.
+#[derive(Clone, Debug)]
+pub(crate) struct SpeculativeHeaderMemoryBudget {
+    inner: Arc<SpeculativeHeaderMemoryBudgetInner>,
+}
+
+#[derive(Debug)]
+struct SpeculativeHeaderMemoryBudgetInner {
+    max_bytes: usize,
+    state: Mutex<SpeculativeHeaderMemoryBudgetState>,
+    available: Condvar,
+}
+
+#[derive(Debug, Default)]
+struct SpeculativeHeaderMemoryBudgetState {
+    used_bytes: usize,
+}
+
+impl SpeculativeHeaderMemoryBudget {
+    pub(crate) fn new(max_bytes: usize) -> Self {
+        Self {
+            inner: Arc::new(SpeculativeHeaderMemoryBudgetInner {
+                max_bytes,
+                state: Mutex::new(SpeculativeHeaderMemoryBudgetState::default()),
+                available: Condvar::new(),
+            }),
+        }
+    }
+
+    #[allow(clippy::result_large_err)]
+    pub(crate) async fn reserve_for_chunk(
+        &self,
+        chunk: &MsgSpeculativeUpdateClientBatchStreamChunk,
+    ) -> Result<SpeculativeHeaderMemoryReservation, Status> {
+        let bytes = match chunk.chunk.as_ref() {
+            Some(BatchChunk::UnitHeaderChunk(header_chunk)) => header_chunk.data.len(),
+            _ => 0,
+        };
+        if bytes == 0 {
+            return Ok(SpeculativeHeaderMemoryReservation::empty());
+        }
+
+        let budget = self.clone();
+        tokio::task::spawn_blocking(move || budget.reserve_blocking(bytes))
+            .await
+            .map_err(|e| {
+                Status::aborted(format!(
+                    "speculative header memory budget waiter failed: {e}"
+                ))
+            })?
+    }
+
+    #[allow(clippy::result_large_err)]
+    fn reserve_blocking(&self, bytes: usize) -> Result<SpeculativeHeaderMemoryReservation, Status> {
+        if bytes > self.inner.max_bytes {
+            return Err(Status::resource_exhausted(format!(
+                "speculative resident header payload too large: bytes={} max={}",
+                bytes, self.inner.max_bytes
+            )));
+        }
+
+        let mut state = self.inner.state.lock().unwrap();
+        while state.used_bytes + bytes > self.inner.max_bytes {
+            state = self.inner.available.wait(state).unwrap();
+        }
+        state.used_bytes += bytes;
+        Ok(SpeculativeHeaderMemoryReservation {
+            budget: Some(self.clone()),
+            bytes,
+        })
+    }
+
+    fn release(&self, bytes: usize) {
+        if bytes == 0 {
+            return;
+        }
+        let mut state = self.inner.state.lock().unwrap();
+        state.used_bytes = state.used_bytes.saturating_sub(bytes);
+        self.inner.available.notify_all();
+    }
+
+    #[cfg(test)]
+    fn used_bytes(&self) -> usize {
+        self.inner.state.lock().unwrap().used_bytes
+    }
+}
+
+#[derive(Debug)]
+pub(crate) struct SpeculativeHeaderMemoryReservation {
+    budget: Option<SpeculativeHeaderMemoryBudget>,
+    bytes: usize,
+}
+
+impl SpeculativeHeaderMemoryReservation {
+    pub(crate) fn empty() -> Self {
+        Self {
+            budget: None,
+            bytes: 0,
+        }
+    }
+
+    fn merge(&mut self, mut other: Self) {
+        if other.bytes == 0 {
+            return;
+        }
+        if self.bytes == 0 {
+            self.budget = other.budget.take();
+            self.bytes = other.bytes;
+            other.bytes = 0;
+            return;
+        }
+        debug_assert!(
+            match (&self.budget, &other.budget) {
+                (Some(left), Some(right)) => Arc::ptr_eq(&left.inner, &right.inner),
+                _ => false,
+            },
+            "cannot merge header memory reservations from different budgets"
+        );
+        self.bytes += other.bytes;
+        other.bytes = 0;
+    }
+}
+
+impl Drop for SpeculativeHeaderMemoryReservation {
+    fn drop(&mut self) {
+        if let Some(budget) = self.budget.take() {
+            budget.release(self.bytes);
+        }
+    }
+}
+
+pub(crate) struct ResidentSpeculativeUpdateClientRequest {
+    request: SpeculativeUpdateClientRequest,
+    _header_memory: SpeculativeHeaderMemoryReservation,
+}
+
+impl ResidentSpeculativeUpdateClientRequest {
+    fn new(
+        request: SpeculativeUpdateClientRequest,
+        header_memory: SpeculativeHeaderMemoryReservation,
+    ) -> Self {
+        Self {
+            request,
+            _header_memory: header_memory,
+        }
+    }
+
+    pub(crate) fn request(&self) -> &SpeculativeUpdateClientRequest {
+        &self.request
+    }
+
+    pub(crate) fn request_mut(&mut self) -> &mut SpeculativeUpdateClientRequest {
+        &mut self.request
+    }
+
+    pub(crate) fn into_request(self) -> SpeculativeUpdateClientRequest {
+        self.request
+    }
+
+    #[cfg(test)]
+    pub(crate) fn unmetered(request: SpeculativeUpdateClientRequest) -> Self {
+        Self::new(request, SpeculativeHeaderMemoryReservation::empty())
+    }
+}
 
 fn sha256_hex(bytes: &[u8]) -> String {
     hex::encode(sha2::Sha256::digest(bytes))
@@ -37,6 +205,7 @@ struct DecodedSpeculativeBatchRequest {
 struct OpenSpeculativeUnit {
     init: SpeculativeUpdateClientUnitInit,
     header_bytes: Vec<u8>,
+    header_memory: SpeculativeHeaderMemoryReservation,
 }
 
 pub(crate) struct SpeculativeBatchStreamDecoder {
@@ -66,7 +235,8 @@ impl SpeculativeBatchStreamDecoder {
     pub(crate) fn push_chunk(
         &mut self,
         chunk: Option<BatchChunk>,
-    ) -> Result<Option<SpeculativeUpdateClientRequest>, Status> {
+        header_memory: SpeculativeHeaderMemoryReservation,
+    ) -> Result<Option<ResidentSpeculativeUpdateClientRequest>, Status> {
         if self.closed {
             return Err(Status::invalid_argument(
                 "speculative batch stream received chunk after batch_end",
@@ -92,6 +262,7 @@ impl SpeculativeBatchStreamDecoder {
                 self.open_unit = Some(OpenSpeculativeUnit {
                     init: unit_init,
                     header_bytes: Vec::new(),
+                    header_memory: SpeculativeHeaderMemoryReservation::empty(),
                 });
                 Ok(None)
             }
@@ -100,6 +271,7 @@ impl SpeculativeBatchStreamDecoder {
                     &mut self.open_unit,
                     header_chunk,
                     &mut self.total_header_bytes,
+                    header_memory,
                 )?;
                 Ok(None)
             }
@@ -109,14 +281,14 @@ impl SpeculativeBatchStreamDecoder {
                     self.open_unit.take(),
                     unit_end.unit_id,
                 )?;
-                if !self.seen_unit_ids.insert(unit.unit_id.clone()) {
+                if !self.seen_unit_ids.insert(unit.request().unit_id.clone()) {
                     return Err(Status::invalid_argument(format!(
                         "duplicate speculative unit_id: {}",
-                        unit.unit_id
+                        unit.request().unit_id
                     )));
                 }
                 #[cfg(test)]
-                self.units.push(unit.clone());
+                self.units.push(unit.request().clone());
                 Ok(Some(unit))
             }
             Some(BatchChunk::BatchEnd(_)) => {
@@ -191,6 +363,7 @@ fn append_speculative_unit_header_chunk(
     open_unit: &mut Option<OpenSpeculativeUnit>,
     header_chunk: SpeculativeUpdateClientUnitHeaderChunk,
     total_header_bytes: &mut usize,
+    header_memory: SpeculativeHeaderMemoryReservation,
 ) -> Result<(), Status> {
     if header_chunk.data.is_empty() {
         return Err(Status::invalid_argument(
@@ -220,13 +393,8 @@ fn append_speculative_unit_header_chunk(
     let chunk_len = header_chunk.data.len();
     open.header_bytes.extend(header_chunk.data);
     *total_header_bytes += chunk_len;
+    open.header_memory.merge(header_memory);
     validate_speculative_unit_header_payload_len(&open.init.unit_id, open.header_bytes.len())?;
-    if *total_header_bytes > MAX_SPECULATIVE_BATCH_HEADER_BYTES {
-        return Err(Status::resource_exhausted(format!(
-            "speculative batch header payload too large: bytes={} max={}",
-            *total_header_bytes, MAX_SPECULATIVE_BATCH_HEADER_BYTES
-        )));
-    }
     Ok(())
 }
 
@@ -249,7 +417,7 @@ fn close_speculative_unit(
     client_id: &str,
     open_unit: Option<OpenSpeculativeUnit>,
     unit_id: String,
-) -> Result<SpeculativeUpdateClientRequest, Status> {
+) -> Result<ResidentSpeculativeUpdateClientRequest, Status> {
     let Some(open) = open_unit else {
         return Err(Status::invalid_argument(
             "speculative unit_end received before unit_init",
@@ -275,7 +443,7 @@ fn close_speculative_unit(
         sha256_hex(&open.header_bytes)
     );
 
-    Ok(SpeculativeUpdateClientRequest {
+    let request = SpeculativeUpdateClientRequest {
         unit_id: open.init.unit_id,
         update: MsgUpdateClient {
             client_id: client_id.to_string(),
@@ -287,7 +455,11 @@ fn close_speculative_unit(
             signer: open.init.signer,
         },
         base_state: decode_explicit_state_ref(open.init.base_state)?,
-    })
+    };
+    Ok(ResidentSpeculativeUpdateClientRequest::new(
+        request,
+        open.header_memory,
+    ))
 }
 
 #[allow(clippy::result_large_err)]
@@ -380,6 +552,7 @@ mod tests {
     use super::{
         decode_speculative_batch, validate_speculative_unit_header_payload_len,
         DecodedSpeculativeBatchRequest, SpeculativeBatchStreamDecoder,
+        SpeculativeHeaderMemoryBudget, SpeculativeHeaderMemoryReservation,
         MAX_SPECULATIVE_BATCH_HEADER_CHUNK_BYTES,
     };
     use crate::{
@@ -389,8 +562,8 @@ mod tests {
     use lcp_proto::google::protobuf::Any;
     use lcp_proto::lcp::service::elc::v1::{
         msg_speculative_update_client_batch_stream_chunk::Chunk as BatchChunk,
-        ExplicitStateRef as ProtoExplicitStateRef, MsgUpdateClient,
-        SpeculativeUpdateClientBatchEnd, SpeculativeUpdateClientBatchStreamInit,
+        ExplicitStateRef as ProtoExplicitStateRef, MsgSpeculativeUpdateClientBatchStreamChunk,
+        MsgUpdateClient, SpeculativeUpdateClientBatchEnd, SpeculativeUpdateClientBatchStreamInit,
         SpeculativeUpdateClientUnitEnd, SpeculativeUpdateClientUnitHeaderChunk,
         SpeculativeUpdateClientUnitInit,
     };
@@ -438,7 +611,7 @@ mod tests {
     ) -> Result<DecodedSpeculativeBatchRequest, tonic::Status> {
         let mut decoder = SpeculativeBatchStreamDecoder::new("client-0".to_string());
         for chunk in chunks {
-            decoder.push_chunk(Some(chunk))?;
+            decoder.push_chunk(Some(chunk), SpeculativeHeaderMemoryReservation::empty())?;
         }
         decoder.finish()?;
         Ok(DecodedSpeculativeBatchRequest {
@@ -463,6 +636,56 @@ mod tests {
             "unexpected error message: {}",
             err.message()
         );
+    }
+
+    fn header_chunk_msg(
+        unit_id: &str,
+        data: Vec<u8>,
+    ) -> MsgSpeculativeUpdateClientBatchStreamChunk {
+        MsgSpeculativeUpdateClientBatchStreamChunk {
+            chunk: Some(BatchChunk::UnitHeaderChunk(
+                SpeculativeUpdateClientUnitHeaderChunk {
+                    unit_id: unit_id.to_string(),
+                    data,
+                },
+            )),
+        }
+    }
+
+    #[test]
+    fn header_memory_reservation_is_held_by_decoded_unit_until_drop() {
+        let runtime = tokio::runtime::Runtime::new().expect("tokio runtime");
+        let budget = SpeculativeHeaderMemoryBudget::new(10);
+        let mut decoder = SpeculativeBatchStreamDecoder::new("client-0".to_string());
+
+        decoder
+            .push_chunk(
+                Some(BatchChunk::UnitInit(make_unit_init("unit-0000"))),
+                SpeculativeHeaderMemoryReservation::empty(),
+            )
+            .expect("unit init");
+        let chunk_msg = header_chunk_msg("unit-0000", b"abc".to_vec());
+        let header_memory = runtime
+            .block_on(budget.reserve_for_chunk(&chunk_msg))
+            .expect("header memory");
+        assert_eq!(budget.used_bytes(), 3);
+        decoder
+            .push_chunk(chunk_msg.chunk, header_memory)
+            .expect("header chunk");
+        assert_eq!(budget.used_bytes(), 3);
+
+        let unit = decoder
+            .push_chunk(
+                Some(BatchChunk::UnitEnd(SpeculativeUpdateClientUnitEnd {
+                    unit_id: "unit-0000".to_string(),
+                })),
+                SpeculativeHeaderMemoryReservation::empty(),
+            )
+            .expect("unit end")
+            .expect("decoded unit");
+        assert_eq!(budget.used_bytes(), 3);
+        drop(unit);
+        assert_eq!(budget.used_bytes(), 0);
     }
 
     #[test]

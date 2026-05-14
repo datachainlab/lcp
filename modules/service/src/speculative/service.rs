@@ -2,9 +2,10 @@ use super::permit::{KeyLockMap, PermitGate};
 #[cfg(test)]
 use super::rebase::{
     extract_client_state_from_write_set, extract_consensus_state_from_write_set,
-    rebase_speculative_request, DependencyRebaseState,
+    rebase_speculative_request_in_place, DependencyRebaseState,
 };
 use super::scheduler::execute_speculative_update_client_stream;
+use super::stream::ResidentSpeculativeUpdateClientRequest;
 use super::types::{
     ExplicitStateRef, ObservedStateTransition, SpeculativeBatchFailure,
     SpeculativeBatchFailureKind, SpeculativeUpdateClientBatch, SpeculativeUpdateClientBatchResult,
@@ -165,7 +166,7 @@ impl SpeculativeService {
         &self,
         app: &AppService<E, S>,
         client_id: String,
-        units: Receiver<SpeculativeUpdateClientRequest>,
+        units: Receiver<ResidentSpeculativeUpdateClientRequest>,
     ) -> core::result::Result<StitchedUpdateClientBatchResult, SpeculativeBatchFailure>
     where
         S: CommitStore + TxAccessor + Send + 'static,
@@ -493,7 +494,7 @@ mod tests {
 
     #[test]
     fn replaces_explicit_base_state_metadata_when_rebasing_previous_payloads() {
-        let req = mk_req(
+        let mut req = mk_req(
             "unit-0001",
             "client",
             Some(Height::new(0, 10)),
@@ -510,18 +511,18 @@ mod tests {
             consensus_state: None,
         };
 
-        let rebased = rebase_speculative_request(req, &previous);
+        rebase_speculative_request_in_place(&mut req, &previous);
 
-        assert_eq!(rebased.base_state.prev_height, Some(Height::new(0, 11)));
+        assert_eq!(req.base_state.prev_height, Some(Height::new(0, 11)));
         assert_eq!(
-            rebased.base_state.prev_state_id.as_deref(),
+            req.base_state.prev_state_id.as_deref(),
             Some(b"post-0".as_slice())
         );
     }
 
     #[test]
     fn fills_missing_base_state_metadata_from_previous_post_state() {
-        let req = mk_req("unit-0001", "client", None, None);
+        let mut req = mk_req("unit-0001", "client", None, None);
         let previous = DependencyRebaseState {
             observed_transition: ObservedStateTransition {
                 prev_height: None,
@@ -533,18 +534,18 @@ mod tests {
             consensus_state: None,
         };
 
-        let rebased = rebase_speculative_request(req, &previous);
+        rebase_speculative_request_in_place(&mut req, &previous);
 
-        assert_eq!(rebased.base_state.prev_height, Some(Height::new(0, 11)));
+        assert_eq!(req.base_state.prev_height, Some(Height::new(0, 11)));
         assert_eq!(
-            rebased.base_state.prev_state_id.as_deref(),
+            req.base_state.prev_state_id.as_deref(),
             Some(b"post-0".as_slice())
         );
     }
 
     #[test]
     fn seeds_previous_payloads_even_when_explicit_base_state_is_complete() {
-        let req = with_explicit_base_state_payload(mk_req(
+        let mut req = with_explicit_base_state_payload(mk_req(
             "unit-0001",
             "client",
             Some(Height::new(0, 11)),
@@ -573,15 +574,15 @@ mod tests {
             ),
         };
 
-        let rebased = rebase_speculative_request(req, &previous);
+        rebase_speculative_request_in_place(&mut req, &previous);
 
-        assert_eq!(rebased.base_state.prev_height, Some(Height::new(0, 11)));
+        assert_eq!(req.base_state.prev_height, Some(Height::new(0, 11)));
         assert_eq!(
-            rebased.base_state.prev_state_id.as_deref(),
+            req.base_state.prev_state_id.as_deref(),
             Some(b"post-0".as_slice())
         );
-        assert!(rebased.base_state.client_state.is_some());
-        assert!(rebased.base_state.consensus_state.is_some());
+        assert!(req.base_state.client_state.is_some());
+        assert!(req.base_state.consensus_state.is_some());
     }
 
     #[test]
@@ -662,24 +663,26 @@ mod tests {
             )
         });
 
-        tx.send(SpeculativeUpdateClientRequest {
-            unit_id: "unit-0000".to_string(),
-            update: MsgUpdateClient {
-                client_id: client_id.to_string(),
-                signer: vec![0; 20],
-                header: Some(Any {
-                    type_url: "/ibc.mock.Header".to_string(),
-                    value: vec![1],
-                }),
-                ..Default::default()
+        tx.send(ResidentSpeculativeUpdateClientRequest::unmetered(
+            SpeculativeUpdateClientRequest {
+                unit_id: "unit-0000".to_string(),
+                update: MsgUpdateClient {
+                    client_id: client_id.to_string(),
+                    signer: vec![0; 20],
+                    header: Some(Any {
+                        type_url: "/ibc.mock.Header".to_string(),
+                        value: vec![1],
+                    }),
+                    ..Default::default()
+                },
+                base_state: ExplicitStateRef {
+                    prev_height: None,
+                    prev_state_id: None,
+                    client_state: None,
+                    consensus_state: None,
+                },
             },
-            base_state: ExplicitStateRef {
-                prev_height: None,
-                prev_state_id: None,
-                client_state: None,
-                consensus_state: None,
-            },
-        })
+        ))
         .expect("send first unit");
 
         for _ in 0..100 {
@@ -693,28 +696,30 @@ mod tests {
             "expected first unit to start before input stream closes"
         );
 
-        tx.send(SpeculativeUpdateClientRequest {
-            unit_id: "unit-0001".to_string(),
-            update: MsgUpdateClient {
-                client_id: client_id.to_string(),
-                signer: {
-                    let mut signer = vec![0; 20];
-                    signer[19] = 1;
-                    signer
+        tx.send(ResidentSpeculativeUpdateClientRequest::unmetered(
+            SpeculativeUpdateClientRequest {
+                unit_id: "unit-0001".to_string(),
+                update: MsgUpdateClient {
+                    client_id: client_id.to_string(),
+                    signer: {
+                        let mut signer = vec![0; 20];
+                        signer[19] = 1;
+                        signer
+                    },
+                    header: Some(Any {
+                        type_url: "/ibc.mock.Header".to_string(),
+                        value: vec![2],
+                    }),
+                    ..Default::default()
                 },
-                header: Some(Any {
-                    type_url: "/ibc.mock.Header".to_string(),
-                    value: vec![2],
-                }),
-                ..Default::default()
+                base_state: ExplicitStateRef {
+                    prev_height: None,
+                    prev_state_id: None,
+                    client_state: None,
+                    consensus_state: None,
+                },
             },
-            base_state: ExplicitStateRef {
-                prev_height: None,
-                prev_state_id: None,
-                client_state: None,
-                consensus_state: None,
-            },
-        })
+        ))
         .expect("send second unit");
         drop(tx);
 
@@ -767,7 +772,8 @@ mod tests {
             };
         }
         for req in requests {
-            tx.send(req).expect("send unit");
+            tx.send(ResidentSpeculativeUpdateClientRequest::unmetered(req))
+                .expect("send unit");
         }
         drop(tx);
 

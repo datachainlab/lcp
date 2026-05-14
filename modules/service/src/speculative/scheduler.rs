@@ -1,7 +1,8 @@
 use super::rebase::{
-    build_dependency_rebase_state, rebase_speculative_request, DependencyRebaseState,
+    build_dependency_rebase_state, rebase_speculative_request_in_place, DependencyRebaseState,
 };
 use super::service::SpeculativeService;
+use super::stream::ResidentSpeculativeUpdateClientRequest;
 use super::types::{
     SpeculativeBatchFailure, SpeculativeBatchFailureKind, SpeculativeUpdateClientBatchResult,
     SpeculativeUpdateClientRequest, SpeculativeUpdateClientResult,
@@ -37,7 +38,7 @@ pub(crate) fn execute_speculative_update_client_stream<E, S>(
     speculative: &SpeculativeService,
     app: &AppService<E, S>,
     client_id: String,
-    units: Receiver<SpeculativeUpdateClientRequest>,
+    units: Receiver<ResidentSpeculativeUpdateClientRequest>,
 ) -> core::result::Result<StreamingSpeculativeBatchResult, SpeculativeBatchFailure>
 where
     S: CommitStore + TxAccessor + Send + 'static,
@@ -81,7 +82,10 @@ where
             if state.has_unresolvable_pending_work() {
                 state.failure = Some(SpeculativeBatchFailure {
                     kind: SpeculativeBatchFailureKind::DependencyStateMismatch,
-                    unit_id: state.pending.front().map(|(_, req)| req.unit_id.clone()),
+                    unit_id: state
+                        .pending
+                        .front()
+                        .map(|(_, req)| req.request().unit_id.clone()),
                     detail: "speculative stream ended with unresolved linear dependencies"
                         .to_string(),
                 });
@@ -153,8 +157,8 @@ struct StreamingSchedulerShared {
 // input order, even if worker threads finish out of order.
 struct StreamingSchedulerState {
     client_id: String,
-    ready: VecDeque<(usize, SpeculativeUpdateClientRequest)>,
-    pending: VecDeque<(usize, SpeculativeUpdateClientRequest)>,
+    ready: VecDeque<(usize, ResidentSpeculativeUpdateClientRequest)>,
+    pending: VecDeque<(usize, ResidentSpeculativeUpdateClientRequest)>,
     request_by_index: BTreeMap<usize, SpeculativeUpdateClientRequest>,
     result_by_index: BTreeMap<usize, SpeculativeUpdateClientResult>,
     rebase_state_by_index: BTreeMap<usize, DependencyRebaseState>,
@@ -194,10 +198,15 @@ impl StreamingSchedulerState {
 
     fn enqueue(
         &mut self,
-        req: SpeculativeUpdateClientRequest,
+        req: ResidentSpeculativeUpdateClientRequest,
     ) -> core::result::Result<(), SpeculativeBatchFailure> {
         let index = self.unit_count;
-        validate_next_linear_request(&self.client_id, index, &mut self.seen_unit_ids, &req)?;
+        validate_next_linear_request(
+            &self.client_id,
+            index,
+            &mut self.seen_unit_ids,
+            req.request(),
+        )?;
         self.unit_count += 1;
         self.enqueue_ready_or_pending(index, req)
     }
@@ -205,13 +214,13 @@ impl StreamingSchedulerState {
     fn enqueue_ready_or_pending(
         &mut self,
         index: usize,
-        req: SpeculativeUpdateClientRequest,
+        mut req: ResidentSpeculativeUpdateClientRequest,
     ) -> core::result::Result<(), SpeculativeBatchFailure> {
-        if index == 0 || req.base_state.has_complete_base_state_payload() {
+        if index == 0 || req.request().base_state.has_complete_base_state_payload() {
             self.ready.push_back((index, req));
         } else if let Some(previous) = self.rebase_state_by_index.get(&(index - 1)) {
-            self.ready
-                .push_back((index, rebase_speculative_request(req, previous)));
+            rebase_speculative_request_in_place(req.request_mut(), previous);
+            self.ready.push_back((index, req));
         } else {
             self.pending.push_back((index, req));
         }
@@ -235,18 +244,24 @@ impl StreamingSchedulerState {
 
     fn promote_pending(&mut self) -> core::result::Result<(), SpeculativeBatchFailure> {
         let mut remaining = VecDeque::new();
-        while let Some((index, req)) = self.pending.pop_front() {
-            if index == 0 || req.base_state.has_complete_base_state_payload() {
+        while let Some((index, mut req)) = self.pending.pop_front() {
+            if index == 0 || req.request().base_state.has_complete_base_state_payload() {
                 self.ready.push_back((index, req));
             } else if let Some(previous) = self.rebase_state_by_index.get(&(index - 1)) {
-                self.ready
-                    .push_back((index, rebase_speculative_request(req, previous)));
+                rebase_speculative_request_in_place(req.request_mut(), previous);
+                self.ready.push_back((index, req));
             } else {
                 remaining.push_back((index, req));
             }
         }
         self.pending = remaining;
         Ok(())
+    }
+}
+
+fn clear_request_header_payload(req: &mut SpeculativeUpdateClientRequest) {
+    if let Some(header) = req.update.header.as_mut() {
+        header.value.clear();
     }
 }
 
@@ -278,12 +293,12 @@ fn streaming_speculative_worker<E, S>(
             }
         };
 
-        let unit_id = req.unit_id.clone();
-        let header_digest = speculative_request_header_digest(&req);
+        let unit_id = req.request().unit_id.clone();
+        let header_digest = speculative_request_header_digest(req.request());
         if let Some((header_bytes, header_sha256)) = header_digest.as_ref() {
             info!(
                 "execute speculative update client unit: client_id={} unit_id={} header_bytes={} header_sha256={}",
-                req.update.client_id,
+                req.request().update.client_id,
                 unit_id,
                 header_bytes,
                 header_sha256
@@ -291,7 +306,7 @@ fn streaming_speculative_worker<E, S>(
         }
         let result = speculative
             .with_speculative_request_permit(|| {
-                speculative.speculative_update_client(app, req.clone())
+                speculative.speculative_update_client(app, req.request().clone())
             })
             .map_err(|e| SpeculativeBatchFailure {
                 kind: SpeculativeBatchFailureKind::SpeculativeExecutionFailed,
@@ -309,6 +324,8 @@ fn streaming_speculative_worker<E, S>(
         state.in_flight -= 1;
         match result {
             Ok(result) => {
+                let mut req = req.into_request();
+                clear_request_header_payload(&mut req);
                 if let Err(e) = state.complete_unit(index, req, result) {
                     state.failure = Some(e);
                 }

@@ -13,10 +13,10 @@ pub(crate) struct DependencyRebaseState {
     pub(crate) consensus_state: Option<Any>,
 }
 
-pub(crate) fn rebase_speculative_request(
-    mut req: SpeculativeUpdateClientRequest,
+pub(crate) fn rebase_speculative_request_in_place(
+    req: &mut SpeculativeUpdateClientRequest,
     previous: &DependencyRebaseState,
-) -> SpeculativeUpdateClientRequest {
+) {
     // Always seed the base state from the previous result so the next unit
     // observes its predecessor's post-state and write set.
     req.base_state = ExplicitStateRef {
@@ -25,7 +25,6 @@ pub(crate) fn rebase_speculative_request(
         client_state: previous.client_state.clone(),
         consensus_state: previous.consensus_state.clone(),
     };
-    req
 }
 
 pub(crate) fn build_dependency_rebase_state(

@@ -1,8 +1,9 @@
 use crate::service::{AppService, ElcService};
 use crate::speculative::stream::{
     decode_speculative_batch_stream_init, encode_stitched_batch_result,
-    SpeculativeBatchStreamDecoder,
+    SpeculativeBatchStreamDecoder, SpeculativeHeaderMemoryBudget,
 };
+use crate::MAX_SPECULATIVE_BATCH_HEADER_BYTES;
 use enclave_api::{EnclaveProtoAPI, SpeculativeEnclaveCommandAPI};
 use lcp_proto::google::protobuf::Any;
 use lcp_proto::lcp::service::elc::v1::msg_update_client_stream_chunk::Chunk;
@@ -127,10 +128,13 @@ where
             )
         });
         let mut decoder = SpeculativeBatchStreamDecoder::new(client_id.clone());
+        let header_memory_budget =
+            SpeculativeHeaderMemoryBudget::new(MAX_SPECULATIVE_BATCH_HEADER_BYTES);
         let mut units = 0usize;
 
         while let Some(chunk_msg) = stream.message().await? {
-            if let Some(unit) = decoder.push_chunk(chunk_msg.chunk)? {
+            let header_memory = header_memory_budget.reserve_for_chunk(&chunk_msg).await?;
+            if let Some(unit) = decoder.push_chunk(chunk_msg.chunk, header_memory)? {
                 units += 1;
                 tx.send(unit).map_err(|_| {
                     Status::aborted("speculative batch scheduler stopped before stream ended")

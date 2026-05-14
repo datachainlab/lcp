@@ -4,7 +4,15 @@ use serde::{Deserialize, Serialize};
 use store::WriteSet;
 
 pub const MAX_SPECULATIVE_BATCH_UNITS: usize = 256;
+
+/// Maximum speculative update-client header bytes that one streaming RPC may
+/// keep resident at the same time. This is a peak in-memory budget, not a
+/// cumulative per-stream payload limit: completed units clear their header
+/// payloads and release their reservation before the stream continues reading
+/// more data.
 pub const MAX_SPECULATIVE_BATCH_HEADER_BYTES: usize = 512 * 1024 * 1024;
+
+/// Maximum header payload accepted for a single speculative update-client unit.
 pub const MAX_SPECULATIVE_UNIT_HEADER_BYTES: usize = 256 * 1024 * 1024;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
