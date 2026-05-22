@@ -61,9 +61,7 @@ pub struct SpeculativeUpdateClientResult {
 impl SpeculativeUpdateClientResult {
     #[allow(clippy::result_large_err)]
     pub fn validate_base_state(&self) -> core::result::Result<(), enclave_api::Error> {
-        if self.base_state.prev_height.is_some()
-            && self.base_state.prev_height != self.observed_transition.prev_height
-        {
+        if self.base_state.prev_height != self.observed_transition.prev_height {
             return Err(enclave_api::Error::invalid_argument(format!(
                 "base prev_height mismatch: expected={:?} observed={:?}",
                 self.base_state.prev_height, self.observed_transition.prev_height

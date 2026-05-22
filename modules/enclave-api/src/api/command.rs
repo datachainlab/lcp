@@ -17,12 +17,12 @@ use store::WriteSet;
 #[derive(Debug)]
 pub struct SpeculativeUpdateClientInput {
     pub update: UpdateClientInput,
-    pub base_state: Option<SpeculativeBaseState>,
+    pub base_state: SpeculativeBaseState,
 }
 
 #[derive(Debug, Clone)]
 pub struct SpeculativeBaseState {
-    pub prev_height: Option<Height>,
+    pub prev_height: Height,
     pub client_state: Any,
     pub consensus_state: Any,
 }
@@ -151,10 +151,7 @@ pub trait SpeculativeEnclaveCommandAPI<S: CommitStore + TxAccessor>:
     where
         Self: Sized,
     {
-        debug!(
-            "prepare speculative command with base state: has_base_state={}",
-            input.base_state.is_some()
-        );
+        debug!("prepare speculative command with base state");
         let client_id = input.update.client_id.to_string();
         let base_state = input.base_state;
 
@@ -162,10 +159,7 @@ pub trait SpeculativeEnclaveCommandAPI<S: CommitStore + TxAccessor>:
             LightClientExecuteCommand::UpdateClient(input.update),
         ));
         let (res, write_set) = self.execute_command_speculatively_with_seed(cmd, |tx_id| {
-            if let Some(base_state) = base_state.as_ref() {
-                seed_speculative_base_state(self, tx_id, &client_id, base_state)?;
-            }
-            Ok(())
+            seed_speculative_base_state(self, tx_id, &client_id, &base_state)
         })?;
 
         match res {
@@ -192,22 +186,15 @@ fn seed_speculative_base_state<S: CommitStore + TxAccessor>(
             .map_err(crate::errors::Error::bincode_encode)?;
     enclave.use_mut_store(|store| store.tx_set(tx_id, client_state_key, client_state_value))?;
 
-    // The client state is always seeded, but the consensus state is keyed by
-    // the predecessor height and is therefore only seeded when prev_height is
-    // present. Callers may still preserve explicit prev_state_id metadata above
-    // this layer; that identifier is validation metadata, not a store key.
-    if let Some(prev_height) = base_state.prev_height {
-        debug_assert!(
-            !base_state.consensus_state.type_url.is_empty(),
-            "seeded consensus state should carry a concrete type"
-        );
-        let consensus_state_key = store_key::consensus_state_bytes(client_id, &prev_height);
-        let consensus_state_value =
-            bincode::serde::encode_to_vec(&base_state.consensus_state, bincode::config::standard())
-                .map_err(crate::errors::Error::bincode_encode)?;
-        enclave.use_mut_store(|store| {
-            store.tx_set(tx_id, consensus_state_key, consensus_state_value)
-        })?;
-    }
+    debug_assert!(
+        !base_state.consensus_state.type_url.is_empty(),
+        "seeded consensus state should carry a concrete type"
+    );
+    let consensus_state_key = store_key::consensus_state_bytes(client_id, &base_state.prev_height);
+    let consensus_state_value =
+        bincode::serde::encode_to_vec(&base_state.consensus_state, bincode::config::standard())
+            .map_err(crate::errors::Error::bincode_encode)?;
+    enclave
+        .use_mut_store(|store| store.tx_set(tx_id, consensus_state_key, consensus_state_value))?;
     Ok(())
 }

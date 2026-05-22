@@ -80,7 +80,7 @@ impl SpeculativeService {
             .enclave
             .speculative_update_client(EnclaveSpeculativeUpdateClientInput {
                 update,
-                base_state: Some(base_state_payload_from_ref(&base_state)),
+                base_state: base_state_payload_from_ref(&base_state),
             })?;
         let observed_transition = decode_observed_transition(&res.response)?;
         Ok(SpeculativeUpdateClientResult {
@@ -181,7 +181,9 @@ impl SpeculativeService {
 
 fn base_state_payload_from_ref(base_state: &ExplicitStateRef) -> SpeculativeBaseState {
     SpeculativeBaseState {
-        prev_height: base_state.prev_height,
+        prev_height: base_state
+            .prev_height
+            .expect("validated speculative base_state prev_height"),
         client_state: base_state
             .client_state
             .clone()
@@ -310,10 +312,7 @@ mod tests {
             std::thread::sleep(self.delay);
             self.current_in_flight.fetch_sub(1, Ordering::SeqCst);
 
-            let prev_height = input
-                .base_state
-                .as_ref()
-                .and_then(|base_state| base_state.prev_height);
+            let prev_height = Some(input.base_state.prev_height);
             let prev_state_id = (idx > 0).then(|| {
                 let mut prev_state_id = [0u8; 32];
                 prev_state_id[31] = idx as u8;
@@ -436,21 +435,6 @@ mod tests {
         ];
 
         assert!(validate_linear_transitions(&requests, &results).is_ok());
-    }
-
-    #[test]
-    fn validates_base_state_prev_height_only_when_provided() {
-        let mut result = mk_result(
-            Some(Height::new(0, 11)),
-            None,
-            Height::new(0, 12),
-            b"post-1",
-        );
-        result.base_state.prev_height = None;
-
-        result
-            .validate_base_state()
-            .expect("missing prev_height should accept observed height");
     }
 
     #[test]
