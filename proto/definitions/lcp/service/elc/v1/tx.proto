@@ -207,9 +207,10 @@ message SpeculativeUpdateClientBatchStreamInit {
 }
 
 // SpeculativeUpdateClientUnitInit starts a single speculative UpdateClient work
-// unit. Units form a linear chain in stream order: the first unit starts from
-// its explicit base_state, and each following unit is rebased onto the previous
-// unit's observed post state before execution.
+// unit. Units form a linear chain in stream order: the first unit may start
+// from an incomplete base_state and read the canonical store, but every
+// following unit must provide complete base_state payloads so it can execute
+// without being rebased from the previous unit's write set.
 message SpeculativeUpdateClientUnitInit {
   reserved 6;
 

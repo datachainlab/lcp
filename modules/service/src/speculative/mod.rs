@@ -1,5 +1,4 @@
 mod permit;
-pub(crate) mod rebase;
 pub(crate) mod scheduler;
 mod service;
 pub(crate) mod stream;

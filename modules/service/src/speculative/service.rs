@@ -1,9 +1,4 @@
 use super::permit::{KeyLockMap, PermitGate};
-#[cfg(test)]
-use super::rebase::{
-    extract_client_state_from_write_set, extract_consensus_state_from_write_set,
-    rebase_speculative_request_in_place, DependencyRebaseState,
-};
 use super::scheduler::execute_speculative_update_client_stream;
 use super::stream::ResidentSpeculativeUpdateClientRequest;
 use super::types::{
@@ -223,7 +218,7 @@ mod tests {
     };
     use keymanager::EnclaveKeyManager;
     use lcp_proto::google::protobuf::Any;
-    use lcp_types::{store_key, Height};
+    use lcp_types::Height;
     use lcp_types::{EnclaveMetadata, Time};
     use sgx_types::{sgx_enclave_id_t, sgx_status_t};
     use std::sync::atomic::{AtomicUsize, Ordering};
@@ -493,164 +488,11 @@ mod tests {
     }
 
     #[test]
-    fn replaces_explicit_base_state_metadata_when_rebasing_previous_payloads() {
-        let mut req = mk_req(
-            "unit-0001",
-            "client",
-            Some(Height::new(0, 10)),
-            Some(b"stale"),
-        );
-        let previous = DependencyRebaseState {
-            observed_transition: ObservedStateTransition {
-                prev_height: None,
-                prev_state_id: None,
-                post_height: Height::new(0, 11),
-                post_state_id: b"post-0".to_vec(),
-            },
-            client_state: None,
-            consensus_state: None,
-        };
-
-        rebase_speculative_request_in_place(&mut req, &previous);
-
-        assert_eq!(req.base_state.prev_height, Some(Height::new(0, 11)));
-        assert_eq!(
-            req.base_state.prev_state_id.as_deref(),
-            Some(b"post-0".as_slice())
-        );
-    }
-
-    #[test]
-    fn fills_missing_base_state_metadata_from_previous_post_state() {
-        let mut req = mk_req("unit-0001", "client", None, None);
-        let previous = DependencyRebaseState {
-            observed_transition: ObservedStateTransition {
-                prev_height: None,
-                prev_state_id: None,
-                post_height: Height::new(0, 11),
-                post_state_id: b"post-0".to_vec(),
-            },
-            client_state: None,
-            consensus_state: None,
-        };
-
-        rebase_speculative_request_in_place(&mut req, &previous);
-
-        assert_eq!(req.base_state.prev_height, Some(Height::new(0, 11)));
-        assert_eq!(
-            req.base_state.prev_state_id.as_deref(),
-            Some(b"post-0".as_slice())
-        );
-    }
-
-    #[test]
-    fn seeds_previous_payloads_even_when_explicit_base_state_is_complete() {
-        let mut req = with_explicit_base_state_payload(mk_req(
-            "unit-0001",
-            "client",
-            Some(Height::new(0, 11)),
-            Some(b"post-0"),
-        ));
-        let previous = DependencyRebaseState {
-            observed_transition: ObservedStateTransition {
-                prev_height: None,
-                prev_state_id: None,
-                post_height: Height::new(0, 11),
-                post_state_id: b"post-0".to_vec(),
-            },
-            client_state: Some(
-                Any {
-                    type_url: "/ibc.mock.ClientState".to_string(),
-                    value: vec![3],
-                }
-                .into(),
-            ),
-            consensus_state: Some(
-                Any {
-                    type_url: "/ibc.mock.ConsensusState".to_string(),
-                    value: vec![4],
-                }
-                .into(),
-            ),
-        };
-
-        rebase_speculative_request_in_place(&mut req, &previous);
-
-        assert_eq!(req.base_state.prev_height, Some(Height::new(0, 11)));
-        assert_eq!(
-            req.base_state.prev_state_id.as_deref(),
-            Some(b"post-0".as_slice())
-        );
-        assert!(req.base_state.client_state.is_some());
-        assert!(req.base_state.consensus_state.is_some());
-    }
-
-    #[test]
-    fn extracts_rebase_payloads_from_bincode_write_set() {
-        let client_id = "07-tendermint-0";
-        let height = Height::new(0, 11);
-        let client_state = Any {
-            type_url: "/ibc.mock.ClientState".to_string(),
-            value: vec![1, 2, 3],
-        };
-        let consensus_state = Any {
-            type_url: "/ibc.mock.ConsensusState".to_string(),
-            value: vec![4, 5, 6],
-        };
-        let client_state_key = store_key::client_state_bytes(client_id);
-        let consensus_state_key = store_key::consensus_state_bytes(client_id, &height);
-        let mut write_set = WriteSet::default();
-        write_set.insert(
-            client_state_key,
-            Some(
-                bincode::serde::encode_to_vec(&client_state, bincode::config::standard())
-                    .expect("encode client state"),
-            ),
-        );
-        write_set.insert(
-            consensus_state_key,
-            Some(
-                bincode::serde::encode_to_vec(&consensus_state, bincode::config::standard())
-                    .expect("encode consensus state"),
-            ),
-        );
-
-        assert_eq!(
-            extract_client_state_from_write_set(client_id, &write_set),
-            Some(client_state.into())
-        );
-        assert_eq!(
-            extract_consensus_state_from_write_set(client_id, height, &write_set),
-            Some(consensus_state.into())
-        );
-    }
-
-    #[test]
-    fn ignores_missing_or_malformed_rebase_payloads_from_write_set() {
-        let client_id = "07-tendermint-0";
-        let height = Height::new(0, 11);
-        let client_state_key = store_key::client_state_bytes(client_id);
-        let consensus_state_key = store_key::consensus_state_bytes(client_id, &height);
-        let mut write_set = WriteSet::default();
-        write_set.insert(client_state_key, Some(b"not-bincode-any".to_vec()));
-        write_set.insert(consensus_state_key, None);
-
-        assert_eq!(
-            extract_client_state_from_write_set(client_id, &write_set),
-            None
-        );
-        assert_eq!(
-            extract_consensus_state_from_write_set(client_id, height, &write_set),
-            None
-        );
-    }
-
-    #[test]
     fn streaming_speculative_batch_executes_before_input_closes() {
         let client_id = "07-tendermint-0";
         let enclave = FakeEnclave::new(Duration::from_millis(100));
         let app = AppService::<FakeEnclave, MemStore>::new("test-home", enclave);
-        let service = SpeculativeService::new(2);
+        let service = SpeculativeService::new(1);
         let (tx, rx) = std::sync::mpsc::sync_channel(2);
         let worker_service = service.clone();
         let worker_app = app.clone();
@@ -697,6 +539,84 @@ mod tests {
         );
 
         tx.send(ResidentSpeculativeUpdateClientRequest::unmetered(
+            with_explicit_base_state_payload(SpeculativeUpdateClientRequest {
+                unit_id: "unit-0001".to_string(),
+                update: MsgUpdateClient {
+                    client_id: client_id.to_string(),
+                    signer: {
+                        let mut signer = vec![0; 20];
+                        signer[19] = 1;
+                        signer
+                    },
+                    header: Some(Any {
+                        type_url: "/ibc.mock.Header".to_string(),
+                        value: vec![2],
+                    }),
+                    ..Default::default()
+                },
+                base_state: ExplicitStateRef {
+                    prev_height: Some(Height::new(0, 11)),
+                    prev_state_id: Some({
+                        let mut prev_state_id = vec![0; 32];
+                        prev_state_id[31] = 1;
+                        prev_state_id
+                    }),
+                    client_state: None,
+                    consensus_state: None,
+                },
+            }),
+        ))
+        .expect("send second unit");
+        drop(tx);
+
+        let result = handle
+            .join()
+            .expect("streaming worker thread")
+            .expect("streaming speculative batch");
+        assert_eq!(result.units.len(), 2);
+        assert_eq!(app.enclave.observed_max_in_flight(), 1);
+    }
+
+    #[test]
+    fn streaming_speculative_batch_rejects_incomplete_non_leading_base_state() {
+        let client_id = "07-tendermint-0";
+        let enclave = FakeEnclave::new(Duration::from_millis(1));
+        let app = AppService::<FakeEnclave, MemStore>::new("test-home", enclave);
+        let service = SpeculativeService::new(2);
+        let (tx, rx) = std::sync::mpsc::sync_channel(2);
+        let worker_service = service.clone();
+        let worker_app = app.clone();
+        let client_id_for_worker = client_id.to_string();
+        let handle = thread::spawn(move || {
+            worker_service.execute_serialized_speculative_update_client_stream(
+                &worker_app,
+                client_id_for_worker,
+                rx,
+            )
+        });
+
+        tx.send(ResidentSpeculativeUpdateClientRequest::unmetered(
+            SpeculativeUpdateClientRequest {
+                unit_id: "unit-0000".to_string(),
+                update: MsgUpdateClient {
+                    client_id: client_id.to_string(),
+                    signer: vec![0; 20],
+                    header: Some(Any {
+                        type_url: "/ibc.mock.Header".to_string(),
+                        value: vec![1],
+                    }),
+                    ..Default::default()
+                },
+                base_state: ExplicitStateRef {
+                    prev_height: None,
+                    prev_state_id: None,
+                    client_state: None,
+                    consensus_state: None,
+                },
+            },
+        ))
+        .expect("send first unit");
+        tx.send(ResidentSpeculativeUpdateClientRequest::unmetered(
             SpeculativeUpdateClientRequest {
                 unit_id: "unit-0001".to_string(),
                 update: MsgUpdateClient {
@@ -713,8 +633,8 @@ mod tests {
                     ..Default::default()
                 },
                 base_state: ExplicitStateRef {
-                    prev_height: None,
-                    prev_state_id: None,
+                    prev_height: Some(Height::new(0, 11)),
+                    prev_state_id: Some(vec![1]),
                     client_state: None,
                     consensus_state: None,
                 },
@@ -723,12 +643,17 @@ mod tests {
         .expect("send second unit");
         drop(tx);
 
-        let result = handle
+        let err = handle
             .join()
             .expect("streaming worker thread")
-            .expect("streaming speculative batch");
-        assert_eq!(result.units.len(), 2);
-        assert_eq!(app.enclave.observed_max_in_flight(), 1);
+            .expect_err("incomplete non-leading base state should fail");
+        assert_eq!(err.kind, SpeculativeBatchFailureKind::BaseStateMismatch);
+        assert_eq!(err.unit_id.as_deref(), Some("unit-0001"));
+        assert!(
+            err.detail.contains("complete base_state payload"),
+            "unexpected error detail: {}",
+            err.detail
+        );
     }
 
     #[test]

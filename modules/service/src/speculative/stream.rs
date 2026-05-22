@@ -177,10 +177,6 @@ impl ResidentSpeculativeUpdateClientRequest {
         &self.request
     }
 
-    pub(crate) fn request_mut(&mut self) -> &mut SpeculativeUpdateClientRequest {
-        &mut self.request
-    }
-
     pub(crate) fn into_request(self) -> SpeculativeUpdateClientRequest {
         self.request
     }

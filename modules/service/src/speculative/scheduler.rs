@@ -1,6 +1,3 @@
-use super::rebase::{
-    build_dependency_rebase_state, rebase_speculative_request_in_place, DependencyRebaseState,
-};
 use super::service::SpeculativeService;
 use super::stream::ResidentSpeculativeUpdateClientRequest;
 use super::types::{
@@ -83,19 +80,6 @@ where
         state.closed = true;
         shared.ready.notify_all();
         while state.failure.is_none() && state.has_unfinished_work() {
-            if state.has_unresolvable_pending_work() {
-                state.failure = Some(SpeculativeBatchFailure {
-                    kind: SpeculativeBatchFailureKind::DependencyStateMismatch,
-                    unit_id: state
-                        .pending
-                        .front()
-                        .map(|(_, req)| req.request().unit_id.clone()),
-                    detail: "speculative stream ended with unresolved linear dependencies"
-                        .to_string(),
-                });
-                shared.ready.notify_all();
-                break;
-            }
             state = shared.complete.wait(state).unwrap();
         }
         info!(
@@ -142,8 +126,7 @@ where
 
 // Shared synchronization wrapper for one streaming scheduler run.
 //
-// The scheduler state is protected by a single mutex so enqueue, promotion,
-// completion, and failure transitions stay consistent across worker threads.
+// The scheduler state is protected by a single mutex so enqueue, completion, and failure transitions stay consistent across worker threads.
 // `ready` wakes workers when executable units become available, while
 // `complete` wakes the coordinator waiting for in-flight work to drain.
 struct StreamingSchedulerShared {
@@ -154,18 +137,16 @@ struct StreamingSchedulerShared {
 
 // Mutable state for one streaming speculative batch execution.
 //
-// Incoming units are assigned monotonically increasing stream indexes, then
-// split into `ready` work that workers can execute immediately and `pending`
-// work that must wait for the previous unit's rebase state. Completed units
-// store their request/result by index so the final response can be rebuilt in
-// input order, even if worker threads finish out of order.
+// Incoming units are assigned monotonically increasing stream indexes. The
+// first unit may execute with an incomplete base state, but non-leading units
+// are admitted only when they carry complete base-state payloads. Completed
+// units store their request/result by index so the final response can be
+// rebuilt in input order, even if worker threads finish out of order.
 struct StreamingSchedulerState {
     client_id: String,
     ready: VecDeque<(usize, ResidentSpeculativeUpdateClientRequest)>,
-    pending: VecDeque<(usize, ResidentSpeculativeUpdateClientRequest)>,
     request_by_index: BTreeMap<usize, SpeculativeUpdateClientRequest>,
     result_by_index: BTreeMap<usize, SpeculativeUpdateClientResult>,
-    rebase_state_by_index: BTreeMap<usize, DependencyRebaseState>,
     seen_unit_ids: BTreeSet<String>,
     unit_count: usize,
     in_flight: usize,
@@ -179,10 +160,8 @@ impl StreamingSchedulerState {
         Self {
             client_id,
             ready: VecDeque::new(),
-            pending: VecDeque::new(),
             request_by_index: BTreeMap::new(),
             result_by_index: BTreeMap::new(),
-            rebase_state_by_index: BTreeMap::new(),
             seen_unit_ids: BTreeSet::new(),
             unit_count: 0,
             in_flight: 0,
@@ -193,11 +172,7 @@ impl StreamingSchedulerState {
     }
 
     fn has_unfinished_work(&self) -> bool {
-        self.in_flight > 0 || !self.ready.is_empty() || !self.pending.is_empty()
-    }
-
-    fn has_unresolvable_pending_work(&self) -> bool {
-        self.in_flight == 0 && self.ready.is_empty() && !self.pending.is_empty()
+        self.in_flight > 0 || !self.ready.is_empty()
     }
 
     fn enqueue(
@@ -212,22 +187,7 @@ impl StreamingSchedulerState {
             req.request(),
         )?;
         self.unit_count += 1;
-        self.enqueue_ready_or_pending(index, req)
-    }
-
-    fn enqueue_ready_or_pending(
-        &mut self,
-        index: usize,
-        mut req: ResidentSpeculativeUpdateClientRequest,
-    ) -> core::result::Result<(), SpeculativeBatchFailure> {
-        if index == 0 || req.request().base_state.has_complete_base_state_payload() {
-            self.ready.push_back((index, req));
-        } else if let Some(previous) = self.rebase_state_by_index.get(&(index - 1)) {
-            rebase_speculative_request_in_place(req.request_mut(), previous);
-            self.ready.push_back((index, req));
-        } else {
-            self.pending.push_back((index, req));
-        }
+        self.ready.push_back((index, req));
         Ok(())
     }
 
@@ -236,30 +196,9 @@ impl StreamingSchedulerState {
         index: usize,
         req: SpeculativeUpdateClientRequest,
         result: SpeculativeUpdateClientResult,
-    ) -> core::result::Result<(), SpeculativeBatchFailure> {
+    ) {
         self.request_by_index.insert(index, req);
-        self.rebase_state_by_index.insert(
-            index,
-            build_dependency_rebase_state(&self.client_id, &result),
-        );
         self.result_by_index.insert(index, result);
-        self.promote_pending()
-    }
-
-    fn promote_pending(&mut self) -> core::result::Result<(), SpeculativeBatchFailure> {
-        let mut remaining = VecDeque::new();
-        while let Some((index, mut req)) = self.pending.pop_front() {
-            if index == 0 || req.request().base_state.has_complete_base_state_payload() {
-                self.ready.push_back((index, req));
-            } else if let Some(previous) = self.rebase_state_by_index.get(&(index - 1)) {
-                rebase_speculative_request_in_place(req.request_mut(), previous);
-                self.ready.push_back((index, req));
-            } else {
-                remaining.push_back((index, req));
-            }
-        }
-        self.pending = remaining;
-        Ok(())
     }
 }
 
@@ -329,9 +268,7 @@ fn streaming_speculative_worker<E, S>(
             Ok(result) => {
                 let mut req = req.into_request();
                 clear_request_header_payload(&mut req);
-                if let Err(e) = state.complete_unit(index, req, result) {
-                    state.failure = Some(e);
-                }
+                state.complete_unit(index, req, result);
             }
             Err(e) => {
                 state.failure = Some(e);
