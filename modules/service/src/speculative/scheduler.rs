@@ -137,8 +137,7 @@ struct StreamingSchedulerShared {
 
 // Mutable state for one streaming speculative batch execution.
 //
-// Incoming units are assigned monotonically increasing stream indexes. The
-// first unit may execute with an incomplete base state, but non-leading units
+// Incoming units are assigned monotonically increasing stream indexes. Units
 // are admitted only when they carry complete base-state payloads. Completed
 // units store their request/result by index so the final response can be
 // rebuilt in input order, even if worker threads finish out of order.

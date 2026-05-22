@@ -57,12 +57,12 @@ pub(crate) fn validate_next_linear_request(
             detail: format!("duplicate unit_id in speculative batch: {}", req.unit_id),
         });
     }
-    if index > 0 && !req.base_state.has_complete_base_state_payload() {
+    if !req.base_state.has_complete_base_state_payload() {
         return Err(SpeculativeBatchFailure {
             kind: SpeculativeBatchFailureKind::BaseStateMismatch,
             unit_id: Some(req.unit_id.clone()),
             detail: format!(
-                "non-leading speculative unit requires complete base_state payload: unit_id={}",
+                "speculative unit requires complete base_state payload: unit_id={}",
                 req.unit_id
             ),
         });

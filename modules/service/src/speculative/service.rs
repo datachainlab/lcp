@@ -80,7 +80,7 @@ impl SpeculativeService {
             .enclave
             .speculative_update_client(EnclaveSpeculativeUpdateClientInput {
                 update,
-                base_state: base_state_payload_from_ref(&base_state),
+                base_state: Some(base_state_payload_from_ref(&base_state)),
             })?;
         let observed_transition = decode_observed_transition(&res.response)?;
         Ok(SpeculativeUpdateClientResult {
@@ -179,12 +179,18 @@ impl SpeculativeService {
     }
 }
 
-fn base_state_payload_from_ref(base_state: &ExplicitStateRef) -> Option<SpeculativeBaseState> {
-    Some(SpeculativeBaseState {
-        prev_height: Some(base_state.prev_height?),
-        client_state: base_state.client_state.clone()?,
-        consensus_state: base_state.consensus_state.clone()?,
-    })
+fn base_state_payload_from_ref(base_state: &ExplicitStateRef) -> SpeculativeBaseState {
+    SpeculativeBaseState {
+        prev_height: base_state.prev_height,
+        client_state: base_state
+            .client_state
+            .clone()
+            .expect("validated speculative base_state client_state"),
+        consensus_state: base_state
+            .consensus_state
+            .clone()
+            .expect("validated speculative base_state consensus_state"),
+    }
 }
 
 #[allow(clippy::result_large_err)]
@@ -304,7 +310,10 @@ mod tests {
             std::thread::sleep(self.delay);
             self.current_in_flight.fetch_sub(1, Ordering::SeqCst);
 
-            let prev_height = (idx > 0).then(|| Height::new(0, 10 + idx));
+            let prev_height = input
+                .base_state
+                .as_ref()
+                .and_then(|base_state| base_state.prev_height);
             let prev_state_id = (idx > 0).then(|| {
                 let mut prev_state_id = [0u8; 32];
                 prev_state_id[31] = idx as u8;
@@ -506,7 +515,7 @@ mod tests {
         });
 
         tx.send(ResidentSpeculativeUpdateClientRequest::unmetered(
-            SpeculativeUpdateClientRequest {
+            with_explicit_base_state_payload(SpeculativeUpdateClientRequest {
                 unit_id: "unit-0000".to_string(),
                 update: MsgUpdateClient {
                     client_id: client_id.to_string(),
@@ -518,12 +527,12 @@ mod tests {
                     ..Default::default()
                 },
                 base_state: ExplicitStateRef {
-                    prev_height: None,
+                    prev_height: Some(Height::new(0, 10)),
                     prev_state_id: None,
                     client_state: None,
                     consensus_state: None,
                 },
-            },
+            }),
         ))
         .expect("send first unit");
 
@@ -578,7 +587,7 @@ mod tests {
     }
 
     #[test]
-    fn streaming_speculative_batch_rejects_incomplete_non_leading_base_state() {
+    fn streaming_speculative_batch_rejects_incomplete_base_state() {
         let client_id = "07-tendermint-0";
         let enclave = FakeEnclave::new(Duration::from_millis(1));
         let app = AppService::<FakeEnclave, MemStore>::new("test-home", enclave);
@@ -616,39 +625,14 @@ mod tests {
             },
         ))
         .expect("send first unit");
-        tx.send(ResidentSpeculativeUpdateClientRequest::unmetered(
-            SpeculativeUpdateClientRequest {
-                unit_id: "unit-0001".to_string(),
-                update: MsgUpdateClient {
-                    client_id: client_id.to_string(),
-                    signer: {
-                        let mut signer = vec![0; 20];
-                        signer[19] = 1;
-                        signer
-                    },
-                    header: Some(Any {
-                        type_url: "/ibc.mock.Header".to_string(),
-                        value: vec![2],
-                    }),
-                    ..Default::default()
-                },
-                base_state: ExplicitStateRef {
-                    prev_height: Some(Height::new(0, 11)),
-                    prev_state_id: Some(vec![1]),
-                    client_state: None,
-                    consensus_state: None,
-                },
-            },
-        ))
-        .expect("send second unit");
         drop(tx);
 
         let err = handle
             .join()
             .expect("streaming worker thread")
-            .expect_err("incomplete non-leading base state should fail");
+            .expect_err("incomplete base state should fail");
         assert_eq!(err.kind, SpeculativeBatchFailureKind::BaseStateMismatch);
-        assert_eq!(err.unit_id.as_deref(), Some("unit-0001"));
+        assert_eq!(err.unit_id.as_deref(), Some("unit-0000"));
         assert!(
             err.detail.contains("complete base_state payload"),
             "unexpected error detail: {}",
@@ -675,7 +659,12 @@ mod tests {
         });
 
         let mut requests = vec![
-            with_explicit_base_state_payload(mk_req("unit-0000", client_id, None, None)),
+            with_explicit_base_state_payload(mk_req(
+                "unit-0000",
+                client_id,
+                Some(Height::new(0, 10)),
+                None,
+            )),
             with_explicit_base_state_payload(mk_req(
                 "unit-0001",
                 client_id,
