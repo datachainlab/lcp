@@ -73,6 +73,8 @@ impl KeyLockMap {
         drop(guard);
 
         let mut locks = self.locks.lock().unwrap();
+        // strong_count == 2 means only this local `lock` binding and the map
+        // entry still reference the mutex, so the idle key entry can be removed.
         let should_remove = Arc::strong_count(&lock) == 2
             && locks
                 .get(key)

@@ -145,9 +145,17 @@ where
             let header_memory = header_memory_budget.reserve_for_chunk(&chunk_msg).await?;
             if let Some(unit) = decoder.push_chunk(chunk_msg.chunk, header_memory)? {
                 units += 1;
-                tx.send(unit).map_err(|_| {
-                    Status::aborted("speculative batch scheduler stopped before stream ended")
-                })?;
+                if tx.send(unit).is_err() {
+                    let result = scheduler.await.map_err(|e| {
+                        Status::aborted(format!("speculative batch worker failed: {e}"))
+                    })?;
+                    return match result {
+                        Ok(_) => Err(Status::aborted(
+                            "speculative batch scheduler stopped before stream ended",
+                        )),
+                        Err(e) => Err(Status::aborted(format!("{:?}: {}", e.kind, e.detail))),
+                    };
+                }
             }
         }
         decoder.finish()?;
