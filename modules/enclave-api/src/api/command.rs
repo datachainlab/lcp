@@ -30,6 +30,9 @@ pub struct SpeculativeBaseState {
 #[derive(Debug)]
 pub struct SpeculativeUpdateClientResponse {
     pub response: UpdateClientResponse,
+    /// Effective write set for canonical apply. Entries whose `(key, value)`
+    /// match the seeded base state have been removed, so applying this write set
+    /// reflects only what speculative UpdateClient actually computed.
     pub write_set: WriteSet,
 }
 
@@ -155,18 +158,20 @@ pub trait SpeculativeEnclaveCommandAPI<S: CommitStore + TxAccessor>:
         let client_id = input.update.client_id.to_string();
         let base_state = input.base_state;
 
+        let seed_writes = compute_seed_write_set(&client_id, &base_state)?;
         let cmd = Command::LightClient(LightClientCommand::Execute(
             LightClientExecuteCommand::UpdateClient(input.update),
         ));
-        let (res, write_set) = self.execute_command_speculatively_with_seed(cmd, |tx_id| {
-            seed_speculative_base_state(self, tx_id, &client_id, &base_state)
+        let (res, raw_write_set) = self.execute_command_speculatively_with_seed(cmd, |tx_id| {
+            apply_seed_write_set(self, tx_id, &seed_writes)
         })?;
+        let effective_write_set = filter_seed_writes(raw_write_set, &seed_writes);
 
         match res {
             CommandResponse::LightClient(LightClientResponse::UpdateClient(response)) => {
                 Ok(SpeculativeUpdateClientResponse {
                     response,
-                    write_set,
+                    write_set: effective_write_set,
                 })
             }
             _ => unreachable!(),
@@ -174,17 +179,11 @@ pub trait SpeculativeEnclaveCommandAPI<S: CommitStore + TxAccessor>:
     }
 }
 
-fn seed_speculative_base_state<S: CommitStore + TxAccessor>(
-    enclave: &(impl CommitStoreAccessor<S> + ?Sized),
-    tx_id: TxId,
-    client_id: &str,
-    base_state: &SpeculativeBaseState,
-) -> Result<()> {
+fn compute_seed_write_set(client_id: &str, base_state: &SpeculativeBaseState) -> Result<WriteSet> {
     let client_state_key = store_key::client_state_bytes(client_id);
     let client_state_value =
         bincode::serde::encode_to_vec(&base_state.client_state, bincode::config::standard())
             .map_err(crate::errors::Error::bincode_encode)?;
-    enclave.use_mut_store(|store| store.tx_set(tx_id, client_state_key, client_state_value))?;
 
     debug_assert!(
         !base_state.consensus_state.type_url.is_empty(),
@@ -194,7 +193,90 @@ fn seed_speculative_base_state<S: CommitStore + TxAccessor>(
     let consensus_state_value =
         bincode::serde::encode_to_vec(&base_state.consensus_state, bincode::config::standard())
             .map_err(crate::errors::Error::bincode_encode)?;
-    enclave
-        .use_mut_store(|store| store.tx_set(tx_id, consensus_state_key, consensus_state_value))?;
+
+    Ok([
+        (client_state_key, Some(client_state_value)),
+        (consensus_state_key, Some(consensus_state_value)),
+    ]
+    .into_iter()
+    .collect())
+}
+
+fn apply_seed_write_set<S: CommitStore + TxAccessor>(
+    enclave: &(impl CommitStoreAccessor<S> + ?Sized),
+    tx_id: TxId,
+    seed_writes: &WriteSet,
+) -> Result<()> {
+    for (key, value) in seed_writes {
+        match value {
+            Some(value) => {
+                enclave.use_mut_store(|store| store.tx_set(tx_id, key.clone(), value.clone()))?
+            }
+            None => enclave.use_mut_store(|store| store.tx_remove(tx_id, key))?,
+        }
+    }
     Ok(())
+}
+
+fn filter_seed_writes(write_set: WriteSet, seed_writes: &WriteSet) -> WriteSet {
+    write_set
+        .into_iter()
+        .filter(|(key, value)| seed_writes.get(key) != Some(value))
+        .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn any(type_url: &str, value: &[u8]) -> Any {
+        Any::new(type_url.to_string(), value.to_vec())
+    }
+
+    fn base_state() -> SpeculativeBaseState {
+        SpeculativeBaseState {
+            prev_height: Height::new(0, 10),
+            client_state: any("/ibc.mock.ClientState", b"client-10"),
+            consensus_state: any("/ibc.mock.ConsensusState", b"consensus-10"),
+        }
+    }
+
+    #[test]
+    fn speculative_update_client_excludes_seeded_consensus_state_from_write_set() {
+        let client_id = "07-tendermint-0";
+        let seed_writes = compute_seed_write_set(client_id, &base_state()).unwrap();
+        let consensus_state_key = store_key::consensus_state_bytes(client_id, &Height::new(0, 10));
+
+        let effective_write_set = filter_seed_writes(seed_writes.clone(), &seed_writes);
+
+        assert!(
+            !effective_write_set.contains_key(&consensus_state_key),
+            "seeded consensus_state(prev_height) must not be returned as an effective write"
+        );
+    }
+
+    #[test]
+    fn speculative_update_client_keeps_computed_client_state_even_if_seed_provided() {
+        let client_id = "07-tendermint-0";
+        let seed_writes = compute_seed_write_set(client_id, &base_state()).unwrap();
+        let client_state_key = store_key::client_state_bytes(client_id);
+        let computed_client_state_value = bincode::serde::encode_to_vec(
+            any("/ibc.mock.ClientState", b"client-11"),
+            bincode::config::standard(),
+        )
+        .unwrap();
+        let raw_write_set = [(
+            client_state_key.clone(),
+            Some(computed_client_state_value.clone()),
+        )]
+        .into_iter()
+        .collect();
+
+        let effective_write_set = filter_seed_writes(raw_write_set, &seed_writes);
+
+        assert_eq!(
+            effective_write_set.get(&client_state_key),
+            Some(&Some(computed_client_state_value))
+        );
+    }
 }
