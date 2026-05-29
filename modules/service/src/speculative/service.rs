@@ -124,6 +124,18 @@ impl SpeculativeService {
             });
         }
         validate_linear_transitions(&batch.units, &results.units)?;
+        let first_unit = batch.units.first().ok_or_else(|| SpeculativeBatchFailure {
+            kind: SpeculativeBatchFailureKind::BatchSizeMismatch,
+            unit_id: None,
+            detail: "speculative batch must contain at least one unit".to_string(),
+        })?;
+        let canonical_base = base_state_payload_from_ref(&first_unit.base_state).map_err(|e| {
+            SpeculativeBatchFailure {
+                kind: SpeculativeBatchFailureKind::BaseStateMismatch,
+                unit_id: Some(first_unit.unit_id.clone()),
+                detail: e.to_string(),
+            }
+        })?;
 
         let mut merged_write_set = WriteSet::default();
         let mut units = Vec::with_capacity(batch.units.len());
@@ -144,10 +156,16 @@ impl SpeculativeService {
             });
         }
         app.enclave
-            .apply_write_set(batch.client_id.clone(), merged_write_set)
+            .apply_write_set_with_expected_base(
+                batch.client_id.clone(),
+                canonical_base.prev_height,
+                &canonical_base.client_state,
+                &canonical_base.consensus_state,
+                merged_write_set,
+            )
             .map_err(|e| SpeculativeBatchFailure {
-                kind: SpeculativeBatchFailureKind::StitchApplyFailed,
-                unit_id: None,
+                kind: SpeculativeBatchFailureKind::BaseStateMismatch,
+                unit_id: Some(first_unit.unit_id.clone()),
                 detail: e.to_string(),
             })?;
 
@@ -245,6 +263,7 @@ mod tests {
     use std::thread;
     use std::time::Duration;
     use store::memory::MemStore;
+    use store::KVStore;
 
     struct FakeEnclave {
         store: Mutex<MemStore>,
@@ -400,6 +419,38 @@ mod tests {
         req
     }
 
+    fn seed_canonical_base_state(
+        app: &AppService<FakeEnclave, MemStore>,
+        client_id: &str,
+        base_state: &ExplicitStateRef,
+    ) {
+        let prev_height = base_state.prev_height.expect("test base prev_height");
+        let client_state = base_state
+            .client_state
+            .as_ref()
+            .expect("test base client_state");
+        let consensus_state = base_state
+            .consensus_state
+            .as_ref()
+            .expect("test base consensus_state");
+        let client_state_value =
+            bincode::serde::encode_to_vec(client_state, bincode::config::standard())
+                .expect("encode client_state");
+        let consensus_state_value =
+            bincode::serde::encode_to_vec(consensus_state, bincode::config::standard())
+                .expect("encode consensus_state");
+        app.enclave.use_mut_store(|store| {
+            store.set(
+                lcp_types::store_key::client_state_bytes(client_id),
+                client_state_value,
+            );
+            store.set(
+                lcp_types::store_key::consensus_state_bytes(client_id, &prev_height),
+                consensus_state_value,
+            );
+        });
+    }
+
     fn mk_result(
         prev_height: Option<Height>,
         prev_state_id: Option<&[u8]>,
@@ -492,6 +543,54 @@ mod tests {
     }
 
     #[test]
+    fn stitch_rejects_first_base_state_that_differs_from_canonical_store() {
+        let client_id = "07-tendermint-0";
+        let enclave = FakeEnclave::new(Duration::from_millis(1));
+        let app = AppService::<FakeEnclave, MemStore>::new("test-home", enclave);
+        let service = SpeculativeService::new(1);
+        let req = with_explicit_base_state_payload(mk_req(
+            "unit-0000",
+            client_id,
+            Some(Height::new(0, 10)),
+            None,
+        ));
+        let result = SpeculativeUpdateClientResult {
+            response: MsgUpdateClientResponse::default(),
+            write_set: WriteSet::default(),
+            base_state: req.base_state.clone(),
+            observed_transition: ObservedStateTransition {
+                prev_height: Some(Height::new(0, 10)),
+                prev_state_id: None,
+                post_height: Height::new(0, 11),
+                post_state_id: vec![1; 32],
+            },
+        };
+
+        let err = service
+            .stitch_speculative_update_client_batch(
+                &app,
+                SpeculativeUpdateClientBatch {
+                    client_id: client_id.to_string(),
+                    units: vec![req],
+                },
+                SpeculativeUpdateClientBatchResult {
+                    client_id: client_id.to_string(),
+                    units: vec![result],
+                },
+            )
+            .expect_err("non-canonical first base state must be rejected");
+
+        assert_eq!(err.kind, SpeculativeBatchFailureKind::BaseStateMismatch);
+        assert_eq!(err.unit_id.as_deref(), Some("unit-0000"));
+        assert!(
+            err.detail
+                .contains("canonical speculative base client_state mismatch"),
+            "unexpected error detail: {}",
+            err.detail
+        );
+    }
+
+    #[test]
     fn streaming_speculative_batch_executes_before_input_closes() {
         let client_id = "07-tendermint-0";
         let enclave = FakeEnclave::new(Duration::from_millis(100));
@@ -509,27 +608,27 @@ mod tests {
             )
         });
 
-        tx.send(ResidentSpeculativeUpdateClientRequest::unmetered(
-            with_explicit_base_state_payload(SpeculativeUpdateClientRequest {
-                unit_id: "unit-0000".to_string(),
-                update: MsgUpdateClient {
-                    client_id: client_id.to_string(),
-                    signer: vec![0; 20],
-                    header: Some(Any {
-                        type_url: "/ibc.mock.Header".to_string(),
-                        value: vec![1],
-                    }),
-                    ..Default::default()
-                },
-                base_state: ExplicitStateRef {
-                    prev_height: Some(Height::new(0, 10)),
-                    prev_state_id: None,
-                    client_state: None,
-                    consensus_state: None,
-                },
-            }),
-        ))
-        .expect("send first unit");
+        let first_req = with_explicit_base_state_payload(SpeculativeUpdateClientRequest {
+            unit_id: "unit-0000".to_string(),
+            update: MsgUpdateClient {
+                client_id: client_id.to_string(),
+                signer: vec![0; 20],
+                header: Some(Any {
+                    type_url: "/ibc.mock.Header".to_string(),
+                    value: vec![1],
+                }),
+                ..Default::default()
+            },
+            base_state: ExplicitStateRef {
+                prev_height: Some(Height::new(0, 10)),
+                prev_state_id: None,
+                client_state: None,
+                consensus_state: None,
+            },
+        });
+        seed_canonical_base_state(&app, client_id, &first_req.base_state);
+        tx.send(ResidentSpeculativeUpdateClientRequest::unmetered(first_req))
+            .expect("send first unit");
 
         for _ in 0..100 {
             if app.enclave.observed_max_in_flight() >= 1 {
@@ -680,6 +779,7 @@ mod tests {
                 signer
             };
         }
+        seed_canonical_base_state(&app, client_id, &requests[0].base_state);
         for req in requests {
             tx.send(ResidentSpeculativeUpdateClientRequest::unmetered(req))
                 .expect("send unit");

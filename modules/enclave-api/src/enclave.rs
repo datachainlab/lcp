@@ -1,6 +1,6 @@
-use crate::errors::Result;
+use crate::errors::{Error, Result};
 use keymanager::EnclaveKeyManager;
-use lcp_types::EnclaveMetadata;
+use lcp_types::{store_key, Any, EnclaveMetadata, Height};
 use sgx_types::{sgx_enclave_id_t, SgxResult};
 use sgx_urts::SgxEnclave;
 use std::path::PathBuf;
@@ -212,16 +212,99 @@ pub trait HostStoreTxManager<S: CommitStore>: CommitStoreAccessor<S> {
     {
         let tx = self.begin_tx(Some(update_key))?;
         let tx_id = tx.get_id();
-        for (key, value) in write_set {
-            if let Err(e) = self.use_mut_store(|store| match value {
-                Some(value) => store.tx_set(tx_id, key, value),
-                None => store.tx_remove(tx_id, &key),
-            }) {
-                self.rollback_tx(tx);
-                return Err(e.into());
-            }
+        if let Err(e) = self.apply_write_set_in_tx(tx_id, write_set) {
+            self.rollback_tx(tx);
+            return Err(e);
         }
         self.commit_tx(tx)
+    }
+
+    /// `apply_write_set_with_expected_base` applies a speculative write set only if the
+    /// canonical store still matches the explicit base state that seeded the batch.
+    /// The check and apply run under the same serialized update transaction keyed by
+    /// `update_key`, so the canonical base cannot change between verification and commit.
+    fn apply_write_set_with_expected_base(
+        &self,
+        update_key: UpdateKey,
+        prev_height: Height,
+        client_state: &Any,
+        consensus_state: &Any,
+        write_set: WriteSet,
+    ) -> Result<()>
+    where
+        S: TxAccessor,
+    {
+        let tx = self.begin_tx(Some(update_key.clone()))?;
+        let tx_id = tx.get_id();
+        if let Err(e) = self.verify_expected_base_state_in_tx(
+            tx_id,
+            &update_key,
+            &prev_height,
+            client_state,
+            consensus_state,
+        ) {
+            self.rollback_tx(tx);
+            return Err(e);
+        }
+        if let Err(e) = self.apply_write_set_in_tx(tx_id, write_set) {
+            self.rollback_tx(tx);
+            return Err(e);
+        }
+        self.commit_tx(tx)
+    }
+
+    fn apply_write_set_in_tx(&self, tx_id: store::TxId, write_set: WriteSet) -> Result<()>
+    where
+        S: TxAccessor,
+    {
+        for (key, value) in write_set {
+            self.use_mut_store(|store| match value {
+                Some(value) => store.tx_set(tx_id, key, value),
+                None => store.tx_remove(tx_id, &key),
+            })?;
+        }
+        Ok(())
+    }
+
+    fn verify_expected_base_state_in_tx(
+        &self,
+        tx_id: store::TxId,
+        client_id: &str,
+        prev_height: &Height,
+        client_state: &Any,
+        consensus_state: &Any,
+    ) -> Result<()>
+    where
+        S: TxAccessor,
+    {
+        let client_state_key = store_key::client_state_bytes(client_id);
+        let client_state_value =
+            bincode::serde::encode_to_vec(client_state, bincode::config::standard())
+                .map_err(Error::bincode_encode)?;
+        let canonical_client_state =
+            self.use_mut_store(|store| store.tx_get(tx_id, &client_state_key))?;
+        if canonical_client_state.as_deref() != Some(client_state_value.as_slice()) {
+            return Err(Error::invalid_argument(format!(
+                "canonical speculative base client_state mismatch: client_id={}",
+                client_id
+            )));
+        }
+
+        let consensus_state_key = store_key::consensus_state_bytes(client_id, prev_height);
+        let consensus_state_value =
+            bincode::serde::encode_to_vec(consensus_state, bincode::config::standard())
+                .map_err(Error::bincode_encode)?;
+        let canonical_consensus_state =
+            self.use_mut_store(|store| store.tx_get(tx_id, &consensus_state_key))?;
+        if canonical_consensus_state.as_deref() != Some(consensus_state_value.as_slice()) {
+            return Err(Error::invalid_argument(format!(
+                "canonical speculative base consensus_state mismatch: client_id={} height={}-{}",
+                client_id,
+                prev_height.revision_number(),
+                prev_height.revision_height()
+            )));
+        }
+        Ok(())
     }
 
     /// `rollback_tx` rollbacks the changes in the transaction
