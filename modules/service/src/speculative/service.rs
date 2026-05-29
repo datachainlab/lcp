@@ -80,7 +80,7 @@ impl SpeculativeService {
             .enclave
             .speculative_update_client(EnclaveSpeculativeUpdateClientInput {
                 update,
-                base_state: base_state_payload_from_ref(&base_state),
+                base_state: base_state_payload_from_ref(&base_state)?,
             })?;
         let observed_transition = decode_observed_transition(&res.response)?;
         Ok(SpeculativeUpdateClientResult {
@@ -179,20 +179,31 @@ impl SpeculativeService {
     }
 }
 
-fn base_state_payload_from_ref(base_state: &ExplicitStateRef) -> SpeculativeBaseState {
-    SpeculativeBaseState {
-        prev_height: base_state
-            .prev_height
-            .expect("validated speculative base_state prev_height"),
-        client_state: base_state
-            .client_state
-            .clone()
-            .expect("validated speculative base_state client_state"),
-        consensus_state: base_state
-            .consensus_state
-            .clone()
-            .expect("validated speculative base_state consensus_state"),
-    }
+#[allow(clippy::result_large_err)]
+fn base_state_payload_from_ref(
+    base_state: &ExplicitStateRef,
+) -> core::result::Result<SpeculativeBaseState, enclave_api::Error> {
+    let prev_height = base_state.prev_height.ok_or_else(|| {
+        enclave_api::Error::invalid_argument(
+            "speculative base_state prev_height must be provided".to_string(),
+        )
+    })?;
+    let client_state = base_state.client_state.clone().ok_or_else(|| {
+        enclave_api::Error::invalid_argument(
+            "speculative base_state client_state must be provided".to_string(),
+        )
+    })?;
+    let consensus_state = base_state.consensus_state.clone().ok_or_else(|| {
+        enclave_api::Error::invalid_argument(
+            "speculative base_state consensus_state must be provided".to_string(),
+        )
+    })?;
+
+    Ok(SpeculativeBaseState {
+        prev_height,
+        client_state,
+        consensus_state,
+    })
 }
 
 #[allow(clippy::result_large_err)]
