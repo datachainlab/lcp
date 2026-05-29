@@ -40,7 +40,12 @@ where
         &self,
         request: Request<MsgUpdateClient>,
     ) -> Result<Response<MsgUpdateClientResponse>, Status> {
-        match self.app.enclave.proto_update_client(request.into_inner()) {
+        let msg = request.into_inner();
+        let client_id = msg.client_id.clone();
+        match self
+            .speculative
+            .with_client_serialized(&client_id, || self.app.enclave.proto_update_client(msg))
+        {
             Ok(res) => Ok(Response::new(res)),
             Err(e) => Err(Status::aborted(e.to_string())),
         }
@@ -103,7 +108,11 @@ where
             }),
         };
 
-        match self.app.enclave.proto_update_client(msg) {
+        let client_id = msg.client_id.clone();
+        match self
+            .speculative
+            .with_client_serialized(&client_id, || self.app.enclave.proto_update_client(msg))
+        {
             Ok(res) => Ok(Response::new(res)),
             Err(e) => Err(Status::aborted(e.to_string())),
         }
