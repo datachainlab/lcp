@@ -42,9 +42,15 @@ where
     ) -> Result<Response<MsgUpdateClientResponse>, Status> {
         let msg = request.into_inner();
         let client_id = msg.client_id.clone();
-        match self
-            .with_client_update_serialized(&client_id, || self.app.enclave.proto_update_client(msg))
-        {
+        let service = self.clone();
+        let result = tokio::task::spawn_blocking(move || {
+            service.with_client_update_serialized(&client_id, || {
+                service.app.enclave.proto_update_client(msg)
+            })
+        })
+        .await
+        .map_err(|e| Status::aborted(format!("update client worker failed: {e}")))?;
+        match result {
             Ok(res) => Ok(Response::new(res)),
             Err(e) => Err(Status::aborted(e.to_string())),
         }
@@ -108,9 +114,15 @@ where
         };
 
         let client_id = msg.client_id.clone();
-        match self
-            .with_client_update_serialized(&client_id, || self.app.enclave.proto_update_client(msg))
-        {
+        let service = self.clone();
+        let result = tokio::task::spawn_blocking(move || {
+            service.with_client_update_serialized(&client_id, || {
+                service.app.enclave.proto_update_client(msg)
+            })
+        })
+        .await
+        .map_err(|e| Status::aborted(format!("update client stream worker failed: {e}")))?;
+        match result {
             Ok(res) => Ok(Response::new(res)),
             Err(e) => Err(Status::aborted(e.to_string())),
         }
