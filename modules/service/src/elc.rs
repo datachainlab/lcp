@@ -43,8 +43,7 @@ where
         let msg = request.into_inner();
         let client_id = msg.client_id.clone();
         match self
-            .speculative
-            .with_client_serialized(&client_id, || self.app.enclave.proto_update_client(msg))
+            .with_client_update_serialized(&client_id, || self.app.enclave.proto_update_client(msg))
         {
             Ok(res) => Ok(Response::new(res)),
             Err(e) => Err(Status::aborted(e.to_string())),
@@ -110,8 +109,7 @@ where
 
         let client_id = msg.client_id.clone();
         match self
-            .speculative
-            .with_client_serialized(&client_id, || self.app.enclave.proto_update_client(msg))
+            .with_client_update_serialized(&client_id, || self.app.enclave.proto_update_client(msg))
         {
             Ok(res) => Ok(Response::new(res)),
             Err(e) => Err(Status::aborted(e.to_string())),
@@ -129,12 +127,11 @@ where
         let app = self.app.clone();
         let speculative = self.speculative.clone();
         let scheduler_client_id = client_id.clone();
+        let service = self.clone();
         let scheduler = tokio::task::spawn_blocking(move || {
-            speculative.execute_serialized_speculative_update_client_stream(
-                &app,
-                scheduler_client_id,
-                rx,
-            )
+            service.with_client_update_serialized(&scheduler_client_id.clone(), || {
+                speculative.execute_speculative_update_client_stream(&app, scheduler_client_id, rx)
+            })
         });
         let mut decoder = SpeculativeBatchStreamDecoder::new(client_id.clone());
         let header_memory_budget =

@@ -1,16 +1,10 @@
 use enclave_api::Error as EnclaveError;
-use std::collections::HashMap;
-use std::sync::{Arc, Condvar, Mutex};
+use std::sync::{Condvar, Mutex};
 
 #[derive(Debug)]
 pub(super) struct PermitGate {
     state: Mutex<PermitGateState>,
     ready: Condvar,
-}
-
-#[derive(Debug, Default)]
-pub(super) struct KeyLockMap {
-    locks: Mutex<HashMap<String, Arc<Mutex<()>>>>,
 }
 
 #[derive(Debug)]
@@ -59,37 +53,9 @@ impl Drop for PermitGuard<'_> {
     }
 }
 
-impl KeyLockMap {
-    pub(super) fn with_key_serialized<T>(&self, key: &str, f: impl FnOnce() -> T) -> T {
-        let lock = {
-            let mut locks = self.locks.lock().unwrap();
-            locks
-                .entry(key.to_string())
-                .or_insert_with(|| Arc::new(Mutex::new(())))
-                .clone()
-        };
-        let guard = lock.lock().unwrap();
-        let result = f();
-        drop(guard);
-
-        let mut locks = self.locks.lock().unwrap();
-        // strong_count == 2 means only this local `lock` binding and the map
-        // entry still reference the mutex, so the idle key entry can be removed.
-        let should_remove = Arc::strong_count(&lock) == 2
-            && locks
-                .get(key)
-                .map(|existing| Arc::ptr_eq(existing, &lock))
-                .unwrap_or(false);
-        if should_remove {
-            locks.remove(key);
-        }
-        result
-    }
-}
-
 #[cfg(test)]
 mod tests {
-    use super::{KeyLockMap, PermitGate};
+    use super::PermitGate;
     use std::sync::atomic::{AtomicUsize, Ordering};
     use std::sync::Arc;
     use std::thread;
@@ -123,61 +89,5 @@ mod tests {
         }
 
         assert_eq!(observed_max.load(Ordering::SeqCst), 2);
-    }
-
-    #[test]
-    fn key_lock_map_serializes_same_key() {
-        let locks = Arc::new(KeyLockMap::default());
-        let in_flight = Arc::new(AtomicUsize::new(0));
-        let observed_max = Arc::new(AtomicUsize::new(0));
-        let mut handles = Vec::new();
-
-        for _ in 0..6 {
-            let locks = locks.clone();
-            let in_flight = in_flight.clone();
-            let observed_max = observed_max.clone();
-            handles.push(thread::spawn(move || {
-                locks.with_key_serialized("client-0", || {
-                    let current = in_flight.fetch_add(1, Ordering::SeqCst) + 1;
-                    observed_max.fetch_max(current, Ordering::SeqCst);
-                    thread::sleep(Duration::from_millis(25));
-                    in_flight.fetch_sub(1, Ordering::SeqCst);
-                });
-            }));
-        }
-
-        for handle in handles {
-            handle.join().unwrap();
-        }
-
-        assert_eq!(observed_max.load(Ordering::SeqCst), 1);
-    }
-
-    #[test]
-    fn key_lock_map_allows_different_keys() {
-        let locks = Arc::new(KeyLockMap::default());
-        let in_flight = Arc::new(AtomicUsize::new(0));
-        let observed_max = Arc::new(AtomicUsize::new(0));
-        let mut handles = Vec::new();
-
-        for i in 0..6 {
-            let locks = locks.clone();
-            let in_flight = in_flight.clone();
-            let observed_max = observed_max.clone();
-            handles.push(thread::spawn(move || {
-                locks.with_key_serialized(&format!("client-{i}"), || {
-                    let current = in_flight.fetch_add(1, Ordering::SeqCst) + 1;
-                    observed_max.fetch_max(current, Ordering::SeqCst);
-                    thread::sleep(Duration::from_millis(25));
-                    in_flight.fetch_sub(1, Ordering::SeqCst);
-                });
-            }));
-        }
-
-        for handle in handles {
-            handle.join().unwrap();
-        }
-
-        assert!(observed_max.load(Ordering::SeqCst) > 1);
     }
 }

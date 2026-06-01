@@ -1,5 +1,5 @@
-use super::permit::{KeyLockMap, PermitGate};
-use super::scheduler::execute_speculative_update_client_stream;
+use super::permit::PermitGate;
+use super::scheduler::execute_speculative_update_client_stream as execute_stream_scheduler;
 use super::stream::ResidentSpeculativeUpdateClientRequest;
 use super::types::{
     ExplicitStateRef, ObservedStateTransition, SpeculativeBatchFailure,
@@ -22,7 +22,6 @@ use store::transaction::{CommitStore, TxAccessor};
 use store::WriteSet;
 
 pub struct SpeculativeService {
-    key_locks: Arc<KeyLockMap>,
     speculative_concurrency_limit: usize,
     speculative_request_permits: Arc<PermitGate>,
 }
@@ -30,7 +29,6 @@ pub struct SpeculativeService {
 impl Clone for SpeculativeService {
     fn clone(&self) -> Self {
         Self {
-            key_locks: self.key_locks.clone(),
             speculative_concurrency_limit: self.speculative_concurrency_limit,
             speculative_request_permits: self.speculative_request_permits.clone(),
         }
@@ -40,7 +38,6 @@ impl Clone for SpeculativeService {
 impl SpeculativeService {
     pub fn new(speculative_concurrency_limit: usize) -> Self {
         Self {
-            key_locks: Arc::new(KeyLockMap::default()),
             speculative_concurrency_limit: speculative_concurrency_limit.max(1),
             speculative_request_permits: Arc::new(PermitGate::new(speculative_concurrency_limit)),
         }
@@ -48,12 +45,6 @@ impl SpeculativeService {
 
     pub fn speculative_concurrency_limit(&self) -> usize {
         self.speculative_concurrency_limit
-    }
-
-    pub fn with_client_serialized<T>(&self, client_id: &str, f: impl FnOnce() -> T) -> T {
-        // Keep client-key serialization outside the speculative execution/stitch
-        // body so all canonical writes for one client are ordered.
-        self.key_locks.with_key_serialized(client_id, f)
     }
 
     #[allow(clippy::result_large_err)]
@@ -175,7 +166,7 @@ impl SpeculativeService {
         })
     }
 
-    pub(crate) fn execute_serialized_speculative_update_client_stream<E, S>(
+    pub(crate) fn execute_speculative_update_client_stream<E, S>(
         &self,
         app: &AppService<E, S>,
         client_id: String,
@@ -185,15 +176,12 @@ impl SpeculativeService {
         S: CommitStore + TxAccessor + Send + 'static,
         E: EnclaveProtoAPI<S> + SpeculativeEnclaveCommandAPI<S> + Send + Sync + 'static,
     {
-        self.with_client_serialized(&client_id.clone(), || {
-            let batch_result =
-                execute_speculative_update_client_stream(self, app, client_id.clone(), units)?;
-            let batch = SpeculativeUpdateClientBatch {
-                client_id,
-                units: batch_result.requests,
-            };
-            self.stitch_speculative_update_client_batch(app, batch, batch_result.results)
-        })
+        let batch_result = execute_stream_scheduler(self, app, client_id.clone(), units)?;
+        let batch = SpeculativeUpdateClientBatch {
+            client_id,
+            units: batch_result.requests,
+        };
+        self.stitch_speculative_update_client_batch(app, batch, batch_result.results)
     }
 }
 
@@ -601,7 +589,7 @@ mod tests {
         let worker_app = app.clone();
         let client_id_for_worker = client_id.to_string();
         let handle = thread::spawn(move || {
-            worker_service.execute_serialized_speculative_update_client_stream(
+            worker_service.execute_speculative_update_client_stream(
                 &worker_app,
                 client_id_for_worker,
                 rx,
@@ -691,7 +679,7 @@ mod tests {
         let worker_app = app.clone();
         let client_id_for_worker = client_id.to_string();
         let handle = thread::spawn(move || {
-            worker_service.execute_serialized_speculative_update_client_stream(
+            worker_service.execute_speculative_update_client_stream(
                 &worker_app,
                 client_id_for_worker,
                 rx,
@@ -745,7 +733,7 @@ mod tests {
         let worker_app = app.clone();
         let client_id_for_worker = client_id.to_string();
         let handle = thread::spawn(move || {
-            worker_service.execute_serialized_speculative_update_client_stream(
+            worker_service.execute_speculative_update_client_stream(
                 &worker_app,
                 client_id_for_worker,
                 rx,

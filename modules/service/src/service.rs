@@ -1,3 +1,4 @@
+use crate::client_lock::ClientUpdateLocks;
 use crate::speculative::SpeculativeService;
 use anyhow::Result;
 use enclave_api::{EnclaveProtoAPI, SpeculativeEnclaveCommandAPI};
@@ -28,6 +29,7 @@ where
 {
     pub(crate) app: AppService<E, S>,
     pub(crate) speculative: SpeculativeService,
+    client_update_locks: Arc<ClientUpdateLocks>,
 }
 
 impl<E, S> Clone for AppService<E, S>
@@ -53,6 +55,7 @@ where
         Self {
             app: self.app.clone(),
             speculative: self.speculative.clone(),
+            client_update_locks: self.client_update_locks.clone(),
         }
     }
 }
@@ -83,7 +86,24 @@ where
     ) -> Self {
         let app = AppService::new(home, enclave);
         let speculative = SpeculativeService::new(speculative_concurrency_limit);
-        Self { app, speculative }
+        Self {
+            app,
+            speculative,
+            client_update_locks: Arc::new(ClientUpdateLocks::default()),
+        }
+    }
+
+    pub(crate) fn with_client_update_serialized<T>(
+        &self,
+        client_id: &str,
+        f: impl FnOnce() -> T,
+    ) -> T {
+        // This lock is intentionally owned by the ELC service, not by the
+        // speculative executor: it serializes all canonical UpdateClient writes
+        // for a client, including both ordinary gRPC updates and speculative
+        // batch stitch commits.
+        self.client_update_locks
+            .with_client_serialized(client_id, f)
     }
 }
 

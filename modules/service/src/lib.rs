@@ -1,3 +1,4 @@
+mod client_lock;
 mod elc;
 mod enclave;
 mod service;
