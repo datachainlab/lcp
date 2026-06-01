@@ -36,8 +36,6 @@ struct ECallPermitGuard<'a> {
 }
 
 impl<S: CommitStore> Enclave<S> {
-    pub const DEFAULT_ECALL_CONCURRENCY: usize = 4;
-
     pub fn new(
         path: impl Into<PathBuf>,
         key_manager: EnclaveKeyManager,

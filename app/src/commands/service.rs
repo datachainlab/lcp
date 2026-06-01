@@ -36,12 +36,14 @@ pub struct Start {
     )]
     pub threads: Option<usize>,
     /// Maximum concurrent enclave ECALLs across serial and speculative paths.
-    /// Defaults to the current Enclave.config.xml TCS budget (4).
+    /// Set this to match the loaded enclave's `TCSNum`; the default assumes a
+    /// conservative TCS budget of 4.
     #[clap(
         long = "max-enclave-concurrency",
+        default_value_t = 4,
         help = "Maximum concurrent enclave ECALLs"
     )]
-    pub max_enclave_concurrency: Option<usize>,
+    pub max_enclave_concurrency: usize,
     /// Maximum concurrent speculative update-client requests.
     /// Prefer a value less than or equal to --max-enclave-concurrency; excess
     /// speculative workers will wait on the enclave ECALL gate.
@@ -63,10 +65,7 @@ impl ServiceCmd {
         match self {
             Self::Start(cmd) => {
                 let addr = cmd.address.parse()?;
-                let enclave_parallelism = cmd
-                    .max_enclave_concurrency
-                    .unwrap_or(Enclave::<S>::DEFAULT_ECALL_CONCURRENCY)
-                    .max(1);
+                let enclave_parallelism = cmd.max_enclave_concurrency.max(1);
                 let enclave = enclave_loader.load_with_ecall_concurrency(
                     opts,
                     cmd.enclave.path.as_ref(),
