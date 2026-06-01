@@ -25,7 +25,8 @@ where
     Enclave<S>: EnclaveProtoAPI<S>,
 {
     fn load(&self, opts: &Opts, path: Option<&PathBuf>, debug: bool) -> Result<Enclave<S>> {
-        self.load_with_ecall_concurrency(opts, path, debug, Enclave::<S>::DEFAULT_ECALL_CONCURRENCY)
+        // One-shot CLI commands (attestation/enclave/elc) issue ECALLs serially.
+        self.load_with_ecall_concurrency(opts, path, debug, 1)
     }
 
     fn load_with_ecall_concurrency(
