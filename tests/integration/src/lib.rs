@@ -279,7 +279,14 @@ mod tests {
 
         let env = host::get_environment().unwrap();
         let km = EnclaveKeyManager::new(&env.home).unwrap();
-        let enclave = Enclave::create(ENCLAVE_FILE, true, km, env.store.clone()).unwrap();
+        let enclave = Enclave::create(
+            ENCLAVE_FILE,
+            true,
+            km,
+            env.store.clone(),
+            Enclave::<_>::DEFAULT_ECALL_CONCURRENCY,
+        )
+        .unwrap();
 
         test_remote_attestation(&enclave).unwrap();
 

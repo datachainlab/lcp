@@ -43,21 +43,6 @@ impl<S: CommitStore> Enclave<S> {
         key_manager: EnclaveKeyManager,
         store: Arc<RwLock<HostStore>>,
         sgx_enclave: SgxEnclave,
-    ) -> Self {
-        Self::new_with_ecall_concurrency(
-            path,
-            key_manager,
-            store,
-            sgx_enclave,
-            Self::DEFAULT_ECALL_CONCURRENCY,
-        )
-    }
-
-    pub fn new_with_ecall_concurrency(
-        path: impl Into<PathBuf>,
-        key_manager: EnclaveKeyManager,
-        store: Arc<RwLock<HostStore>>,
-        sgx_enclave: SgxEnclave,
         ecall_concurrency: usize,
     ) -> Self {
         Enclave {
@@ -75,26 +60,11 @@ impl<S: CommitStore> Enclave<S> {
         debug: bool,
         key_manager: EnclaveKeyManager,
         store: Arc<RwLock<HostStore>>,
-    ) -> SgxResult<Self> {
-        Self::create_with_ecall_concurrency(
-            path,
-            debug,
-            key_manager,
-            store,
-            Self::DEFAULT_ECALL_CONCURRENCY,
-        )
-    }
-
-    pub fn create_with_ecall_concurrency(
-        path: impl Into<PathBuf>,
-        debug: bool,
-        key_manager: EnclaveKeyManager,
-        store: Arc<RwLock<HostStore>>,
         ecall_concurrency: usize,
     ) -> SgxResult<Self> {
         let path = path.into();
         let enclave = host::create_enclave(path.clone(), debug)?;
-        Ok(Self::new_with_ecall_concurrency(
+        Ok(Self::new(
             path,
             key_manager,
             store,

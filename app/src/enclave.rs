@@ -42,13 +42,7 @@ where
         };
         let env = host::get_environment().unwrap();
         let km = EnclaveKeyManager::new(&env.home)?;
-        match Enclave::create_with_ecall_concurrency(
-            &path,
-            debug,
-            km,
-            env.store.clone(),
-            ecall_concurrency,
-        ) {
+        match Enclave::create(&path, debug, km, env.store.clone(), ecall_concurrency) {
             Ok(enclave) => Ok(enclave),
             Err(x) => {
                 bail!(
