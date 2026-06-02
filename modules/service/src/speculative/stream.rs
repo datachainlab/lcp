@@ -177,7 +177,10 @@ impl ResidentSpeculativeUpdateClientRequest {
         &self.request
     }
 
-    pub(crate) fn into_request(self) -> SpeculativeUpdateClientRequest {
+    pub(crate) fn into_request_without_header_payload(mut self) -> SpeculativeUpdateClientRequest {
+        if let Some(header) = self.request.update.header.as_mut() {
+            header.value.clear();
+        }
         self.request
     }
 

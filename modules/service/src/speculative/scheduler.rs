@@ -201,12 +201,6 @@ impl StreamingSchedulerState {
     }
 }
 
-fn clear_request_header_payload(req: &mut SpeculativeUpdateClientRequest) {
-    if let Some(header) = req.update.header.as_mut() {
-        header.value.clear();
-    }
-}
-
 fn streaming_speculative_worker<E, S>(
     speculative: &SpeculativeService,
     app: &AppService<E, S>,
@@ -265,8 +259,7 @@ fn streaming_speculative_worker<E, S>(
         state.in_flight -= 1;
         match result {
             Ok(result) => {
-                let mut req = req.into_request();
-                clear_request_header_payload(&mut req);
+                let req = req.into_request_without_header_payload();
                 state.complete_unit(index, req, result);
             }
             Err(e) => {
