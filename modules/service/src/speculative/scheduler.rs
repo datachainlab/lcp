@@ -263,7 +263,7 @@ fn streaming_speculative_worker<E, S>(
                 state.complete_unit(index, req, result);
             }
             Err(e) => {
-                state.failure = Some(e);
+                state.failure.get_or_insert(e);
             }
         }
         shared.ready.notify_all();
