@@ -185,10 +185,11 @@ fn compute_seed_write_set(client_id: &str, base_state: &SpeculativeBaseState) ->
         bincode::serde::encode_to_vec(&base_state.client_state, bincode::config::standard())
             .map_err(crate::errors::Error::bincode_encode)?;
 
-    debug_assert!(
-        !base_state.consensus_state.type_url.is_empty(),
-        "seeded consensus state should carry a concrete type"
-    );
+    if base_state.consensus_state.type_url.is_empty() {
+        return Err(crate::errors::Error::invalid_argument(
+            "speculative base_state consensus_state type_url must not be empty".to_string(),
+        ));
+    }
     let consensus_state_key = store_key::consensus_state_bytes(client_id, &base_state.prev_height);
     let consensus_state_value =
         bincode::serde::encode_to_vec(&base_state.consensus_state, bincode::config::standard())
@@ -277,6 +278,23 @@ mod tests {
         assert_eq!(
             effective_write_set.get(&client_state_key),
             Some(&Some(computed_client_state_value))
+        );
+    }
+    #[test]
+    fn speculative_update_client_rejects_empty_seeded_consensus_state_type_url() {
+        let client_id = "07-tendermint-0";
+        let base_state = SpeculativeBaseState {
+            consensus_state: any("", b"consensus-10"),
+            ..base_state()
+        };
+
+        let err = compute_seed_write_set(client_id, &base_state)
+            .expect_err("empty consensus_state type_url must be rejected");
+
+        assert!(
+            err.to_string()
+                .contains("speculative base_state consensus_state type_url must not be empty"),
+            "unexpected error: {err}"
         );
     }
 }
