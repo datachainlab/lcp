@@ -188,9 +188,14 @@ pub trait HostStoreTxManager<S: CommitStore>: CommitStoreAccessor<S> {
     }
 
     /// `apply_write_set_with_expected_base` applies a speculative write set only if the
-    /// canonical store still matches the explicit base state that seeded the batch.
+    /// store already contains the explicit base state that seeded the batch at
+    /// `prev_height`.
+    ///
     /// The check and apply run under the same serialized update transaction keyed by
-    /// `update_key`, so the canonical base cannot change between verification and commit.
+    /// `update_key`, so the accepted base cannot change between verification and commit.
+    /// Historical client-state entries are preferred. The latest client-state key is
+    /// accepted as a bootstrap fallback for stores created before the historical index
+    /// existed, or for the first speculative batch whose base is still the latest state.
     fn apply_write_set_with_expected_base(
         &self,
         update_key: UpdateKey,
@@ -245,17 +250,36 @@ pub trait HostStoreTxManager<S: CommitStore>: CommitStoreAccessor<S> {
     where
         S: TxAccessor,
     {
-        let client_state_key = store_key::client_state_bytes(client_id);
+        let historical_client_state_key =
+            store_key::client_state_at_height_bytes(client_id, prev_height);
+        let latest_client_state_key = store_key::client_state_bytes(client_id);
         let client_state_value =
             bincode::serde::encode_to_vec(client_state, bincode::config::standard())
                 .map_err(Error::bincode_encode)?;
-        let canonical_client_state =
-            self.use_mut_store(|store| store.tx_get(tx_id, &client_state_key))?;
-        if canonical_client_state.as_deref() != Some(client_state_value.as_slice()) {
-            return Err(Error::invalid_argument(format!(
-                "canonical speculative base client_state mismatch: client_id={}",
-                client_id
-            )));
+        let stored_historical_client_state =
+            self.use_mut_store(|store| store.tx_get(tx_id, &historical_client_state_key))?;
+        let stored_latest_client_state =
+            self.use_mut_store(|store| store.tx_get(tx_id, &latest_client_state_key))?;
+        match stored_historical_client_state.as_deref() {
+            Some(stored) if stored == client_state_value.as_slice() => {}
+            Some(_) => {
+                return Err(Error::invalid_argument(format!(
+                    "stored speculative base client_state mismatch: client_id={} height={}-{}",
+                    client_id,
+                    prev_height.revision_number(),
+                    prev_height.revision_height()
+                )));
+            }
+            None if stored_latest_client_state.as_deref()
+                == Some(client_state_value.as_slice()) => {}
+            None => {
+                return Err(Error::invalid_argument(format!(
+                    "stored speculative base client_state mismatch: client_id={} height={}-{}",
+                    client_id,
+                    prev_height.revision_number(),
+                    prev_height.revision_height()
+                )));
+            }
         }
 
         let consensus_state_key = store_key::consensus_state_bytes(client_id, prev_height);
@@ -266,7 +290,7 @@ pub trait HostStoreTxManager<S: CommitStore>: CommitStoreAccessor<S> {
             self.use_mut_store(|store| store.tx_get(tx_id, &consensus_state_key))?;
         if canonical_consensus_state.as_deref() != Some(consensus_state_value.as_slice()) {
             return Err(Error::invalid_argument(format!(
-                "canonical speculative base consensus_state mismatch: client_id={} height={}-{}",
+                "stored speculative base consensus_state mismatch: client_id={} height={}-{}",
                 client_id,
                 prev_height.revision_number(),
                 prev_height.revision_height()
