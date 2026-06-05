@@ -8,9 +8,9 @@ pub fn client_state(client_id: &str) -> String {
     format!("clients/{client_id}/clientState")
 }
 
-pub fn client_state_at_height(client_id: &str, height: &Height) -> String {
+pub fn state_id(client_id: &str, height: &Height) -> String {
     format!(
-        "clients/{}/clientStates/{}-{}",
+        "clients/{}/stateIds/{}-{}",
         client_id,
         height.revision_number(),
         height.revision_height()
@@ -34,8 +34,8 @@ pub fn client_state_bytes(client_id: &str) -> Vec<u8> {
     client_state(client_id).into_bytes()
 }
 
-pub fn client_state_at_height_bytes(client_id: &str, height: &Height) -> Vec<u8> {
-    client_state_at_height(client_id, height).into_bytes()
+pub fn state_id_bytes(client_id: &str, height: &Height) -> Vec<u8> {
+    state_id(client_id, height).into_bytes()
 }
 
 pub fn consensus_state_bytes(client_id: &str, height: &Height) -> Vec<u8> {
@@ -58,12 +58,12 @@ mod tests {
             "clients/07-tendermint-0/clientState"
         );
         assert_eq!(
-            client_state_at_height("07-tendermint-0", &height),
-            "clients/07-tendermint-0/clientStates/1-23"
-        );
-        assert_eq!(
             consensus_state("07-tendermint-0", &height),
             "clients/07-tendermint-0/consensusStates/1-23"
+        );
+        assert_eq!(
+            state_id("07-tendermint-0", &height),
+            "clients/07-tendermint-0/stateIds/1-23"
         );
     }
 }

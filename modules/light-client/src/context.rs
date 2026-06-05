@@ -1,5 +1,6 @@
 use crate::types::{Any, ClientId, Height, Time};
 use crate::{errors::Error, prelude::*};
+use commitments::StateID;
 use lcp_types::store_key;
 use store::KVStore;
 
@@ -92,6 +93,23 @@ pub trait ClientKeeper: ClientReader {
         self.set(
             store_key::consensus_state_bytes(client_id.as_str(), &height),
             bz,
+        );
+        Ok(())
+    }
+
+    /// Called upon successful client creation and update to index the state ID
+    /// for the state at `height`. This keeps historical base validation compact:
+    /// client_state remains latest-only while consensus_state and state_id are
+    /// height-indexed.
+    fn store_state_id(
+        &mut self,
+        client_id: ClientId,
+        height: Height,
+        state_id: StateID,
+    ) -> Result<(), Error> {
+        self.set(
+            store_key::state_id_bytes(client_id.as_str(), &height),
+            state_id.to_vec(),
         );
         Ok(())
     }
