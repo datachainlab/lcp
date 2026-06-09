@@ -15,10 +15,14 @@ use lcp_proto::lcp::service::elc::v1::{
     MsgVerifyNonMembership, MsgVerifyNonMembershipResponse, QueryClientRequest,
     QueryClientResponse,
 };
-use log::debug;
+use log::{debug, warn};
 use std::sync::mpsc;
+use std::time::Duration;
 use store::transaction::{CommitStore, TxAccessor};
+use tokio::time::timeout;
 use tonic::{Request, Response, Status, Streaming};
+
+const SPECULATIVE_BATCH_STREAM_IDLE_TIMEOUT: Duration = Duration::from_secs(60);
 
 #[tonic::async_trait]
 impl<E, S> Msg for ElcService<E, S>
@@ -150,7 +154,28 @@ where
             SpeculativeHeaderMemoryBudget::new(MAX_SPECULATIVE_BATCH_HEADER_BYTES);
         let mut units = 0usize;
 
-        while let Some(chunk_msg) = stream.message().await? {
+        loop {
+            let chunk_msg = match timeout(SPECULATIVE_BATCH_STREAM_IDLE_TIMEOUT, stream.message())
+                .await
+            {
+                Ok(result) => result?,
+                Err(_) => {
+                    warn!(
+                        "speculative update client batch stream idle timeout: client_id={} timeout_secs={}",
+                        client_id,
+                        SPECULATIVE_BATCH_STREAM_IDLE_TIMEOUT.as_secs()
+                    );
+                    drop(tx);
+                    let _ = scheduler.await;
+                    return Err(Status::deadline_exceeded(format!(
+                        "speculative update client batch stream idle timeout after {} seconds",
+                        SPECULATIVE_BATCH_STREAM_IDLE_TIMEOUT.as_secs()
+                    )));
+                }
+            };
+            let Some(chunk_msg) = chunk_msg else {
+                break;
+            };
             let header_memory = header_memory_budget.reserve_for_chunk(&chunk_msg).await?;
             if let Some(unit) = decoder.push_chunk(chunk_msg.chunk, header_memory)? {
                 units += 1;
