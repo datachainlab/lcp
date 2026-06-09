@@ -194,12 +194,12 @@ pub trait HostStoreTxManager<S: CommitStore>: CommitStoreAccessor<S> {
     ///
     /// The check and apply run under the same serialized update transaction keyed by
     /// `update_key`, so the accepted base cannot change between verification and commit.
-    /// The explicit base client state is not looked up by height. Instead, the
-    /// caller-supplied `(client_state, consensus_state)` pair must re-derive the
+    /// The explicit base client state must match the latest canonical
+    /// client_state. This prevents an old, historically valid base state from
+    /// overwriting a newer latest-only client_state. The caller-supplied
+    /// `(client_state, consensus_state)` pair must also re-derive the
     /// height-indexed state ID previously stored by a successful
-    /// serial/speculative update. This keeps the canonical store model aligned
-    /// with serial UpdateClient: latest client_state plus height-indexed
-    /// consensus_states and compact state_ids.
+    /// serial/speculative update.
     fn apply_write_set_with_expected_base(
         &self,
         update_key: UpdateKey,
@@ -257,6 +257,21 @@ pub trait HostStoreTxManager<S: CommitStore>: CommitStoreAccessor<S> {
     where
         S: TxAccessor,
     {
+        let client_state_key = store_key::client_state_bytes(client_id);
+        let client_state_value =
+            bincode::serde::encode_to_vec(client_state, bincode::config::standard())
+                .map_err(Error::bincode_encode)?;
+        let canonical_client_state =
+            self.use_mut_store(|store| store.tx_get(tx_id, &client_state_key))?;
+        if canonical_client_state.as_deref() != Some(client_state_value.as_slice()) {
+            return Err(Error::invalid_argument(format!(
+                "stored speculative base client_state mismatch: client_id={} height={}-{}",
+                client_id,
+                prev_height.revision_number(),
+                prev_height.revision_height()
+            )));
+        }
+
         let consensus_state_key = store_key::consensus_state_bytes(client_id, prev_height);
         let consensus_state_value =
             bincode::serde::encode_to_vec(consensus_state, bincode::config::standard())

@@ -474,6 +474,22 @@ mod tests {
         .to_vec()
     }
 
+    fn set_canonical_client_state(
+        app: &AppService<FakeEnclave, MemStore>,
+        client_id: &str,
+        client_state: &Any,
+    ) {
+        let client_state_value =
+            bincode::serde::encode_to_vec(client_state, bincode::config::standard())
+                .expect("encode client_state");
+        app.enclave.use_mut_store(|store| {
+            store.set(
+                lcp_types::store_key::client_state_bytes(client_id),
+                client_state_value,
+            );
+        });
+    }
+
     fn mk_result(
         prev_height: Option<Height>,
         prev_state_id: Option<&[u8]>,
@@ -577,6 +593,14 @@ mod tests {
             Some(Height::new(0, 10)),
             None,
         ));
+        set_canonical_client_state(
+            &app,
+            client_id,
+            req.base_state
+                .client_state
+                .as_ref()
+                .expect("test base client_state"),
+        );
         let result = SpeculativeUpdateClientResult {
             response: MsgUpdateClientResponse::default(),
             write_set: WriteSet::default(),
@@ -845,6 +869,14 @@ mod tests {
             }
             .into(),
         );
+        set_canonical_client_state(
+            &app,
+            client_id,
+            req.base_state
+                .client_state
+                .as_ref()
+                .expect("mutated client_state"),
+        );
         let result = SpeculativeUpdateClientResult {
             response: MsgUpdateClientResponse::default(),
             write_set: WriteSet::default(),
@@ -876,6 +908,66 @@ mod tests {
         assert!(
             err.detail
                 .contains("speculative base state_id does not match client_state/consensus_state"),
+            "unexpected error detail: {}",
+            err.detail
+        );
+    }
+
+    #[test]
+    fn stitch_rejects_first_base_state_when_canonical_client_state_advanced() {
+        let client_id = "07-tendermint-0";
+        let enclave = FakeEnclave::new(Duration::from_millis(1));
+        let app = AppService::<FakeEnclave, MemStore>::new("test-home", enclave);
+        let service = SpeculativeService::new(1);
+        let mut req = with_explicit_base_state_payload(mk_req(
+            "unit-0000",
+            client_id,
+            Some(Height::new(0, 10)),
+            None,
+        ));
+        let prev_height = req.base_state.prev_height.expect("test base prev_height");
+        let prev_state_id = state_id_for_base_state(&req.base_state);
+        req.base_state.prev_state_id = Some(prev_state_id.clone());
+        seed_canonical_base_state(&app, client_id, &req.base_state);
+        set_canonical_client_state(
+            &app,
+            client_id,
+            &Any {
+                type_url: "/ibc.mock.ClientState".to_string(),
+                value: vec![42],
+            },
+        );
+        let result = SpeculativeUpdateClientResult {
+            response: MsgUpdateClientResponse::default(),
+            write_set: WriteSet::default(),
+            base_state: req.base_state.clone(),
+            observed_transition: ObservedStateTransition {
+                prev_height: Some(prev_height),
+                prev_state_id: Some(prev_state_id),
+                post_height: Height::new(0, 11),
+                post_state_id: vec![1; 32],
+            },
+        };
+
+        let err = service
+            .stitch_speculative_update_client_batch(
+                &app,
+                SpeculativeUpdateClientBatch {
+                    client_id: client_id.to_string(),
+                    units: vec![req],
+                },
+                SpeculativeUpdateClientBatchResult {
+                    client_id: client_id.to_string(),
+                    units: vec![result],
+                },
+            )
+            .expect_err("stale base client_state should be rejected");
+
+        assert_eq!(err.kind, SpeculativeBatchFailureKind::BaseStateMismatch);
+        assert_eq!(err.unit_id.as_deref(), Some("unit-0000"));
+        assert!(
+            err.detail
+                .contains("stored speculative base client_state mismatch"),
             "unexpected error detail: {}",
             err.detail
         );
