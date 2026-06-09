@@ -139,6 +139,9 @@ where
         let mut stream = request.into_inner();
         let init = decode_speculative_batch_stream_init(&mut stream).await?;
         let client_id = init.client_id;
+        // This channel is intentionally unbounded: resident header bytes are
+        // bounded by `SpeculativeHeaderMemoryBudget`, which is the actual
+        // backpressure mechanism for large speculative batch inputs.
         let (tx, rx) = mpsc::channel();
         let app = self.app.clone();
         let speculative = self.speculative.clone();
