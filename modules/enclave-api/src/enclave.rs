@@ -1,4 +1,5 @@
 use crate::errors::{Error, Result};
+use commitments::gen_state_id_from_any;
 use keymanager::EnclaveKeyManager;
 use lcp_types::{store_key, Any, EnclaveMetadata, Height};
 use sgx_types::{sgx_enclave_id_t, SgxResult};
@@ -193,10 +194,11 @@ pub trait HostStoreTxManager<S: CommitStore>: CommitStoreAccessor<S> {
     ///
     /// The check and apply run under the same serialized update transaction keyed by
     /// `update_key`, so the accepted base cannot change between verification and commit.
-    /// The explicit base client state is not looked up by height. Instead, its
-    /// state ID must match the height-indexed state ID previously stored by a
-    /// successful serial/speculative update. This keeps the canonical store model
-    /// aligned with serial UpdateClient: latest client_state plus height-indexed
+    /// The explicit base client state is not looked up by height. Instead, the
+    /// caller-supplied `(client_state, consensus_state)` pair must re-derive the
+    /// height-indexed state ID previously stored by a successful
+    /// serial/speculative update. This keeps the canonical store model aligned
+    /// with serial UpdateClient: latest client_state plus height-indexed
     /// consensus_states and compact state_ids.
     fn apply_write_set_with_expected_base(
         &self,
@@ -248,7 +250,7 @@ pub trait HostStoreTxManager<S: CommitStore>: CommitStoreAccessor<S> {
         tx_id: store::TxId,
         client_id: &str,
         prev_height: &Height,
-        _client_state: &Any,
+        client_state: &Any,
         consensus_state: &Any,
         prev_state_id: Option<&[u8]>,
     ) -> Result<()>
@@ -278,6 +280,15 @@ pub trait HostStoreTxManager<S: CommitStore>: CommitStoreAccessor<S> {
                 prev_height.revision_height()
             ))
         })?;
+        let expected_prev_state_id = gen_state_id_from_any(client_state, consensus_state)?.to_vec();
+        if expected_prev_state_id.as_slice() != prev_state_id {
+            return Err(Error::invalid_argument(format!(
+                "speculative base state_id does not match client_state/consensus_state: client_id={} height={}-{}",
+                client_id,
+                prev_height.revision_number(),
+                prev_height.revision_height()
+            )));
+        }
         let state_id_key = store_key::state_id_bytes(client_id, prev_height);
         let stored_state_id = self.use_mut_store(|store| store.tx_get(tx_id, &state_id_key))?;
         if stored_state_id.as_deref() != Some(prev_state_id) {

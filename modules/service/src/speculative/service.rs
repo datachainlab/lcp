@@ -770,21 +770,29 @@ mod tests {
         let enclave = FakeEnclave::new(Duration::from_millis(1));
         let app = AppService::<FakeEnclave, MemStore>::new("test-home", enclave);
         let service = SpeculativeService::new(1);
-        let req = with_explicit_base_state_payload(mk_req(
+        let mut req = with_explicit_base_state_payload(mk_req(
             "unit-0000",
             client_id,
             Some(Height::new(0, 10)),
             None,
         ));
         let prev_height = req.base_state.prev_height.expect("test base prev_height");
+        let prev_state_id = state_id_for_base_state(&req.base_state);
+        req.base_state.prev_state_id = Some(prev_state_id.clone());
         seed_canonical_base_state(&app, client_id, &req.base_state);
+        app.enclave.use_mut_store(|store| {
+            store.set(
+                lcp_types::store_key::state_id_bytes(client_id, &prev_height),
+                vec![9; 32],
+            );
+        });
         let result = SpeculativeUpdateClientResult {
             response: MsgUpdateClientResponse::default(),
             write_set: WriteSet::default(),
             base_state: req.base_state.clone(),
             observed_transition: ObservedStateTransition {
                 prev_height: Some(prev_height),
-                prev_state_id: Some(vec![9; 32]),
+                prev_state_id: Some(prev_state_id),
                 post_height: Height::new(0, 11),
                 post_state_id: vec![1; 32],
             },
@@ -809,6 +817,65 @@ mod tests {
         assert!(
             err.detail
                 .contains("stored speculative base state_id mismatch"),
+            "unexpected error detail: {}",
+            err.detail
+        );
+    }
+
+    #[test]
+    fn stitch_rejects_first_base_state_when_client_state_does_not_match_state_id() {
+        let client_id = "07-tendermint-0";
+        let enclave = FakeEnclave::new(Duration::from_millis(1));
+        let app = AppService::<FakeEnclave, MemStore>::new("test-home", enclave);
+        let service = SpeculativeService::new(1);
+        let mut req = with_explicit_base_state_payload(mk_req(
+            "unit-0000",
+            client_id,
+            Some(Height::new(0, 10)),
+            None,
+        ));
+        let prev_height = req.base_state.prev_height.expect("test base prev_height");
+        let prev_state_id = state_id_for_base_state(&req.base_state);
+        seed_canonical_base_state(&app, client_id, &req.base_state);
+        req.base_state.prev_state_id = Some(prev_state_id.clone());
+        req.base_state.client_state = Some(
+            Any {
+                type_url: "/ibc.mock.ClientState".to_string(),
+                value: vec![9],
+            }
+            .into(),
+        );
+        let result = SpeculativeUpdateClientResult {
+            response: MsgUpdateClientResponse::default(),
+            write_set: WriteSet::default(),
+            base_state: req.base_state.clone(),
+            observed_transition: ObservedStateTransition {
+                prev_height: Some(prev_height),
+                prev_state_id: Some(prev_state_id),
+                post_height: Height::new(0, 11),
+                post_state_id: vec![1; 32],
+            },
+        };
+
+        let err = service
+            .stitch_speculative_update_client_batch(
+                &app,
+                SpeculativeUpdateClientBatch {
+                    client_id: client_id.to_string(),
+                    units: vec![req],
+                },
+                SpeculativeUpdateClientBatchResult {
+                    client_id: client_id.to_string(),
+                    units: vec![result],
+                },
+            )
+            .expect_err("client_state inconsistent with state_id should be rejected");
+
+        assert_eq!(err.kind, SpeculativeBatchFailureKind::BaseStateMismatch);
+        assert_eq!(err.unit_id.as_deref(), Some("unit-0000"));
+        assert!(
+            err.detail
+                .contains("speculative base state_id does not match client_state/consensus_state"),
             "unexpected error detail: {}",
             err.detail
         );
