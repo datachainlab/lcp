@@ -2,9 +2,8 @@ use crate::service::{AppService, ElcService};
 use crate::speculative::scheduler::StreamingSpeculativeBatchInput;
 use crate::speculative::stream::{
     decode_speculative_batch_stream_init, encode_stitched_batch_result,
-    SpeculativeBatchStreamDecoder, SpeculativeHeaderMemoryBudget,
+    SpeculativeBatchStreamDecoder,
 };
-use crate::MAX_SPECULATIVE_BATCH_HEADER_BYTES;
 use enclave_api::{EnclaveProtoAPI, SpeculativeEnclaveCommandAPI};
 use lcp_proto::google::protobuf::Any;
 use lcp_proto::lcp::service::elc::v1::msg_update_client_stream_chunk::Chunk;
@@ -141,21 +140,26 @@ where
         let init = decode_speculative_batch_stream_init(&mut stream).await?;
         let client_id = init.client_id;
         // This channel is intentionally unbounded: resident header bytes are
-        // bounded by `SpeculativeHeaderMemoryBudget`, which is the actual
-        // backpressure mechanism for large speculative batch inputs.
+        // bounded by the service-global `SpeculativeHeaderMemoryBudget`, which
+        // is the actual backpressure mechanism for large speculative batch
+        // inputs across concurrent streams.
         let (tx, rx) = mpsc::channel();
         let app = self.app.clone();
         let speculative = self.speculative.clone();
         let scheduler_client_id = client_id.clone();
         let service = self.clone();
         let scheduler = tokio::task::spawn_blocking(move || {
-            service.with_client_update_serialized(&scheduler_client_id.clone(), || {
-                speculative.execute_speculative_update_client_stream(&app, scheduler_client_id, rx)
+            let (batch, results) = speculative.execute_speculative_update_client_stream_batch(
+                &app,
+                scheduler_client_id.clone(),
+                rx,
+            )?;
+            service.with_client_update_serialized(&scheduler_client_id, || {
+                speculative.stitch_executed_speculative_update_client_stream(&app, batch, results)
             })
         });
         let mut decoder = SpeculativeBatchStreamDecoder::new(client_id.clone());
-        let header_memory_budget =
-            SpeculativeHeaderMemoryBudget::new(MAX_SPECULATIVE_BATCH_HEADER_BYTES);
+        let header_memory_budget = self.speculative.header_memory_budget();
         let mut units = 0usize;
 
         loop {

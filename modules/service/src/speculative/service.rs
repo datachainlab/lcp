@@ -5,11 +5,12 @@ use super::scheduler::{
 };
 #[cfg(test)]
 use super::stream::ResidentSpeculativeUpdateClientRequest;
+use super::stream::SpeculativeHeaderMemoryBudget;
 use super::types::{
     ExplicitStateRef, ObservedStateTransition, SpeculativeBatchFailure,
     SpeculativeBatchFailureKind, SpeculativeUpdateClientBatch, SpeculativeUpdateClientBatchResult,
     SpeculativeUpdateClientRequest, SpeculativeUpdateClientResult, StitchedUpdateClientBatchResult,
-    StitchedUpdateClientResult,
+    StitchedUpdateClientResult, MAX_SPECULATIVE_BATCH_HEADER_BYTES,
 };
 use super::validation::{validate_linear_batch_requests, validate_linear_transitions};
 use crate::service::AppService;
@@ -28,6 +29,7 @@ use store::WriteSet;
 pub struct SpeculativeService {
     speculative_concurrency_limit: usize,
     speculative_request_permits: Arc<PermitGate>,
+    header_memory_budget: SpeculativeHeaderMemoryBudget,
 }
 
 impl Clone for SpeculativeService {
@@ -35,6 +37,7 @@ impl Clone for SpeculativeService {
         Self {
             speculative_concurrency_limit: self.speculative_concurrency_limit,
             speculative_request_permits: self.speculative_request_permits.clone(),
+            header_memory_budget: self.header_memory_budget.clone(),
         }
     }
 }
@@ -44,11 +47,18 @@ impl SpeculativeService {
         Self {
             speculative_concurrency_limit: speculative_concurrency_limit.max(1),
             speculative_request_permits: Arc::new(PermitGate::new(speculative_concurrency_limit)),
+            header_memory_budget: SpeculativeHeaderMemoryBudget::new(
+                MAX_SPECULATIVE_BATCH_HEADER_BYTES,
+            ),
         }
     }
 
     pub fn speculative_concurrency_limit(&self) -> usize {
         self.speculative_concurrency_limit
+    }
+
+    pub(crate) fn header_memory_budget(&self) -> SpeculativeHeaderMemoryBudget {
+        self.header_memory_budget.clone()
     }
 
     #[allow(clippy::result_large_err)]
@@ -175,6 +185,7 @@ impl SpeculativeService {
         })
     }
 
+    #[cfg(test)]
     pub(crate) fn execute_speculative_update_client_stream<E, S>(
         &self,
         app: &AppService<E, S>,
@@ -185,12 +196,46 @@ impl SpeculativeService {
         S: CommitStore + TxAccessor + Send + 'static,
         E: EnclaveProtoAPI<S> + SpeculativeEnclaveCommandAPI<S> + Send + Sync + 'static,
     {
+        let (batch, results) =
+            self.execute_speculative_update_client_stream_batch(app, client_id, units)?;
+        self.stitch_speculative_update_client_batch(app, batch, results)
+    }
+
+    pub(crate) fn execute_speculative_update_client_stream_batch<E, S>(
+        &self,
+        app: &AppService<E, S>,
+        client_id: String,
+        units: Receiver<StreamingSpeculativeBatchInput>,
+    ) -> core::result::Result<
+        (
+            SpeculativeUpdateClientBatch,
+            SpeculativeUpdateClientBatchResult,
+        ),
+        SpeculativeBatchFailure,
+    >
+    where
+        S: CommitStore + TxAccessor + Send + 'static,
+        E: EnclaveProtoAPI<S> + SpeculativeEnclaveCommandAPI<S> + Send + Sync + 'static,
+    {
         let batch_result = execute_stream_scheduler(self, app, client_id.clone(), units)?;
         let batch = SpeculativeUpdateClientBatch {
             client_id,
             units: batch_result.requests,
         };
-        self.stitch_speculative_update_client_batch(app, batch, batch_result.results)
+        Ok((batch, batch_result.results))
+    }
+
+    pub(crate) fn stitch_executed_speculative_update_client_stream<E, S>(
+        &self,
+        app: &AppService<E, S>,
+        batch: SpeculativeUpdateClientBatch,
+        results: SpeculativeUpdateClientBatchResult,
+    ) -> core::result::Result<StitchedUpdateClientBatchResult, SpeculativeBatchFailure>
+    where
+        S: CommitStore + TxAccessor + 'static,
+        E: EnclaveProtoAPI<S> + SpeculativeEnclaveCommandAPI<S> + 'static,
+    {
+        self.stitch_speculative_update_client_batch(app, batch, results)
     }
 }
 
@@ -254,6 +299,10 @@ mod tests {
     };
     use keymanager::EnclaveKeyManager;
     use lcp_proto::google::protobuf::Any;
+    use lcp_proto::lcp::service::elc::v1::{
+        msg_speculative_update_client_batch_stream_chunk::Chunk as BatchChunk,
+        MsgSpeculativeUpdateClientBatchStreamChunk, SpeculativeUpdateClientUnitHeaderChunk,
+    };
     use lcp_types::Height;
     use lcp_types::{EnclaveMetadata, Time};
     use sgx_types::{sgx_enclave_id_t, sgx_status_t};
@@ -492,6 +541,30 @@ mod tests {
                 client_state_value,
             );
         });
+    }
+
+    #[test]
+    fn speculative_service_clones_share_header_memory_budget() {
+        let runtime = tokio::runtime::Runtime::new().expect("tokio runtime");
+        let service = SpeculativeService::new(1);
+        let cloned = service.clone();
+        let left_budget = service.header_memory_budget();
+        let right_budget = cloned.header_memory_budget();
+        let chunk_msg = MsgSpeculativeUpdateClientBatchStreamChunk {
+            chunk: Some(BatchChunk::UnitHeaderChunk(
+                SpeculativeUpdateClientUnitHeaderChunk {
+                    unit_id: "unit-0000".to_string(),
+                    data: b"abc".to_vec(),
+                },
+            )),
+        };
+
+        let reservation = runtime
+            .block_on(left_budget.reserve_for_chunk(&chunk_msg))
+            .expect("header memory");
+        assert_eq!(right_budget.used_bytes(), 3);
+        drop(reservation);
+        assert_eq!(right_budget.used_bytes(), 0);
     }
 
     fn mk_result(
@@ -1099,6 +1172,7 @@ mod tests {
             None,
         ));
         req.base_state.prev_state_id = Some(state_id_for_base_state(&req.base_state));
+        req.update.signer = vec![0; 20];
         seed_canonical_base_state(&app, client_id, &req.base_state);
 
         tx.send(StreamingSpeculativeBatchInput::Unit(
@@ -1121,6 +1195,62 @@ mod tests {
             app.enclave.use_mut_store(|store| store.get(&[0])),
             None,
             "truncated stream must not apply speculative write set"
+        );
+    }
+
+    #[test]
+    fn streaming_speculative_batch_execution_does_not_apply_until_stitched() {
+        let client_id = "07-tendermint-0";
+        let enclave = FakeEnclave::new(Duration::from_millis(1));
+        let app = AppService::<FakeEnclave, MemStore>::new("test-home", enclave);
+        let service = SpeculativeService::new(1);
+        let (tx, rx) = std::sync::mpsc::sync_channel(2);
+        let worker_service = service.clone();
+        let worker_app = app.clone();
+        let client_id_for_worker = client_id.to_string();
+        let handle = thread::spawn(move || {
+            worker_service.execute_speculative_update_client_stream_batch(
+                &worker_app,
+                client_id_for_worker,
+                rx,
+            )
+        });
+
+        let mut req = with_explicit_base_state_payload(mk_req(
+            "unit-0000",
+            client_id,
+            Some(Height::new(0, 10)),
+            None,
+        ));
+        req.base_state.prev_state_id = Some(state_id_for_base_state(&req.base_state));
+        req.update.signer = vec![0; 20];
+        seed_canonical_base_state(&app, client_id, &req.base_state);
+
+        tx.send(StreamingSpeculativeBatchInput::Unit(
+            ResidentSpeculativeUpdateClientRequest::unmetered(req),
+        ))
+        .expect("send first unit");
+        tx.send(StreamingSpeculativeBatchInput::Complete)
+            .expect("send batch complete");
+        drop(tx);
+
+        let (batch, results) = handle
+            .join()
+            .expect("streaming worker thread")
+            .expect("streaming speculative batch execution");
+        assert_eq!(
+            app.enclave.use_mut_store(|store| store.get(&[0])),
+            None,
+            "execution alone must not apply speculative write set"
+        );
+
+        service
+            .stitch_executed_speculative_update_client_stream(&app, batch, results)
+            .expect("stitch executed stream");
+        assert_eq!(
+            app.enclave.use_mut_store(|store| store.get(&[0])),
+            Some(vec![0]),
+            "stitch should apply speculative write set"
         );
     }
 

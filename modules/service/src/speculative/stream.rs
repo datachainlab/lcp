@@ -15,7 +15,7 @@ use lcp_proto::lcp::service::elc::v1::{
     StitchedSpeculativeUpdateClientUnitResult as ProtoStitchedSpeculativeUpdateClientUnitResult,
 };
 use lcp_types::Height;
-use log::info;
+use log::debug;
 use sha2::Digest;
 use std::collections::HashSet;
 use std::sync::{Arc, Condvar, Mutex};
@@ -108,7 +108,7 @@ impl SpeculativeHeaderMemoryBudget {
     }
 
     #[cfg(test)]
-    fn used_bytes(&self) -> usize {
+    pub(crate) fn used_bytes(&self) -> usize {
         self.inner.state.lock().unwrap().used_bytes
     }
 }
@@ -214,7 +214,6 @@ pub(crate) struct SpeculativeBatchStreamDecoder {
     open_unit: Option<OpenSpeculativeUnit>,
     seen_unit_ids: HashSet<String>,
     closed: bool,
-    total_header_bytes: usize,
 }
 
 impl SpeculativeBatchStreamDecoder {
@@ -226,7 +225,6 @@ impl SpeculativeBatchStreamDecoder {
             open_unit: None,
             seen_unit_ids: HashSet::new(),
             closed: false,
-            total_header_bytes: 0,
         }
     }
 
@@ -269,7 +267,6 @@ impl SpeculativeBatchStreamDecoder {
                 append_speculative_unit_header_chunk(
                     &mut self.open_unit,
                     header_chunk,
-                    &mut self.total_header_bytes,
                     header_memory,
                 )?;
                 Ok(None)
@@ -324,7 +321,7 @@ pub(crate) async fn decode_speculative_batch_stream_init(
 ) -> Result<SpeculativeUpdateClientBatchStreamInit, Status> {
     match stream.message().await? {
         Some(chunk) => match chunk.chunk {
-            Some(BatchChunk::Init(init)) => Ok(init),
+            Some(BatchChunk::Init(init)) => validate_speculative_batch_stream_init(init),
             _ => Err(Status::invalid_argument(
                 "first message must be of type Init",
             )),
@@ -333,6 +330,18 @@ pub(crate) async fn decode_speculative_batch_stream_init(
             "expected Init message as the first message",
         )),
     }
+}
+
+#[allow(clippy::result_large_err)]
+fn validate_speculative_batch_stream_init(
+    init: SpeculativeUpdateClientBatchStreamInit,
+) -> Result<SpeculativeUpdateClientBatchStreamInit, Status> {
+    if init.client_id.is_empty() {
+        return Err(Status::invalid_argument(
+            "speculative batch stream init requires client_id",
+        ));
+    }
+    Ok(init)
 }
 
 #[allow(clippy::result_large_err)]
@@ -361,7 +370,6 @@ fn validate_speculative_unit_init(
 fn append_speculative_unit_header_chunk(
     open_unit: &mut Option<OpenSpeculativeUnit>,
     header_chunk: SpeculativeUpdateClientUnitHeaderChunk,
-    total_header_bytes: &mut usize,
     header_memory: SpeculativeHeaderMemoryReservation,
 ) -> Result<(), Status> {
     if header_chunk.data.is_empty() {
@@ -389,9 +397,7 @@ fn append_speculative_unit_header_chunk(
         )));
     }
 
-    let chunk_len = header_chunk.data.len();
     open.header_bytes.extend(header_chunk.data);
-    *total_header_bytes += chunk_len;
     open.header_memory.merge(header_memory);
     validate_speculative_unit_header_payload_len(&open.init.unit_id, open.header_bytes.len())?;
     Ok(())
@@ -434,7 +440,7 @@ fn close_speculative_unit(
             open.init.unit_id
         )));
     }
-    info!(
+    debug!(
         "received speculative update client unit: client_id={} unit_id={} header_bytes={} header_sha256={}",
         client_id,
         open.init.unit_id,
@@ -549,10 +555,10 @@ fn encode_observed_transition(transition: ObservedStateTransition) -> ProtoObser
 #[cfg(test)]
 mod tests {
     use super::{
-        decode_speculative_batch, validate_speculative_unit_header_payload_len,
-        DecodedSpeculativeBatchRequest, SpeculativeBatchStreamDecoder,
-        SpeculativeHeaderMemoryBudget, SpeculativeHeaderMemoryReservation,
-        MAX_SPECULATIVE_BATCH_HEADER_CHUNK_BYTES,
+        decode_speculative_batch, validate_speculative_batch_stream_init,
+        validate_speculative_unit_header_payload_len, DecodedSpeculativeBatchRequest,
+        SpeculativeBatchStreamDecoder, SpeculativeHeaderMemoryBudget,
+        SpeculativeHeaderMemoryReservation, MAX_SPECULATIVE_BATCH_HEADER_CHUNK_BYTES,
     };
     use crate::{
         ExplicitStateRef, SpeculativeUpdateClientRequest, MAX_SPECULATIVE_BATCH_UNITS,
@@ -707,6 +713,15 @@ mod tests {
         )
         .unwrap_err();
         assert_resource_exhausted_contains(err, "speculative unit header payload too large");
+    }
+
+    #[test]
+    fn validate_speculative_batch_stream_init_rejects_empty_client_id() {
+        let err = validate_speculative_batch_stream_init(SpeculativeUpdateClientBatchStreamInit {
+            client_id: String::new(),
+        })
+        .unwrap_err();
+        assert_invalid_argument_contains(err, "requires client_id");
     }
 
     #[test]

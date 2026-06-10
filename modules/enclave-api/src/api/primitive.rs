@@ -87,18 +87,20 @@ fn execute_prepared_command(
     cmd: Command,
     tx_id: TxId,
 ) -> Result<CommandResponse> {
-    let current_timestamp = Time::now();
-    let cctx = match cmd.get_enclave_key() {
-        Some(addr) => {
-            let ski = enclave.get_key_manager().load(addr)?;
-            CommandContext::new(current_timestamp, Some(ski.sealed_ek), tx_id)
-        }
-        None => CommandContext::new(current_timestamp, None, tx_id),
-    };
+    enclave.with_ecall_permit(|| {
+        let current_timestamp = Time::now();
+        let cctx = match cmd.get_enclave_key() {
+            Some(addr) => {
+                let ski = enclave.get_key_manager().load(addr)?;
+                CommandContext::new(current_timestamp, Some(ski.sealed_ek), tx_id)
+            }
+            None => CommandContext::new(current_timestamp, None, tx_id),
+        };
 
-    let ecmd = ECallCommand::new(cctx, cmd);
-    debug!("try to execute command: {:?}", ecmd);
-    enclave.with_ecall_permit(|| raw_execute_command(enclave.get_eid(), ecmd))
+        let ecmd = ECallCommand::new(cctx, cmd);
+        debug!("try to execute command: {:?}", ecmd);
+        raw_execute_command(enclave.get_eid(), ecmd)
+    })
 }
 
 pub(crate) fn raw_execute_command(

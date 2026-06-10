@@ -142,13 +142,21 @@ impl CommitStore for InnerMemStore {
     }
 
     fn begin(&mut self, tx: &<Self::Tx as CreatedTx>::PreparedTx) -> Result<()> {
-        assert!(self.running_tx_kind.is_none());
+        if self.running_tx_kind.is_some() {
+            return Err(crate::Error::begin_tx(
+                "MemStore supports only one running transaction".to_string(),
+            ));
+        }
         self.running_tx_kind = Some(tx.kind);
         Ok(())
     }
 
-    fn commit(&mut self, _tx: <Self::Tx as CreatedTx>::PreparedTx) -> Result<()> {
-        assert!(self.running_tx_kind.is_some());
+    fn commit(&mut self, tx: <Self::Tx as CreatedTx>::PreparedTx) -> Result<()> {
+        if self.running_tx_kind != Some(tx.kind) {
+            return Err(crate::Error::commit_tx(
+                "MemStore transaction kind mismatch or no running transaction".to_string(),
+            ));
+        }
         self.running_tx_kind = None;
         let data = HashMap::<Vec<u8>, Option<Vec<u8>>>::default();
         let uncommitted_data = std::mem::replace(&mut self.uncommitted_data, data);
@@ -162,20 +170,26 @@ impl CommitStore for InnerMemStore {
     }
 
     fn take_write_set(&mut self, tx: <Self::Tx as CreatedTx>::PreparedTx) -> Result<WriteSet> {
-        assert!(self.running_tx_kind.is_some());
-        self.running_tx_kind = None;
-        let data = HashMap::<Vec<u8>, Option<Vec<u8>>>::default();
-        let uncommitted_data = std::mem::replace(&mut self.uncommitted_data, data);
+        if self.running_tx_kind != Some(tx.kind) {
+            return Err(crate::Error::commit_tx(
+                "MemStore transaction kind mismatch or no running transaction".to_string(),
+            ));
+        }
         if tx.kind != MemTxKind::Speculative {
             return Err(crate::Error::not_supported_operation(
                 "take_write_set is only available for speculative transactions".to_string(),
             ));
         }
+        self.running_tx_kind = None;
+        let data = HashMap::<Vec<u8>, Option<Vec<u8>>>::default();
+        let uncommitted_data = std::mem::replace(&mut self.uncommitted_data, data);
         Ok(uncommitted_data.into_iter().collect())
     }
 
-    fn rollback(&mut self, _tx: <Self::Tx as CreatedTx>::PreparedTx) {
-        assert!(self.running_tx_kind.is_some());
+    fn rollback(&mut self, tx: <Self::Tx as CreatedTx>::PreparedTx) {
+        if self.running_tx_kind != Some(tx.kind) {
+            return;
+        }
         self.running_tx_kind = None;
         self.uncommitted_data.clear();
     }
@@ -226,6 +240,22 @@ mod tests {
         store.tx_set(tx.get_id(), key(1), value(1)).unwrap();
 
         assert!(store.take_write_set(tx).is_err());
+        assert_eq!(store.get(&key(1)), Some(value(1)));
+    }
+
+    #[test]
+    fn begin_rejects_overlapping_transactions_without_panicking() {
+        let mut store = InnerMemStore::default();
+        let tx1 = store.create_transaction(None).unwrap().prepare().unwrap();
+        let tx2 = store
+            .create_speculative_transaction()
+            .unwrap()
+            .prepare()
+            .unwrap();
+
+        store.begin(&tx1).unwrap();
+        assert!(store.begin(&tx2).is_err());
+        store.rollback(tx1);
         assert_eq!(store.get(&key(1)), None);
     }
 
