@@ -20,6 +20,11 @@ pub(crate) struct StreamingSpeculativeBatchResult {
     pub(crate) results: SpeculativeUpdateClientBatchResult,
 }
 
+pub(crate) enum StreamingSpeculativeBatchInput {
+    Unit(ResidentSpeculativeUpdateClientRequest),
+    Complete,
+}
+
 fn sha256_hex(bytes: &[u8]) -> String {
     hex::encode(sha2::Sha256::digest(bytes))
 }
@@ -39,7 +44,7 @@ pub(crate) fn execute_speculative_update_client_stream<E, S>(
     speculative: &SpeculativeService,
     app: &AppService<E, S>,
     client_id: String,
-    units: Receiver<ResidentSpeculativeUpdateClientRequest>,
+    inputs: Receiver<StreamingSpeculativeBatchInput>,
 ) -> core::result::Result<StreamingSpeculativeBatchResult, SpeculativeBatchFailure>
 where
     S: CommitStore + TxAccessor + Send + 'static,
@@ -62,7 +67,12 @@ where
             scope.spawn(move || streaming_speculative_worker(speculative, app, shared));
         }
 
-        for unit in units {
+        let mut input_completed = false;
+        for input in inputs {
+            let StreamingSpeculativeBatchInput::Unit(unit) = input else {
+                input_completed = true;
+                break;
+            };
             let mut state = shared.state.lock().unwrap();
             if state.failure.is_some() {
                 break;
@@ -77,6 +87,15 @@ where
         }
 
         let mut state = shared.state.lock().unwrap();
+        if !input_completed {
+            state
+                .failure
+                .get_or_insert_with(|| SpeculativeBatchFailure {
+                    kind: SpeculativeBatchFailureKind::BatchSizeMismatch,
+                    unit_id: None,
+                    detail: "speculative batch input stream closed before batch_end".to_string(),
+                });
+        }
         state.closed = true;
         shared.ready.notify_all();
         while state.failure.is_none() && state.has_unfinished_work() {

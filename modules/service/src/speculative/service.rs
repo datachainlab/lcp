@@ -1,5 +1,9 @@
 use super::permit::PermitGate;
-use super::scheduler::execute_speculative_update_client_stream as execute_stream_scheduler;
+use super::scheduler::{
+    execute_speculative_update_client_stream as execute_stream_scheduler,
+    StreamingSpeculativeBatchInput,
+};
+#[cfg(test)]
 use super::stream::ResidentSpeculativeUpdateClientRequest;
 use super::types::{
     ExplicitStateRef, ObservedStateTransition, SpeculativeBatchFailure,
@@ -175,7 +179,7 @@ impl SpeculativeService {
         &self,
         app: &AppService<E, S>,
         client_id: String,
-        units: Receiver<ResidentSpeculativeUpdateClientRequest>,
+        units: Receiver<StreamingSpeculativeBatchInput>,
     ) -> core::result::Result<StitchedUpdateClientBatchResult, SpeculativeBatchFailure>
     where
         S: CommitStore + TxAccessor + Send + 'static,
@@ -1011,8 +1015,10 @@ mod tests {
         });
         first_req.base_state.prev_state_id = Some(state_id_for_base_state(&first_req.base_state));
         seed_canonical_base_state(&app, client_id, &first_req.base_state);
-        tx.send(ResidentSpeculativeUpdateClientRequest::unmetered(first_req))
-            .expect("send first unit");
+        tx.send(StreamingSpeculativeBatchInput::Unit(
+            ResidentSpeculativeUpdateClientRequest::unmetered(first_req),
+        ))
+        .expect("send first unit");
 
         for _ in 0..100 {
             if app.enclave.observed_max_in_flight() >= 1 {
@@ -1025,35 +1031,39 @@ mod tests {
             "expected first unit to start before input stream closes"
         );
 
-        tx.send(ResidentSpeculativeUpdateClientRequest::unmetered(
-            with_explicit_base_state_payload(SpeculativeUpdateClientRequest {
-                unit_id: "unit-0001".to_string(),
-                update: MsgUpdateClient {
-                    client_id: client_id.to_string(),
-                    signer: {
-                        let mut signer = vec![0; 20];
-                        signer[19] = 1;
-                        signer
+        tx.send(StreamingSpeculativeBatchInput::Unit(
+            ResidentSpeculativeUpdateClientRequest::unmetered(with_explicit_base_state_payload(
+                SpeculativeUpdateClientRequest {
+                    unit_id: "unit-0001".to_string(),
+                    update: MsgUpdateClient {
+                        client_id: client_id.to_string(),
+                        signer: {
+                            let mut signer = vec![0; 20];
+                            signer[19] = 1;
+                            signer
+                        },
+                        header: Some(Any {
+                            type_url: "/ibc.mock.Header".to_string(),
+                            value: vec![2],
+                        }),
+                        ..Default::default()
                     },
-                    header: Some(Any {
-                        type_url: "/ibc.mock.Header".to_string(),
-                        value: vec![2],
-                    }),
-                    ..Default::default()
+                    base_state: ExplicitStateRef {
+                        prev_height: Some(Height::new(0, 11)),
+                        prev_state_id: Some({
+                            let mut prev_state_id = vec![0; 32];
+                            prev_state_id[31] = 1;
+                            prev_state_id
+                        }),
+                        client_state: None,
+                        consensus_state: None,
+                    },
                 },
-                base_state: ExplicitStateRef {
-                    prev_height: Some(Height::new(0, 11)),
-                    prev_state_id: Some({
-                        let mut prev_state_id = vec![0; 32];
-                        prev_state_id[31] = 1;
-                        prev_state_id
-                    }),
-                    client_state: None,
-                    consensus_state: None,
-                },
-            }),
+            )),
         ))
         .expect("send second unit");
+        tx.send(StreamingSpeculativeBatchInput::Complete)
+            .expect("send batch complete");
         drop(tx);
 
         let result = handle
@@ -1062,6 +1072,56 @@ mod tests {
             .expect("streaming speculative batch");
         assert_eq!(result.units.len(), 2);
         assert_eq!(app.enclave.observed_max_in_flight(), 1);
+    }
+
+    #[test]
+    fn streaming_speculative_batch_rejects_channel_close_without_complete() {
+        let client_id = "07-tendermint-0";
+        let enclave = FakeEnclave::new(Duration::from_millis(1));
+        let app = AppService::<FakeEnclave, MemStore>::new("test-home", enclave);
+        let service = SpeculativeService::new(1);
+        let (tx, rx) = std::sync::mpsc::sync_channel(1);
+        let worker_service = service.clone();
+        let worker_app = app.clone();
+        let client_id_for_worker = client_id.to_string();
+        let handle = thread::spawn(move || {
+            worker_service.execute_speculative_update_client_stream(
+                &worker_app,
+                client_id_for_worker,
+                rx,
+            )
+        });
+
+        let mut req = with_explicit_base_state_payload(mk_req(
+            "unit-0000",
+            client_id,
+            Some(Height::new(0, 10)),
+            None,
+        ));
+        req.base_state.prev_state_id = Some(state_id_for_base_state(&req.base_state));
+        seed_canonical_base_state(&app, client_id, &req.base_state);
+
+        tx.send(StreamingSpeculativeBatchInput::Unit(
+            ResidentSpeculativeUpdateClientRequest::unmetered(req),
+        ))
+        .expect("send first unit");
+        drop(tx);
+
+        let err = handle
+            .join()
+            .expect("streaming worker thread")
+            .expect_err("missing batch completion should fail");
+        assert_eq!(err.kind, SpeculativeBatchFailureKind::BatchSizeMismatch);
+        assert!(
+            err.detail.contains("closed before batch_end"),
+            "unexpected error detail: {}",
+            err.detail
+        );
+        assert_eq!(
+            app.enclave.use_mut_store(|store| store.get(&[0])),
+            None,
+            "truncated stream must not apply speculative write set"
+        );
     }
 
     #[test]
@@ -1082,8 +1142,8 @@ mod tests {
             )
         });
 
-        tx.send(ResidentSpeculativeUpdateClientRequest::unmetered(
-            SpeculativeUpdateClientRequest {
+        tx.send(StreamingSpeculativeBatchInput::Unit(
+            ResidentSpeculativeUpdateClientRequest::unmetered(SpeculativeUpdateClientRequest {
                 unit_id: "unit-0000".to_string(),
                 update: MsgUpdateClient {
                     client_id: client_id.to_string(),
@@ -1100,7 +1160,7 @@ mod tests {
                     client_state: None,
                     consensus_state: None,
                 },
-            },
+            }),
         ))
         .expect("send first unit");
         drop(tx);
@@ -1172,9 +1232,13 @@ mod tests {
         }
         seed_canonical_base_state(&app, client_id, &requests[0].base_state);
         for req in requests {
-            tx.send(ResidentSpeculativeUpdateClientRequest::unmetered(req))
-                .expect("send unit");
+            tx.send(StreamingSpeculativeBatchInput::Unit(
+                ResidentSpeculativeUpdateClientRequest::unmetered(req),
+            ))
+            .expect("send unit");
         }
+        tx.send(StreamingSpeculativeBatchInput::Complete)
+            .expect("send batch complete");
         drop(tx);
 
         let result = handle
