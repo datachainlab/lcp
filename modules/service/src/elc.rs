@@ -34,7 +34,15 @@ where
         &self,
         request: Request<MsgCreateClient>,
     ) -> Result<Response<MsgCreateClientResponse>, Status> {
-        match self.app.enclave.proto_create_client(request.into_inner()) {
+        let inner = request.into_inner();
+        let app = self.app.clone();
+        let result = tokio::task::spawn_blocking(move || {
+            app.ecall_pool
+                .run(move || app.enclave.proto_create_client(inner))
+        })
+        .await
+        .map_err(|e| Status::aborted(format!("create client worker failed: {e}")))?;
+        match result {
             Ok(res) => Ok(Response::new(res)),
             Err(e) => Err(Status::aborted(e.to_string())),
         }
@@ -48,8 +56,13 @@ where
         let client_id = msg.client_id.clone();
         let service = self.clone();
         let result = tokio::task::spawn_blocking(move || {
-            service.with_client_update_serialized(&client_id, || {
-                service.app.enclave.proto_update_client(msg)
+            let pool = service.app.ecall_pool.clone();
+            let enclave = service.app.enclave.clone();
+            service.with_client_update_serialized(&client_id, move || {
+                // The blocking-pool thread holds the per-client lock; the
+                // actual ECALL runs on an EcallPool worker so cumulative
+                // TCS bindings stay bounded.
+                pool.run(move || enclave.proto_update_client(msg))
             })
         })
         .await
@@ -120,8 +133,10 @@ where
         let client_id = msg.client_id.clone();
         let service = self.clone();
         let result = tokio::task::spawn_blocking(move || {
-            service.with_client_update_serialized(&client_id, || {
-                service.app.enclave.proto_update_client(msg)
+            let pool = service.app.ecall_pool.clone();
+            let enclave = service.app.enclave.clone();
+            service.with_client_update_serialized(&client_id, move || {
+                pool.run(move || enclave.proto_update_client(msg))
             })
         })
         .await
@@ -231,11 +246,15 @@ where
         &self,
         request: Request<MsgAggregateMessages>,
     ) -> Result<Response<MsgAggregateMessagesResponse>, Status> {
-        match self
-            .app
-            .enclave
-            .proto_aggregate_messages(request.into_inner())
-        {
+        let inner = request.into_inner();
+        let app = self.app.clone();
+        let result = tokio::task::spawn_blocking(move || {
+            app.ecall_pool
+                .run(move || app.enclave.proto_aggregate_messages(inner))
+        })
+        .await
+        .map_err(|e| Status::aborted(format!("aggregate messages worker failed: {e}")))?;
+        match result {
             Ok(res) => Ok(Response::new(res)),
             Err(e) => Err(Status::aborted(e.to_string())),
         }
@@ -245,11 +264,15 @@ where
         &self,
         request: Request<MsgVerifyMembership>,
     ) -> Result<Response<MsgVerifyMembershipResponse>, Status> {
-        match self
-            .app
-            .enclave
-            .proto_verify_membership(request.into_inner())
-        {
+        let inner = request.into_inner();
+        let app = self.app.clone();
+        let result = tokio::task::spawn_blocking(move || {
+            app.ecall_pool
+                .run(move || app.enclave.proto_verify_membership(inner))
+        })
+        .await
+        .map_err(|e| Status::aborted(format!("verify membership worker failed: {e}")))?;
+        match result {
             Ok(res) => Ok(Response::new(res)),
             Err(e) => Err(Status::aborted(e.to_string())),
         }
@@ -259,11 +282,15 @@ where
         &self,
         request: Request<MsgVerifyNonMembership>,
     ) -> Result<Response<MsgVerifyNonMembershipResponse>, Status> {
-        match self
-            .app
-            .enclave
-            .proto_verify_non_membership(request.into_inner())
-        {
+        let inner = request.into_inner();
+        let app = self.app.clone();
+        let result = tokio::task::spawn_blocking(move || {
+            app.ecall_pool
+                .run(move || app.enclave.proto_verify_non_membership(inner))
+        })
+        .await
+        .map_err(|e| Status::aborted(format!("verify non-membership worker failed: {e}")))?;
+        match result {
             Ok(res) => Ok(Response::new(res)),
             Err(e) => Err(Status::aborted(e.to_string())),
         }
@@ -273,14 +300,22 @@ where
 #[tonic::async_trait]
 impl<E, S> Query for AppService<E, S>
 where
-    S: CommitStore + TxAccessor + 'static,
-    E: EnclaveProtoAPI<S> + 'static,
+    S: CommitStore + TxAccessor + Send + 'static,
+    E: EnclaveProtoAPI<S> + Send + Sync + 'static,
 {
     async fn client(
         &self,
         request: Request<QueryClientRequest>,
     ) -> Result<Response<QueryClientResponse>, Status> {
-        match self.enclave.proto_query_client(request.into_inner()) {
+        let inner = request.into_inner();
+        let app = self.clone();
+        let result = tokio::task::spawn_blocking(move || {
+            app.ecall_pool
+                .run(move || app.enclave.proto_query_client(inner))
+        })
+        .await
+        .map_err(|e| Status::aborted(format!("query client worker failed: {e}")))?;
+        match result {
             Ok(res) => Ok(Response::new(res)),
             Err(e) => Err(Status::aborted(e.to_string())),
         }

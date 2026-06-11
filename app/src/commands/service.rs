@@ -35,13 +35,17 @@ pub struct Start {
         help = "Worker thread number the tokio `Runtime` will use"
     )]
     pub threads: Option<usize>,
-    /// Maximum concurrent enclave ECALLs across serial and speculative paths.
-    /// Set this to match the loaded enclave's `TCSNum`; the default assumes a
-    /// conservative TCS budget of 4.
+    /// Size of the dedicated ECALL worker pool that owns the set of OS
+    /// threads allowed to enter the enclave. Under `TCSPolicy=BIND` the
+    /// Intel SGX SDK pins one TCS to each ECALL-issuing thread for the
+    /// thread's lifetime, so this value also bounds the cumulative number
+    /// of TCS bindings created by the service. Set this to a value strictly
+    /// less than the enclave's `TCSNum` to leave headroom for the SDK
+    /// runtime and any speculative path that spawns ad-hoc workers.
     #[clap(
         long = "max-enclave-concurrency",
         default_value_t = 4,
-        help = "Maximum concurrent enclave ECALLs"
+        help = "Size of the dedicated ECALL worker pool"
     )]
     pub max_enclave_concurrency: usize,
     /// Maximum concurrent speculative update-client requests.
@@ -89,7 +93,12 @@ impl ServiceCmd {
                         enclave_parallelism
                     );
                 }
-                let srv = ElcService::new(opts.get_home(), enclave, speculative_concurrency_limit);
+                let srv = ElcService::new(
+                    opts.get_home(),
+                    enclave,
+                    speculative_concurrency_limit,
+                    enclave_parallelism,
+                );
 
                 info!(
                     "start service: addr={addr} mrenclave={mrenclave} speculative_concurrency_limit={} enclave_parallelism={}",

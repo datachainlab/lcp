@@ -662,7 +662,7 @@ mod tests {
     fn stitch_rejects_first_base_state_that_is_not_in_store() {
         let client_id = "07-tendermint-0";
         let enclave = FakeEnclave::new(Duration::from_millis(1));
-        let app = AppService::<FakeEnclave, MemStore>::new("test-home", enclave);
+        let app = AppService::<FakeEnclave, MemStore>::new("test-home", enclave, 1);
         let service = SpeculativeService::new(1);
         let req = with_explicit_base_state_payload(mk_req(
             "unit-0000",
@@ -718,7 +718,7 @@ mod tests {
     fn stitch_accepts_first_base_state_when_stored_consensus_and_state_id_match() {
         let client_id = "07-tendermint-0";
         let enclave = FakeEnclave::new(Duration::from_millis(1));
-        let app = AppService::<FakeEnclave, MemStore>::new("test-home", enclave);
+        let app = AppService::<FakeEnclave, MemStore>::new("test-home", enclave, 1);
         let service = SpeculativeService::new(1);
         let mut req = with_explicit_base_state_payload(mk_req(
             "unit-0000",
@@ -761,7 +761,7 @@ mod tests {
     fn stitch_rejects_first_base_state_when_prev_state_id_is_missing() {
         let client_id = "07-tendermint-0";
         let enclave = FakeEnclave::new(Duration::from_millis(1));
-        let app = AppService::<FakeEnclave, MemStore>::new("test-home", enclave);
+        let app = AppService::<FakeEnclave, MemStore>::new("test-home", enclave, 1);
         let service = SpeculativeService::new(1);
         let req = with_explicit_base_state_payload(mk_req(
             "unit-0000",
@@ -811,7 +811,7 @@ mod tests {
     fn stitch_rejects_first_base_state_when_stored_state_id_is_missing() {
         let client_id = "07-tendermint-0";
         let enclave = FakeEnclave::new(Duration::from_millis(1));
-        let app = AppService::<FakeEnclave, MemStore>::new("test-home", enclave);
+        let app = AppService::<FakeEnclave, MemStore>::new("test-home", enclave, 1);
         let service = SpeculativeService::new(1);
         let mut req = with_explicit_base_state_payload(mk_req(
             "unit-0000",
@@ -869,7 +869,7 @@ mod tests {
     fn stitch_rejects_first_base_state_when_state_id_mismatch() {
         let client_id = "07-tendermint-0";
         let enclave = FakeEnclave::new(Duration::from_millis(1));
-        let app = AppService::<FakeEnclave, MemStore>::new("test-home", enclave);
+        let app = AppService::<FakeEnclave, MemStore>::new("test-home", enclave, 1);
         let service = SpeculativeService::new(1);
         let mut req = with_explicit_base_state_payload(mk_req(
             "unit-0000",
@@ -927,7 +927,7 @@ mod tests {
     fn stitch_rejects_first_base_state_when_client_state_does_not_match_state_id() {
         let client_id = "07-tendermint-0";
         let enclave = FakeEnclave::new(Duration::from_millis(1));
-        let app = AppService::<FakeEnclave, MemStore>::new("test-home", enclave);
+        let app = AppService::<FakeEnclave, MemStore>::new("test-home", enclave, 1);
         let service = SpeculativeService::new(1);
         let mut req = with_explicit_base_state_payload(mk_req(
             "unit-0000",
@@ -994,7 +994,7 @@ mod tests {
     fn stitch_rejects_first_base_state_when_canonical_client_state_advanced() {
         let client_id = "07-tendermint-0";
         let enclave = FakeEnclave::new(Duration::from_millis(1));
-        let app = AppService::<FakeEnclave, MemStore>::new("test-home", enclave);
+        let app = AppService::<FakeEnclave, MemStore>::new("test-home", enclave, 1);
         let service = SpeculativeService::new(1);
         let mut req = with_explicit_base_state_payload(mk_req(
             "unit-0000",
@@ -1054,7 +1054,7 @@ mod tests {
     fn streaming_speculative_batch_executes_before_input_closes() {
         let client_id = "07-tendermint-0";
         let enclave = FakeEnclave::new(Duration::from_millis(100));
-        let app = AppService::<FakeEnclave, MemStore>::new("test-home", enclave);
+        let app = AppService::<FakeEnclave, MemStore>::new("test-home", enclave, 1);
         let service = SpeculativeService::new(1);
         let (tx, rx) = std::sync::mpsc::sync_channel(2);
         let worker_service = service.clone();
@@ -1151,7 +1151,7 @@ mod tests {
     fn streaming_speculative_batch_rejects_channel_close_without_complete() {
         let client_id = "07-tendermint-0";
         let enclave = FakeEnclave::new(Duration::from_millis(1));
-        let app = AppService::<FakeEnclave, MemStore>::new("test-home", enclave);
+        let app = AppService::<FakeEnclave, MemStore>::new("test-home", enclave, 1);
         let service = SpeculativeService::new(1);
         let (tx, rx) = std::sync::mpsc::sync_channel(1);
         let worker_service = service.clone();
@@ -1202,7 +1202,7 @@ mod tests {
     fn streaming_speculative_batch_execution_does_not_apply_until_stitched() {
         let client_id = "07-tendermint-0";
         let enclave = FakeEnclave::new(Duration::from_millis(1));
-        let app = AppService::<FakeEnclave, MemStore>::new("test-home", enclave);
+        let app = AppService::<FakeEnclave, MemStore>::new("test-home", enclave, 1);
         let service = SpeculativeService::new(1);
         let (tx, rx) = std::sync::mpsc::sync_channel(2);
         let worker_service = service.clone();
@@ -1258,7 +1258,7 @@ mod tests {
     fn streaming_speculative_batch_rejects_incomplete_base_state() {
         let client_id = "07-tendermint-0";
         let enclave = FakeEnclave::new(Duration::from_millis(1));
-        let app = AppService::<FakeEnclave, MemStore>::new("test-home", enclave);
+        let app = AppService::<FakeEnclave, MemStore>::new("test-home", enclave, 1);
         let service = SpeculativeService::new(2);
         let (tx, rx) = std::sync::mpsc::sync_channel(2);
         let worker_service = service.clone();
@@ -1312,7 +1312,7 @@ mod tests {
     fn streaming_speculative_batch_parallelizes_complete_base_state_units() {
         let client_id = "07-tendermint-0";
         let enclave = FakeEnclave::new(Duration::from_millis(100));
-        let app = AppService::<FakeEnclave, MemStore>::new("test-home", enclave);
+        let app = AppService::<FakeEnclave, MemStore>::new("test-home", enclave, 1);
         let service = SpeculativeService::new(3);
         let (tx, rx) = std::sync::mpsc::sync_channel(3);
         let worker_service = service.clone();
