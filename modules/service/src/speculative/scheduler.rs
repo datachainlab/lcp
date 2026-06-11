@@ -258,9 +258,22 @@ fn streaming_speculative_worker<E, S>(
                 header_bytes
             );
         }
+        // Dispatch the actual ECALL onto the long-lived EcallPool worker.
+        // This scope thread holds the per-stream `speculative_request_permit`
+        // and `in_flight` slot, then blocks on `pool.run` waiting for the pool
+        // worker's result. The ECALL itself runs on the pool worker thread,
+        // whose TCS binding is stable across the lifetime of the LCP service
+        // process. The scope thread itself never enters the enclave and
+        // therefore does not contribute to TCS occupancy.
+        let pool = app.ecall_pool.clone();
+        let speculative_inner = speculative.clone();
+        let app_inner = app.clone();
+        let req_clone = req.request().clone();
         let result = speculative
             .with_speculative_request_permit(|| {
-                speculative.speculative_update_client(app, req.request().clone())
+                pool.run(move || {
+                    speculative_inner.speculative_update_client(&app_inner, req_clone)
+                })
             })
             .map_err(|e| SpeculativeBatchFailure {
                 kind: SpeculativeBatchFailureKind::SpeculativeExecutionFailed,

@@ -1312,7 +1312,10 @@ mod tests {
     fn streaming_speculative_batch_parallelizes_complete_base_state_units() {
         let client_id = "07-tendermint-0";
         let enclave = FakeEnclave::new(Duration::from_millis(100));
-        let app = AppService::<FakeEnclave, MemStore>::new("test-home", enclave, 1);
+        // EcallPool size must be at least as large as the per-stream
+        // speculative cap or the pool becomes the effective bottleneck and
+        // the in-flight observation below will not exceed pool size.
+        let app = AppService::<FakeEnclave, MemStore>::new("test-home", enclave, 3);
         let service = SpeculativeService::new(3);
         let (tx, rx) = std::sync::mpsc::sync_channel(3);
         let worker_service = service.clone();
