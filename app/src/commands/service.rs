@@ -35,13 +35,14 @@ pub struct Start {
         help = "Worker thread number the tokio `Runtime` will use"
     )]
     pub threads: Option<usize>,
-    /// Size of the dedicated ECALL worker pool that owns the set of OS
-    /// threads allowed to enter the enclave. Under `TCSPolicy=BIND` the
-    /// Intel SGX SDK pins one TCS to each ECALL-issuing thread for the
-    /// thread's lifetime, so this value also bounds the cumulative number
-    /// of TCS bindings created by the service. Set this to a value strictly
-    /// less than the enclave's `TCSNum` to leave headroom for the SDK
-    /// runtime and any speculative path that spawns ad-hoc workers.
+    /// Size of the dedicated ECALL worker pool. All enclave ECALL execution
+    /// flows through this pool — both serial gRPC handlers and speculative
+    /// scheduler workers — so this value is the single source of truth for
+    /// concurrent ECALL count and cumulative TCS bindings under
+    /// `TCSPolicy=BIND`. Set this to a value at most equal to the loaded
+    /// enclave's `TCSNum`; leaving at least one TCS for the SDK runtime
+    /// (i.e. `--max-enclave-concurrency = TCSNum - 1`) is the conservative
+    /// default.
     #[clap(
         long = "max-enclave-concurrency",
         default_value_t = 4,
@@ -70,11 +71,10 @@ impl ServiceCmd {
             Self::Start(cmd) => {
                 let addr = cmd.address.parse()?;
                 let enclave_parallelism = cmd.max_enclave_concurrency.max(1);
-                let enclave = enclave_loader.load_with_ecall_concurrency(
+                let enclave = enclave_loader.load(
                     opts,
                     cmd.enclave.path.as_ref(),
                     cmd.enclave.is_debug(),
-                    enclave_parallelism,
                 )?;
                 let metadata = enclave.metadata()?;
                 let mrenclave = metadata.mrenclave().to_hex_string();
@@ -88,7 +88,7 @@ impl ServiceCmd {
                 let speculative_concurrency_limit = cmd.max_speculative_concurrency.max(1);
                 if speculative_concurrency_limit > enclave_parallelism {
                     warn!(
-                        "max-speculative-concurrency ({}) is greater than max-enclave-concurrency ({}); speculative workers above the enclave limit will wait on the ECALL gate",
+                        "max-speculative-concurrency ({}) is greater than max-enclave-concurrency ({}); speculative workers above the enclave limit will block waiting for an EcallPool slot",
                         speculative_concurrency_limit,
                         enclave_parallelism
                     );

@@ -5,7 +5,7 @@ use lcp_types::{store_key, Any, EnclaveMetadata, Height};
 use sgx_types::{sgx_enclave_id_t, SgxResult};
 use sgx_urts::SgxEnclave;
 use std::path::PathBuf;
-use std::sync::{Arc, Condvar, Mutex, RwLock};
+use std::sync::{Arc, RwLock};
 use std::{marker::PhantomData, ops::DerefMut};
 use store::host::{HostStore, IntoCommitStore};
 use store::transaction::{CommitStore, CreatedTx, Tx, TxAccessor, UpdateKey};
@@ -17,23 +17,7 @@ pub struct Enclave<S: CommitStore> {
     pub(crate) key_manager: EnclaveKeyManager,
     pub(crate) store: Arc<RwLock<HostStore>>,
     pub(crate) sgx_enclave: SgxEnclave,
-    pub(crate) ecall_gate: Arc<ECallGate>,
     _marker: PhantomData<S>,
-}
-
-#[derive(Debug)]
-pub(crate) struct ECallGate {
-    state: Mutex<ECallGateState>,
-    ready: Condvar,
-}
-
-#[derive(Debug)]
-struct ECallGateState {
-    available: usize,
-}
-
-struct ECallPermitGuard<'a> {
-    gate: &'a ECallGate,
 }
 
 impl<S: CommitStore> Enclave<S> {
@@ -42,14 +26,12 @@ impl<S: CommitStore> Enclave<S> {
         key_manager: EnclaveKeyManager,
         store: Arc<RwLock<HostStore>>,
         sgx_enclave: SgxEnclave,
-        ecall_concurrency: usize,
     ) -> Self {
         Enclave {
             path: path.into(),
             key_manager,
             store,
             sgx_enclave,
-            ecall_gate: Arc::new(ECallGate::new(ecall_concurrency)),
             _marker: PhantomData,
         }
     }
@@ -59,17 +41,10 @@ impl<S: CommitStore> Enclave<S> {
         debug: bool,
         key_manager: EnclaveKeyManager,
         store: Arc<RwLock<HostStore>>,
-        ecall_concurrency: usize,
     ) -> SgxResult<Self> {
         let path = path.into();
         let enclave = host::create_enclave(path.clone(), debug)?;
-        Ok(Self::new(
-            path,
-            key_manager,
-            store,
-            enclave,
-            ecall_concurrency,
-        ))
+        Ok(Self::new(path, key_manager, store, enclave))
     }
 
     pub fn destroy(self) {
@@ -77,40 +52,12 @@ impl<S: CommitStore> Enclave<S> {
     }
 }
 
-impl ECallGate {
-    fn new(permits: usize) -> Self {
-        Self {
-            state: Mutex::new(ECallGateState {
-                available: permits.max(1),
-            }),
-            ready: Condvar::new(),
-        }
-    }
-
-    fn with_permit<T>(&self, f: impl FnOnce() -> Result<T>) -> Result<T> {
-        let _permit = self.acquire();
-        f()
-    }
-
-    fn acquire(&self) -> ECallPermitGuard<'_> {
-        let mut state = self.state.lock().unwrap();
-        while state.available == 0 {
-            state = self.ready.wait(state).unwrap();
-        }
-        state.available -= 1;
-        ECallPermitGuard { gate: self }
-    }
-}
-
-impl Drop for ECallPermitGuard<'_> {
-    fn drop(&mut self) {
-        let mut state = self.gate.state.lock().unwrap();
-        state.available += 1;
-        self.gate.ready.notify_one();
-    }
-}
-
-/// `EnclaveInfo` is an accessor to enclave information
+/// `EnclaveInfo` is an accessor to enclave information.
+///
+/// Concurrency over `ecall_execute_command` is the caller's responsibility:
+/// the LCP service routes all ECALLs through `service::EcallPool`, which pins
+/// host threads that issue ECALLs to a fixed set so that cumulative TCS
+/// bindings under `TCSPolicy=BIND` cannot exceed the pool size.
 pub trait EnclaveInfo: Sync + Send {
     /// `get_eid` returns the enclave id
     fn get_eid(&self) -> sgx_enclave_id_t;
@@ -120,10 +67,6 @@ pub trait EnclaveInfo: Sync + Send {
     fn is_debug(&self) -> bool;
     /// `get_key_manager` returns a key manager for Enclave Keys
     fn get_key_manager(&self) -> &EnclaveKeyManager;
-    /// `with_ecall_permit` guards entry into enclave ECALLs.
-    fn with_ecall_permit<T>(&self, f: impl FnOnce() -> Result<T>) -> Result<T> {
-        f()
-    }
 }
 
 impl<S: CommitStore> EnclaveInfo for Enclave<S> {
@@ -142,9 +85,6 @@ impl<S: CommitStore> EnclaveInfo for Enclave<S> {
     /// `get_keymanager` returns a key manager for Enclave Keys
     fn get_key_manager(&self) -> &EnclaveKeyManager {
         &self.key_manager
-    }
-    fn with_ecall_permit<T>(&self, f: impl FnOnce() -> Result<T>) -> Result<T> {
-        self.ecall_gate.with_permit(f)
     }
 }
 
@@ -339,41 +279,3 @@ where
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::ECallGate;
-    use std::sync::atomic::{AtomicUsize, Ordering};
-    use std::sync::Arc;
-    use std::thread;
-    use std::time::Duration;
-
-    #[test]
-    fn ecall_gate_limits_concurrency() {
-        let gate = Arc::new(ECallGate::new(2));
-        let in_flight = Arc::new(AtomicUsize::new(0));
-        let observed_max = Arc::new(AtomicUsize::new(0));
-        let mut handles = Vec::new();
-
-        for _ in 0..6 {
-            let gate = gate.clone();
-            let in_flight = in_flight.clone();
-            let observed_max = observed_max.clone();
-            handles.push(thread::spawn(move || {
-                gate.with_permit(|| {
-                    let current = in_flight.fetch_add(1, Ordering::SeqCst) + 1;
-                    observed_max.fetch_max(current, Ordering::SeqCst);
-                    thread::sleep(Duration::from_millis(25));
-                    in_flight.fetch_sub(1, Ordering::SeqCst);
-                    Ok(())
-                })
-                .unwrap();
-            }));
-        }
-
-        for handle in handles {
-            handle.join().unwrap();
-        }
-
-        assert_eq!(observed_max.load(Ordering::SeqCst), 2);
-    }
-}
