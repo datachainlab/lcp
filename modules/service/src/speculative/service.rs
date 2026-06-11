@@ -757,6 +757,69 @@ mod tests {
             .expect("stored consensus state and matching state_id should be accepted");
     }
 
+    // Regression test: light clients derive state IDs from a
+    // canonicalized client state (e.g. latest_height/frozen reset before
+    // hashing), so the stored/observed state ID is generally NOT equal to
+    // gen_state_id_from_any over the raw supplied Anys. The stitch must not
+    // recompute the state ID from the raw base; it must accept the batch as
+    // long as the stored state_id and the enclave-observed prev_state_id
+    // agree, even when both differ from the raw-Any hash.
+    #[test]
+    fn stitch_accepts_first_base_state_when_state_id_uses_canonicalized_form() {
+        let client_id = "07-tendermint-0";
+        let enclave = FakeEnclave::new(Duration::from_millis(1));
+        let app = AppService::<FakeEnclave, MemStore>::new("test-home", enclave, 1);
+        let service = SpeculativeService::new(1);
+        let mut req = with_explicit_base_state_payload(mk_req(
+            "unit-0000",
+            client_id,
+            Some(Height::new(0, 10)),
+            None,
+        ));
+        let prev_height = req.base_state.prev_height.expect("test base prev_height");
+        // Simulate an ELC whose canonicalized state_id differs from the hash
+        // of the raw supplied Anys.
+        let canonical_form_state_id = vec![7u8; 32];
+        assert_ne!(
+            canonical_form_state_id,
+            state_id_for_base_state(&req.base_state),
+            "test requires a state_id that differs from the raw-Any hash"
+        );
+        req.base_state.prev_state_id = Some(canonical_form_state_id.clone());
+        seed_canonical_base_state(&app, client_id, &req.base_state);
+        app.enclave.use_mut_store(|store| {
+            store.set(
+                lcp_types::store_key::state_id_bytes(client_id, &prev_height),
+                canonical_form_state_id.clone(),
+            );
+        });
+        let result = SpeculativeUpdateClientResult {
+            response: MsgUpdateClientResponse::default(),
+            write_set: WriteSet::default(),
+            base_state: req.base_state.clone(),
+            observed_transition: ObservedStateTransition {
+                prev_height: Some(prev_height),
+                prev_state_id: Some(canonical_form_state_id),
+                post_height: Height::new(0, 11),
+                post_state_id: vec![1; 32],
+            },
+        };
+
+        service
+            .stitch_speculative_update_client_batch(
+                &app,
+                SpeculativeUpdateClientBatch {
+                    client_id: client_id.to_string(),
+                    units: vec![req],
+                },
+                SpeculativeUpdateClientBatchResult {
+                    client_id: client_id.to_string(),
+                    units: vec![result],
+                },
+            )
+            .expect("canonicalized-form state_id matching the stored state_id should be accepted");
+    }
+
     #[test]
     fn stitch_rejects_first_base_state_when_prev_state_id_is_missing() {
         let client_id = "07-tendermint-0";
@@ -924,7 +987,7 @@ mod tests {
     }
 
     #[test]
-    fn stitch_rejects_first_base_state_when_client_state_does_not_match_state_id() {
+    fn stitch_rejects_first_base_state_when_client_state_does_not_match_stored_state_id() {
         let client_id = "07-tendermint-0";
         let enclave = FakeEnclave::new(Duration::from_millis(1));
         let app = AppService::<FakeEnclave, MemStore>::new("test-home", enclave, 1);
@@ -936,9 +999,12 @@ mod tests {
             None,
         ));
         let prev_height = req.base_state.prev_height.expect("test base prev_height");
-        let prev_state_id = state_id_for_base_state(&req.base_state);
+        // Seed the canonical store from the original base, then mutate the
+        // supplied client_state. The stored state_id keeps reflecting the
+        // original pair while the unit (executing from the supplied base)
+        // observes the mutated pair's state_id, so the stored-state_id check
+        // must reject the stitch.
         seed_canonical_base_state(&app, client_id, &req.base_state);
-        req.base_state.prev_state_id = Some(prev_state_id.clone());
         req.base_state.client_state = Some(
             Any {
                 type_url: "/ibc.mock.ClientState".to_string(),
@@ -946,6 +1012,8 @@ mod tests {
             }
             .into(),
         );
+        let observed_prev_state_id = state_id_for_base_state(&req.base_state);
+        req.base_state.prev_state_id = Some(observed_prev_state_id.clone());
         set_canonical_client_state(
             &app,
             client_id,
@@ -960,7 +1028,7 @@ mod tests {
             base_state: req.base_state.clone(),
             observed_transition: ObservedStateTransition {
                 prev_height: Some(prev_height),
-                prev_state_id: Some(prev_state_id),
+                prev_state_id: Some(observed_prev_state_id),
                 post_height: Height::new(0, 11),
                 post_state_id: vec![1; 32],
             },
@@ -978,13 +1046,13 @@ mod tests {
                     units: vec![result],
                 },
             )
-            .expect_err("client_state inconsistent with state_id should be rejected");
+            .expect_err("client_state inconsistent with stored state_id should be rejected");
 
         assert_eq!(err.kind, SpeculativeBatchFailureKind::BaseStateMismatch);
         assert_eq!(err.unit_id.as_deref(), Some("unit-0000"));
         assert!(
             err.detail
-                .contains("speculative base state_id does not match client_state/consensus_state"),
+                .contains("stored speculative base state_id mismatch"),
             "unexpected error detail: {}",
             err.detail
         );

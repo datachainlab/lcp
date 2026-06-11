@@ -1,5 +1,4 @@
 use crate::errors::{Error, Result};
-use commitments::gen_state_id_from_any;
 use keymanager::EnclaveKeyManager;
 use lcp_types::{store_key, Any, EnclaveMetadata, Height};
 use sgx_types::{sgx_enclave_id_t, SgxResult};
@@ -137,9 +136,9 @@ pub trait HostStoreTxManager<S: CommitStore>: CommitStoreAccessor<S> {
     /// The explicit base client state must match the latest canonical
     /// client_state. This prevents an old, historically valid base state from
     /// overwriting a newer latest-only client_state. The caller-supplied
-    /// `(client_state, consensus_state)` pair must also re-derive the
-    /// height-indexed state ID previously stored by a successful
-    /// serial/speculative update.
+    /// `prev_state_id` (observed in-enclave by the first speculative unit)
+    /// must also match the height-indexed state ID previously stored by a
+    /// successful create/serial/speculative update.
     fn apply_write_set_with_expected_base(
         &self,
         update_key: UpdateKey,
@@ -235,15 +234,14 @@ pub trait HostStoreTxManager<S: CommitStore>: CommitStoreAccessor<S> {
                 prev_height.revision_height()
             ))
         })?;
-        let expected_prev_state_id = gen_state_id_from_any(client_state, consensus_state)?.to_vec();
-        if expected_prev_state_id.as_slice() != prev_state_id {
-            return Err(Error::invalid_argument(format!(
-                "speculative base state_id does not match client_state/consensus_state: client_id={} height={}-{}",
-                client_id,
-                prev_height.revision_number(),
-                prev_height.revision_height()
-            )));
-        }
+        // Do not recompute the state ID from the supplied raw Anys here: light
+        // clients derive state IDs from a canonicalized client state (e.g.
+        // latest_height/frozen reset), and that canonicalization is
+        // ELC-specific and only available inside the enclave. The supplied
+        // base bytes are already pinned to the canonical store by the two
+        // checks above, and the stored state_id below was written by the
+        // in-enclave light client for exactly those bytes, so comparing the
+        // observed prev_state_id against the stored state_id closes the chain.
         let state_id_key = store_key::state_id_bytes(client_id, prev_height);
         let stored_state_id = self.use_mut_store(|store| store.tx_get(tx_id, &state_id_key))?;
         if stored_state_id.as_deref() != Some(prev_state_id) {
