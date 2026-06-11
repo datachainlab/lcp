@@ -1,4 +1,5 @@
 use crate::client_lock::ClientUpdateLocks;
+use crate::ecall_pool::EcallPool;
 use crate::speculative::SpeculativeService;
 use anyhow::Result;
 use enclave_api::{EnclaveProtoAPI, SpeculativeEnclaveCommandAPI};
@@ -19,6 +20,12 @@ where
 {
     pub(crate) home: PathBuf,
     pub(crate) enclave: Arc<E>,
+    /// Long-lived pool that owns the set of OS threads allowed to ECALL.
+    /// All ECALL-issuing call sites in the gRPC layer dispatch through this
+    /// pool to keep the cumulative set of distinct host threads that ever
+    /// enter the enclave bounded by `--max-enclave-concurrency`, which is
+    /// the invariant TCSPolicy=BIND requires.
+    pub(crate) ecall_pool: Arc<EcallPool>,
     _marker: PhantomData<S>,
 }
 
@@ -41,6 +48,7 @@ where
         Self {
             home: self.home.clone(),
             enclave: self.enclave.clone(),
+            ecall_pool: self.ecall_pool.clone(),
             _marker: Default::default(),
         }
     }
@@ -65,10 +73,11 @@ where
     S: CommitStore + 'static,
     E: EnclaveProtoAPI<S> + 'static,
 {
-    pub fn new<P: Into<PathBuf>>(home: P, enclave: E) -> Self {
+    pub fn new<P: Into<PathBuf>>(home: P, enclave: E, ecall_concurrency: usize) -> Self {
         AppService {
             home: home.into(),
             enclave: Arc::new(enclave),
+            ecall_pool: Arc::new(EcallPool::new(ecall_concurrency)),
             _marker: Default::default(),
         }
     }
@@ -83,8 +92,9 @@ where
         home: P,
         enclave: E,
         speculative_concurrency_limit: usize,
+        ecall_concurrency: usize,
     ) -> Self {
-        let app = AppService::new(home, enclave);
+        let app = AppService::new(home, enclave, ecall_concurrency);
         let speculative = SpeculativeService::new(speculative_concurrency_limit);
         Self {
             app,
