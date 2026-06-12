@@ -19,9 +19,17 @@ use log::debug;
 use sha2::Digest;
 use std::collections::HashSet;
 use std::sync::{Arc, Condvar, Mutex};
+use std::time::{Duration, Instant};
 use tonic::{Status, Streaming};
 
 pub(crate) const MAX_SPECULATIVE_BATCH_HEADER_CHUNK_BYTES: usize = 4 * 1024 * 1024;
+
+// Upper bound on how long one stream may wait for header memory held by other
+// streams. The budget is shared service-wide, so an unbounded wait lets two
+// streams that each hold partial reservations deadlock each other (and starve
+// every later stream). Timing out converts that into a retryable
+// RESOURCE_EXHAUSTED error that releases the failing stream's reservations.
+const SPECULATIVE_HEADER_MEMORY_RESERVE_TIMEOUT: Duration = Duration::from_secs(60);
 
 /// Tracks the peak resident header payload bytes for one speculative batch
 /// stream. Reservations are attached to decoded units and released when those
@@ -35,6 +43,7 @@ pub(crate) struct SpeculativeHeaderMemoryBudget {
 #[derive(Debug)]
 struct SpeculativeHeaderMemoryBudgetInner {
     max_bytes: usize,
+    reserve_timeout: Duration,
     state: Mutex<SpeculativeHeaderMemoryBudgetState>,
     available: Condvar,
 }
@@ -46,9 +55,14 @@ struct SpeculativeHeaderMemoryBudgetState {
 
 impl SpeculativeHeaderMemoryBudget {
     pub(crate) fn new(max_bytes: usize) -> Self {
+        Self::new_with_reserve_timeout(max_bytes, SPECULATIVE_HEADER_MEMORY_RESERVE_TIMEOUT)
+    }
+
+    fn new_with_reserve_timeout(max_bytes: usize, reserve_timeout: Duration) -> Self {
         Self {
             inner: Arc::new(SpeculativeHeaderMemoryBudgetInner {
                 max_bytes,
+                reserve_timeout,
                 state: Mutex::new(SpeculativeHeaderMemoryBudgetState::default()),
                 available: Condvar::new(),
             }),
@@ -87,9 +101,17 @@ impl SpeculativeHeaderMemoryBudget {
             )));
         }
 
+        let deadline = Instant::now() + self.inner.reserve_timeout;
         let mut state = self.inner.state.lock().unwrap();
         while state.used_bytes + bytes > self.inner.max_bytes {
-            state = self.inner.available.wait(state).unwrap();
+            let remaining = deadline.saturating_duration_since(Instant::now());
+            if remaining.is_zero() {
+                return Err(Status::resource_exhausted(format!(
+                    "timed out waiting for speculative header memory budget: requested_bytes={} used_bytes={} max_bytes={}",
+                    bytes, state.used_bytes, self.inner.max_bytes
+                )));
+            }
+            (state, _) = self.inner.available.wait_timeout(state, remaining).unwrap();
         }
         state.used_bytes += bytes;
         Ok(SpeculativeHeaderMemoryReservation {
@@ -691,6 +713,32 @@ mod tests {
         assert_eq!(budget.used_bytes(), 3);
         drop(unit);
         assert_eq!(budget.used_bytes(), 0);
+    }
+
+    #[test]
+    fn header_memory_reservation_wait_times_out_instead_of_deadlocking() {
+        let runtime = tokio::runtime::Runtime::new().expect("tokio runtime");
+        let budget = super::SpeculativeHeaderMemoryBudget::new_with_reserve_timeout(
+            10,
+            std::time::Duration::from_millis(50),
+        );
+        let held = runtime
+            .block_on(budget.reserve_for_chunk(&header_chunk_msg("unit-0000", vec![0u8; 8])))
+            .expect("first reservation");
+
+        let err = runtime
+            .block_on(budget.reserve_for_chunk(&header_chunk_msg("unit-0001", vec![0u8; 8])))
+            .expect_err("reservation exceeding the budget must time out");
+        assert_resource_exhausted_contains(
+            err,
+            "timed out waiting for speculative header memory budget",
+        );
+
+        // Releasing the held reservation makes the budget usable again.
+        drop(held);
+        runtime
+            .block_on(budget.reserve_for_chunk(&header_chunk_msg("unit-0002", vec![0u8; 8])))
+            .expect("reservation after release");
     }
 
     #[test]
