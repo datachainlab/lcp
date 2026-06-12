@@ -71,11 +71,8 @@ impl ServiceCmd {
             Self::Start(cmd) => {
                 let addr = cmd.address.parse()?;
                 let enclave_parallelism = cmd.max_enclave_concurrency.max(1);
-                let enclave = enclave_loader.load(
-                    opts,
-                    cmd.enclave.path.as_ref(),
-                    cmd.enclave.is_debug(),
-                )?;
+                let enclave =
+                    enclave_loader.load(opts, cmd.enclave.path.as_ref(), cmd.enclave.is_debug())?;
                 let metadata = enclave.metadata()?;
                 let mrenclave = metadata.mrenclave().to_hex_string();
                 let mut rb = Builder::new_multi_thread();

@@ -276,4 +276,3 @@ where
         store.deref_mut().apply(f)
     }
 }
-

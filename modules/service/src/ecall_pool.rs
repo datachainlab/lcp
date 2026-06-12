@@ -60,9 +60,7 @@ impl EcallPool {
         let job: Job = Box::new(move || {
             let _ = tx.send(f());
         });
-        sender
-            .send(job)
-            .expect("ECALL pool worker channel closed");
+        sender.send(job).expect("ECALL pool worker channel closed");
         rx.recv()
             .expect("ECALL pool worker terminated before producing a result")
     }
@@ -144,9 +142,9 @@ mod tests {
         // Verifies the "1 thread = 1 TCS forever" property under BIND policy:
         // the set of OS thread ids that execute jobs is bounded by pool size.
         let pool = Arc::new(EcallPool::new(3));
-        let observed = Arc::new(std::sync::Mutex::new(
-            std::collections::HashSet::<thread::ThreadId>::new(),
-        ));
+        let observed = Arc::new(std::sync::Mutex::new(std::collections::HashSet::<
+            thread::ThreadId,
+        >::new()));
         let mut handles = Vec::new();
         for _ in 0..30 {
             let pool = Arc::clone(&pool);

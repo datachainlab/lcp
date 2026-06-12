@@ -271,9 +271,7 @@ fn streaming_speculative_worker<E, S>(
         let req_clone = req.request().clone();
         let result = speculative
             .with_speculative_request_permit(|| {
-                pool.run(move || {
-                    speculative_inner.speculative_update_client(&app_inner, req_clone)
-                })
+                pool.run(move || speculative_inner.speculative_update_client(&app_inner, req_clone))
             })
             .map_err(|e| SpeculativeBatchFailure {
                 kind: SpeculativeBatchFailureKind::SpeculativeExecutionFailed,
