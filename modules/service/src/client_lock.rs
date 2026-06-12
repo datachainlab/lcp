@@ -15,7 +15,10 @@ impl ClientUpdateLocks {
                 .or_insert_with(|| Arc::new(Mutex::new(())))
                 .clone()
         };
-        let guard = lock.lock().unwrap();
+        // Recover from poisoning: the guarded data is `()`, so a panic while
+        // the lock was held leaves no invariant to protect, and refusing the
+        // lock here would permanently block all updates for this client.
+        let guard = lock.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
         let result = f();
         drop(guard);
 
@@ -68,6 +71,20 @@ mod tests {
         }
 
         assert_eq!(observed_max.load(Ordering::SeqCst), 1);
+    }
+
+    #[test]
+    fn client_update_locks_recover_after_panicked_update() {
+        let locks = ClientUpdateLocks::default();
+        let panic = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            locks.with_client_serialized("client-0", || {
+                panic!("injected update panic");
+            })
+        }));
+        assert!(panic.is_err());
+        // A panicked update must not poison the per-client lock for good.
+        let value = locks.with_client_serialized("client-0", || 42);
+        assert_eq!(value, 42);
     }
 
     #[test]
