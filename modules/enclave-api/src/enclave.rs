@@ -244,7 +244,18 @@ pub trait HostStoreTxManager<S: CommitStore>: CommitStoreAccessor<S> {
         // observed prev_state_id against the stored state_id closes the chain.
         let state_id_key = store_key::state_id_bytes(client_id, prev_height);
         let stored_state_id = self.use_mut_store(|store| store.tx_get(tx_id, &state_id_key))?;
-        if stored_state_id.as_deref() != Some(prev_state_id) {
+        // Clients created before state_id tracking have no stored entry at
+        // prev_height; one serial update_client backfills it. Report that
+        // case distinctly from a true mismatch so the error is actionable.
+        let Some(stored_state_id) = stored_state_id else {
+            return Err(Error::invalid_argument(format!(
+                "stored speculative base state_id missing: client_id={} height={}-{}; run a serial update_client once to record the state_id before speculative updates",
+                client_id,
+                prev_height.revision_number(),
+                prev_height.revision_height()
+            )));
+        };
+        if stored_state_id.as_slice() != prev_state_id {
             return Err(Error::invalid_argument(format!(
                 "stored speculative base state_id mismatch: client_id={} height={}-{}",
                 client_id,

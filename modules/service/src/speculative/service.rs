@@ -932,10 +932,18 @@ mod tests {
 
         assert_eq!(err.kind, SpeculativeBatchFailureKind::BaseStateMismatch);
         assert_eq!(err.unit_id.as_deref(), Some("unit-0000"));
+        // A missing stateIds entry (e.g. a client created before state_id
+        // tracking) must be reported distinctly from a mismatch, with the
+        // serial-update remedy, so operators can tell the cases apart.
         assert!(
             err.detail
-                .contains("stored speculative base state_id mismatch"),
+                .contains("stored speculative base state_id missing"),
             "unexpected error detail: {}",
+            err.detail
+        );
+        assert!(
+            err.detail.contains("run a serial update_client once"),
+            "missing remedy hint in error detail: {}",
             err.detail
         );
     }
