@@ -103,14 +103,19 @@ pub(crate) fn validate_linear_transitions(
 // must report the previous unit's post state as its own base state before the
 // batch can be stitched into one canonical write set.
 //
-// Binding scope: only the first unit's base bytes are pinned byte-for-byte
-// against the canonical store (`verify_expected_base_state_in_tx`). Later
-// units are bound to their predecessor solely through the canonicalized
-// state_id chain, so base fields erased by ELC canonicalization (for example
-// `latest_height`) are not byte-compared. A divergent intermediate base from
-// the authenticated relayer cannot affect the on-chain proof chain; at worst
-// it corrupts this client's stitched host-store cache, which a subsequent
-// serial update_client rewrites.
+// Binding scope: every unit (including the first) is bound by the
+// canonicalized state_id chain, not by byte comparison of the supplied base
+// Anys: the canonical store's Any encoding is not stable across writers
+// (create_client stores the submitter's encoding, update_client the enclave's
+// re-encoded form), so a relayer-rebuilt base cannot reproduce the stored
+// bytes in general. The first unit's prev_state_id is checked against the
+// height-indexed state_id recorded in the canonical store, and its prev_height
+// against the speculative-commit high-water mark
+// (`verify_expected_base_state_in_tx`); base fields erased by ELC
+// canonicalization (for example `latest_height`) are therefore not compared.
+// A divergent base from the authenticated relayer cannot affect the on-chain
+// proof chain; at worst it corrupts this client's stitched host-store cache,
+// which a subsequent serial update_client rewrites.
 fn validate_observed_transition_follows(
     unit_id: &str,
     previous: Option<&ObservedStateTransition>,

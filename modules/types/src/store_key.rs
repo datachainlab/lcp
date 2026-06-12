@@ -17,6 +17,13 @@ pub fn state_id(client_id: &str, height: &Height) -> String {
     )
 }
 
+/// Host-managed record of the highest `post_height` committed through the
+/// speculative stitch path. Not written by the enclave; see `enclave-api`'s
+/// `apply_write_set_with_expected_base`.
+pub fn speculative_commit_height(client_id: &str) -> String {
+    format!("clients/{client_id}/speculativeCommitHeight")
+}
+
 pub fn consensus_state(client_id: &str, height: &Height) -> String {
     format!(
         "clients/{}/consensusStates/{}-{}",
@@ -40,6 +47,10 @@ pub fn state_id_bytes(client_id: &str, height: &Height) -> Vec<u8> {
 
 pub fn consensus_state_bytes(client_id: &str, height: &Height) -> Vec<u8> {
     consensus_state(client_id, height).into_bytes()
+}
+
+pub fn speculative_commit_height_bytes(client_id: &str) -> Vec<u8> {
+    speculative_commit_height(client_id).into_bytes()
 }
 
 #[cfg(test)]

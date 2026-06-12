@@ -1,6 +1,6 @@
 use crate::errors::{Error, Result};
 use keymanager::EnclaveKeyManager;
-use lcp_types::{store_key, Any, EnclaveMetadata, Height};
+use lcp_types::{store_key, EnclaveMetadata, Height};
 use sgx_types::{sgx_enclave_id_t, SgxResult};
 use sgx_urts::SgxEnclave;
 use std::path::PathBuf;
@@ -128,24 +128,34 @@ pub trait HostStoreTxManager<S: CommitStore>: CommitStoreAccessor<S> {
     }
 
     /// `apply_write_set_with_expected_base` applies a speculative write set only if the
-    /// store already contains the explicit base state that seeded the batch at
-    /// `prev_height`.
+    /// canonical chain recorded at `prev_height` matches the explicit base state that
+    /// seeded the batch.
     ///
     /// The check and apply run under the same serialized update transaction keyed by
     /// `update_key`, so the accepted base cannot change between verification and commit.
-    /// The explicit base client state must match the latest canonical
-    /// client_state. This prevents an old, historically valid base state from
-    /// overwriting a newer latest-only client_state. The caller-supplied
-    /// `prev_state_id` (observed in-enclave by the first speculative unit)
-    /// must also match the height-indexed state ID previously stored by a
-    /// successful create/serial/speculative update.
+    ///
+    /// The base is bound by content, not by bytes. The canonical store's Any
+    /// encoding is not stable across writers: create_client stores the
+    /// submitter's encoding verbatim, while update_client stores the enclave
+    /// light client's re-encoded form (which may, for example, re-serialize
+    /// JSON-embedded config fields). A base rebuilt by the relayer therefore
+    /// cannot reproduce the stored bytes in general, so byte equality is not a
+    /// usable invariant here. Instead, the caller-supplied `prev_state_id`
+    /// (observed in-enclave by the first speculative unit over the supplied
+    /// base) must match the height-indexed state ID previously written by a
+    /// successful create/serial/speculative update; state IDs are computed
+    /// in-enclave over the decoded states, so they are encoding-independent.
+    ///
+    /// To keep an old, historically valid base from silently rewinding the
+    /// host-store cache, `prev_height` must also be at or above the
+    /// speculative-commit high-water mark recorded by previous calls; the mark
+    /// advances to `post_height` on every successful apply.
     fn apply_write_set_with_expected_base(
         &self,
         update_key: UpdateKey,
         prev_height: Height,
-        client_state: &Any,
-        consensus_state: &Any,
         prev_state_id: Option<&[u8]>,
+        post_height: Height,
         write_set: WriteSet,
     ) -> Result<()>
     where
@@ -153,18 +163,19 @@ pub trait HostStoreTxManager<S: CommitStore>: CommitStoreAccessor<S> {
     {
         let tx = self.begin_tx(Some(update_key.clone()))?;
         let tx_id = tx.get_id();
-        if let Err(e) = self.verify_expected_base_state_in_tx(
-            tx_id,
-            &update_key,
-            &prev_height,
-            client_state,
-            consensus_state,
-            prev_state_id,
-        ) {
+        if let Err(e) =
+            self.verify_expected_base_state_in_tx(tx_id, &update_key, &prev_height, prev_state_id)
+        {
             self.rollback_tx(tx);
             return Err(e);
         }
         if let Err(e) = self.apply_write_set_in_tx(tx_id, write_set) {
+            self.rollback_tx(tx);
+            return Err(e);
+        }
+        if let Err(e) =
+            self.advance_speculative_commit_height_in_tx(tx_id, &update_key, post_height)
+        {
             self.rollback_tx(tx);
             return Err(e);
         }
@@ -189,41 +200,27 @@ pub trait HostStoreTxManager<S: CommitStore>: CommitStoreAccessor<S> {
         tx_id: store::TxId,
         client_id: &str,
         prev_height: &Height,
-        client_state: &Any,
-        consensus_state: &Any,
         prev_state_id: Option<&[u8]>,
     ) -> Result<()>
     where
         S: TxAccessor,
     {
-        let client_state_key = store_key::client_state_bytes(client_id);
-        let client_state_value =
-            bincode::serde::encode_to_vec(client_state, bincode::config::standard())
-                .map_err(Error::bincode_encode)?;
-        let canonical_client_state =
-            self.use_mut_store(|store| store.tx_get(tx_id, &client_state_key))?;
-        if canonical_client_state.as_deref() != Some(client_state_value.as_slice()) {
-            return Err(Error::invalid_argument(format!(
-                "stored speculative base client_state mismatch: client_id={} height={}-{}",
-                client_id,
-                prev_height.revision_number(),
-                prev_height.revision_height()
-            )));
-        }
-
-        let consensus_state_key = store_key::consensus_state_bytes(client_id, prev_height);
-        let consensus_state_value =
-            bincode::serde::encode_to_vec(consensus_state, bincode::config::standard())
-                .map_err(Error::bincode_encode)?;
-        let canonical_consensus_state =
-            self.use_mut_store(|store| store.tx_get(tx_id, &consensus_state_key))?;
-        if canonical_consensus_state.as_deref() != Some(consensus_state_value.as_slice()) {
-            return Err(Error::invalid_argument(format!(
-                "stored speculative base consensus_state mismatch: client_id={} height={}-{}",
-                client_id,
-                prev_height.revision_number(),
-                prev_height.revision_height()
-            )));
+        // Reject bases older than the speculative-commit high-water mark so a
+        // stale batch cannot rewind state committed by a previous batch. The
+        // mark only tracks speculative commits: a serial update_client that
+        // advances the client further does not move it, so a base taken from
+        // the post-serial canonical state still passes this check.
+        if let Some(commit_height) = self.get_speculative_commit_height_in_tx(tx_id, client_id)? {
+            if *prev_height < commit_height {
+                return Err(Error::invalid_argument(format!(
+                    "stale speculative base height: client_id={} height={}-{} last_committed={}-{}",
+                    client_id,
+                    prev_height.revision_number(),
+                    prev_height.revision_height(),
+                    commit_height.revision_number(),
+                    commit_height.revision_height()
+                )));
+            }
         }
 
         let prev_state_id = prev_state_id.ok_or_else(|| {
@@ -234,14 +231,17 @@ pub trait HostStoreTxManager<S: CommitStore>: CommitStoreAccessor<S> {
                 prev_height.revision_height()
             ))
         })?;
-        // Do not recompute the state ID from the supplied raw Anys here: light
-        // clients derive state IDs from a canonicalized client state (e.g.
-        // latest_height/frozen reset), and that canonicalization is
-        // ELC-specific and only available inside the enclave. The supplied
-        // base bytes are already pinned to the canonical store by the two
-        // checks above, and the stored state_id below was written by the
-        // in-enclave light client for exactly those bytes, so comparing the
-        // observed prev_state_id against the stored state_id closes the chain.
+        // Do not recompute the state ID from the supplied raw Anys, and do not
+        // compare the supplied bytes against the stored client/consensus
+        // states: light clients derive state IDs from decoded, canonicalized
+        // states (canonicalization is ELC-specific and only available inside
+        // the enclave), and the stored Any bytes are not a canonical encoding
+        // (create_client stores the submitter's encoding, update_client the
+        // enclave's re-encoded form). The stored state_id below was written by
+        // the in-enclave light client for the canonical state at prev_height,
+        // and the observed prev_state_id was computed in-enclave over the
+        // supplied base, so comparing the two binds the supplied base content
+        // to the canonical chain independently of byte encodings.
         let state_id_key = store_key::state_id_bytes(client_id, prev_height);
         let stored_state_id = self.use_mut_store(|store| store.tx_get(tx_id, &state_id_key))?;
         // Clients created before state_id tracking have no stored entry at
@@ -263,6 +263,53 @@ pub trait HostStoreTxManager<S: CommitStore>: CommitStoreAccessor<S> {
                 prev_height.revision_height()
             )));
         }
+        Ok(())
+    }
+
+    /// `get_speculative_commit_height_in_tx` reads the speculative-commit
+    /// high-water mark for `client_id`, i.e. the highest `post_height` applied
+    /// through `apply_write_set_with_expected_base` so far. The record is
+    /// host-managed and host-encoded (bincode), so it is symmetric for both
+    /// the writer and the reader.
+    fn get_speculative_commit_height_in_tx(
+        &self,
+        tx_id: store::TxId,
+        client_id: &str,
+    ) -> Result<Option<Height>>
+    where
+        S: TxAccessor,
+    {
+        let key = store_key::speculative_commit_height_bytes(client_id);
+        let value = self.use_mut_store(|store| store.tx_get(tx_id, &key))?;
+        value
+            .map(|v| {
+                bincode::serde::decode_from_slice::<Height, _>(&v, bincode::config::standard())
+                    .map(|(height, _)| height)
+                    .map_err(Error::bincode_decode)
+            })
+            .transpose()
+    }
+
+    /// `advance_speculative_commit_height_in_tx` moves the speculative-commit
+    /// high-water mark forward to `post_height`; it never rewinds the mark.
+    fn advance_speculative_commit_height_in_tx(
+        &self,
+        tx_id: store::TxId,
+        client_id: &str,
+        post_height: Height,
+    ) -> Result<()>
+    where
+        S: TxAccessor,
+    {
+        if let Some(commit_height) = self.get_speculative_commit_height_in_tx(tx_id, client_id)? {
+            if post_height <= commit_height {
+                return Ok(());
+            }
+        }
+        let key = store_key::speculative_commit_height_bytes(client_id);
+        let value = bincode::serde::encode_to_vec(post_height, bincode::config::standard())
+            .map_err(Error::bincode_encode)?;
+        self.use_mut_store(|store| store.tx_set(tx_id, key, value))?;
         Ok(())
     }
 

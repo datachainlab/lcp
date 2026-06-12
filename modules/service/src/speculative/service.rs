@@ -164,13 +164,20 @@ impl SpeculativeService {
                 observed_transition: result.observed_transition,
             });
         }
+        let last_post_height = units
+            .last()
+            .map(|unit| unit.observed_transition.post_height)
+            .ok_or_else(|| SpeculativeBatchFailure {
+                kind: SpeculativeBatchFailureKind::BatchSizeMismatch,
+                unit_id: None,
+                detail: "speculative batch must contain at least one unit".to_string(),
+            })?;
         app.enclave
             .apply_write_set_with_expected_base(
                 batch.client_id.clone(),
                 first_base.prev_height,
-                &first_base.client_state,
-                &first_base.consensus_state,
                 first_prev_state_id.as_deref(),
+                last_post_height,
                 merged_write_set,
             )
             .map_err(|e| SpeculativeBatchFailure {
@@ -671,62 +678,6 @@ mod tests {
     }
 
     #[test]
-    fn stitch_rejects_first_base_state_that_is_not_in_store() {
-        let client_id = "07-tendermint-0";
-        let enclave = FakeEnclave::new(Duration::from_millis(1));
-        let app = AppService::<FakeEnclave, MemStore>::new("test-home", enclave, 1);
-        let service = SpeculativeService::new(1);
-        let req = with_explicit_base_state_payload(mk_req(
-            "unit-0000",
-            client_id,
-            Some(Height::new(0, 10)),
-            None,
-        ));
-        set_canonical_client_state(
-            &app,
-            client_id,
-            req.base_state
-                .client_state
-                .as_ref()
-                .expect("test base client_state"),
-        );
-        let result = SpeculativeUpdateClientResult {
-            response: MsgUpdateClientResponse::default(),
-            write_set: WriteSet::default(),
-            base_state: req.base_state.clone(),
-            observed_transition: ObservedStateTransition {
-                prev_height: Some(Height::new(0, 10)),
-                prev_state_id: None,
-                post_height: Height::new(0, 11),
-                post_state_id: vec![1; 32],
-            },
-        };
-
-        let err = service
-            .stitch_speculative_update_client_batch(
-                &app,
-                SpeculativeUpdateClientBatch {
-                    client_id: client_id.to_string(),
-                    units: vec![req],
-                },
-                SpeculativeUpdateClientBatchResult {
-                    client_id: client_id.to_string(),
-                    units: vec![result],
-                },
-            )
-            .expect_err("unknown first base consensus state must be rejected");
-
-        assert_eq!(err.kind, SpeculativeBatchFailureKind::BaseStateMismatch);
-        assert_eq!(err.unit_id.as_deref(), Some("unit-0000"));
-        assert!(
-            err.detail
-                .contains("stored speculative base consensus_state mismatch"),
-            "unexpected error detail: {}",
-            err.detail
-        );
-    }
-
-    #[test]
     fn stitch_accepts_first_base_state_when_stored_consensus_and_state_id_match() {
         let client_id = "07-tendermint-0";
         let enclave = FakeEnclave::new(Duration::from_millis(1));
@@ -1078,8 +1029,86 @@ mod tests {
         );
     }
 
+    // Regression test for the deterministic first-stitch failure on real ELC
+    // paths: the canonical store's Any encoding changes across writers
+    // (create_client stores the relayer's encoding verbatim; update_client
+    // stores the enclave light client's re-encoded form, e.g. with
+    // JSON-embedded config re-serialized), so a relayer-rebuilt base cannot
+    // reproduce the stored bytes. The stitch must bind the base via the
+    // stored state_id, not via byte equality with the stored Anys.
     #[test]
-    fn stitch_rejects_first_base_state_when_canonical_client_state_advanced() {
+    fn stitch_accepts_first_base_state_when_stored_bytes_use_different_encoding() {
+        let client_id = "07-tendermint-0";
+        let enclave = FakeEnclave::new(Duration::from_millis(1));
+        let app = AppService::<FakeEnclave, MemStore>::new("test-home", enclave, 1);
+        let service = SpeculativeService::new(1);
+        let mut req = with_explicit_base_state_payload(mk_req(
+            "unit-0000",
+            client_id,
+            Some(Height::new(0, 10)),
+            None,
+        ));
+        let prev_height = req.base_state.prev_height.expect("test base prev_height");
+        let prev_state_id = state_id_for_base_state(&req.base_state);
+        req.base_state.prev_state_id = Some(prev_state_id.clone());
+        // The canonical store holds a different encoding of the base states
+        // than the supplied bytes; only the state_id recorded at prev_height
+        // matches the supplied base content.
+        set_canonical_client_state(
+            &app,
+            client_id,
+            &Any {
+                type_url: "/ibc.mock.ClientState".to_string(),
+                value: vec![42],
+            },
+        );
+        app.enclave.use_mut_store(|store| {
+            store.set(
+                lcp_types::store_key::state_id_bytes(client_id, &prev_height),
+                prev_state_id.clone(),
+            );
+        });
+        let post_height = Height::new(0, 11);
+        let result = SpeculativeUpdateClientResult {
+            response: MsgUpdateClientResponse::default(),
+            write_set: WriteSet::default(),
+            base_state: req.base_state.clone(),
+            observed_transition: ObservedStateTransition {
+                prev_height: Some(prev_height),
+                prev_state_id: Some(prev_state_id),
+                post_height,
+                post_state_id: vec![1; 32],
+            },
+        };
+
+        service
+            .stitch_speculative_update_client_batch(
+                &app,
+                SpeculativeUpdateClientBatch {
+                    client_id: client_id.to_string(),
+                    units: vec![req],
+                },
+                SpeculativeUpdateClientBatchResult {
+                    client_id: client_id.to_string(),
+                    units: vec![result],
+                },
+            )
+            .expect("base bytes differing from the stored encoding must be accepted when the state_id matches");
+
+        let recorded = app.enclave.use_mut_store(|store| {
+            store.get(&lcp_types::store_key::speculative_commit_height_bytes(
+                client_id,
+            ))
+        });
+        let recorded = recorded.expect("speculative commit height must be recorded");
+        let (recorded_height, _): (Height, usize) =
+            bincode::serde::decode_from_slice(&recorded, bincode::config::standard())
+                .expect("decode speculative commit height");
+        assert_eq!(recorded_height, post_height);
+    }
+
+    #[test]
+    fn stitch_rejects_stale_first_base_below_speculative_commit_height() {
         let client_id = "07-tendermint-0";
         let enclave = FakeEnclave::new(Duration::from_millis(1));
         let app = AppService::<FakeEnclave, MemStore>::new("test-home", enclave, 1);
@@ -1094,14 +1123,16 @@ mod tests {
         let prev_state_id = state_id_for_base_state(&req.base_state);
         req.base_state.prev_state_id = Some(prev_state_id.clone());
         seed_canonical_base_state(&app, client_id, &req.base_state);
-        set_canonical_client_state(
-            &app,
-            client_id,
-            &Any {
-                type_url: "/ibc.mock.ClientState".to_string(),
-                value: vec![42],
-            },
-        );
+        // A previous speculative batch already committed up to height 12, so
+        // a base at height 10 — even with a valid historical state_id — must
+        // not rewind the canonical store.
+        app.enclave.use_mut_store(|store| {
+            store.set(
+                lcp_types::store_key::speculative_commit_height_bytes(client_id),
+                bincode::serde::encode_to_vec(Height::new(0, 12), bincode::config::standard())
+                    .expect("encode speculative commit height"),
+            );
+        });
         let result = SpeculativeUpdateClientResult {
             response: MsgUpdateClientResponse::default(),
             write_set: WriteSet::default(),
@@ -1126,13 +1157,12 @@ mod tests {
                     units: vec![result],
                 },
             )
-            .expect_err("stale base client_state should be rejected");
+            .expect_err("stale base below the speculative commit height should be rejected");
 
         assert_eq!(err.kind, SpeculativeBatchFailureKind::BaseStateMismatch);
         assert_eq!(err.unit_id.as_deref(), Some("unit-0000"));
         assert!(
-            err.detail
-                .contains("stored speculative base client_state mismatch"),
+            err.detail.contains("stale speculative base height"),
             "unexpected error detail: {}",
             err.detail
         );
