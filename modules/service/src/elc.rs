@@ -202,7 +202,10 @@ where
             let header_memory = header_memory_budget.reserve_for_chunk(&chunk_msg).await?;
             if let Some(unit) = decoder.push_chunk(chunk_msg.chunk, header_memory)? {
                 units += 1;
-                if tx.send(StreamingSpeculativeBatchInput::Unit(unit)).is_err() {
+                if tx
+                    .send(StreamingSpeculativeBatchInput::Unit(Box::new(unit)))
+                    .is_err()
+                {
                     let result = scheduler.await.map_err(|e| {
                         Status::aborted(format!("speculative batch worker failed: {e}"))
                     })?;

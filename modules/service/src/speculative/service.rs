@@ -1156,9 +1156,9 @@ mod tests {
         });
         first_req.base_state.prev_state_id = Some(state_id_for_base_state(&first_req.base_state));
         seed_canonical_base_state(&app, client_id, &first_req.base_state);
-        tx.send(StreamingSpeculativeBatchInput::Unit(
+        tx.send(StreamingSpeculativeBatchInput::Unit(Box::new(
             ResidentSpeculativeUpdateClientRequest::unmetered(first_req),
-        ))
+        )))
         .expect("send first unit");
 
         for _ in 0..100 {
@@ -1172,7 +1172,7 @@ mod tests {
             "expected first unit to start before input stream closes"
         );
 
-        tx.send(StreamingSpeculativeBatchInput::Unit(
+        tx.send(StreamingSpeculativeBatchInput::Unit(Box::new(
             ResidentSpeculativeUpdateClientRequest::unmetered(with_explicit_base_state_payload(
                 SpeculativeUpdateClientRequest {
                     unit_id: "unit-0001".to_string(),
@@ -1201,7 +1201,7 @@ mod tests {
                     },
                 },
             )),
-        ))
+        )))
         .expect("send second unit");
         tx.send(StreamingSpeculativeBatchInput::Complete)
             .expect("send batch complete");
@@ -1243,9 +1243,9 @@ mod tests {
         req.update.signer = vec![0; 20];
         seed_canonical_base_state(&app, client_id, &req.base_state);
 
-        tx.send(StreamingSpeculativeBatchInput::Unit(
+        tx.send(StreamingSpeculativeBatchInput::Unit(Box::new(
             ResidentSpeculativeUpdateClientRequest::unmetered(req),
-        ))
+        )))
         .expect("send first unit");
         drop(tx);
 
@@ -1294,9 +1294,9 @@ mod tests {
         req.update.signer = vec![0; 20];
         seed_canonical_base_state(&app, client_id, &req.base_state);
 
-        tx.send(StreamingSpeculativeBatchInput::Unit(
+        tx.send(StreamingSpeculativeBatchInput::Unit(Box::new(
             ResidentSpeculativeUpdateClientRequest::unmetered(req),
-        ))
+        )))
         .expect("send first unit");
         tx.send(StreamingSpeculativeBatchInput::Complete)
             .expect("send batch complete");
@@ -1340,7 +1340,7 @@ mod tests {
             )
         });
 
-        tx.send(StreamingSpeculativeBatchInput::Unit(
+        tx.send(StreamingSpeculativeBatchInput::Unit(Box::new(
             ResidentSpeculativeUpdateClientRequest::unmetered(SpeculativeUpdateClientRequest {
                 unit_id: "unit-0000".to_string(),
                 update: MsgUpdateClient {
@@ -1359,7 +1359,7 @@ mod tests {
                     consensus_state: None,
                 },
             }),
-        ))
+        )))
         .expect("send first unit");
         drop(tx);
 
@@ -1433,9 +1433,9 @@ mod tests {
         }
         seed_canonical_base_state(&app, client_id, &requests[0].base_state);
         for req in requests {
-            tx.send(StreamingSpeculativeBatchInput::Unit(
+            tx.send(StreamingSpeculativeBatchInput::Unit(Box::new(
                 ResidentSpeculativeUpdateClientRequest::unmetered(req),
-            ))
+            )))
             .expect("send unit");
         }
         tx.send(StreamingSpeculativeBatchInput::Complete)

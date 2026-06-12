@@ -21,7 +21,7 @@ pub(crate) struct StreamingSpeculativeBatchResult {
 }
 
 pub(crate) enum StreamingSpeculativeBatchInput {
-    Unit(ResidentSpeculativeUpdateClientRequest),
+    Unit(Box<ResidentSpeculativeUpdateClientRequest>),
     Complete,
 }
 
@@ -77,7 +77,7 @@ where
             if state.failure.is_some() {
                 break;
             }
-            if let Err(e) = state.enqueue(unit) {
+            if let Err(e) = state.enqueue(*unit) {
                 state.failure = Some(e);
                 shared.ready.notify_all();
                 shared.complete.notify_all();
