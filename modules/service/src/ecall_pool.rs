@@ -1,4 +1,5 @@
 use log::*;
+use std::panic::{catch_unwind, resume_unwind, AssertUnwindSafe};
 use std::sync::mpsc::{channel, Sender};
 use std::sync::{Arc, Mutex};
 use std::thread::{self, JoinHandle};
@@ -47,6 +48,10 @@ impl EcallPool {
 
     /// Runs `f` on one of the pool's worker threads, blocking the caller
     /// until the job completes. Each invocation acquires a worker slot.
+    ///
+    /// If `f` panics, the panic is caught on the worker thread (keeping the
+    /// worker and its TCS binding alive) and resumed on the calling thread,
+    /// matching the observable behavior of a direct invocation.
     pub fn run<F, R>(&self, f: F) -> R
     where
         F: FnOnce() -> R + Send + 'static,
@@ -58,11 +63,16 @@ impl EcallPool {
             .expect("ECALL pool used after shutdown");
         let (tx, rx) = channel();
         let job: Job = Box::new(move || {
-            let _ = tx.send(f());
+            let _ = tx.send(catch_unwind(AssertUnwindSafe(f)));
         });
         sender.send(job).expect("ECALL pool worker channel closed");
-        rx.recv()
+        match rx
+            .recv()
             .expect("ECALL pool worker terminated before producing a result")
+        {
+            Ok(result) => result,
+            Err(panic) => resume_unwind(panic),
+        }
     }
 }
 
@@ -135,6 +145,18 @@ mod tests {
         let pool = EcallPool::new(2);
         let result = pool.run(|| 7 * 6);
         assert_eq!(result, 42);
+    }
+
+    #[test]
+    fn pool_survives_job_panic_and_propagates_it_to_caller() {
+        let pool = EcallPool::new(1);
+        let panic = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            pool.run::<_, ()>(|| panic!("job panic"))
+        }))
+        .expect_err("job panic should propagate to the caller");
+        assert_eq!(panic.downcast_ref::<&str>(), Some(&"job panic"));
+        // The single worker must have survived the panic to serve this job.
+        assert_eq!(pool.run(|| 7 * 6), 42);
     }
 
     #[test]

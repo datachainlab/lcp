@@ -9,7 +9,9 @@ use crate::service::AppService;
 use enclave_api::{EnclaveProtoAPI, SpeculativeEnclaveCommandAPI};
 use log::info;
 use sha2::Digest;
+use std::any::Any;
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
+use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::sync::mpsc::Receiver;
 use std::sync::{Arc, Condvar, Mutex};
 use std::thread;
@@ -220,6 +222,42 @@ impl StreamingSchedulerState {
     }
 }
 
+// RAII guard for one `in_flight` slot taken by a streaming worker.
+//
+// Dropping the guard returns the slot and wakes both the workers waiting on
+// `ready` and the coordinator waiting on `complete`. Tying the decrement to
+// `Drop` keeps slot accounting correct even if the worker unwinds while
+// executing a unit; a leaked slot would leave the coordinator blocked on
+// `complete` forever.
+struct InFlightSlot<'a> {
+    shared: &'a StreamingSchedulerShared,
+}
+
+impl Drop for InFlightSlot<'_> {
+    fn drop(&mut self) {
+        // Recover from mutex poisoning: this may run during unwinding, and
+        // panicking again here would abort the process.
+        let mut state = self
+            .shared
+            .state
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        state.in_flight -= 1;
+        self.shared.ready.notify_all();
+        self.shared.complete.notify_all();
+    }
+}
+
+fn panic_payload_message(panic: &(dyn Any + Send)) -> String {
+    if let Some(msg) = panic.downcast_ref::<&str>() {
+        (*msg).to_string()
+    } else if let Some(msg) = panic.downcast_ref::<String>() {
+        msg.clone()
+    } else {
+        "non-string panic payload".to_string()
+    }
+}
+
 fn streaming_speculative_worker<E, S>(
     speculative: &SpeculativeService,
     app: &AppService<E, S>,
@@ -248,6 +286,10 @@ fn streaming_speculative_worker<E, S>(
             }
         };
 
+        // Hold the slot in an RAII guard so it is restored even if anything
+        // below unwinds; see InFlightSlot.
+        let in_flight_slot = InFlightSlot { shared: &shared };
+
         let unit_id = req.request().unit_id.clone();
         let header_bytes = speculative_request_header_len(req.request());
         if let Some(header_bytes) = header_bytes {
@@ -269,11 +311,12 @@ fn streaming_speculative_worker<E, S>(
         let speculative_inner = speculative.clone();
         let app_inner = app.clone();
         let req_clone = req.request().clone();
-        let result = speculative
-            .with_speculative_request_permit(|| {
+        let result = match catch_unwind(AssertUnwindSafe(|| {
+            speculative.with_speculative_request_permit(|| {
                 pool.run(move || speculative_inner.speculative_update_client(&app_inner, req_clone))
             })
-            .map_err(|e| SpeculativeBatchFailure {
+        })) {
+            Ok(executed) => executed.map_err(|e| SpeculativeBatchFailure {
                 kind: SpeculativeBatchFailureKind::SpeculativeExecutionFailed,
                 unit_id: Some(unit_id),
                 detail: match speculative_request_header_digest(req.request()) {
@@ -283,20 +326,33 @@ fn streaming_speculative_worker<E, S>(
                     ),
                     None => e.to_string(),
                 },
-            });
+            }),
+            // A panic in the ECALL path is recorded as a unit failure instead
+            // of unwinding this scoped worker, which would poison the shared
+            // state and panic the surrounding `thread::scope`.
+            Err(panic) => Err(SpeculativeBatchFailure {
+                kind: SpeculativeBatchFailureKind::SpeculativeExecutionFailed,
+                unit_id: Some(unit_id),
+                detail: format!(
+                    "speculative execution panicked: {}",
+                    panic_payload_message(panic.as_ref())
+                ),
+            }),
+        };
 
-        let mut state = shared.state.lock().unwrap();
-        state.in_flight -= 1;
-        match result {
-            Ok(result) => {
-                let req = req.into_request_without_header_payload();
-                state.complete_unit(index, req, result);
-            }
-            Err(e) => {
-                state.failure.get_or_insert(e);
+        {
+            let mut state = shared.state.lock().unwrap();
+            match result {
+                Ok(result) => {
+                    let req = req.into_request_without_header_payload();
+                    state.complete_unit(index, req, result);
+                }
+                Err(e) => {
+                    state.failure.get_or_insert(e);
+                }
             }
         }
-        shared.ready.notify_all();
-        shared.complete.notify_all();
+        // Release the slot and wake waiters after the outcome is recorded.
+        drop(in_flight_slot);
     }
 }

@@ -319,6 +319,7 @@ mod tests {
         current_in_flight: AtomicUsize,
         observed_max_in_flight: AtomicUsize,
         delay: Duration,
+        panic_on_signer_idx: Option<u64>,
     }
 
     impl FakeEnclave {
@@ -338,6 +339,14 @@ mod tests {
                 current_in_flight: AtomicUsize::new(0),
                 observed_max_in_flight: AtomicUsize::new(0),
                 delay,
+                panic_on_signer_idx: None,
+            }
+        }
+
+        fn new_panicking_on(delay: Duration, signer_idx: u64) -> Self {
+            Self {
+                panic_on_signer_idx: Some(signer_idx),
+                ..Self::new(delay)
             }
         }
 
@@ -384,6 +393,9 @@ mod tests {
         ) -> core::result::Result<EnclaveSpeculativeUpdateClientResponse, enclave_api::Error>
         {
             let idx = input.update.signer.0[19] as u64;
+            if self.panic_on_signer_idx == Some(idx) {
+                panic!("injected speculative_update_client panic");
+            }
             let current = self.current_in_flight.fetch_add(1, Ordering::SeqCst) + 1;
             self.observed_max_in_flight
                 .fetch_max(current, Ordering::SeqCst);
@@ -1263,6 +1275,62 @@ mod tests {
             app.enclave.use_mut_store(|store| store.get(&[0])),
             None,
             "truncated stream must not apply speculative write set"
+        );
+    }
+
+    #[test]
+    fn streaming_speculative_batch_reports_worker_panic_as_failure() {
+        // Regression test: a panic inside the speculative ECALL path used to
+        // kill the EcallPool worker and leak the scheduler's `in_flight`
+        // slot, leaving the coordinator blocked on `complete` forever. The
+        // stream must instead finish with a SpeculativeExecutionFailed error.
+        let client_id = "07-tendermint-0";
+        let enclave = FakeEnclave::new_panicking_on(Duration::from_millis(1), 0);
+        let app = AppService::<FakeEnclave, MemStore>::new("test-home", enclave, 1);
+        let service = SpeculativeService::new(1);
+        let (tx, rx) = std::sync::mpsc::sync_channel(1);
+        let worker_service = service.clone();
+        let worker_app = app.clone();
+        let client_id_for_worker = client_id.to_string();
+        let handle = thread::spawn(move || {
+            worker_service.execute_speculative_update_client_stream(
+                &worker_app,
+                client_id_for_worker,
+                rx,
+            )
+        });
+
+        let mut req = with_explicit_base_state_payload(mk_req(
+            "unit-0000",
+            client_id,
+            Some(Height::new(0, 10)),
+            None,
+        ));
+        req.base_state.prev_state_id = Some(state_id_for_base_state(&req.base_state));
+        req.update.signer = vec![0; 20];
+        seed_canonical_base_state(&app, client_id, &req.base_state);
+
+        tx.send(StreamingSpeculativeBatchInput::Unit(Box::new(
+            ResidentSpeculativeUpdateClientRequest::unmetered(req),
+        )))
+        .expect("send first unit");
+        tx.send(StreamingSpeculativeBatchInput::Complete)
+            .expect("send batch complete");
+        drop(tx);
+
+        let err = handle
+            .join()
+            .expect("streaming worker thread")
+            .expect_err("panicking unit must surface as batch failure");
+        assert_eq!(
+            err.kind,
+            SpeculativeBatchFailureKind::SpeculativeExecutionFailed
+        );
+        assert_eq!(err.unit_id.as_deref(), Some("unit-0000"));
+        assert!(
+            err.detail.contains("panicked"),
+            "unexpected error detail: {}",
+            err.detail
         );
     }
 
