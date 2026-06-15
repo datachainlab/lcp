@@ -194,9 +194,21 @@ fn compute_seed_write_set(client_id: &str, base_state: &SpeculativeBaseState) ->
     let consensus_state_value =
         bincode::serde::encode_to_vec(&base_state.consensus_state, bincode::config::standard())
             .map_err(crate::errors::Error::bincode_encode)?;
+    // per-height client_state design: seed the per-height client_state entry alongside
+    // the singleton so the speculative ECALL sees the supplied base under both
+    // keys. The downstream ELC writes the post-state client_state through
+    // ClientKeeper::store_any_client_state, which also dual-writes; the
+    // per-height seed here ensures the *base* (prev_height) entry exists for
+    // the very first speculative batch on a freshly-created client.
+    let client_state_at_height_key =
+        store_key::client_state_at_height_bytes(client_id, &base_state.prev_height);
 
     Ok([
-        (client_state_key, Some(client_state_value)),
+        (client_state_key, Some(client_state_value.clone())),
+        (
+            client_state_at_height_key,
+            Some(client_state_value),
+        ),
         (consensus_state_key, Some(consensus_state_value)),
     ]
     .into_iter()

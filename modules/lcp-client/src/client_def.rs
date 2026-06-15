@@ -123,7 +123,11 @@ impl LCPClient {
         // An initial consensus state must be empty
         assert!(consensus_state.is_empty());
 
-        ctx.store_any_client_state(client_id.clone(), client_state.clone().into())?;
+        ctx.store_any_client_state(
+            client_id.clone(),
+            client_state.latest_height,
+            client_state.clone().into(),
+        )?;
         ctx.store_any_consensus_state(
             client_id,
             client_state.latest_height,
@@ -206,7 +210,11 @@ impl LCPClient {
             timestamp: message.timestamp,
         };
 
-        ctx.store_any_client_state(client_id.clone(), new_client_state.into())?;
+        ctx.store_any_client_state(
+            client_id.clone(),
+            message.post_height,
+            new_client_state.into(),
+        )?;
         ctx.store_any_consensus_state(client_id, message.post_height, new_consensus_state.into())?;
         Ok(())
     }
@@ -304,7 +312,14 @@ impl LCPClient {
                 output.min_tcb_evaluation_data_number,
             )?;
         if current_updated || next_updated {
-            ctx.store_any_client_state(client_id.clone(), client_state.clone().into())?;
+            // tcb_evaluation_data_number is an in-place metadata update on the
+            // existing client_state at the current latest_height; keep the
+            // per-height entry coherent by writing under that same height.
+            ctx.store_any_client_state(
+                client_id.clone(),
+                client_state.latest_height,
+                client_state.clone().into(),
+            )?;
         }
 
         let host_timestamp = ctx.host_timestamp().as_unix_timestamp_secs();
@@ -498,7 +513,12 @@ impl LCPClient {
             message.new_operators_threshold_numerator,
             message.new_operators_threshold_denominator,
         );
-        ctx.store_any_client_state(client_id, new_client_state.into())?;
+        // Operator change is in-place at the current latest_height.
+        ctx.store_any_client_state(
+            client_id,
+            new_client_state.latest_height,
+            new_client_state.into(),
+        )?;
 
         Ok(())
     }
@@ -528,7 +548,13 @@ impl LCPClient {
         self.verify_ek_signatures(ctx, &client_id, &client_state, &sign_bytes, signatures)?;
 
         let new_client_state = client_state.with_frozen();
-        ctx.store_any_client_state(client_id, new_client_state.into())?;
+        // Misbehaviour freezes the client at its current latest_height; keep
+        // per-height entry coherent under that same height.
+        ctx.store_any_client_state(
+            client_id,
+            new_client_state.latest_height,
+            new_client_state.into(),
+        )?;
 
         Ok(())
     }
@@ -956,19 +982,16 @@ mod tests {
                 consensus_state.clone().into(),
             );
             assert!(res.is_ok(), "res={:?}", res);
+            let initial_height = res.unwrap().height;
 
             let client_id =
                 ClientId::from_str(&format!("{}-0", MockLightClient.client_type())).unwrap();
             ctx.store_client_type(client_id.clone(), MockLightClient.client_type())
                 .unwrap();
-            ctx.store_any_client_state(client_id.clone(), client_state.into())
+            ctx.store_any_client_state(client_id.clone(), initial_height, client_state.into())
                 .unwrap();
-            ctx.store_any_consensus_state(
-                client_id.clone(),
-                res.unwrap().height,
-                consensus_state.into(),
-            )
-            .unwrap();
+            ctx.store_any_consensus_state(client_id.clone(), initial_height, consensus_state.into())
+                .unwrap();
             client_id
         };
 
@@ -999,7 +1022,7 @@ mod tests {
             let res = prove_commitment(ctx.get_enclave_key(), res.message.into());
             assert!(res.is_ok(), "res={:?}", res);
 
-            ctx.store_any_client_state(upstream_client_id.clone(), client_state)
+            ctx.store_any_client_state(upstream_client_id.clone(), height, client_state)
                 .unwrap();
             ctx.store_any_consensus_state(upstream_client_id.clone(), height, consensus_state)
                 .unwrap();

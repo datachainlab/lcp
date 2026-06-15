@@ -511,6 +511,10 @@ mod tests {
         app.enclave.use_mut_store(|store| {
             store.set(
                 lcp_types::store_key::client_state_bytes(client_id),
+                client_state_value.clone(),
+            );
+            store.set(
+                lcp_types::store_key::client_state_at_height_bytes(client_id, &prev_height),
                 client_state_value,
             );
             store.set(

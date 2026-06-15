@@ -11,7 +11,8 @@ pub use host::ClientId;
 pub use lcp_proto as proto;
 pub use sgx::{EnclaveMetadata, Mrenclave};
 pub use store_key::{
-    client_state as client_state_key, client_state_bytes, client_type as client_type_key,
+    client_state as client_state_key, client_state_at_height,
+    client_state_at_height_bytes, client_state_bytes, client_type as client_type_key,
     client_type_bytes, consensus_state as consensus_state_key, consensus_state_bytes, state_id,
     state_id_bytes,
 };

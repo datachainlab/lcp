@@ -196,12 +196,27 @@ pub trait HostStoreTxManager<S: CommitStore>: CommitStoreAccessor<S> {
     where
         S: TxAccessor,
     {
-        let client_state_key = store_key::client_state_bytes(client_id);
+        // per-height client_state design: look up the client_state at the supplied
+        // prev_height directly. This decouples the commit-time CAS from "the
+        // latest canonical tip", which is what enables drift recovery — a new
+        // explicit-state stream can anchor at any past committed height and
+        // still pass this check by reading the same per-height entry that LCP
+        // wrote at that height. Falls back to the singleton legacy key if the
+        // per-height entry is absent (clients created before per-height
+        // storage was added).
         let client_state_value =
             bincode::serde::encode_to_vec(client_state, bincode::config::standard())
                 .map_err(Error::bincode_encode)?;
-        let canonical_client_state =
-            self.use_mut_store(|store| store.tx_get(tx_id, &client_state_key))?;
+        let per_height_key =
+            store_key::client_state_at_height_bytes(client_id, prev_height);
+        let canonical_client_state = self
+            .use_mut_store(|store| store.tx_get(tx_id, &per_height_key))?
+            .or_else(|| {
+                let singleton_key = store_key::client_state_bytes(client_id);
+                self.use_mut_store(|store| store.tx_get(tx_id, &singleton_key))
+                    .ok()
+                    .flatten()
+            });
         if canonical_client_state.as_deref() != Some(client_state_value.as_slice()) {
             return Err(Error::invalid_argument(format!(
                 "stored speculative base client_state mismatch: client_id={} height={}-{}",

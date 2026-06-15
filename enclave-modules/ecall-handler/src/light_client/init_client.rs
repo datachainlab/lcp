@@ -44,7 +44,7 @@ pub fn init_client<R: LightClientResolver, S: KVStore, K: Signer>(
         }
     };
     ctx.store_client_type(client_id.clone(), client_type)?;
-    ctx.store_any_client_state(client_id.clone(), input.any_client_state)?;
+    ctx.store_any_client_state(client_id.clone(), res.height, input.any_client_state)?;
     ctx.store_any_consensus_state(client_id.clone(), res.height, input.any_consensus_state)?;
     ctx.store_state_id(client_id.clone(), res.height, state_id)?;
 

@@ -25,7 +25,11 @@ pub fn update_client<R: LightClientResolver, S: KVStore, K: Signer>(
                 data.message.into()
             };
 
-            ctx.store_any_client_state(input.client_id.clone(), data.new_any_client_state)?;
+            ctx.store_any_client_state(
+                input.client_id.clone(),
+                data.height,
+                data.new_any_client_state,
+            )?;
             ctx.store_any_consensus_state(
                 input.client_id.clone(),
                 data.height,
@@ -43,7 +47,21 @@ pub fn update_client<R: LightClientResolver, S: KVStore, K: Signer>(
             )))
         }
         UpdateClientResult::Misbehaviour(data) => {
-            ctx.store_any_client_state(input.client_id, data.new_any_client_state)?;
+            // Use the highest height observed across misbehaviour prev_states as
+            // the key for the per-height client_state write. After misbehaviour
+            // the client is frozen, so no further updates are expected; we use
+            // a deterministic height purely to keep the per-height schema
+            // consistent. If prev_states is empty (shouldn't happen), fall back
+            // to a sentinel zero height — the legacy singleton entry remains
+            // the only useful read for that pathological case.
+            let height = data
+                .message
+                .prev_states
+                .iter()
+                .map(|ps| ps.height)
+                .max()
+                .unwrap_or_else(|| light_client::types::Height::new(0, 0));
+            ctx.store_any_client_state(input.client_id, height, data.new_any_client_state)?;
 
             let proof = prove_commitment(ek, data.message.into())?;
             Ok(LightClientResponse::UpdateClient(UpdateClientResponse(
