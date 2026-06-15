@@ -87,6 +87,10 @@ pub struct CommitmentProofPair(pub Height, pub Vec<u8>);
 #[derive(Serialize, Deserialize, Debug)]
 pub struct QueryClientInput {
     pub client_id: ClientId,
+    /// Optional height for per-height canonical lookup (per-height client_state design).
+    /// When `None`, the response carries the latest singleton entry — exactly
+    /// matching pre-D behaviour for every existing caller.
+    pub height: Option<Height>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -123,4 +127,11 @@ pub struct QueryClientResponse {
     pub found: bool,
     pub any_client_state: Option<Any>,
     pub any_consensus_state: Option<Any>,
+    /// 32-byte canonical state_id at the resolved height (the explicit-state drift design
+    ///). Empty for legacy entries that predate state_id tracking.
+    pub state_id: Option<Vec<u8>>,
+    /// Resolved height. Echoes the request `height` when supplied; otherwise
+    /// the latest tip inferred from the returned `any_client_state`.
+    /// `None` when `found = false`.
+    pub height: Option<Height>,
 }

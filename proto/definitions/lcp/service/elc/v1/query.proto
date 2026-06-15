@@ -18,6 +18,13 @@ message QueryClientRequest {
   option (gogoproto.goproto_getters) = false;
 
   string client_id = 1;
+  // Optional. When set, return the client_state stored at this specific
+  // height in the canonical per-height history (per-height client_state design).
+  // When unset, the response carries the latest singleton entry, exactly
+  // matching pre-D behaviour for every existing caller. Drift recovery on
+  // lcp-go uses this to fetch a past-committed anchor without rebuilding
+  // the payload locally.
+  ibc.core.client.v1.Height height = 2;
 }
 
 message QueryClientResponse {
@@ -31,4 +38,14 @@ message QueryClientResponse {
   // consensus state associated with the client that corresponds to a given
   // height.
   google.protobuf.Any consensus_state = 3 [(gogoproto.moretags) = "yaml:\"consensus_state\""];
+  // 32-byte canonical state_id at the resolved height. Populated whenever
+  // a state_id is stored for the resolved height (per-height client_state design);
+  // empty for legacy entries that predate state_id tracking, in which case
+  // the caller must decode `consensus_state` to recover it. Used by
+  // lcp-go drift recovery to seed `prev_state_id` without re-decoding.
+  bytes state_id = 4;
+  // Height that the returned client_state / consensus_state apply to.
+  // Echoes the request `height` when supplied; otherwise the latest tip
+  // inferred from the singleton client_state. Empty when `found = false`.
+  ibc.core.client.v1.Height height = 5;
 }

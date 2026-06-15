@@ -107,7 +107,8 @@ impl TryFrom<MsgQueryClientRequest> for QueryClientInput {
     type Error = Error;
     fn try_from(query: MsgQueryClientRequest) -> Result<Self, Error> {
         let client_id = ClientId::from_str(&query.client_id)?;
-        Ok(Self { client_id })
+        let height = query.height.map(|h| h.into());
+        Ok(Self { client_id, height })
     }
 }
 
@@ -162,6 +163,8 @@ impl From<QueryClientResponse> for MsgQueryClientResponse {
             found: res.found,
             client_state: res.any_client_state.map(Into::into),
             consensus_state: res.any_consensus_state.map(Into::into),
+            state_id: res.state_id.unwrap_or_default(),
+            height: res.height.map(|h| h.into()),
         }
     }
 }

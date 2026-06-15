@@ -4,6 +4,16 @@
 pub struct QueryClientRequest {
     #[prost(string, tag = "1")]
     pub client_id: ::prost::alloc::string::String,
+    /// Optional. When set, return the client_state stored at this specific
+    /// height in the canonical per-height history (per-height client_state design).
+    /// When unset, the response carries the latest singleton entry, exactly
+    /// matching pre-D behaviour for every existing caller. Drift recovery on
+    /// lcp-go uses this to fetch a past-committed anchor without rebuilding
+    /// the payload locally.
+    #[prost(message, optional, tag = "2")]
+    pub height: ::core::option::Option<
+        super::super::super::super::ibc::core::client::v1::Height,
+    >,
 }
 #[derive(::serde::Serialize, ::serde::Deserialize)]
 #[allow(clippy::derive_partial_eq_without_eq)]
@@ -19,6 +29,20 @@ pub struct QueryClientResponse {
     /// height.
     #[prost(message, optional, tag = "3")]
     pub consensus_state: ::core::option::Option<super::super::super::super::google::protobuf::Any>,
+    /// 32-byte canonical state_id at the resolved height. Populated whenever
+    /// a state_id is stored for the resolved height (per-height client_state design);
+    /// empty for legacy entries that predate state_id tracking, in which case
+    /// the caller must decode `consensus_state` to recover it. Used by
+    /// lcp-go drift recovery to seed `prev_state_id` without re-decoding.
+    #[prost(bytes = "vec", tag = "4")]
+    pub state_id: ::prost::alloc::vec::Vec<u8>,
+    /// Height that the returned client_state / consensus_state apply to.
+    /// Echoes the request `height` when supplied; otherwise the latest tip
+    /// inferred from the singleton client_state. Empty when `found = false`.
+    #[prost(message, optional, tag = "5")]
+    pub height: ::core::option::Option<
+        super::super::super::super::ibc::core::client::v1::Height,
+    >,
 }
 /// Generated client implementations.
 #[cfg(feature = "client")]
