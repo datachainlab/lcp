@@ -196,39 +196,17 @@ pub trait HostStoreTxManager<S: CommitStore>: CommitStoreAccessor<S> {
     where
         S: TxAccessor,
     {
-        // Verify the speculative batch's first-unit base anchors at the
-        // stored canonical state_id. The supplied `_client_state` /
-        // `_consensus_state` Anys are intentionally not byte-compared here:
-        //
-        //   - The supplied `prev_state_id` (recorded by the in-enclave light
-        //     client as the first unit's `observed_transition.prev_state_id`)
-        //     is computed by `gen_state_id(canonicalize(client_state),
-        //     canonicalize(consensus_state))`. The same canonicalization
-        //     wrote `stored_state_id` at this height during the previous
-        //     committed update. If the two state_ids agree, the supplied
-        //     base canonicalizes to the same logical state as the stored
-        //     canonical — which is the property a speculative batch requires.
-        //
-        //   - Byte-comparing the raw Any bytes is over-strict: encoding-only
-        //     differences (e.g. light-client serde round-trip reshuffling
-        //     nested JSON keys, dropping unknown fields, default-Some vs
-        //     omitted-None for optional fields across the relayer-side
-        //     local rebuild vs the enclave-side incremental advance) reject
-        //     a base whose canonicalized form is identical to the stored
-        //     canonical. The state_id check is the canonical-equivalent
-        //     CAS without the encoding noise.
-        //
-        //   - Value-level divergence (e.g. an L1Config that genuinely
-        //     differs at the same height) flows through canonicalize() into
-        //     state_id and is therefore still caught by the hash check.
-        //
-        //   - The supplied bytes are still seeded into the speculative
-        //     transaction via `compute_seed_write_set` so the in-enclave
-        //     light client observes exactly the supplied state when it
-        //     processes the first unit's header; the state_id check
-        //     verifies that the resulting prev_state_id agrees with the
-        //     prior committed canonical, which keeps the chain of in-enclave
-        //     updates tight.
+        // The supplied Anys are intentionally not byte-compared. The
+        // observed `prev_state_id` from the in-enclave light client is
+        // `gen_state_id(canonicalize(client_state), canonicalize(consensus_state))`,
+        // and `stored_state_id` was written by the same canonicalization
+        // at commit time. Comparing state_ids therefore checks canonical
+        // equivalence and absorbs encoding-only differences in the raw
+        // Any bytes; value-level divergence at the same height still
+        // flows through canonicalize() into state_id and is rejected.
+        // The supplied bytes are still seeded into the speculative
+        // transaction via `compute_seed_write_set` so the in-enclave
+        // light client observes exactly the supplied state.
         let prev_state_id = prev_state_id.ok_or_else(|| {
             Error::invalid_argument(format!(
                 "speculative update_client must provide prev_state_id: client_id={} height={}-{}",
@@ -239,12 +217,9 @@ pub trait HostStoreTxManager<S: CommitStore>: CommitStoreAccessor<S> {
         })?;
         let state_id_key = store_key::state_id_bytes(client_id, prev_height);
         let stored_state_id = self.use_mut_store(|store| store.tx_get(tx_id, &state_id_key))?;
-        // Clients created before state_id tracking have no stored entry at
-        // prev_height; one serial update_client backfills it. Report that
-        // case distinctly from a true mismatch so the error is actionable.
         let Some(stored_state_id) = stored_state_id else {
             return Err(Error::invalid_argument(format!(
-                "stored speculative base state_id missing: client_id={} height={}-{}; run a serial update_client once to record the state_id before speculative updates",
+                "stored speculative base state_id missing: client_id={} height={}-{}",
                 client_id,
                 prev_height.revision_number(),
                 prev_height.revision_height()
