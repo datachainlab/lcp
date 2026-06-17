@@ -22,7 +22,7 @@ use store::transaction::{CommitStore, TxAccessor};
 use tokio::time::timeout;
 use tonic::{Request, Response, Status, Streaming};
 
-const SPECULATIVE_BATCH_STREAM_IDLE_TIMEOUT: Duration = Duration::from_secs(60);
+const SPECULATIVE_BATCH_STREAM_IDLE_TIMEOUT: Duration = Duration::from_secs(300);
 
 #[tonic::async_trait]
 impl<E, S> Msg for ElcService<E, S>
