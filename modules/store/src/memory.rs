@@ -176,6 +176,8 @@ impl CommitStore for InnerMemStore {
             ));
         }
         if tx.kind != MemTxKind::Speculative {
+            self.running_tx_kind = None;
+            self.uncommitted_data.clear();
             return Err(crate::Error::not_supported_operation(
                 "take_write_set is only available for speculative transactions".to_string(),
             ));
@@ -240,7 +242,11 @@ mod tests {
         store.tx_set(tx.get_id(), key(1), value(1)).unwrap();
 
         assert!(store.take_write_set(tx).is_err());
-        assert_eq!(store.get(&key(1)), Some(value(1)));
+        assert_eq!(store.get(&key(1)), None);
+
+        let next_tx = store.create_transaction(None).unwrap().prepare().unwrap();
+        store.begin(&next_tx).unwrap();
+        store.rollback(next_tx);
     }
 
     #[test]

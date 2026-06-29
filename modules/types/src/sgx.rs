@@ -241,7 +241,7 @@ mod tests {
     fn write_tcs_entry(output: &mut [u8], index: usize) {
         let offset = index * LAYOUT_ENTRY_SIZE;
         write_u16(output, offset, LAYOUT_ID_TCS as u16);
-        write_u16(output, offset + 2, PAGE_ATTR_EADD as u16);
+        write_u16(output, offset + 2, PAGE_ATTR_EADD);
         write_u32(output, offset + 20, 1);
         write_u64(output, offset + 24, SI_FLAGS_TCS);
     }

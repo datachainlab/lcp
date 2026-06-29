@@ -134,11 +134,12 @@ pub trait HostStoreTxManager<S: CommitStore>: CommitStoreAccessor<S> {
     /// The check and apply run under the same serialized update transaction keyed by
     /// `update_key`, so the accepted base cannot change between verification and commit.
     /// The explicit base client state must match the latest canonical
-    /// client_state. This prevents an old, historically valid base state from
-    /// overwriting a newer latest-only client_state. The caller-supplied
-    /// `prev_state_id` (observed in-enclave by the first speculative unit)
-    /// must also match the height-indexed state ID previously stored by a
-    /// successful create/serial/speculative update.
+    /// client_state and the explicit base consensus state must match the
+    /// height-indexed consensus state at `prev_height`. This prevents an old,
+    /// historically valid base state from overwriting a newer latest-only
+    /// client_state. The caller-supplied `prev_state_id` (observed in-enclave by
+    /// the first speculative unit) must also match the height-indexed state ID
+    /// previously stored by a successful create/serial/speculative update.
     fn apply_write_set_with_expected_base(
         &self,
         update_key: UpdateKey,
@@ -189,24 +190,43 @@ pub trait HostStoreTxManager<S: CommitStore>: CommitStoreAccessor<S> {
         tx_id: store::TxId,
         client_id: &str,
         prev_height: &Height,
-        _client_state: &Any,
-        _consensus_state: &Any,
+        client_state: &Any,
+        consensus_state: &Any,
         prev_state_id: Option<&[u8]>,
     ) -> Result<()>
     where
         S: TxAccessor,
     {
-        // The supplied Anys are intentionally not byte-compared. The
-        // observed `prev_state_id` from the in-enclave light client is
-        // `gen_state_id(canonicalize(client_state), canonicalize(consensus_state))`,
-        // and `stored_state_id` was written by the same canonicalization
-        // at commit time. Comparing state_ids therefore checks canonical
-        // equivalence and absorbs encoding-only differences in the raw
-        // Any bytes; value-level divergence at the same height still
-        // flows through canonicalize() into state_id and is rejected.
-        // The supplied bytes are still seeded into the speculative
-        // transaction via `compute_seed_write_set` so the in-enclave
-        // light client observes exactly the supplied state.
+        let expected_client_state =
+            bincode::serde::encode_to_vec(client_state, bincode::config::standard())
+                .map_err(Error::bincode_encode)?;
+        let client_state_key = store_key::client_state_bytes(client_id);
+        let stored_client_state =
+            self.use_mut_store(|store| store.tx_get(tx_id, &client_state_key))?;
+        if stored_client_state.as_deref() != Some(expected_client_state.as_slice()) {
+            return Err(Error::invalid_argument(format!(
+                "stored speculative base client_state mismatch: client_id={} height={}-{}",
+                client_id,
+                prev_height.revision_number(),
+                prev_height.revision_height()
+            )));
+        }
+
+        let expected_consensus_state =
+            bincode::serde::encode_to_vec(consensus_state, bincode::config::standard())
+                .map_err(Error::bincode_encode)?;
+        let consensus_state_key = store_key::consensus_state_bytes(client_id, prev_height);
+        let stored_consensus_state =
+            self.use_mut_store(|store| store.tx_get(tx_id, &consensus_state_key))?;
+        if stored_consensus_state.as_deref() != Some(expected_consensus_state.as_slice()) {
+            return Err(Error::invalid_argument(format!(
+                "stored speculative base consensus_state mismatch: client_id={} height={}-{}",
+                client_id,
+                prev_height.revision_number(),
+                prev_height.revision_height()
+            )));
+        }
+
         let prev_state_id = prev_state_id.ok_or_else(|| {
             Error::invalid_argument(format!(
                 "speculative update_client must provide prev_state_id: client_id={} height={}-{}",
@@ -219,7 +239,7 @@ pub trait HostStoreTxManager<S: CommitStore>: CommitStoreAccessor<S> {
         let stored_state_id = self.use_mut_store(|store| store.tx_get(tx_id, &state_id_key))?;
         let Some(stored_state_id) = stored_state_id else {
             return Err(Error::invalid_argument(format!(
-                "stored speculative base state_id missing: client_id={} height={}-{}",
+                "stored speculative base state_id missing: client_id={} height={}-{}; run a serial update_client once to populate state_id tracking before retrying explicit-state batch execution",
                 client_id,
                 prev_height.revision_number(),
                 prev_height.revision_height()
