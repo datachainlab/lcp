@@ -1,6 +1,6 @@
 use crate::enclave::EnclaveLoader;
 use crate::opts::{EnclaveOpts, Opts};
-use anyhow::Result;
+use anyhow::{bail, Context, Result};
 use clap::Parser;
 use enclave_api::{Enclave, EnclaveInfo, EnclaveProtoAPI, SpeculativeEnclaveCommandAPI};
 use host::store::transaction::{CommitStore, TxAccessor};
@@ -75,6 +75,10 @@ impl ServiceCmd {
                     enclave_loader.load(opts, cmd.enclave.path.as_ref(), cmd.enclave.is_debug())?;
                 let metadata = enclave.metadata()?;
                 let mrenclave = metadata.mrenclave().to_hex_string();
+                let tcs_num = metadata
+                    .tcs_num()
+                    .context("failed to derive TCSNum from enclave metadata")?;
+                validate_enclave_parallelism(enclave_parallelism, tcs_num)?;
                 let mut rb = Builder::new_multi_thread();
                 let rb = if let Some(threads) = cmd.threads {
                     rb.worker_threads(threads)
@@ -90,6 +94,13 @@ impl ServiceCmd {
                         enclave_parallelism
                     );
                 }
+                if speculative_concurrency_limit > tcs_num {
+                    warn!(
+                        "max-speculative-concurrency ({}) is greater than enclave TCSNum ({}); excess speculative requests will wait for an EcallPool slot",
+                        speculative_concurrency_limit,
+                        tcs_num
+                    );
+                }
                 let srv = ElcService::new(
                     opts.get_home(),
                     enclave,
@@ -98,12 +109,41 @@ impl ServiceCmd {
                 );
 
                 info!(
-                    "start service: addr={addr} mrenclave={mrenclave} speculative_concurrency_limit={} enclave_parallelism={}",
+                    "start service: addr={addr} mrenclave={mrenclave} tcs_num={} tcs_policy={} speculative_concurrency_limit={} enclave_parallelism={}",
+                    tcs_num,
+                    metadata.tcs_policy(),
                     speculative_concurrency_limit,
                     enclave_parallelism
                 );
                 rt.block_on(async { run_service(srv, addr).await })
             }
         }
+    }
+}
+
+fn validate_enclave_parallelism(enclave_parallelism: usize, tcs_num: usize) -> Result<()> {
+    if enclave_parallelism > tcs_num {
+        bail!(
+            "max-enclave-concurrency ({}) exceeds enclave TCSNum ({}); reduce --max-enclave-concurrency or rebuild the enclave with a larger TCSNum",
+            enclave_parallelism,
+            tcs_num
+        );
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::validate_enclave_parallelism;
+
+    #[test]
+    fn enclave_parallelism_may_equal_tcs_num() {
+        validate_enclave_parallelism(8, 8).unwrap();
+    }
+
+    #[test]
+    fn enclave_parallelism_cannot_exceed_tcs_num() {
+        let err = validate_enclave_parallelism(9, 8).unwrap_err();
+        assert!(err.to_string().contains("exceeds enclave TCSNum"));
     }
 }
