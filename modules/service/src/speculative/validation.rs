@@ -104,16 +104,17 @@ pub(crate) fn validate_linear_transitions(
 // batch can be stitched into one canonical write set.
 //
 // Binding scope: only the first unit is anchored against the local store, and
-// only through historical `consensusState[prev_height]` plus stored
-// `stateId[prev_height]` (`verify_expected_base_state_in_tx`). We intentionally
-// do not require the latest canonical `clientState` to equal the first unit's
-// base client state, because the on-chain/client protocol path may start from a
-// historical base. Later units are bound to their predecessor solely through
-// the canonicalized state_id chain, so base fields erased by ELC
-// canonicalization (for example `latest_height`) are not byte-compared. A
-// divergent intermediate base from the authenticated relayer cannot affect the
-// on-chain proof chain; at worst it corrupts this client's stitched host-store
-// cache, which a subsequent serial update_client rewrites.
+// only through stored `stateId[prev_height]`
+// (`verify_expected_base_state_in_tx`). We intentionally do not require the
+// latest canonical `clientState`, nor the raw `consensusState[prev_height]`
+// bytes, to equal the first unit's base bytes: the on-chain/client protocol
+// path may start from a historical base, and raw Any encodings are not the
+// canonical identity for a light-client state. Later units are bound to their
+// predecessor solely through the canonicalized state_id chain, so base fields
+// erased by ELC canonicalization (for example `latest_height`) are not
+// byte-compared. A divergent intermediate base from the authenticated relayer
+// cannot affect the on-chain proof chain; at worst it corrupts this client's
+// stitched host-store cache, which a subsequent serial update_client rewrites.
 fn validate_observed_transition_follows(
     unit_id: &str,
     previous: Option<&ObservedStateTransition>,

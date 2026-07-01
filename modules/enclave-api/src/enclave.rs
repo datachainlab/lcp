@@ -1,6 +1,6 @@
 use crate::errors::{Error, Result};
 use keymanager::EnclaveKeyManager;
-use lcp_types::{store_key, Any, EnclaveMetadata, Height};
+use lcp_types::{store_key, EnclaveMetadata, Height};
 use sgx_types::{sgx_enclave_id_t, SgxResult};
 use sgx_urts::SgxEnclave;
 use std::path::PathBuf;
@@ -128,27 +128,26 @@ pub trait HostStoreTxManager<S: CommitStore>: CommitStoreAccessor<S> {
     }
 
     /// `apply_write_set_with_expected_base` applies a speculative write set only if the
-    /// store already contains the explicit historical base state that seeded
-    /// the batch at `prev_height`.
+    /// store already contains the explicit historical state ID that seeded the
+    /// batch at `prev_height`.
     ///
     /// The check and apply run under the same serialized update transaction keyed by
     /// `update_key`, so the accepted base cannot change between verification and
     /// commit.
     ///
-    /// This intentionally does not compare the explicit base client state with
-    /// the latest canonical `clientState`, because the on-chain/client protocol
-    /// path is allowed to start from a historical base. The local check only
-    /// anchors that historical base to state that LCP has already observed: the
-    /// explicit base consensus state must match the height-indexed
-    /// `consensusState[prev_height]`, and the caller-supplied `prev_state_id`
-    /// (observed in-enclave by the first speculative unit) must match the
+    /// This intentionally does not byte-compare the explicit base client state
+    /// or consensus state with the local store: the on-chain/client protocol
+    /// path is allowed to start from a historical base, and raw `Any` encodings
+    /// are not the canonical representation of a light-client state. The local
+    /// check anchors the supplied base by the state commitment that the
+    /// in-enclave light client actually observed: the caller-supplied
+    /// `prev_state_id` (recorded by the first speculative unit) must match the
     /// height-indexed state ID previously stored by a successful
     /// create/serial/speculative update.
     fn apply_write_set_with_expected_base(
         &self,
         update_key: UpdateKey,
         prev_height: Height,
-        consensus_state: &Any,
         prev_state_id: Option<&[u8]>,
         write_set: WriteSet,
     ) -> Result<()>
@@ -157,13 +156,9 @@ pub trait HostStoreTxManager<S: CommitStore>: CommitStoreAccessor<S> {
     {
         let tx = self.begin_tx(Some(update_key.clone()))?;
         let tx_id = tx.get_id();
-        if let Err(e) = self.verify_expected_base_state_in_tx(
-            tx_id,
-            &update_key,
-            &prev_height,
-            consensus_state,
-            prev_state_id,
-        ) {
+        if let Err(e) =
+            self.verify_expected_base_state_in_tx(tx_id, &update_key, &prev_height, prev_state_id)
+        {
             self.rollback_tx(tx);
             return Err(e);
         }
@@ -192,27 +187,11 @@ pub trait HostStoreTxManager<S: CommitStore>: CommitStoreAccessor<S> {
         tx_id: store::TxId,
         client_id: &str,
         prev_height: &Height,
-        consensus_state: &Any,
         prev_state_id: Option<&[u8]>,
     ) -> Result<()>
     where
         S: TxAccessor,
     {
-        let expected_consensus_state =
-            bincode::serde::encode_to_vec(consensus_state, bincode::config::standard())
-                .map_err(Error::bincode_encode)?;
-        let consensus_state_key = store_key::consensus_state_bytes(client_id, prev_height);
-        let stored_consensus_state =
-            self.use_mut_store(|store| store.tx_get(tx_id, &consensus_state_key))?;
-        if stored_consensus_state.as_deref() != Some(expected_consensus_state.as_slice()) {
-            return Err(Error::invalid_argument(format!(
-                "stored speculative base consensus_state mismatch: client_id={} height={}-{}",
-                client_id,
-                prev_height.revision_number(),
-                prev_height.revision_height()
-            )));
-        }
-
         let prev_state_id = prev_state_id.ok_or_else(|| {
             Error::invalid_argument(format!(
                 "speculative update_client must provide prev_state_id: client_id={} height={}-{}",
@@ -221,6 +200,15 @@ pub trait HostStoreTxManager<S: CommitStore>: CommitStoreAccessor<S> {
                 prev_height.revision_height()
             ))
         })?;
+        // Do not recompute the state ID from the supplied raw Anys, and do not
+        // compare those raw bytes against stored client/consensus states here.
+        // The light-client-specific canonicalization that defines state_id is
+        // available only inside the enclave. The first speculative unit reports
+        // the state_id it observed after seeding the supplied base, and this
+        // stored state_id was written by the same in-enclave light client at a
+        // previous create/update commit. Comparing the two is therefore the
+        // canonical base-connection check without encoding-only false
+        // mismatches.
         let state_id_key = store_key::state_id_bytes(client_id, prev_height);
         let stored_state_id = self.use_mut_store(|store| store.tx_get(tx_id, &state_id_key))?;
         let Some(stored_state_id) = stored_state_id else {

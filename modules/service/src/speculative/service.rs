@@ -134,13 +134,15 @@ impl SpeculativeService {
             unit_id: None,
             detail: "speculative batch must contain at least one unit".to_string(),
         })?;
-        let first_base = base_state_payload_from_ref(&first_unit.base_state).map_err(|e| {
-            SpeculativeBatchFailure {
-                kind: SpeculativeBatchFailureKind::BaseStateMismatch,
-                unit_id: Some(first_unit.unit_id.clone()),
-                detail: e.to_string(),
-            }
-        })?;
+        let first_prev_height =
+            first_unit
+                .base_state
+                .prev_height
+                .ok_or_else(|| SpeculativeBatchFailure {
+                    kind: SpeculativeBatchFailureKind::BaseStateMismatch,
+                    unit_id: Some(first_unit.unit_id.clone()),
+                    detail: "speculative base_state prev_height must be provided".to_string(),
+                })?;
         let first_prev_state_id = results
             .units
             .first()
@@ -167,8 +169,7 @@ impl SpeculativeService {
         app.enclave
             .apply_write_set_with_expected_base(
                 batch.client_id.clone(),
-                first_base.prev_height,
-                &first_base.consensus_state,
+                first_prev_height,
                 first_prev_state_id.as_deref(),
                 merged_write_set,
             )
@@ -670,7 +671,7 @@ mod tests {
     }
 
     #[test]
-    fn stitch_rejects_first_base_state_that_is_not_in_store() {
+    fn stitch_rejects_first_base_state_id_that_is_not_in_store() {
         let client_id = "07-tendermint-0";
         let enclave = FakeEnclave::new(Duration::from_millis(1));
         let app = AppService::<FakeEnclave, MemStore>::new("test-home", enclave, 1);
@@ -681,21 +682,14 @@ mod tests {
             Some(Height::new(0, 10)),
             None,
         ));
-        set_canonical_client_state(
-            &app,
-            client_id,
-            req.base_state
-                .client_state
-                .as_ref()
-                .expect("test base client_state"),
-        );
+        let prev_state_id = state_id_for_base_state(&req.base_state);
         let result = SpeculativeUpdateClientResult {
             response: MsgUpdateClientResponse::default(),
             write_set: WriteSet::default(),
             base_state: req.base_state.clone(),
             observed_transition: ObservedStateTransition {
                 prev_height: Some(Height::new(0, 10)),
-                prev_state_id: None,
+                prev_state_id: Some(prev_state_id),
                 post_height: Height::new(0, 11),
                 post_state_id: vec![1; 32],
             },
@@ -713,20 +707,20 @@ mod tests {
                     units: vec![result],
                 },
             )
-            .expect_err("unknown first base consensus state must be rejected");
+            .expect_err("unknown first base state_id must be rejected");
 
         assert_eq!(err.kind, SpeculativeBatchFailureKind::BaseStateMismatch);
         assert_eq!(err.unit_id.as_deref(), Some("unit-0000"));
         assert!(
             err.detail
-                .contains("stored speculative base consensus_state mismatch"),
+                .contains("stored speculative base state_id missing"),
             "unexpected error detail: {}",
             err.detail
         );
     }
 
     #[test]
-    fn stitch_accepts_first_base_state_when_stored_consensus_and_state_id_match() {
+    fn stitch_accepts_first_base_state_when_stored_state_id_matches() {
         let client_id = "07-tendermint-0";
         let enclave = FakeEnclave::new(Duration::from_millis(1));
         let app = AppService::<FakeEnclave, MemStore>::new("test-home", enclave, 1);
@@ -765,7 +759,71 @@ mod tests {
                     units: vec![result],
                 },
             )
-            .expect("stored consensus state and matching state_id should be accepted");
+            .expect("matching stored state_id should be accepted");
+    }
+
+    #[test]
+    fn stitch_accepts_first_base_state_when_consensus_state_bytes_differ_but_state_id_matches() {
+        let client_id = "07-tendermint-0";
+        let enclave = FakeEnclave::new(Duration::from_millis(1));
+        let app = AppService::<FakeEnclave, MemStore>::new("test-home", enclave, 1);
+        let service = SpeculativeService::new(1);
+        let mut req = with_explicit_base_state_payload(mk_req(
+            "unit-0000",
+            client_id,
+            Some(Height::new(0, 10)),
+            None,
+        ));
+        let prev_height = req.base_state.prev_height.expect("test base prev_height");
+        let stored_prev_state_id = state_id_for_base_state(&req.base_state);
+        seed_canonical_base_state(&app, client_id, &req.base_state);
+
+        // Simulate an encoding-only difference in the supplied consensus Any:
+        // the raw bytes differ from the stored consensus_state[prev_height],
+        // but the in-enclave light client canonicalizes the supplied base to
+        // the same state_id as the stored historical state.
+        req.base_state.consensus_state = Some(
+            Any {
+                type_url: "/ibc.mock.ConsensusState".to_string(),
+                value: vec![9],
+            }
+            .into(),
+        );
+        req.base_state.prev_state_id = Some(stored_prev_state_id.clone());
+
+        let result = SpeculativeUpdateClientResult {
+            response: MsgUpdateClientResponse::default(),
+            write_set: vec![(b"applied".to_vec(), Some(b"yes".to_vec()))]
+                .into_iter()
+                .collect(),
+            base_state: req.base_state.clone(),
+            observed_transition: ObservedStateTransition {
+                prev_height: Some(prev_height),
+                prev_state_id: Some(stored_prev_state_id),
+                post_height: Height::new(0, 11),
+                post_state_id: vec![1; 32],
+            },
+        };
+
+        service
+            .stitch_speculative_update_client_batch(
+                &app,
+                SpeculativeUpdateClientBatch {
+                    client_id: client_id.to_string(),
+                    units: vec![req],
+                },
+                SpeculativeUpdateClientBatchResult {
+                    client_id: client_id.to_string(),
+                    units: vec![result],
+                },
+            )
+            .expect("raw consensus_state bytes should not be a commit-time CAS");
+
+        assert_eq!(
+            app.enclave.use_mut_store(|store| store.get(b"applied")),
+            Some(b"yes".to_vec()),
+            "write set should be applied when the stored state_id anchor matches"
+        );
     }
 
     // Regression test: light clients derive state IDs from a
