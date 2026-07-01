@@ -144,6 +144,14 @@ pub trait HostStoreTxManager<S: CommitStore>: CommitStoreAccessor<S> {
     /// `prev_state_id` (recorded by the first speculative unit) must match the
     /// height-indexed state ID previously stored by a successful
     /// create/serial/speculative update.
+    ///
+    /// The on-chain state ID chain is the source of truth for finality: a
+    /// signed update is accepted only if its `prev_state_id` matches the
+    /// on-chain client's current state. The host store's latest `clientState`
+    /// is therefore a local cache/cursor, not the authoritative commit point
+    /// for speculative batches. This host-side check is deliberately narrower:
+    /// it prevents signing from an entirely unknown base by requiring
+    /// continuity from a state ID that LCP has already observed and stored.
     fn apply_write_set_with_expected_base(
         &self,
         update_key: UpdateKey,
@@ -209,6 +217,14 @@ pub trait HostStoreTxManager<S: CommitStore>: CommitStoreAccessor<S> {
         // previous create/update commit. Comparing the two is therefore the
         // canonical base-connection check without encoding-only false
         // mismatches.
+        //
+        // Note the intentionally limited authority of this check. The LCP host
+        // store is not the SSOT for whether this update can land; the
+        // destination chain's state ID is. Here we only ensure the proposed
+        // speculative chain starts from a state ID that LCP knows about. If the
+        // on-chain client has already moved past that state, the on-chain
+        // verifier rejects the signed message by state ID; the local latest
+        // clientState cache is not used as a commit-time CAS.
         let state_id_key = store_key::state_id_bytes(client_id, prev_height);
         let stored_state_id = self.use_mut_store(|store| store.tx_get(tx_id, &state_id_key))?;
         let Some(stored_state_id) = stored_state_id else {
