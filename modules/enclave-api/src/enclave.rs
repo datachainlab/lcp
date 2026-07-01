@@ -128,23 +128,26 @@ pub trait HostStoreTxManager<S: CommitStore>: CommitStoreAccessor<S> {
     }
 
     /// `apply_write_set_with_expected_base` applies a speculative write set only if the
-    /// store already contains the explicit base state that seeded the batch at
-    /// `prev_height`.
+    /// store already contains the explicit historical base state that seeded
+    /// the batch at `prev_height`.
     ///
     /// The check and apply run under the same serialized update transaction keyed by
-    /// `update_key`, so the accepted base cannot change between verification and commit.
-    /// The explicit base client state must match the latest canonical
-    /// client_state and the explicit base consensus state must match the
-    /// height-indexed consensus state at `prev_height`. This prevents an old,
-    /// historically valid base state from overwriting a newer latest-only
-    /// client_state. The caller-supplied `prev_state_id` (observed in-enclave by
-    /// the first speculative unit) must also match the height-indexed state ID
-    /// previously stored by a successful create/serial/speculative update.
+    /// `update_key`, so the accepted base cannot change between verification and
+    /// commit.
+    ///
+    /// This intentionally does not compare the explicit base client state with
+    /// the latest canonical `clientState`, because the on-chain/client protocol
+    /// path is allowed to start from a historical base. The local check only
+    /// anchors that historical base to state that LCP has already observed: the
+    /// explicit base consensus state must match the height-indexed
+    /// `consensusState[prev_height]`, and the caller-supplied `prev_state_id`
+    /// (observed in-enclave by the first speculative unit) must match the
+    /// height-indexed state ID previously stored by a successful
+    /// create/serial/speculative update.
     fn apply_write_set_with_expected_base(
         &self,
         update_key: UpdateKey,
         prev_height: Height,
-        client_state: &Any,
         consensus_state: &Any,
         prev_state_id: Option<&[u8]>,
         write_set: WriteSet,
@@ -158,7 +161,6 @@ pub trait HostStoreTxManager<S: CommitStore>: CommitStoreAccessor<S> {
             tx_id,
             &update_key,
             &prev_height,
-            client_state,
             consensus_state,
             prev_state_id,
         ) {
@@ -190,28 +192,12 @@ pub trait HostStoreTxManager<S: CommitStore>: CommitStoreAccessor<S> {
         tx_id: store::TxId,
         client_id: &str,
         prev_height: &Height,
-        client_state: &Any,
         consensus_state: &Any,
         prev_state_id: Option<&[u8]>,
     ) -> Result<()>
     where
         S: TxAccessor,
     {
-        let expected_client_state =
-            bincode::serde::encode_to_vec(client_state, bincode::config::standard())
-                .map_err(Error::bincode_encode)?;
-        let client_state_key = store_key::client_state_bytes(client_id);
-        let stored_client_state =
-            self.use_mut_store(|store| store.tx_get(tx_id, &client_state_key))?;
-        if stored_client_state.as_deref() != Some(expected_client_state.as_slice()) {
-            return Err(Error::invalid_argument(format!(
-                "stored speculative base client_state mismatch: client_id={} height={}-{}",
-                client_id,
-                prev_height.revision_number(),
-                prev_height.revision_height()
-            )));
-        }
-
         let expected_consensus_state =
             bincode::serde::encode_to_vec(consensus_state, bincode::config::standard())
                 .map_err(Error::bincode_encode)?;

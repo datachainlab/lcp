@@ -168,7 +168,6 @@ impl SpeculativeService {
             .apply_write_set_with_expected_base(
                 batch.client_id.clone(),
                 first_base.prev_height,
-                &first_base.client_state,
                 &first_base.consensus_state,
                 first_prev_state_id.as_deref(),
                 merged_write_set,
@@ -1079,7 +1078,7 @@ mod tests {
     }
 
     #[test]
-    fn stitch_rejects_first_base_state_when_canonical_client_state_advanced() {
+    fn stitch_accepts_first_base_state_when_canonical_client_state_advanced() {
         let client_id = "07-tendermint-0";
         let enclave = FakeEnclave::new(Duration::from_millis(1));
         let app = AppService::<FakeEnclave, MemStore>::new("test-home", enclave, 1);
@@ -1104,7 +1103,9 @@ mod tests {
         );
         let result = SpeculativeUpdateClientResult {
             response: MsgUpdateClientResponse::default(),
-            write_set: WriteSet::default(),
+            write_set: vec![(b"applied".to_vec(), Some(b"yes".to_vec()))]
+                .into_iter()
+                .collect(),
             base_state: req.base_state.clone(),
             observed_transition: ObservedStateTransition {
                 prev_height: Some(prev_height),
@@ -1114,7 +1115,7 @@ mod tests {
             },
         };
 
-        let err = service
+        service
             .stitch_speculative_update_client_batch(
                 &app,
                 SpeculativeUpdateClientBatch {
@@ -1126,15 +1127,14 @@ mod tests {
                     units: vec![result],
                 },
             )
-            .expect_err("stale base client_state should be rejected");
+            .expect(
+                "historical base should not be rejected only because latest client_state advanced",
+            );
 
-        assert_eq!(err.kind, SpeculativeBatchFailureKind::BaseStateMismatch);
-        assert_eq!(err.unit_id.as_deref(), Some("unit-0000"));
-        assert!(
-            err.detail
-                .contains("stored speculative base client_state mismatch"),
-            "unexpected error detail: {}",
-            err.detail
+        assert_eq!(
+            app.enclave.use_mut_store(|store| store.get(b"applied")),
+            Some(b"yes".to_vec()),
+            "write set should still be applied after historical-base verification"
         );
     }
 
