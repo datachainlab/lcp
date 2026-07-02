@@ -1,14 +1,21 @@
 use crate::client_lock::ClientUpdateLocks;
 use crate::ecall_pool::EcallPool;
 use crate::speculative::SpeculativeService;
-use anyhow::Result;
-use enclave_api::{EnclaveProtoAPI, SpeculativeEnclaveCommandAPI};
+use anyhow::{anyhow, Result};
+use ecall_commands::EnclaveRuntimeInfo;
+use enclave_api::{EnclaveCommandAPI, EnclaveProtoAPI, SpeculativeEnclaveCommandAPI};
 use lcp_proto::lcp::service::{
     elc::v1::{msg_server::MsgServer as ELCMsgServer, query_server::QueryServer as ELCQueryServer},
     enclave::v1::query_server::QueryServer as EnclaveQueryServer,
 };
 use log::*;
-use std::{marker::PhantomData, net::SocketAddr, path::PathBuf, sync::Arc};
+use std::{
+    marker::PhantomData,
+    net::SocketAddr,
+    path::PathBuf,
+    sync::{Arc, Barrier},
+    thread,
+};
 use store::transaction::{CommitStore, TxAccessor};
 use tokio::signal::unix::{signal, SignalKind};
 use tonic::transport::Server;
@@ -101,6 +108,49 @@ where
             speculative,
             client_update_locks: Arc::new(ClientUpdateLocks::default()),
         }
+    }
+
+    /// Query runtime SGX/TRTS limits via the dedicated ECALL pool.
+    ///
+    /// Do not call the enclave directly from the startup thread under
+    /// `TCSPolicy=BIND`: that would bind an extra TCS outside the fixed
+    /// `EcallPool` worker set.
+    pub fn enclave_runtime_info(&self) -> Result<EnclaveRuntimeInfo> {
+        let enclave = Arc::clone(&self.app.enclave);
+        Ok(self
+            .app
+            .ecall_pool
+            .run(move || <E as EnclaveCommandAPI<S>>::runtime_info(&*enclave))?)
+    }
+
+    /// Force every ECALL worker to enter the enclave once before serving.
+    ///
+    /// The barrier is inside the pool job, so all long-lived ECALL workers are
+    /// in-flight at the same time. If TCS allocation/binding cannot support the
+    /// configured pool size, the service fails before accepting requests.
+    pub fn prewarm_ecall_pool(&self, expected_workers: usize) -> Result<()> {
+        let expected_workers = expected_workers.max(1);
+        let barrier = Arc::new(Barrier::new(expected_workers));
+        let mut handles = Vec::with_capacity(expected_workers);
+        for _ in 0..expected_workers {
+            let barrier = Arc::clone(&barrier);
+            let pool = Arc::clone(&self.app.ecall_pool);
+            let enclave = Arc::clone(&self.app.enclave);
+            handles.push(thread::spawn(move || {
+                pool.run(move || {
+                    barrier.wait();
+                    <E as EnclaveCommandAPI<S>>::runtime_info(&*enclave)
+                })
+            }));
+        }
+
+        for handle in handles {
+            let info = handle
+                .join()
+                .map_err(|_| anyhow!("ECALL pool prewarm worker panicked"))??;
+            debug!("prewarmed ECALL worker: runtime_info={:?}", info);
+        }
+        Ok(())
     }
 
     pub(crate) fn with_client_update_serialized<T>(

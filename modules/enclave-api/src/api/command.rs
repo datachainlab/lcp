@@ -2,7 +2,7 @@ use crate::{CommitStoreAccessor, EnclavePrimitiveAPI, Result, SpeculativeEnclave
 use attestation_report::QEType;
 use ecall_commands::{
     AggregateMessagesInput, AggregateMessagesResponse, Command, CommandResponse,
-    EnclaveManageCommand, EnclaveManageResponse, GenerateEnclaveKeyInput,
+    EnclaveManageCommand, EnclaveManageResponse, EnclaveRuntimeInfo, GenerateEnclaveKeyInput,
     GenerateEnclaveKeyResponse, InitClientInput, InitClientResponse, LightClientCommand,
     LightClientExecuteCommand, LightClientQueryCommand, LightClientResponse, QueryClientInput,
     QueryClientResponse, UpdateClientInput, UpdateClientResponse, VerifyMembershipInput,
@@ -37,6 +37,17 @@ pub struct SpeculativeUpdateClientResponse {
 }
 
 pub trait EnclaveCommandAPI<S: CommitStore>: EnclavePrimitiveAPI<S> {
+    /// runtime_info queries runtime SGX/TRTS limits from inside the enclave.
+    fn runtime_info(&self) -> Result<EnclaveRuntimeInfo> {
+        match self.execute_command(
+            Command::EnclaveManage(EnclaveManageCommand::RuntimeInfo),
+            None,
+        )? {
+            CommandResponse::EnclaveManage(EnclaveManageResponse::RuntimeInfo(res)) => Ok(res),
+            _ => unreachable!(),
+        }
+    }
+
     /// generate_enclave_key generates a new key and perform remote attestation to generates an AVR
     fn generate_enclave_key(
         &self,

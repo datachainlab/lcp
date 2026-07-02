@@ -518,6 +518,7 @@ dependencies = [
  "flex-error",
  "lcp-types",
  "light-client",
+ "sgx_trts",
  "sgx_tse",
  "sgx_types",
  "store",

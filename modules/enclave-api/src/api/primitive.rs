@@ -127,6 +127,7 @@ pub(crate) fn raw_execute_command(
             &mut output_len,
         )
     };
+    fail_stop_on_out_of_tcs(result, "ecall_execute_command");
     if result != sgx_status_t::SGX_SUCCESS {
         Err(Error::sgx_error(result))
     } else {
@@ -143,9 +144,20 @@ pub(crate) fn raw_execute_command(
         if ret == sgx_status_t::SGX_SUCCESS {
             Ok(res)
         } else if let CommandResponse::CommandError(descr) = res {
+            fail_stop_on_out_of_tcs(ret, "ecall_execute_command retval");
             Err(Error::command(ret, descr))
         } else {
             unreachable!()
         }
+    }
+}
+
+fn fail_stop_on_out_of_tcs(status: sgx_status_t, where_: &str) {
+    if status == sgx_status_t::SGX_ERROR_OUT_OF_TCS {
+        log::error!(
+            "fatal SGX invariant violation: {} returned SGX_ERROR_OUT_OF_TCS; aborting to avoid inconsistent state",
+            where_
+        );
+        std::process::abort();
     }
 }

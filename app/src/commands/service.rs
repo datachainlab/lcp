@@ -75,10 +75,6 @@ impl ServiceCmd {
                     enclave_loader.load(opts, cmd.enclave.path.as_ref(), cmd.enclave.is_debug())?;
                 let metadata = enclave.metadata()?;
                 let mrenclave = metadata.mrenclave().to_hex_string();
-                let tcs_num = metadata
-                    .tcs_num()
-                    .context("failed to derive TCSNum from enclave metadata")?;
-                validate_enclave_parallelism(enclave_parallelism, tcs_num)?;
                 let mut rb = Builder::new_multi_thread();
                 let rb = if let Some(threads) = cmd.threads {
                     rb.worker_threads(threads)
@@ -87,6 +83,19 @@ impl ServiceCmd {
                 };
                 let rt = Arc::new(rb.enable_all().build()?);
                 let speculative_concurrency_limit = cmd.max_speculative_concurrency.max(1);
+                let srv = ElcService::new(
+                    opts.get_home(),
+                    enclave,
+                    speculative_concurrency_limit,
+                    enclave_parallelism,
+                );
+                let runtime_info = srv
+                    .enclave_runtime_info()
+                    .context("failed to query enclave runtime info")?;
+                let tcs_limit = runtime_info.effective_tcs_limit();
+                validate_enclave_parallelism(enclave_parallelism, tcs_limit)?;
+                srv.prewarm_ecall_pool(enclave_parallelism)
+                    .context("failed to prewarm ECALL pool")?;
                 if speculative_concurrency_limit > enclave_parallelism {
                     warn!(
                         "max-speculative-concurrency ({}) is greater than max-enclave-concurrency ({}); speculative workers above the enclave limit will block waiting for an EcallPool slot",
@@ -94,24 +103,23 @@ impl ServiceCmd {
                         enclave_parallelism
                     );
                 }
-                if speculative_concurrency_limit > tcs_num {
+                if speculative_concurrency_limit > tcs_limit {
                     warn!(
-                        "max-speculative-concurrency ({}) is greater than enclave TCSNum ({}); excess speculative requests will wait for an EcallPool slot",
+                        "max-speculative-concurrency ({}) is greater than enclave TCS limit ({}); excess speculative requests will wait for an EcallPool slot",
                         speculative_concurrency_limit,
-                        tcs_num
+                        tcs_limit
                     );
                 }
-                let srv = ElcService::new(
-                    opts.get_home(),
-                    enclave,
-                    speculative_concurrency_limit,
-                    enclave_parallelism,
-                );
 
                 info!(
-                    "start service: addr={addr} mrenclave={mrenclave} tcs_num={} tcs_policy={} speculative_concurrency_limit={} enclave_parallelism={}",
-                    tcs_num,
-                    metadata.tcs_policy(),
+                    "start service: addr={addr} mrenclave={mrenclave} tcs_limit={} thread_policy={} static_tcs_num={} eremove_tcs_num={} dyn_tcs_num={} tcs_max_num={} edmm_supported={} speculative_concurrency_limit={} enclave_parallelism={}",
+                    tcs_limit,
+                    runtime_info.thread_policy,
+                    runtime_info.static_tcs_num,
+                    runtime_info.eremove_tcs_num,
+                    runtime_info.dyn_tcs_num,
+                    runtime_info.tcs_max_num,
+                    runtime_info.edmm_supported,
                     speculative_concurrency_limit,
                     enclave_parallelism
                 );
@@ -124,7 +132,7 @@ impl ServiceCmd {
 fn validate_enclave_parallelism(enclave_parallelism: usize, tcs_num: usize) -> Result<()> {
     if enclave_parallelism > tcs_num {
         bail!(
-            "max-enclave-concurrency ({}) exceeds enclave TCSNum ({}); reduce --max-enclave-concurrency or rebuild the enclave with a larger TCSNum",
+            "max-enclave-concurrency ({}) exceeds enclave TCS limit ({}); reduce --max-enclave-concurrency or rebuild the enclave with a larger TCSNum/TCSMaxNum",
             enclave_parallelism,
             tcs_num
         );
@@ -144,6 +152,6 @@ mod tests {
     #[test]
     fn enclave_parallelism_cannot_exceed_tcs_num() {
         let err = validate_enclave_parallelism(9, 8).unwrap_err();
-        assert!(err.to_string().contains("exceeds enclave TCSNum"));
+        assert!(err.to_string().contains("exceeds enclave TCS limit"));
     }
 }
