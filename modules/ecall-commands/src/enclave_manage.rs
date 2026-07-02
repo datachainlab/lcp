@@ -62,10 +62,45 @@ pub struct EnclaveRuntimeInfo {
 
 impl EnclaveRuntimeInfo {
     pub fn effective_tcs_limit(&self) -> usize {
-        if self.edmm_supported {
+        if self.edmm_supported || self.static_tcs_num == 0 {
             self.tcs_max_num as usize
         } else {
             self.static_tcs_num as usize
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn runtime_info(
+        static_tcs_num: u32,
+        tcs_max_num: u32,
+        edmm_supported: bool,
+    ) -> EnclaveRuntimeInfo {
+        EnclaveRuntimeInfo {
+            thread_policy: EnclaveThreadPolicy::Bound,
+            static_tcs_num,
+            eremove_tcs_num: 0,
+            dyn_tcs_num: 0,
+            tcs_max_num,
+            edmm_supported,
+        }
+    }
+
+    #[test]
+    fn effective_tcs_limit_uses_static_tcs_for_sgx1_when_reported() {
+        assert_eq!(runtime_info(8, 16, false).effective_tcs_limit(), 8);
+    }
+
+    #[test]
+    fn effective_tcs_limit_falls_back_to_max_when_static_tcs_is_zero() {
+        assert_eq!(runtime_info(0, 8, false).effective_tcs_limit(), 8);
+    }
+
+    #[test]
+    fn effective_tcs_limit_uses_max_for_edmm() {
+        assert_eq!(runtime_info(4, 16, true).effective_tcs_limit(), 16);
     }
 }
