@@ -22,6 +22,7 @@ mod prelude {
 
 pub use crate::errors::{Error, Result};
 pub use crate::store::{KVStore, TxId};
+use alloc::collections::BTreeMap;
 
 pub mod cache;
 mod errors;
@@ -29,8 +30,11 @@ mod errors;
 pub mod host;
 #[cfg(feature = "std")]
 pub mod memory;
+pub mod overlay;
 #[cfg(feature = "rocksdb")]
 pub mod rocksdb;
 mod store;
 #[cfg(feature = "std")]
 pub mod transaction;
+
+pub type WriteSet = BTreeMap<alloc::vec::Vec<u8>, Option<alloc::vec::Vec<u8>>>;

@@ -1,5 +1,5 @@
 use crate::prelude::*;
-use crate::{KVStore, Result, TxId};
+use crate::{KVStore, Result, TxId, WriteSet};
 
 /// `UpdateKey` is a hint to the store to control concurrent transactions
 pub type UpdateKey = String;
@@ -27,11 +27,25 @@ pub trait CommitStore: Sync + Send {
     /// if `update_key` is None, it is desired that the store controls a transaction as read-only
     fn create_transaction(&mut self, update_key: Option<UpdateKey>) -> Result<Self::Tx>;
 
+    /// `create_speculative_transaction` creates a transaction whose writes remain isolated
+    /// and can be extracted with `take_write_set`.
+    fn create_speculative_transaction(&mut self) -> Result<Self::Tx> {
+        self.create_transaction(None)
+    }
+
     /// `begin` begins the transaction
     fn begin(&mut self, tx: &<Self::Tx as CreatedTx>::PreparedTx) -> Result<()>;
 
     /// `commit` consume the transaction handle to commit the changes
     fn commit(&mut self, tx: <Self::Tx as CreatedTx>::PreparedTx) -> Result<()>;
+
+    /// `take_write_set` consumes a speculative transaction and returns its isolated writes
+    /// without mutating the canonical store.
+    fn take_write_set(&mut self, _tx: <Self::Tx as CreatedTx>::PreparedTx) -> Result<WriteSet> {
+        Err(crate::Error::not_supported_operation(
+            "take_write_set".to_string(),
+        ))
+    }
 
     /// `rollback` consume the transaction handle to rollback the changes
     fn rollback(&mut self, tx: <Self::Tx as CreatedTx>::PreparedTx);

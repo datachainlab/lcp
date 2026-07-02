@@ -5,7 +5,7 @@ use crate::{
 use anyhow::Result;
 use clap::Parser;
 use enclave_api::{Enclave, EnclaveProtoAPI};
-use host::store::transaction::CommitStore;
+use host::store::transaction::{CommitStore, TxAccessor};
 use serde::de::DeserializeOwned;
 use std::path::PathBuf;
 
@@ -47,7 +47,7 @@ impl ELCOpts {
 impl ELCCmd {
     pub fn run<S, L>(&self, opts: &Opts, enclave_loader: L) -> Result<()>
     where
-        S: CommitStore,
+        S: CommitStore + TxAccessor + 'static,
         Enclave<S>: EnclaveProtoAPI<S>,
         L: EnclaveLoader<S>,
     {

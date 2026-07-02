@@ -38,5 +38,4 @@ mod context;
 mod errors;
 #[cfg(feature = "ibc")]
 pub mod ibc;
-mod path;
 mod registry;

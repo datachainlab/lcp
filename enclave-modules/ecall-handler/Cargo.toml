@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 sgx_types = { rev = "v1.1.6", git = "https://github.com/apache/incubator-teaclave-sgx-sdk" }
+sgx_trts = { rev = "v1.1.6", git = "https://github.com/apache/incubator-teaclave-sgx-sdk" }
 sgx_tse = { rev = "v1.1.6", git = "https://github.com/apache/incubator-teaclave-sgx-sdk" }
 flex-error = { version = "0.4.4", default-features = false }
 

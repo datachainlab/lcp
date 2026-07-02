@@ -1,5 +1,9 @@
 #![allow(clippy::result_large_err)]
-pub use api::{EnclaveCommandAPI, EnclavePrimitiveAPI, EnclaveProtoAPI};
+pub use api::{
+    EnclaveCommandAPI, EnclavePrimitiveAPI, EnclaveProtoAPI, SpeculativeBaseState,
+    SpeculativeEnclaveCommandAPI, SpeculativeEnclavePrimitiveAPI, SpeculativeUpdateClientInput,
+    SpeculativeUpdateClientResponse,
+};
 pub use enclave::{CommitStoreAccessor, Enclave, EnclaveInfo, HostStoreTxManager};
 pub use errors::Error;
 use errors::Result;

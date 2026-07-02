@@ -14,22 +14,18 @@ pub struct QueryClientResponse {
     pub found: bool,
     /// light client state
     #[prost(message, optional, tag = "2")]
-    pub client_state: ::core::option::Option<
-        super::super::super::super::google::protobuf::Any,
-    >,
+    pub client_state: ::core::option::Option<super::super::super::super::google::protobuf::Any>,
     /// consensus state associated with the client that corresponds to a given
     /// height.
     #[prost(message, optional, tag = "3")]
-    pub consensus_state: ::core::option::Option<
-        super::super::super::super::google::protobuf::Any,
-    >,
+    pub consensus_state: ::core::option::Option<super::super::super::super::google::protobuf::Any>,
 }
 /// Generated client implementations.
 #[cfg(feature = "client")]
 pub mod query_client {
     #![allow(unused_variables, dead_code, missing_docs, clippy::let_unit_value)]
-    use tonic::codegen::*;
     use tonic::codegen::http::Uri;
+    use tonic::codegen::*;
     /// Query defines the ELC Query service.
     #[derive(Debug, Clone)]
     pub struct QueryClient<T> {
@@ -74,9 +70,8 @@ pub mod query_client {
                     <T as tonic::client::GrpcService<tonic::body::BoxBody>>::ResponseBody,
                 >,
             >,
-            <T as tonic::codegen::Service<
-                http::Request<tonic::body::BoxBody>,
-            >>::Error: Into<StdError> + Send + Sync,
+            <T as tonic::codegen::Service<http::Request<tonic::body::BoxBody>>>::Error:
+                Into<StdError> + Send + Sync,
         {
             QueryClient::new(InterceptedService::new(inner, interceptor))
         }
@@ -99,19 +94,14 @@ pub mod query_client {
             &mut self,
             request: impl tonic::IntoRequest<super::QueryClientRequest>,
         ) -> Result<tonic::Response<super::QueryClientResponse>, tonic::Status> {
-            self.inner
-                .ready()
-                .await
-                .map_err(|e| {
-                    tonic::Status::new(
-                        tonic::Code::Unknown,
-                        format!("Service was not ready: {}", e.into()),
-                    )
-                })?;
+            self.inner.ready().await.map_err(|e| {
+                tonic::Status::new(
+                    tonic::Code::Unknown,
+                    format!("Service was not ready: {}", e.into()),
+                )
+            })?;
             let codec = tonic::codec::ProstCodec::default();
-            let path = http::uri::PathAndQuery::from_static(
-                "/lcp.service.elc.v1.Query/Client",
-            );
+            let path = http::uri::PathAndQuery::from_static("/lcp.service.elc.v1.Query/Client");
             self.inner.unary(request.into_request(), path, codec).await
         }
     }
@@ -149,10 +139,7 @@ pub mod query_server {
                 send_compression_encodings: Default::default(),
             }
         }
-        pub fn with_interceptor<F>(
-            inner: T,
-            interceptor: F,
-        ) -> InterceptedService<Self, F>
+        pub fn with_interceptor<F>(inner: T, interceptor: F) -> InterceptedService<Self, F>
         where
             F: tonic::service::Interceptor,
         {
@@ -180,10 +167,7 @@ pub mod query_server {
         type Response = http::Response<tonic::body::BoxBody>;
         type Error = std::convert::Infallible;
         type Future = BoxFuture<Self::Response, Self::Error>;
-        fn poll_ready(
-            &mut self,
-            _cx: &mut Context<'_>,
-        ) -> Poll<Result<(), Self::Error>> {
+        fn poll_ready(&mut self, _cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
             Poll::Ready(Ok(()))
         }
         fn call(&mut self, req: http::Request<B>) -> Self::Future {
@@ -192,13 +176,9 @@ pub mod query_server {
                 "/lcp.service.elc.v1.Query/Client" => {
                     #[allow(non_camel_case_types)]
                     struct ClientSvc<T: Query>(pub Arc<T>);
-                    impl<T: Query> tonic::server::UnaryService<super::QueryClientRequest>
-                    for ClientSvc<T> {
+                    impl<T: Query> tonic::server::UnaryService<super::QueryClientRequest> for ClientSvc<T> {
                         type Response = super::QueryClientResponse;
-                        type Future = BoxFuture<
-                            tonic::Response<Self::Response>,
-                            tonic::Status,
-                        >;
+                        type Future = BoxFuture<tonic::Response<Self::Response>, tonic::Status>;
                         fn call(
                             &mut self,
                             request: tonic::Request<super::QueryClientRequest>,
@@ -215,28 +195,23 @@ pub mod query_server {
                         let inner = inner.0;
                         let method = ClientSvc(inner);
                         let codec = tonic::codec::ProstCodec::default();
-                        let mut grpc = tonic::server::Grpc::new(codec)
-                            .apply_compression_config(
-                                accept_compression_encodings,
-                                send_compression_encodings,
-                            );
+                        let mut grpc = tonic::server::Grpc::new(codec).apply_compression_config(
+                            accept_compression_encodings,
+                            send_compression_encodings,
+                        );
                         let res = grpc.unary(method, req).await;
                         Ok(res)
                     };
                     Box::pin(fut)
                 }
-                _ => {
-                    Box::pin(async move {
-                        Ok(
-                            http::Response::builder()
-                                .status(200)
-                                .header("grpc-status", "12")
-                                .header("content-type", "application/grpc")
-                                .body(empty_body())
-                                .unwrap(),
-                        )
-                    })
-                }
+                _ => Box::pin(async move {
+                    Ok(http::Response::builder()
+                        .status(200)
+                        .header("grpc-status", "12")
+                        .header("content-type", "application/grpc")
+                        .body(empty_body())
+                        .unwrap())
+                }),
             }
         }
     }
@@ -273,15 +248,11 @@ pub struct MsgCreateClient {
     pub client_id: ::prost::alloc::string::String,
     /// light client state
     #[prost(message, optional, tag = "2")]
-    pub client_state: ::core::option::Option<
-        super::super::super::super::google::protobuf::Any,
-    >,
+    pub client_state: ::core::option::Option<super::super::super::super::google::protobuf::Any>,
     /// consensus state associated with the client that corresponds to a given
     /// height.
     #[prost(message, optional, tag = "3")]
-    pub consensus_state: ::core::option::Option<
-        super::super::super::super::google::protobuf::Any,
-    >,
+    pub consensus_state: ::core::option::Option<super::super::super::super::google::protobuf::Any>,
     /// enclave key for signing
     #[prost(bytes = "vec", tag = "4")]
     pub signer: ::prost::alloc::vec::Vec<u8>,
@@ -307,9 +278,7 @@ pub struct MsgUpdateClient {
     pub client_id: ::prost::alloc::string::String,
     /// header to update the light client
     #[prost(message, optional, tag = "2")]
-    pub header: ::core::option::Option<
-        super::super::super::super::google::protobuf::Any,
-    >,
+    pub header: ::core::option::Option<super::super::super::super::google::protobuf::Any>,
     /// request to emit state
     #[prost(bool, tag = "3")]
     pub include_state: bool,
@@ -360,9 +329,8 @@ pub struct MsgVerifyMembership {
     #[prost(bytes = "vec", tag = "4")]
     pub value: ::prost::alloc::vec::Vec<u8>,
     #[prost(message, optional, tag = "5")]
-    pub proof_height: ::core::option::Option<
-        super::super::super::super::ibc::core::client::v1::Height,
-    >,
+    pub proof_height:
+        ::core::option::Option<super::super::super::super::ibc::core::client::v1::Height>,
     #[prost(bytes = "vec", tag = "6")]
     pub proof: ::prost::alloc::vec::Vec<u8>,
     /// enclave key for signing
@@ -389,9 +357,8 @@ pub struct MsgVerifyNonMembership {
     #[prost(string, tag = "3")]
     pub path: ::prost::alloc::string::String,
     #[prost(message, optional, tag = "4")]
-    pub proof_height: ::core::option::Option<
-        super::super::super::super::ibc::core::client::v1::Height,
-    >,
+    pub proof_height:
+        ::core::option::Option<super::super::super::super::ibc::core::client::v1::Height>,
     #[prost(bytes = "vec", tag = "5")]
     pub proof: ::prost::alloc::vec::Vec<u8>,
     /// enclave key for signing
@@ -446,12 +413,129 @@ pub struct UpdateClientStreamHeaderChunk {
     #[prost(bytes = "vec", tag = "1")]
     pub data: ::prost::alloc::vec::Vec<u8>,
 }
+#[derive(::serde::Serialize, ::serde::Deserialize)]
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct ExplicitStateRef {
+    #[prost(message, optional, tag = "1")]
+    pub prev_height:
+        ::core::option::Option<super::super::super::super::ibc::core::client::v1::Height>,
+    #[prost(bytes = "vec", tag = "2")]
+    pub prev_state_id: ::prost::alloc::vec::Vec<u8>,
+    #[prost(message, optional, tag = "3")]
+    pub client_state: ::core::option::Option<super::super::super::super::google::protobuf::Any>,
+    #[prost(message, optional, tag = "4")]
+    pub consensus_state: ::core::option::Option<super::super::super::super::google::protobuf::Any>,
+}
+#[derive(::serde::Serialize, ::serde::Deserialize)]
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct MsgSpeculativeUpdateClientBatchStreamChunk {
+    #[prost(
+        oneof = "msg_speculative_update_client_batch_stream_chunk::Chunk",
+        tags = "1, 2, 3, 4, 5"
+    )]
+    pub chunk: ::core::option::Option<msg_speculative_update_client_batch_stream_chunk::Chunk>,
+}
+/// Nested message and enum types in `MsgSpeculativeUpdateClientBatchStreamChunk`.
+pub mod msg_speculative_update_client_batch_stream_chunk {
+    #[derive(::serde::Serialize, ::serde::Deserialize)]
+    #[allow(clippy::derive_partial_eq_without_eq)]
+    #[derive(Clone, PartialEq, ::prost::Oneof)]
+    pub enum Chunk {
+        #[prost(message, tag = "1")]
+        Init(super::SpeculativeUpdateClientBatchStreamInit),
+        #[prost(message, tag = "2")]
+        UnitInit(super::SpeculativeUpdateClientUnitInit),
+        #[prost(message, tag = "3")]
+        UnitHeaderChunk(super::SpeculativeUpdateClientUnitHeaderChunk),
+        #[prost(message, tag = "4")]
+        UnitEnd(super::SpeculativeUpdateClientUnitEnd),
+        #[prost(message, tag = "5")]
+        BatchEnd(super::SpeculativeUpdateClientBatchEnd),
+    }
+}
+#[derive(::serde::Serialize, ::serde::Deserialize)]
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct SpeculativeUpdateClientBatchStreamInit {
+    #[prost(string, tag = "1")]
+    pub client_id: ::prost::alloc::string::String,
+}
+#[derive(::serde::Serialize, ::serde::Deserialize)]
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct SpeculativeUpdateClientUnitInit {
+    #[prost(string, tag = "1")]
+    pub unit_id: ::prost::alloc::string::String,
+    #[prost(string, tag = "2")]
+    pub type_url: ::prost::alloc::string::String,
+    #[prost(bool, tag = "3")]
+    pub include_state: bool,
+    #[prost(bytes = "vec", tag = "4")]
+    pub signer: ::prost::alloc::vec::Vec<u8>,
+    #[prost(message, optional, tag = "5")]
+    pub base_state: ::core::option::Option<ExplicitStateRef>,
+}
+#[derive(::serde::Serialize, ::serde::Deserialize)]
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct SpeculativeUpdateClientUnitHeaderChunk {
+    #[prost(string, tag = "1")]
+    pub unit_id: ::prost::alloc::string::String,
+    #[prost(bytes = "vec", tag = "2")]
+    pub data: ::prost::alloc::vec::Vec<u8>,
+}
+#[derive(::serde::Serialize, ::serde::Deserialize)]
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct SpeculativeUpdateClientUnitEnd {
+    #[prost(string, tag = "1")]
+    pub unit_id: ::prost::alloc::string::String,
+}
+#[derive(::serde::Serialize, ::serde::Deserialize)]
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct SpeculativeUpdateClientBatchEnd {}
+#[derive(::serde::Serialize, ::serde::Deserialize)]
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct ObservedStateTransition {
+    #[prost(message, optional, tag = "1")]
+    pub prev_height:
+        ::core::option::Option<super::super::super::super::ibc::core::client::v1::Height>,
+    #[prost(bytes = "vec", tag = "2")]
+    pub prev_state_id: ::prost::alloc::vec::Vec<u8>,
+    #[prost(message, optional, tag = "3")]
+    pub post_height:
+        ::core::option::Option<super::super::super::super::ibc::core::client::v1::Height>,
+    #[prost(bytes = "vec", tag = "4")]
+    pub post_state_id: ::prost::alloc::vec::Vec<u8>,
+}
+#[derive(::serde::Serialize, ::serde::Deserialize)]
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct StitchedSpeculativeUpdateClientUnitResult {
+    #[prost(message, optional, tag = "1")]
+    pub response: ::core::option::Option<MsgUpdateClientResponse>,
+    #[prost(message, optional, tag = "2")]
+    pub observed_transition: ::core::option::Option<ObservedStateTransition>,
+}
+#[derive(::serde::Serialize, ::serde::Deserialize)]
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct ExecuteSpeculativeUpdateClientBatchResponse {
+    #[prost(string, tag = "1")]
+    pub client_id: ::prost::alloc::string::String,
+    #[prost(message, repeated, tag = "2")]
+    pub units: ::prost::alloc::vec::Vec<StitchedSpeculativeUpdateClientUnitResult>,
+}
 /// Generated client implementations.
 #[cfg(feature = "client")]
 pub mod msg_client {
     #![allow(unused_variables, dead_code, missing_docs, clippy::let_unit_value)]
-    use tonic::codegen::*;
     use tonic::codegen::http::Uri;
+    use tonic::codegen::*;
     /// Msg defines the ELC Msg service.
     #[derive(Debug, Clone)]
     pub struct MsgClient<T> {
@@ -483,10 +567,7 @@ pub mod msg_client {
             let inner = tonic::client::Grpc::with_origin(inner, origin);
             Self { inner }
         }
-        pub fn with_interceptor<F>(
-            inner: T,
-            interceptor: F,
-        ) -> MsgClient<InterceptedService<T, F>>
+        pub fn with_interceptor<F>(inner: T, interceptor: F) -> MsgClient<InterceptedService<T, F>>
         where
             F: tonic::service::Interceptor,
             T::ResponseBody: Default,
@@ -496,9 +577,8 @@ pub mod msg_client {
                     <T as tonic::client::GrpcService<tonic::body::BoxBody>>::ResponseBody,
                 >,
             >,
-            <T as tonic::codegen::Service<
-                http::Request<tonic::body::BoxBody>,
-            >>::Error: Into<StdError> + Send + Sync,
+            <T as tonic::codegen::Service<http::Request<tonic::body::BoxBody>>>::Error:
+                Into<StdError> + Send + Sync,
         {
             MsgClient::new(InterceptedService::new(inner, interceptor))
         }
@@ -522,19 +602,14 @@ pub mod msg_client {
             &mut self,
             request: impl tonic::IntoRequest<super::MsgCreateClient>,
         ) -> Result<tonic::Response<super::MsgCreateClientResponse>, tonic::Status> {
-            self.inner
-                .ready()
-                .await
-                .map_err(|e| {
-                    tonic::Status::new(
-                        tonic::Code::Unknown,
-                        format!("Service was not ready: {}", e.into()),
-                    )
-                })?;
+            self.inner.ready().await.map_err(|e| {
+                tonic::Status::new(
+                    tonic::Code::Unknown,
+                    format!("Service was not ready: {}", e.into()),
+                )
+            })?;
             let codec = tonic::codec::ProstCodec::default();
-            let path = http::uri::PathAndQuery::from_static(
-                "/lcp.service.elc.v1.Msg/CreateClient",
-            );
+            let path = http::uri::PathAndQuery::from_static("/lcp.service.elc.v1.Msg/CreateClient");
             self.inner.unary(request.into_request(), path, codec).await
         }
         /// UpdateClient defines a rpc handler method for MsgUpdateClient.
@@ -542,40 +617,55 @@ pub mod msg_client {
             &mut self,
             request: impl tonic::IntoRequest<super::MsgUpdateClient>,
         ) -> Result<tonic::Response<super::MsgUpdateClientResponse>, tonic::Status> {
-            self.inner
-                .ready()
-                .await
-                .map_err(|e| {
-                    tonic::Status::new(
-                        tonic::Code::Unknown,
-                        format!("Service was not ready: {}", e.into()),
-                    )
-                })?;
+            self.inner.ready().await.map_err(|e| {
+                tonic::Status::new(
+                    tonic::Code::Unknown,
+                    format!("Service was not ready: {}", e.into()),
+                )
+            })?;
             let codec = tonic::codec::ProstCodec::default();
-            let path = http::uri::PathAndQuery::from_static(
-                "/lcp.service.elc.v1.Msg/UpdateClient",
-            );
+            let path = http::uri::PathAndQuery::from_static("/lcp.service.elc.v1.Msg/UpdateClient");
             self.inner.unary(request.into_request(), path, codec).await
         }
         /// UpdateClientStream defines a rpc handler method for MsgUpdateClient.
         pub async fn update_client_stream(
             &mut self,
-            request: impl tonic::IntoStreamingRequest<
-                Message = super::MsgUpdateClientStreamChunk,
-            >,
+            request: impl tonic::IntoStreamingRequest<Message = super::MsgUpdateClientStreamChunk>,
         ) -> Result<tonic::Response<super::MsgUpdateClientResponse>, tonic::Status> {
+            self.inner.ready().await.map_err(|e| {
+                tonic::Status::new(
+                    tonic::Code::Unknown,
+                    format!("Service was not ready: {}", e.into()),
+                )
+            })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path =
+                http::uri::PathAndQuery::from_static("/lcp.service.elc.v1.Msg/UpdateClientStream");
             self.inner
-                .ready()
+                .client_streaming(request.into_streaming_request(), path, codec)
                 .await
-                .map_err(|e| {
-                    tonic::Status::new(
-                        tonic::Code::Unknown,
-                        format!("Service was not ready: {}", e.into()),
-                    )
-                })?;
+        }
+        /// SpeculativeUpdateClientBatchStream defines a client-streaming
+        /// rpc handler method for explicit-state speculative UpdateClient batch
+        /// execution.
+        pub async fn speculative_update_client_batch_stream(
+            &mut self,
+            request: impl tonic::IntoStreamingRequest<
+                Message = super::MsgSpeculativeUpdateClientBatchStreamChunk,
+            >,
+        ) -> Result<
+            tonic::Response<super::ExecuteSpeculativeUpdateClientBatchResponse>,
+            tonic::Status,
+        > {
+            self.inner.ready().await.map_err(|e| {
+                tonic::Status::new(
+                    tonic::Code::Unknown,
+                    format!("Service was not ready: {}", e.into()),
+                )
+            })?;
             let codec = tonic::codec::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
-                "/lcp.service.elc.v1.Msg/UpdateClientStream",
+                "/lcp.service.elc.v1.Msg/SpeculativeUpdateClientBatchStream",
             );
             self.inner
                 .client_streaming(request.into_streaming_request(), path, codec)
@@ -585,23 +675,16 @@ pub mod msg_client {
         pub async fn aggregate_messages(
             &mut self,
             request: impl tonic::IntoRequest<super::MsgAggregateMessages>,
-        ) -> Result<
-            tonic::Response<super::MsgAggregateMessagesResponse>,
-            tonic::Status,
-        > {
-            self.inner
-                .ready()
-                .await
-                .map_err(|e| {
-                    tonic::Status::new(
-                        tonic::Code::Unknown,
-                        format!("Service was not ready: {}", e.into()),
-                    )
-                })?;
+        ) -> Result<tonic::Response<super::MsgAggregateMessagesResponse>, tonic::Status> {
+            self.inner.ready().await.map_err(|e| {
+                tonic::Status::new(
+                    tonic::Code::Unknown,
+                    format!("Service was not ready: {}", e.into()),
+                )
+            })?;
             let codec = tonic::codec::ProstCodec::default();
-            let path = http::uri::PathAndQuery::from_static(
-                "/lcp.service.elc.v1.Msg/AggregateMessages",
-            );
+            let path =
+                http::uri::PathAndQuery::from_static("/lcp.service.elc.v1.Msg/AggregateMessages");
             self.inner.unary(request.into_request(), path, codec).await
         }
         /// VerifyMembership defines a rpc handler method for MsgVerifyMembership
@@ -609,42 +692,31 @@ pub mod msg_client {
             &mut self,
             request: impl tonic::IntoRequest<super::MsgVerifyMembership>,
         ) -> Result<tonic::Response<super::MsgVerifyMembershipResponse>, tonic::Status> {
-            self.inner
-                .ready()
-                .await
-                .map_err(|e| {
-                    tonic::Status::new(
-                        tonic::Code::Unknown,
-                        format!("Service was not ready: {}", e.into()),
-                    )
-                })?;
+            self.inner.ready().await.map_err(|e| {
+                tonic::Status::new(
+                    tonic::Code::Unknown,
+                    format!("Service was not ready: {}", e.into()),
+                )
+            })?;
             let codec = tonic::codec::ProstCodec::default();
-            let path = http::uri::PathAndQuery::from_static(
-                "/lcp.service.elc.v1.Msg/VerifyMembership",
-            );
+            let path =
+                http::uri::PathAndQuery::from_static("/lcp.service.elc.v1.Msg/VerifyMembership");
             self.inner.unary(request.into_request(), path, codec).await
         }
         /// VerifyNonMembership defines a rpc handler method for MsgVerifyNonMembership
         pub async fn verify_non_membership(
             &mut self,
             request: impl tonic::IntoRequest<super::MsgVerifyNonMembership>,
-        ) -> Result<
-            tonic::Response<super::MsgVerifyNonMembershipResponse>,
-            tonic::Status,
-        > {
-            self.inner
-                .ready()
-                .await
-                .map_err(|e| {
-                    tonic::Status::new(
-                        tonic::Code::Unknown,
-                        format!("Service was not ready: {}", e.into()),
-                    )
-                })?;
+        ) -> Result<tonic::Response<super::MsgVerifyNonMembershipResponse>, tonic::Status> {
+            self.inner.ready().await.map_err(|e| {
+                tonic::Status::new(
+                    tonic::Code::Unknown,
+                    format!("Service was not ready: {}", e.into()),
+                )
+            })?;
             let codec = tonic::codec::ProstCodec::default();
-            let path = http::uri::PathAndQuery::from_static(
-                "/lcp.service.elc.v1.Msg/VerifyNonMembership",
-            );
+            let path =
+                http::uri::PathAndQuery::from_static("/lcp.service.elc.v1.Msg/VerifyNonMembership");
             self.inner.unary(request.into_request(), path, codec).await
         }
     }
@@ -672,6 +744,18 @@ pub mod msg_server {
             &self,
             request: tonic::Request<tonic::Streaming<super::MsgUpdateClientStreamChunk>>,
         ) -> Result<tonic::Response<super::MsgUpdateClientResponse>, tonic::Status>;
+        /// SpeculativeUpdateClientBatchStream defines a client-streaming
+        /// rpc handler method for explicit-state speculative UpdateClient batch
+        /// execution.
+        async fn speculative_update_client_batch_stream(
+            &self,
+            request: tonic::Request<
+                tonic::Streaming<super::MsgSpeculativeUpdateClientBatchStreamChunk>,
+            >,
+        ) -> Result<
+            tonic::Response<super::ExecuteSpeculativeUpdateClientBatchResponse>,
+            tonic::Status,
+        >;
         /// AggregateMessages defines a rpc handler method for MsgAggregateMessages
         async fn aggregate_messages(
             &self,
@@ -686,10 +770,7 @@ pub mod msg_server {
         async fn verify_non_membership(
             &self,
             request: tonic::Request<super::MsgVerifyNonMembership>,
-        ) -> Result<
-            tonic::Response<super::MsgVerifyNonMembershipResponse>,
-            tonic::Status,
-        >;
+        ) -> Result<tonic::Response<super::MsgVerifyNonMembershipResponse>, tonic::Status>;
     }
     /// Msg defines the ELC Msg service.
     #[derive(Debug)]
@@ -711,10 +792,7 @@ pub mod msg_server {
                 send_compression_encodings: Default::default(),
             }
         }
-        pub fn with_interceptor<F>(
-            inner: T,
-            interceptor: F,
-        ) -> InterceptedService<Self, F>
+        pub fn with_interceptor<F>(inner: T, interceptor: F) -> InterceptedService<Self, F>
         where
             F: tonic::service::Interceptor,
         {
@@ -742,10 +820,7 @@ pub mod msg_server {
         type Response = http::Response<tonic::body::BoxBody>;
         type Error = std::convert::Infallible;
         type Future = BoxFuture<Self::Response, Self::Error>;
-        fn poll_ready(
-            &mut self,
-            _cx: &mut Context<'_>,
-        ) -> Poll<Result<(), Self::Error>> {
+        fn poll_ready(&mut self, _cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
             Poll::Ready(Ok(()))
         }
         fn call(&mut self, req: http::Request<B>) -> Self::Future {
@@ -754,21 +829,15 @@ pub mod msg_server {
                 "/lcp.service.elc.v1.Msg/CreateClient" => {
                     #[allow(non_camel_case_types)]
                     struct CreateClientSvc<T: Msg>(pub Arc<T>);
-                    impl<T: Msg> tonic::server::UnaryService<super::MsgCreateClient>
-                    for CreateClientSvc<T> {
+                    impl<T: Msg> tonic::server::UnaryService<super::MsgCreateClient> for CreateClientSvc<T> {
                         type Response = super::MsgCreateClientResponse;
-                        type Future = BoxFuture<
-                            tonic::Response<Self::Response>,
-                            tonic::Status,
-                        >;
+                        type Future = BoxFuture<tonic::Response<Self::Response>, tonic::Status>;
                         fn call(
                             &mut self,
                             request: tonic::Request<super::MsgCreateClient>,
                         ) -> Self::Future {
                             let inner = self.0.clone();
-                            let fut = async move {
-                                (*inner).create_client(request).await
-                            };
+                            let fut = async move { (*inner).create_client(request).await };
                             Box::pin(fut)
                         }
                     }
@@ -779,11 +848,10 @@ pub mod msg_server {
                         let inner = inner.0;
                         let method = CreateClientSvc(inner);
                         let codec = tonic::codec::ProstCodec::default();
-                        let mut grpc = tonic::server::Grpc::new(codec)
-                            .apply_compression_config(
-                                accept_compression_encodings,
-                                send_compression_encodings,
-                            );
+                        let mut grpc = tonic::server::Grpc::new(codec).apply_compression_config(
+                            accept_compression_encodings,
+                            send_compression_encodings,
+                        );
                         let res = grpc.unary(method, req).await;
                         Ok(res)
                     };
@@ -792,21 +860,15 @@ pub mod msg_server {
                 "/lcp.service.elc.v1.Msg/UpdateClient" => {
                     #[allow(non_camel_case_types)]
                     struct UpdateClientSvc<T: Msg>(pub Arc<T>);
-                    impl<T: Msg> tonic::server::UnaryService<super::MsgUpdateClient>
-                    for UpdateClientSvc<T> {
+                    impl<T: Msg> tonic::server::UnaryService<super::MsgUpdateClient> for UpdateClientSvc<T> {
                         type Response = super::MsgUpdateClientResponse;
-                        type Future = BoxFuture<
-                            tonic::Response<Self::Response>,
-                            tonic::Status,
-                        >;
+                        type Future = BoxFuture<tonic::Response<Self::Response>, tonic::Status>;
                         fn call(
                             &mut self,
                             request: tonic::Request<super::MsgUpdateClient>,
                         ) -> Self::Future {
                             let inner = self.0.clone();
-                            let fut = async move {
-                                (*inner).update_client(request).await
-                            };
+                            let fut = async move { (*inner).update_client(request).await };
                             Box::pin(fut)
                         }
                     }
@@ -817,11 +879,10 @@ pub mod msg_server {
                         let inner = inner.0;
                         let method = UpdateClientSvc(inner);
                         let codec = tonic::codec::ProstCodec::default();
-                        let mut grpc = tonic::server::Grpc::new(codec)
-                            .apply_compression_config(
-                                accept_compression_encodings,
-                                send_compression_encodings,
-                            );
+                        let mut grpc = tonic::server::Grpc::new(codec).apply_compression_config(
+                            accept_compression_encodings,
+                            send_compression_encodings,
+                        );
                         let res = grpc.unary(method, req).await;
                         Ok(res)
                     };
@@ -830,16 +891,12 @@ pub mod msg_server {
                 "/lcp.service.elc.v1.Msg/UpdateClientStream" => {
                     #[allow(non_camel_case_types)]
                     struct UpdateClientStreamSvc<T: Msg>(pub Arc<T>);
-                    impl<
-                        T: Msg,
-                    > tonic::server::ClientStreamingService<
-                        super::MsgUpdateClientStreamChunk,
-                    > for UpdateClientStreamSvc<T> {
+                    impl<T: Msg>
+                        tonic::server::ClientStreamingService<super::MsgUpdateClientStreamChunk>
+                        for UpdateClientStreamSvc<T>
+                    {
                         type Response = super::MsgUpdateClientResponse;
-                        type Future = BoxFuture<
-                            tonic::Response<Self::Response>,
-                            tonic::Status,
-                        >;
+                        type Future = BoxFuture<tonic::Response<Self::Response>, tonic::Status>;
                         fn call(
                             &mut self,
                             request: tonic::Request<
@@ -847,9 +904,7 @@ pub mod msg_server {
                             >,
                         ) -> Self::Future {
                             let inner = self.0.clone();
-                            let fut = async move {
-                                (*inner).update_client_stream(request).await
-                            };
+                            let fut = async move { (*inner).update_client_stream(request).await };
                             Box::pin(fut)
                         }
                     }
@@ -860,11 +915,51 @@ pub mod msg_server {
                         let inner = inner.0;
                         let method = UpdateClientStreamSvc(inner);
                         let codec = tonic::codec::ProstCodec::default();
-                        let mut grpc = tonic::server::Grpc::new(codec)
-                            .apply_compression_config(
-                                accept_compression_encodings,
-                                send_compression_encodings,
-                            );
+                        let mut grpc = tonic::server::Grpc::new(codec).apply_compression_config(
+                            accept_compression_encodings,
+                            send_compression_encodings,
+                        );
+                        let res = grpc.client_streaming(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
+                "/lcp.service.elc.v1.Msg/SpeculativeUpdateClientBatchStream" => {
+                    #[allow(non_camel_case_types)]
+                    struct SpeculativeUpdateClientBatchStreamSvc<T: Msg>(pub Arc<T>);
+                    impl<T: Msg>
+                        tonic::server::ClientStreamingService<
+                            super::MsgSpeculativeUpdateClientBatchStreamChunk,
+                        > for SpeculativeUpdateClientBatchStreamSvc<T>
+                    {
+                        type Response = super::ExecuteSpeculativeUpdateClientBatchResponse;
+                        type Future = BoxFuture<tonic::Response<Self::Response>, tonic::Status>;
+                        fn call(
+                            &mut self,
+                            request: tonic::Request<
+                                tonic::Streaming<super::MsgSpeculativeUpdateClientBatchStreamChunk>,
+                            >,
+                        ) -> Self::Future {
+                            let inner = self.0.clone();
+                            let fut = async move {
+                                (*inner)
+                                    .speculative_update_client_batch_stream(request)
+                                    .await
+                            };
+                            Box::pin(fut)
+                        }
+                    }
+                    let accept_compression_encodings = self.accept_compression_encodings;
+                    let send_compression_encodings = self.send_compression_encodings;
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let inner = inner.0;
+                        let method = SpeculativeUpdateClientBatchStreamSvc(inner);
+                        let codec = tonic::codec::ProstCodec::default();
+                        let mut grpc = tonic::server::Grpc::new(codec).apply_compression_config(
+                            accept_compression_encodings,
+                            send_compression_encodings,
+                        );
                         let res = grpc.client_streaming(method, req).await;
                         Ok(res)
                     };
@@ -873,21 +968,15 @@ pub mod msg_server {
                 "/lcp.service.elc.v1.Msg/AggregateMessages" => {
                     #[allow(non_camel_case_types)]
                     struct AggregateMessagesSvc<T: Msg>(pub Arc<T>);
-                    impl<T: Msg> tonic::server::UnaryService<super::MsgAggregateMessages>
-                    for AggregateMessagesSvc<T> {
+                    impl<T: Msg> tonic::server::UnaryService<super::MsgAggregateMessages> for AggregateMessagesSvc<T> {
                         type Response = super::MsgAggregateMessagesResponse;
-                        type Future = BoxFuture<
-                            tonic::Response<Self::Response>,
-                            tonic::Status,
-                        >;
+                        type Future = BoxFuture<tonic::Response<Self::Response>, tonic::Status>;
                         fn call(
                             &mut self,
                             request: tonic::Request<super::MsgAggregateMessages>,
                         ) -> Self::Future {
                             let inner = self.0.clone();
-                            let fut = async move {
-                                (*inner).aggregate_messages(request).await
-                            };
+                            let fut = async move { (*inner).aggregate_messages(request).await };
                             Box::pin(fut)
                         }
                     }
@@ -898,11 +987,10 @@ pub mod msg_server {
                         let inner = inner.0;
                         let method = AggregateMessagesSvc(inner);
                         let codec = tonic::codec::ProstCodec::default();
-                        let mut grpc = tonic::server::Grpc::new(codec)
-                            .apply_compression_config(
-                                accept_compression_encodings,
-                                send_compression_encodings,
-                            );
+                        let mut grpc = tonic::server::Grpc::new(codec).apply_compression_config(
+                            accept_compression_encodings,
+                            send_compression_encodings,
+                        );
                         let res = grpc.unary(method, req).await;
                         Ok(res)
                     };
@@ -911,21 +999,15 @@ pub mod msg_server {
                 "/lcp.service.elc.v1.Msg/VerifyMembership" => {
                     #[allow(non_camel_case_types)]
                     struct VerifyMembershipSvc<T: Msg>(pub Arc<T>);
-                    impl<T: Msg> tonic::server::UnaryService<super::MsgVerifyMembership>
-                    for VerifyMembershipSvc<T> {
+                    impl<T: Msg> tonic::server::UnaryService<super::MsgVerifyMembership> for VerifyMembershipSvc<T> {
                         type Response = super::MsgVerifyMembershipResponse;
-                        type Future = BoxFuture<
-                            tonic::Response<Self::Response>,
-                            tonic::Status,
-                        >;
+                        type Future = BoxFuture<tonic::Response<Self::Response>, tonic::Status>;
                         fn call(
                             &mut self,
                             request: tonic::Request<super::MsgVerifyMembership>,
                         ) -> Self::Future {
                             let inner = self.0.clone();
-                            let fut = async move {
-                                (*inner).verify_membership(request).await
-                            };
+                            let fut = async move { (*inner).verify_membership(request).await };
                             Box::pin(fut)
                         }
                     }
@@ -936,11 +1018,10 @@ pub mod msg_server {
                         let inner = inner.0;
                         let method = VerifyMembershipSvc(inner);
                         let codec = tonic::codec::ProstCodec::default();
-                        let mut grpc = tonic::server::Grpc::new(codec)
-                            .apply_compression_config(
-                                accept_compression_encodings,
-                                send_compression_encodings,
-                            );
+                        let mut grpc = tonic::server::Grpc::new(codec).apply_compression_config(
+                            accept_compression_encodings,
+                            send_compression_encodings,
+                        );
                         let res = grpc.unary(method, req).await;
                         Ok(res)
                     };
@@ -949,23 +1030,17 @@ pub mod msg_server {
                 "/lcp.service.elc.v1.Msg/VerifyNonMembership" => {
                     #[allow(non_camel_case_types)]
                     struct VerifyNonMembershipSvc<T: Msg>(pub Arc<T>);
-                    impl<
-                        T: Msg,
-                    > tonic::server::UnaryService<super::MsgVerifyNonMembership>
-                    for VerifyNonMembershipSvc<T> {
+                    impl<T: Msg> tonic::server::UnaryService<super::MsgVerifyNonMembership>
+                        for VerifyNonMembershipSvc<T>
+                    {
                         type Response = super::MsgVerifyNonMembershipResponse;
-                        type Future = BoxFuture<
-                            tonic::Response<Self::Response>,
-                            tonic::Status,
-                        >;
+                        type Future = BoxFuture<tonic::Response<Self::Response>, tonic::Status>;
                         fn call(
                             &mut self,
                             request: tonic::Request<super::MsgVerifyNonMembership>,
                         ) -> Self::Future {
                             let inner = self.0.clone();
-                            let fut = async move {
-                                (*inner).verify_non_membership(request).await
-                            };
+                            let fut = async move { (*inner).verify_non_membership(request).await };
                             Box::pin(fut)
                         }
                     }
@@ -976,28 +1051,23 @@ pub mod msg_server {
                         let inner = inner.0;
                         let method = VerifyNonMembershipSvc(inner);
                         let codec = tonic::codec::ProstCodec::default();
-                        let mut grpc = tonic::server::Grpc::new(codec)
-                            .apply_compression_config(
-                                accept_compression_encodings,
-                                send_compression_encodings,
-                            );
+                        let mut grpc = tonic::server::Grpc::new(codec).apply_compression_config(
+                            accept_compression_encodings,
+                            send_compression_encodings,
+                        );
                         let res = grpc.unary(method, req).await;
                         Ok(res)
                     };
                     Box::pin(fut)
                 }
-                _ => {
-                    Box::pin(async move {
-                        Ok(
-                            http::Response::builder()
-                                .status(200)
-                                .header("grpc-status", "12")
-                                .header("content-type", "application/grpc")
-                                .body(empty_body())
-                                .unwrap(),
-                        )
-                    })
-                }
+                _ => Box::pin(async move {
+                    Ok(http::Response::builder()
+                        .status(200)
+                        .header("grpc-status", "12")
+                        .header("content-type", "application/grpc")
+                        .body(empty_body())
+                        .unwrap())
+                }),
             }
         }
     }

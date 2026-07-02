@@ -2,7 +2,13 @@ use crate::enclave_manage::Error;
 use crate::prelude::*;
 use attestation_report::ReportData;
 use crypto::{EnclaveKey, SealingKey};
-use ecall_commands::{GenerateEnclaveKeyInput, GenerateEnclaveKeyResponse};
+use ecall_commands::{
+    EnclaveRuntimeInfo, EnclaveThreadPolicy, GenerateEnclaveKeyInput, GenerateEnclaveKeyResponse,
+};
+use sgx_trts::enclave::{
+    rsgx_get_tcs_max_num, rsgx_get_tcs_num, rsgx_get_thread_policy, rsgx_is_supported_EDMM,
+    SgxThreadPolicy,
+};
 use sgx_tse::rsgx_create_report;
 
 pub(crate) fn generate_enclave_key(
@@ -23,4 +29,19 @@ pub(crate) fn generate_enclave_key(
         sealed_ek,
         report,
     })
+}
+
+pub(crate) fn runtime_info() -> EnclaveRuntimeInfo {
+    let (static_tcs_num, eremove_tcs_num, dyn_tcs_num) = rsgx_get_tcs_num();
+    EnclaveRuntimeInfo {
+        thread_policy: match rsgx_get_thread_policy() {
+            SgxThreadPolicy::Bound => EnclaveThreadPolicy::Bound,
+            SgxThreadPolicy::Unbound => EnclaveThreadPolicy::Unbound,
+        },
+        static_tcs_num,
+        eremove_tcs_num,
+        dyn_tcs_num,
+        tcs_max_num: rsgx_get_tcs_max_num(),
+        edmm_supported: rsgx_is_supported_EDMM(),
+    }
 }

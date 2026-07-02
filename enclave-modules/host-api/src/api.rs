@@ -92,7 +92,7 @@ mod tests {
             assert_eq!(res.unwrap(), CommandResult::Log);
         }
         {
-            let tx = TestEnv.begin_tx(None).unwrap();
+            let tx = TestEnv.begin_tx(Some("test-client".to_string())).unwrap();
             let res = execute_command(
                 StoreCommand::Set(tx.get_id(), b"k0".to_vec(), b"v0".to_vec()).into(),
             );

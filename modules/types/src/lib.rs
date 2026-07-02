@@ -10,6 +10,11 @@ pub use host::ClientId;
 /// re-export
 pub use lcp_proto as proto;
 pub use sgx::{EnclaveMetadata, Mrenclave};
+pub use store_key::{
+    client_state as client_state_key, client_state_bytes, client_type as client_type_key,
+    client_type_bytes, consensus_state as consensus_state_key, consensus_state_bytes, state_id,
+    state_id_bytes,
+};
 pub use time::{nanos_to_duration, Time, MAX_UNIX_TIMESTAMP_NANOS};
 pub use transmuter::{deserialize_bytes, serialize_bytes, BytesTransmuter};
 
@@ -18,6 +23,7 @@ mod errors;
 mod height;
 mod host;
 mod sgx;
+pub mod store_key;
 mod time;
 mod transmuter;
 

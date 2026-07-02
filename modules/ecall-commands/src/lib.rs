@@ -26,8 +26,8 @@ mod prelude {
 pub use commands::{Command, CommandContext, CommandResponse, ECallCommand};
 use crypto::Address;
 pub use enclave_manage::{
-    EnclaveManageCommand, EnclaveManageResponse, GenerateEnclaveKeyInput,
-    GenerateEnclaveKeyResponse,
+    EnclaveManageCommand, EnclaveManageResponse, EnclaveRuntimeInfo, EnclaveThreadPolicy,
+    GenerateEnclaveKeyInput, GenerateEnclaveKeyResponse,
 };
 pub use errors::InputValidationError;
 pub use light_client::{

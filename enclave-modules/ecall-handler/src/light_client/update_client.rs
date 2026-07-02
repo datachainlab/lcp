@@ -16,6 +16,7 @@ pub fn update_client<R: LightClientResolver, S: KVStore, K: Signer>(
     let ek = ctx.get_enclave_key();
     match lc.update_client(ctx, input.client_id.clone(), input.any_header)? {
         UpdateClientResult::UpdateState(mut data) => {
+            let post_state_id = data.message.post_state_id;
             let message: ProxyMessage = {
                 if input.include_state && data.message.emitted_states.is_empty() {
                     data.message.emitted_states =
@@ -26,10 +27,11 @@ pub fn update_client<R: LightClientResolver, S: KVStore, K: Signer>(
 
             ctx.store_any_client_state(input.client_id.clone(), data.new_any_client_state)?;
             ctx.store_any_consensus_state(
-                input.client_id,
+                input.client_id.clone(),
                 data.height,
                 data.new_any_consensus_state,
             )?;
+            ctx.store_state_id(input.client_id, data.height, post_state_id)?;
 
             let proof = if data.prove {
                 prove_commitment(ek, message)?
