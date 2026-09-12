@@ -4,9 +4,9 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-sgx_types = { rev = "v1.1.6", git = "https://github.com/apache/incubator-teaclave-sgx-sdk" }
-sgx_trts = { rev = "v1.1.6", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", optional = true }
-sgx_tseal = { rev = "v1.1.6", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", optional = true }
+sgx-types = { rev = "e860e34", git = "https://github.com/datachainlab/sgx-sdk-rs" }
+sgx-trts = { rev = "e860e34", git = "https://github.com/datachainlab/sgx-sdk-rs", optional = true }
+sgx-tseal = { rev = "e860e34", git = "https://github.com/datachainlab/sgx-sdk-rs", optional = true }
 
 rand = { version = "0.8", default-features = false, optional = true }
 tiny-keccak = "2.0"
@@ -24,6 +24,6 @@ std = [
     "flex-error/std"
 ]
 sgx = [
-    "sgx_trts",
-    "sgx_tseal"
+    "sgx-trts",
+    "sgx-tseal"
 ]
