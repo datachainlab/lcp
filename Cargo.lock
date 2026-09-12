@@ -835,7 +835,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_with 2.3.3",
- "sgx_types",
+ "sgx-types",
  "tokio",
  "webpki 0.22.4",
 ]
@@ -1795,9 +1795,9 @@ dependencies = [
  "rand 0.8.5",
  "serde",
  "serde-big-array",
- "sgx_trts",
- "sgx_tseal",
- "sgx_types",
+ "sgx-trts",
+ "sgx-tseal",
+ "sgx-types",
  "tiny-keccak",
  "zeroize",
 ]
@@ -2382,7 +2382,7 @@ dependencies = [
  "lcp-types",
  "serde",
  "serde_with 2.3.3",
- "sgx_types",
+ "sgx-types",
  "store",
 ]
 
@@ -2551,8 +2551,8 @@ dependencies = [
  "lcp-proto",
  "lcp-types",
  "log",
- "sgx_types",
- "sgx_urts",
+ "sgx-types",
+ "sgx-urts",
  "store",
 ]
 
@@ -3470,8 +3470,8 @@ dependencies = [
  "ocall-commands",
  "ocall-handler",
  "once_cell",
- "sgx_types",
- "sgx_urts",
+ "sgx-types",
+ "sgx-urts",
 ]
 
 [[package]]
@@ -4450,7 +4450,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_with 2.3.3",
- "sgx_types",
+ "sgx-types",
 ]
 
 [[package]]
@@ -4537,7 +4537,7 @@ dependencies = [
  "remote-attestation",
  "serde",
  "serde_json",
- "sgx_types",
+ "sgx-types",
  "store",
  "tiny-keccak",
  "zkvm",
@@ -4567,7 +4567,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_with 2.3.3",
- "sgx_types",
+ "sgx-types",
  "time",
 ]
 
@@ -5345,7 +5345,7 @@ dependencies = [
  "host-environment",
  "log",
  "ocall-commands",
- "sgx_types",
+ "sgx-types",
 ]
 
 [[package]]
@@ -6385,7 +6385,7 @@ dependencies = [
  "rsa",
  "rustls 0.23.18",
  "serde_json",
- "sgx_types",
+ "sgx-types",
  "sha2 0.10.8",
  "webpki-roots 0.26.6",
  "zkvm",
@@ -7772,61 +7772,63 @@ dependencies = [
 ]
 
 [[package]]
-name = "sgx_libc"
-version = "1.1.6"
-source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?rev=v1.1.6#c3d82372dff81e5bafb07f71bc8ad532d06b504e"
+name = "sgx-build"
+version = "1.2.0"
+source = "git+https://github.com/datachainlab/sgx-sdk-rs?rev=e860e34#e860e34e3c45254b2bb52629e90e73865c2d0c7e"
 dependencies = [
- "sgx_types",
+ "cc",
 ]
 
 [[package]]
-name = "sgx_tcrypto"
-version = "1.1.6"
-source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?rev=v1.1.6#c3d82372dff81e5bafb07f71bc8ad532d06b504e"
+name = "sgx-tcrypto"
+version = "1.2.0"
+source = "git+https://github.com/datachainlab/sgx-sdk-rs?rev=e860e34#e860e34e3c45254b2bb52629e90e73865c2d0c7e"
 dependencies = [
- "sgx_types",
+ "sgx-types",
 ]
 
 [[package]]
-name = "sgx_trts"
-version = "1.1.6"
-source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?rev=v1.1.6#c3d82372dff81e5bafb07f71bc8ad532d06b504e"
+name = "sgx-trts"
+version = "1.2.0"
+source = "git+https://github.com/datachainlab/sgx-sdk-rs?rev=e860e34#e860e34e3c45254b2bb52629e90e73865c2d0c7e"
 dependencies = [
- "sgx_libc",
- "sgx_types",
+ "sgx-types",
 ]
 
 [[package]]
-name = "sgx_tse"
-version = "1.1.6"
-source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?rev=v1.1.6#c3d82372dff81e5bafb07f71bc8ad532d06b504e"
+name = "sgx-tse"
+version = "1.2.0"
+source = "git+https://github.com/datachainlab/sgx-sdk-rs?rev=e860e34#e860e34e3c45254b2bb52629e90e73865c2d0c7e"
 dependencies = [
- "sgx_types",
+ "sgx-types",
 ]
 
 [[package]]
-name = "sgx_tseal"
-version = "1.1.6"
-source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?rev=v1.1.6#c3d82372dff81e5bafb07f71bc8ad532d06b504e"
+name = "sgx-tseal"
+version = "1.2.0"
+source = "git+https://github.com/datachainlab/sgx-sdk-rs?rev=e860e34#e860e34e3c45254b2bb52629e90e73865c2d0c7e"
 dependencies = [
- "sgx_tcrypto",
- "sgx_trts",
- "sgx_tse",
- "sgx_types",
+ "sgx-tcrypto",
+ "sgx-trts",
+ "sgx-tse",
+ "sgx-types",
 ]
 
 [[package]]
-name = "sgx_types"
-version = "1.1.6"
-source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?rev=v1.1.6#c3d82372dff81e5bafb07f71bc8ad532d06b504e"
+name = "sgx-types"
+version = "1.2.0"
+source = "git+https://github.com/datachainlab/sgx-sdk-rs?rev=e860e34#e860e34e3c45254b2bb52629e90e73865c2d0c7e"
+dependencies = [
+ "sgx-build",
+]
 
 [[package]]
-name = "sgx_urts"
-version = "1.1.6"
-source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?rev=v1.1.6#c3d82372dff81e5bafb07f71bc8ad532d06b504e"
+name = "sgx-urts"
+version = "1.2.0"
+source = "git+https://github.com/datachainlab/sgx-sdk-rs?rev=e860e34#e860e34e3c45254b2bb52629e90e73865c2d0c7e"
 dependencies = [
  "libc",
- "sgx_types",
+ "sgx-types",
 ]
 
 [[package]]

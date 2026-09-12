@@ -4,8 +4,8 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-sgx_types = { rev = "v1.1.6", git = "https://github.com/apache/incubator-teaclave-sgx-sdk" }
-sgx_tse = { rev = "v1.1.6", git = "https://github.com/apache/incubator-teaclave-sgx-sdk" }
+sgx-types = { rev = "e860e34", git = "https://github.com/datachainlab/sgx-sdk-rs" }
+sgx-tse = { rev = "e860e34", git = "https://github.com/datachainlab/sgx-sdk-rs" }
 flex-error = { version = "0.4.4", default-features = false }
 
 crypto = { path = "../../modules/crypto", default-features = false, features = ["sgx"] }
