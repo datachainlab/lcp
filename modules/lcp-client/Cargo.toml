@@ -20,7 +20,7 @@ crypto = { path = "../crypto", default-features = false }
 zkvm = { path = "../zkvm", default-features = false, features = ["verifier"] }
 
 [dev-dependencies]
-sgx-types = { rev = "1f3134a469346ecae98cd4f67a7c11f28648ff41", git = "https://github.com/datachainlab/sgx-sdk-rs", features = ["extra_traits"] }
+sgx-types = { rev = "789b0429b4843821c27bd04d0dbe22ea7e5cbfb9", git = "https://github.com/datachainlab/sgx-sdk-rs", features = ["extra_traits"] }
 ibc = { version = "0.29.0", default-features = false, features = ["serde", "std"] }
 chrono = { version = "0.4", default-features = false, features = ["alloc", "clock"]}
 base64 = { version = "0.22.1", default-features = false, features = ["alloc"] }
