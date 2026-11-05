@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-sgx-types = { rev = "1f3134a469346ecae98cd4f67a7c11f28648ff41", git = "https://github.com/datachainlab/sgx-sdk-rs" }
+sgx-types = { tag = "v0.1.0", git = "https://github.com/datachainlab/sgx-sdk-rs" }
 prost = { version = "0.11", default-features = false }
 ibc = { version = "0.29.0", default-features = false, features = ["serde"], optional = true }
 lcp-proto = { path = "../../proto", default-features = false }

@@ -7772,37 +7772,37 @@ dependencies = [
 
 [[package]]
 name = "sgx-build-env"
-version = "1.2.0"
-source = "git+https://github.com/datachainlab/sgx-sdk-rs?rev=1f3134a469346ecae98cd4f67a7c11f28648ff41#1f3134a469346ecae98cd4f67a7c11f28648ff41"
+version = "0.1.0"
+source = "git+https://github.com/datachainlab/sgx-sdk-rs?tag=v0.1.0#1e42009f6ae6f5964c1728fb142de7318d50a647"
 
 [[package]]
 name = "sgx-tcrypto"
-version = "1.2.0"
-source = "git+https://github.com/datachainlab/sgx-sdk-rs?rev=1f3134a469346ecae98cd4f67a7c11f28648ff41#1f3134a469346ecae98cd4f67a7c11f28648ff41"
+version = "0.1.0"
+source = "git+https://github.com/datachainlab/sgx-sdk-rs?tag=v0.1.0#1e42009f6ae6f5964c1728fb142de7318d50a647"
 dependencies = [
  "sgx-types",
 ]
 
 [[package]]
 name = "sgx-trts"
-version = "1.2.0"
-source = "git+https://github.com/datachainlab/sgx-sdk-rs?rev=1f3134a469346ecae98cd4f67a7c11f28648ff41#1f3134a469346ecae98cd4f67a7c11f28648ff41"
+version = "0.1.0"
+source = "git+https://github.com/datachainlab/sgx-sdk-rs?tag=v0.1.0#1e42009f6ae6f5964c1728fb142de7318d50a647"
 dependencies = [
  "sgx-types",
 ]
 
 [[package]]
 name = "sgx-tse"
-version = "1.2.0"
-source = "git+https://github.com/datachainlab/sgx-sdk-rs?rev=1f3134a469346ecae98cd4f67a7c11f28648ff41#1f3134a469346ecae98cd4f67a7c11f28648ff41"
+version = "0.1.0"
+source = "git+https://github.com/datachainlab/sgx-sdk-rs?tag=v0.1.0#1e42009f6ae6f5964c1728fb142de7318d50a647"
 dependencies = [
  "sgx-types",
 ]
 
 [[package]]
 name = "sgx-tseal"
-version = "1.2.0"
-source = "git+https://github.com/datachainlab/sgx-sdk-rs?rev=1f3134a469346ecae98cd4f67a7c11f28648ff41#1f3134a469346ecae98cd4f67a7c11f28648ff41"
+version = "0.1.0"
+source = "git+https://github.com/datachainlab/sgx-sdk-rs?tag=v0.1.0#1e42009f6ae6f5964c1728fb142de7318d50a647"
 dependencies = [
  "sgx-tcrypto",
  "sgx-trts",
@@ -7812,16 +7812,16 @@ dependencies = [
 
 [[package]]
 name = "sgx-types"
-version = "1.2.0"
-source = "git+https://github.com/datachainlab/sgx-sdk-rs?rev=1f3134a469346ecae98cd4f67a7c11f28648ff41#1f3134a469346ecae98cd4f67a7c11f28648ff41"
+version = "0.1.0"
+source = "git+https://github.com/datachainlab/sgx-sdk-rs?tag=v0.1.0#1e42009f6ae6f5964c1728fb142de7318d50a647"
 dependencies = [
  "sgx-build-env",
 ]
 
 [[package]]
 name = "sgx-urts"
-version = "1.2.0"
-source = "git+https://github.com/datachainlab/sgx-sdk-rs?rev=1f3134a469346ecae98cd4f67a7c11f28648ff41#1f3134a469346ecae98cd4f67a7c11f28648ff41"
+version = "0.1.0"
+source = "git+https://github.com/datachainlab/sgx-sdk-rs?tag=v0.1.0#1e42009f6ae6f5964c1728fb142de7318d50a647"
 dependencies = [
  "libc",
  "sgx-types",

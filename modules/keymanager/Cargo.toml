@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-sgx-types = { rev = "1f3134a469346ecae98cd4f67a7c11f28648ff41", git = "https://github.com/datachainlab/sgx-sdk-rs" }
+sgx-types = { tag = "v0.1.0", git = "https://github.com/datachainlab/sgx-sdk-rs" }
 serde_with = { version = "2.0.1", default-features = false, features = ["alloc", "macros"] }
 log = "0.4.8"
 anyhow = { version = "1.0.56" }

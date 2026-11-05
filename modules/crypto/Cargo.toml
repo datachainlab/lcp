@@ -4,9 +4,9 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-sgx-types = { rev = "1f3134a469346ecae98cd4f67a7c11f28648ff41", git = "https://github.com/datachainlab/sgx-sdk-rs" }
-sgx-trts = { rev = "1f3134a469346ecae98cd4f67a7c11f28648ff41", git = "https://github.com/datachainlab/sgx-sdk-rs", optional = true }
-sgx-tseal = { rev = "1f3134a469346ecae98cd4f67a7c11f28648ff41", git = "https://github.com/datachainlab/sgx-sdk-rs", optional = true }
+sgx-types = { tag = "v0.1.0", git = "https://github.com/datachainlab/sgx-sdk-rs" }
+sgx-trts = { tag = "v0.1.0", git = "https://github.com/datachainlab/sgx-sdk-rs", optional = true }
+sgx-tseal = { tag = "v0.1.0", git = "https://github.com/datachainlab/sgx-sdk-rs", optional = true }
 
 rand = { version = "0.8", default-features = false, optional = true }
 tiny-keccak = "2.0"
