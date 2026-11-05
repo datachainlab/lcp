@@ -420,7 +420,7 @@ mod tests {
         assert!(res.is_err());
         if let ErrorDetail::OutOfTrustingPeriod(_) = res.as_ref().err().unwrap().detail() {
         } else {
-            panic!("{:?}", res);
+            core::panic!("{:?}", res);
         }
     }
 
@@ -435,7 +435,7 @@ mod tests {
         assert!(res.is_err());
         if let ErrorDetail::HeaderFromFuture(_) = res.as_ref().err().unwrap().detail() {
         } else {
-            panic!("{:?}", res);
+            core::panic!("{:?}", res);
         }
     }
 
@@ -539,7 +539,7 @@ mod tests {
             if let Ok(ctx) = res {
                 assert_eq!(ctx, expected);
             } else {
-                panic!("{:?}", res);
+                core::panic!("{:?}", res);
             }
         }
 
@@ -566,7 +566,7 @@ mod tests {
             if let Ok(ctx) = res {
                 assert_eq!(ctx, expected);
             } else {
-                panic!("{:?}", res);
+                core::panic!("{:?}", res);
             }
         }
 
@@ -625,7 +625,7 @@ mod tests {
             if let Ok(ctx) = res {
                 assert_eq!(ctx, expected);
             } else {
-                panic!("{:?}", res);
+                core::panic!("{:?}", res);
             }
         }
 
@@ -647,7 +647,7 @@ mod tests {
             if let Ok(ctx) = res {
                 assert_eq!(ctx, expected);
             } else {
-                panic!("{:?}", res);
+                core::panic!("{:?}", res);
             }
         }
     }
@@ -660,7 +660,7 @@ mod tests {
         if let Ok(ctx) = res {
             assert_eq!(ctx, ValidationContext::Empty);
         } else {
-            panic!("{:?}", res);
+            core::panic!("{:?}", res);
         }
     }
 }

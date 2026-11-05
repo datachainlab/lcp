@@ -4,8 +4,8 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-sgx_types = { rev = "v1.1.6", git = "https://github.com/apache/incubator-teaclave-sgx-sdk" }
-sgx_urts = { rev = "v1.1.6", git = "https://github.com/apache/incubator-teaclave-sgx-sdk" }
+sgx-types = { rev = "789b0429b4843821c27bd04d0dbe22ea7e5cbfb9", git = "https://github.com/datachainlab/sgx-sdk-rs", features = ["urts"] }
+sgx-urts = { rev = "789b0429b4843821c27bd04d0dbe22ea7e5cbfb9", git = "https://github.com/datachainlab/sgx-sdk-rs" }
 bincode = { version = "2.0.0-rc.3", default-features = false, features = ["serde", "alloc"] }
 log = "0.4.8"
 flex-error = { version = "0.4.4" }

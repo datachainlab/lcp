@@ -1,8 +1,10 @@
 #![no_std]
 #![allow(internal_features)]
 #![feature(rustc_private)]
-#![feature(lang_items)]
-#![feature(alloc_error_handler)]
+// The items using these are all `cfg(not(test))`, so declaring them
+// unconditionally leaves them unused in a test build.
+#![cfg_attr(not(test), feature(lang_items))]
+#![cfg_attr(not(test), feature(alloc_error_handler))]
 
 extern crate alloc;
 

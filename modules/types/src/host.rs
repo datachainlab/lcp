@@ -152,7 +152,7 @@ mod tests {
 
     #[test]
     fn test_valid_client_id() {
-        let cases = vec![
+        let cases = [
             ("testclient", "testclient-0"),
             ("testclient", "testclient-1"),
             ("testclient", "testclient-10"),

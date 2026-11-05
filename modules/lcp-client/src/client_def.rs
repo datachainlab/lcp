@@ -594,7 +594,7 @@ impl LCPClient {
             let mut success = 0u64;
             for (signature, operator) in signatures
                 .into_iter()
-                .zip(client_state.operators.clone().into_iter())
+                .zip(client_state.operators.clone())
                 .filter(|(sig, _)| !sig.is_empty())
             {
                 // check if the `header.signer` matches the commitment prover
