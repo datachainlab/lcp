@@ -23,11 +23,13 @@ members = [
     "modules/service",
     "modules/zkvm",
     "proto",
-    "tests/integration",
-    "tools/nodes-runner",
 ]
 exclude = [
     "enclave",
     "enclave-modules",
-    "proto-compiler"
+    "proto-compiler",
+    # Test-only. Kept out of the workspace so the ibc-relayer 0.22 stack they pull
+    # does not land in the lockfile the released binary resolves from.
+    "tests/integration",
+    "tools/nodes-runner"
 ]

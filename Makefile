@@ -159,12 +159,16 @@ fmt:
 	@cargo fmt --all $(CARGO_FMT_OPT)
 	@$(TEST_ENCLAVE_CARGO) fmt --all $(CARGO_FMT_OPT)
 	@cd ./enclave && cargo fmt --all $(CARGO_FMT_OPT)
+	@cargo fmt --manifest-path tests/integration/Cargo.toml --all $(CARGO_FMT_OPT)
+	@cargo fmt --manifest-path tools/nodes-runner/Cargo.toml --all $(CARGO_FMT_OPT)
 
 .PHONY: lint
 lint:
 	@$(MAKE) CARGO_FMT_OPT=--check fmt
 	@cargo clippy --locked --tests $(CARGO_TARGET) -- -D warnings
 	@$(TEST_ENCLAVE_CARGO) clippy --locked --tests $(CARGO_TARGET) -- -D warnings
+	@cargo clippy --manifest-path tests/integration/Cargo.toml --locked --tests $(CARGO_TARGET) -- -D warnings
+	@cargo clippy --manifest-path tools/nodes-runner/Cargo.toml --locked --tests $(CARGO_TARGET) -- -D warnings
 	@cargo machete
 
 .PHONY: udeps
@@ -176,7 +180,7 @@ udeps:
 
 .PHONY: nodes-runner
 nodes-runner:
-	@cargo build $(CARGO_TARGET) --package nodes-runner
+	@cargo build $(CARGO_TARGET) --manifest-path tools/nodes-runner/Cargo.toml
 
 ######## Tests ########
 
@@ -188,7 +192,7 @@ GAIAD_VERSION ?= v7.0.3
 
 .PHONY: test
 test:
-	@cargo test $(CARGO_TARGET) --workspace --exclude integration-test
+	@cargo test $(CARGO_TARGET) --workspace
 	@$(TEST_ENCLAVE_CARGO_TEST) -p ecall-handler
 	@$(TEST_ENCLAVE_CARGO_TEST) -p enclave-environment
 	@$(TEST_ENCLAVE_CARGO_TEST) -p host-api
@@ -197,11 +201,11 @@ test:
 
 .PHONY: integration-test
 integration-test: $(Signed_RustEnclave_Name) bin/gaiad
-	@PATH=${PATH}:$(CURDIR)/bin cargo test $(CARGO_TARGET) --package integration-test $(APP_CARGO_FEATURES)
+	@PATH=${PATH}:$(CURDIR)/bin cargo test $(CARGO_TARGET) --manifest-path tests/integration/Cargo.toml $(APP_CARGO_FEATURES)
 
 .PHONY: test-nodes
 test-setup-nodes: bin/gaiad
-	@PATH=${PATH}:$(CURDIR)/bin cargo run --bin test_setup_with_binary_channel
+	@PATH=${PATH}:$(CURDIR)/bin cargo run --manifest-path tools/nodes-runner/Cargo.toml --bin test_setup_with_binary_channel
 
 bin/gaiad:
 	curl -o ./bin/gaiad -LO https://github.com/cosmos/gaia/releases/download/$(GAIAD_VERSION)/gaiad-$(GAIAD_VERSION)-linux-amd64 && chmod +x ./bin/gaiad
