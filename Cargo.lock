@@ -835,7 +835,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_with 2.3.3",
- "sgx_types",
+ "sgx-types",
  "tokio",
  "webpki 0.22.4",
 ]
@@ -994,7 +994,7 @@ version = "0.69.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "271383c67ccabffb7381723dea0672a673f292304fcb45c01cc648c7a8d58088"
 dependencies = [
- "bitflags 2.9.3",
+ "bitflags 2.13.2",
  "cexpr",
  "clang-sys",
  "itertools 0.12.1",
@@ -1014,7 +1014,7 @@ version = "0.72.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4f72209734318d0b619a5e0f5129918b848c416e122a3c4ce054e03cb87b726f"
 dependencies = [
- "bitflags 2.9.3",
+ "bitflags 2.13.2",
  "cexpr",
  "clang-sys",
  "itertools 0.13.0",
@@ -1072,9 +1072,9 @@ checksum = "bef38d45163c2f1dde094a7dfd33ccf595c92905c8f8f4fdc18d06fb1037718a"
 
 [[package]]
 name = "bitflags"
-version = "2.9.3"
+version = "2.13.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "34efbcccd345379ca2868b2b2c9d3782e9cc58ba87bc7d79d5b53d9c9ae6f25d"
+checksum = "3ded4057c258ba199e2d26386d3af3780957ecaee6c4ef4041c6b4b8b97c0b06"
 
 [[package]]
 name = "bitvec"
@@ -1795,9 +1795,9 @@ dependencies = [
  "rand 0.8.5",
  "serde",
  "serde-big-array",
- "sgx_trts",
- "sgx_tseal",
- "sgx_types",
+ "sgx-trts",
+ "sgx-tseal",
+ "sgx-types",
  "tiny-keccak",
  "zeroize",
 ]
@@ -2382,7 +2382,7 @@ dependencies = [
  "lcp-types",
  "serde",
  "serde_with 2.3.3",
- "sgx_types",
+ "sgx-types",
  "store",
 ]
 
@@ -2551,8 +2551,8 @@ dependencies = [
  "lcp-proto",
  "lcp-types",
  "log",
- "sgx_types",
- "sgx_urts",
+ "sgx-types",
+ "sgx-urts",
  "store",
 ]
 
@@ -2698,7 +2698,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "778e2ac28f6c47af28e4907f13ffd1e1ddbd400980a9abd7c8df189bf578a5ad"
 dependencies = [
  "libc",
- "windows-sys 0.59.0",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -3038,7 +3038,7 @@ version = "0.7.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b686b198dfaa4109ebd0443d2841bc521e4b4b2915f1d84b3bb50332a8cdc1ae"
 dependencies = [
- "bitflags 2.9.3",
+ "bitflags 2.13.2",
  "cfg-if 1.0.0",
  "log",
  "managed",
@@ -3126,7 +3126,7 @@ version = "0.20.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3fda788993cc341f69012feba8bf45c0ba4f3291fcc08e214b4d5a7332d88aff"
 dependencies = [
- "bitflags 2.9.3",
+ "bitflags 2.13.2",
  "libc",
  "libgit2-sys",
  "log",
@@ -3470,8 +3470,8 @@ dependencies = [
  "ocall-commands",
  "ocall-handler",
  "once_cell",
- "sgx_types",
- "sgx_urts",
+ "sgx-types",
+ "sgx-urts",
 ]
 
 [[package]]
@@ -4450,7 +4450,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_with 2.3.3",
- "sgx_types",
+ "sgx-types",
 ]
 
 [[package]]
@@ -4537,7 +4537,7 @@ dependencies = [
  "remote-attestation",
  "serde",
  "serde_json",
- "sgx_types",
+ "sgx-types",
  "store",
  "tiny-keccak",
  "zkvm",
@@ -4567,7 +4567,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_with 2.3.3",
- "sgx_types",
+ "sgx-types",
  "time",
 ]
 
@@ -4596,7 +4596,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4979f22fdb869068da03c9f7528f8297c6fd2606bc3a4affe42e6a823fdb8da4"
 dependencies = [
  "cfg-if 1.0.0",
- "windows-targets 0.52.6",
+ "windows-targets 0.48.5",
 ]
 
 [[package]]
@@ -4631,7 +4631,7 @@ version = "0.1.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c0ff37bd590ca25063e35af745c343cb7a0271906fb7b37e4813e8f79f00268d"
 dependencies = [
- "bitflags 2.9.3",
+ "bitflags 2.13.2",
  "libc",
  "redox_syscall",
 ]
@@ -4959,7 +4959,7 @@ version = "0.29.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7ecfd3296f8c56b7c1f6fbac3c71cefa9d78ce009850c45000015f206dc7fa21"
 dependencies = [
- "bitflags 2.9.3",
+ "bitflags 2.13.2",
  "block",
  "core-graphics-types",
  "foreign-types 0.5.0",
@@ -5345,7 +5345,7 @@ dependencies = [
  "host-environment",
  "log",
  "ocall-commands",
- "sgx_types",
+ "sgx-types",
 ]
 
 [[package]]
@@ -5383,7 +5383,7 @@ name = "openssl"
 version = "0.10.64"
 source = "git+https://github.com/datachainlab/rust-openssl?rev=6fdf2f32721719d173bf909c97e982fe4e2e2819#6fdf2f32721719d173bf909c97e982fe4e2e2819"
 dependencies = [
- "bitflags 2.9.3",
+ "bitflags 2.13.2",
  "cfg-if 1.0.0",
  "foreign-types 0.3.2",
  "libc",
@@ -5913,14 +5913,13 @@ dependencies = [
 
 [[package]]
 name = "proptest"
-version = "1.7.0"
+version = "1.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6fcdab19deb5195a31cf7726a210015ff1496ba1464fd42cb4f537b8b01b471f"
+checksum = "4b45fcc2344c680f5025fe57779faef368840d0bd1f42f216291f0dc4ace4744"
 dependencies = [
  "bit-set",
  "bit-vec",
- "bitflags 2.9.3",
- "lazy_static",
+ "bitflags 2.13.2",
  "num-traits",
  "rand 0.9.2",
  "rand_chacha 0.9.0",
@@ -6041,7 +6040,7 @@ version = "0.9.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "57206b407293d2bcd3af849ce869d52068623f19e1b5ff8e8778e3309439682b"
 dependencies = [
- "bitflags 2.9.3",
+ "bitflags 2.13.2",
  "memchr",
  "unicase",
 ]
@@ -6117,7 +6116,7 @@ dependencies = [
  "once_cell",
  "socket2",
  "tracing",
- "windows-sys 0.59.0",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -6292,7 +6291,7 @@ version = "0.5.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9b6dfecf2c74bce2466cabf93f6664d6998a69eb21e39f4207930065b27b771f"
 dependencies = [
- "bitflags 2.9.3",
+ "bitflags 2.13.2",
 ]
 
 [[package]]
@@ -6385,7 +6384,7 @@ dependencies = [
  "rsa",
  "rustls 0.23.18",
  "serde_json",
- "sgx_types",
+ "sgx-types",
  "sha2 0.10.8",
  "webpki-roots 0.26.6",
  "zkvm",
@@ -7048,7 +7047,7 @@ version = "0.29.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "549b9d036d571d42e6e85d1c1425e2ac83491075078ca9a15be021c56b1641f2"
 dependencies = [
- "bitflags 2.9.3",
+ "bitflags 2.13.2",
  "fallible-iterator 0.2.0",
  "fallible-streaming-iterator",
  "hashlink 0.8.4",
@@ -7113,7 +7112,7 @@ version = "0.38.41"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d7f649912bc1495e167a6edee79151c84b1bad49748cb4f1f1167f459f6224f6"
 dependencies = [
- "bitflags 2.9.3",
+ "bitflags 2.13.2",
  "errno",
  "libc",
  "linux-raw-sys 0.4.14",
@@ -7126,11 +7125,11 @@ version = "1.0.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "11181fbabf243db407ef8df94a6ce0b2f9a733bd8be4ad02b4eda9602296cac8"
 dependencies = [
- "bitflags 2.9.3",
+ "bitflags 2.13.2",
  "errno",
  "libc",
  "linux-raw-sys 0.9.4",
- "windows-sys 0.59.0",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -7536,7 +7535,7 @@ version = "2.11.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "897b2245f0b511c87893af39b033e5ca9cce68824c4d7e7630b5a1d339658d02"
 dependencies = [
- "bitflags 2.9.3",
+ "bitflags 2.13.2",
  "core-foundation",
  "core-foundation-sys",
  "libc",
@@ -7772,61 +7771,60 @@ dependencies = [
 ]
 
 [[package]]
-name = "sgx_libc"
-version = "1.1.6"
-source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?rev=v1.1.6#c3d82372dff81e5bafb07f71bc8ad532d06b504e"
+name = "sgx-build-env"
+version = "0.1.0"
+source = "git+https://github.com/datachainlab/sgx-sdk-rs?tag=v0.1.0#1e42009f6ae6f5964c1728fb142de7318d50a647"
+
+[[package]]
+name = "sgx-tcrypto"
+version = "0.1.0"
+source = "git+https://github.com/datachainlab/sgx-sdk-rs?tag=v0.1.0#1e42009f6ae6f5964c1728fb142de7318d50a647"
 dependencies = [
- "sgx_types",
+ "sgx-types",
 ]
 
 [[package]]
-name = "sgx_tcrypto"
-version = "1.1.6"
-source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?rev=v1.1.6#c3d82372dff81e5bafb07f71bc8ad532d06b504e"
+name = "sgx-trts"
+version = "0.1.0"
+source = "git+https://github.com/datachainlab/sgx-sdk-rs?tag=v0.1.0#1e42009f6ae6f5964c1728fb142de7318d50a647"
 dependencies = [
- "sgx_types",
+ "sgx-types",
 ]
 
 [[package]]
-name = "sgx_trts"
-version = "1.1.6"
-source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?rev=v1.1.6#c3d82372dff81e5bafb07f71bc8ad532d06b504e"
+name = "sgx-tse"
+version = "0.1.0"
+source = "git+https://github.com/datachainlab/sgx-sdk-rs?tag=v0.1.0#1e42009f6ae6f5964c1728fb142de7318d50a647"
 dependencies = [
- "sgx_libc",
- "sgx_types",
+ "sgx-types",
 ]
 
 [[package]]
-name = "sgx_tse"
-version = "1.1.6"
-source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?rev=v1.1.6#c3d82372dff81e5bafb07f71bc8ad532d06b504e"
+name = "sgx-tseal"
+version = "0.1.0"
+source = "git+https://github.com/datachainlab/sgx-sdk-rs?tag=v0.1.0#1e42009f6ae6f5964c1728fb142de7318d50a647"
 dependencies = [
- "sgx_types",
+ "sgx-tcrypto",
+ "sgx-trts",
+ "sgx-tse",
+ "sgx-types",
 ]
 
 [[package]]
-name = "sgx_tseal"
-version = "1.1.6"
-source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?rev=v1.1.6#c3d82372dff81e5bafb07f71bc8ad532d06b504e"
+name = "sgx-types"
+version = "0.1.0"
+source = "git+https://github.com/datachainlab/sgx-sdk-rs?tag=v0.1.0#1e42009f6ae6f5964c1728fb142de7318d50a647"
 dependencies = [
- "sgx_tcrypto",
- "sgx_trts",
- "sgx_tse",
- "sgx_types",
+ "sgx-build-env",
 ]
 
 [[package]]
-name = "sgx_types"
-version = "1.1.6"
-source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?rev=v1.1.6#c3d82372dff81e5bafb07f71bc8ad532d06b504e"
-
-[[package]]
-name = "sgx_urts"
-version = "1.1.6"
-source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?rev=v1.1.6#c3d82372dff81e5bafb07f71bc8ad532d06b504e"
+name = "sgx-urts"
+version = "0.1.0"
+source = "git+https://github.com/datachainlab/sgx-sdk-rs?tag=v0.1.0#1e42009f6ae6f5964c1728fb142de7318d50a647"
 dependencies = [
  "libc",
- "sgx_types",
+ "sgx-types",
 ]
 
 [[package]]
@@ -8274,7 +8272,7 @@ dependencies = [
  "getrandom 0.3.3",
  "once_cell",
  "rustix 1.0.8",
- "windows-sys 0.59.0",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -9092,7 +9090,7 @@ version = "1.6.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "97fee6b57c6a41524a810daee9286c02d7752c4253064d0b05472833a438f675"
 dependencies = [
- "cfg-if 1.0.0",
+ "cfg-if 0.1.10",
  "static_assertions",
 ]
 
@@ -9548,7 +9546,7 @@ version = "0.1.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cf221c93e13a30d793f7645a0e7762c55d169dbb0a49671918a2319d289b10bb"
 dependencies = [
- "windows-sys 0.59.0",
+ "windows-sys 0.48.0",
 ]
 
 [[package]]
@@ -9778,7 +9776,7 @@ version = "0.39.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6f42320e61fe2cfd34354ecb597f86f413484a798ba44a8ca1165c58d42da6c1"
 dependencies = [
- "bitflags 2.9.3",
+ "bitflags 2.13.2",
 ]
 
 [[package]]

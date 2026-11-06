@@ -296,6 +296,8 @@ mod tests {
         verify(rly, enclave)
     }
 
+    // commitments::Error is 224 bytes; boxing it would reach far beyond this test.
+    #[allow(clippy::result_large_err)]
     fn verify(
         mut rly: Relayer,
         enclave: &Enclave<store::memory::MemStore>,
