@@ -23,10 +23,11 @@ jobs:
             ./enclave
           cache-directories: |
             ~/.cargo/registry/src/**/librocksdb-sys-*
-      - run: cargo check -r
+      - run: sudo bash .github/scripts/install_sgx_sdk.sh /opt/intel
+      - run: source /opt/intel/sgxsdk/environment && cargo check -r
         working-directory: enclave-modules
       - run: make lint-tools
-      - run: make lint
+      - run: source /opt/intel/sgxsdk/environment && make lint
 
   sdk-test:
     runs-on: ubuntu-22.04

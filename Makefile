@@ -9,36 +9,23 @@ SGX_DEBUG          ?= 0
 SGX_ENCLAVE_CONFIG ?= "enclave/Enclave.config.xml"
 SGX_SIGN_KEY       ?= "enclave/Enclave_private.pem"
 
-SGX_COMMON_CFLAGS  := -m64
-SGX_LIBRARY_PATH   := $(SGX_SDK)/lib64
 SGX_ENCLAVE_SIGNER := $(SGX_SDK)/bin/x64/sgx_sign
-SGX_EDGER8R        := $(SGX_SDK)/bin/x64/sgx_edger8r
 
 include buildenv.mk
 
 ifeq ($(SGX_DEBUG), 1)
-	SGX_COMMON_CFLAGS += -O0 -g -ggdb
 	# debug build
 	CARGO_TARGET      :=
 	OUTPUT_PATH       := debug
 else
-	SGX_COMMON_CFLAGS += -O2
 	CARGO_TARGET      := --release
 	OUTPUT_PATH       := release
 endif
-
-SGX_COMMON_CFLAGS += -fstack-protector
 
 ######## CUSTOM Settings ########
 
 CUSTOM_LIBRARY_PATH := ./lib
 CUSTOM_BIN_PATH := ./bin
-
-######## EDL Settings ########
-
-# Only the untrusted half. cargo sgx build runs edger8r for the enclave itself
-# through enclave/build.rs.
-Enclave_EDL_Files := app/Enclave_u.c app/Enclave_u.h
 
 ######## APP Settings ########
 
@@ -53,25 +40,12 @@ endif
 
 App_Rust_Flags := $(CARGO_TARGET) $(APP_CARGO_FEATURES) $(APP_CARGO_FLAGS)
 App_SRC_Files := $(shell find app/ -type f -name '*.rs') $(shell find app/ -type f -name 'Cargo.toml')
-App_Include_Paths := -I ./app -I./include -I$(SGX_SDK)/include
-App_C_Flags := $(SGX_COMMON_CFLAGS) -fPIC -Wno-attributes $(App_Include_Paths)
 
 App_Rust_Path := ./target/$(OUTPUT_PATH)
-App_Enclave_u_Object := $(CUSTOM_LIBRARY_PATH)/libEnclave_u.a
 App_Name := lcp
 App_Path := $(CUSTOM_BIN_PATH)/$(App_Name)
 
 ######## Enclave Settings ########
-
-ifneq ($(SGX_MODE), HW)
-	Trts_Library_Name := sgx_trts_sim
-	Service_Library_Name := sgx_tservice_sim
-else
-	Trts_Library_Name := sgx_trts
-	Service_Library_Name := sgx_tservice
-endif
-Crypto_Library_Name := sgx_tcrypto
-ProtectedFs_Library_Name := sgx_tprotected_fs
 
 RustEnclave_Name := enclave/target/x86_64-unknown-unknown-sgx/$(OUTPUT_PATH)/enclave.so
 Signed_RustEnclave_Name := bin/enclave.signed.so
@@ -88,22 +62,9 @@ clean:
 	@cd enclave && cargo clean
 	@cd enclave-modules && cargo clean
 
-######## EDL Objects ########
-
-$(Enclave_EDL_Files): $(SGX_EDGER8R) enclave/Enclave.edl
-	@$(SGX_EDGER8R) --untrusted enclave/Enclave.edl --search-path $(SGX_SDK)/include --untrusted-dir app
-	@echo "GEN  =>  $(Enclave_EDL_Files)"
-
 ######## App Objects ########
 
-app/Enclave_u.o: $(Enclave_EDL_Files)
-	@$(CC) $(App_C_Flags) -c app/Enclave_u.c -o $@
-	@echo "CC   <=  $<"
-
-$(App_Enclave_u_Object): app/Enclave_u.o
-	$(AR) rcsD $@ $^
-
-$(App_Path): $(App_Enclave_u_Object) $(App_SRC_Files)
+$(App_Path): $(App_SRC_Files)
 	@cd app && SGX_SDK=$(SGX_SDK) SGX_MODE=$(SGX_MODE) cargo build $(App_Rust_Flags)
 	@echo "Cargo  =>  $@"
 	mkdir -p bin
