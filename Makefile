@@ -73,8 +73,6 @@ endif
 Crypto_Library_Name := sgx_tcrypto
 ProtectedFs_Library_Name := sgx_tprotected_fs
 
-# avx2 and the link flags that used to live here are in
-# enclave/x86_64-unknown-unknown-sgx.json now.
 RustEnclave_Name := enclave/target/x86_64-unknown-unknown-sgx/$(OUTPUT_PATH)/enclave.so
 Signed_RustEnclave_Name := bin/enclave.signed.so
 
@@ -118,15 +116,8 @@ $(Signed_RustEnclave_Name): enclave
 	@$(SGX_ENCLAVE_SIGNER) sign -key enclave/Enclave_private.pem -enclave $(RustEnclave_Name) -out $@ -config $(SGX_ENCLAVE_CONFIG)
 	@echo "SIGN =>  $@"
 
-# cargo sgx build compiles for x86_64-unknown-unknown-sgx and produces the
-# linked enclave.so itself, so there is no separate staticlib or link step here.
-# The target spec is passed explicitly and build-std through the environment, so
-# the enclave needs no .cargo/config.toml of its own.
 Enclave_Target_Spec := $(CURDIR)/enclave/x86_64-unknown-unknown-sgx.json
 
-# cargo sgx build needs the cargo-sgx subcommand and rust-src (for build-std).
-# They are installed here rather than by each CI so that every caller gets them,
-# including the Azure integration test whose image ships with neither.
 CARGO_SGX_TAG := v0.1.0
 
 .PHONY: enclave-tools
