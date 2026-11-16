@@ -46,9 +46,6 @@ jobs:
             ./enclave
           cache-directories: |
             ~/.cargo/registry/src/**/librocksdb-sys-*
-      # cargo sgx build: build-std needs rust-src, and the subcommand itself.
-      - run: rustup component add rust-src
-      - run: cargo install --git https://github.com/datachainlab/sgx-sdk-rs --tag v0.1.0 cargo-sgx --locked
       - run: sudo bash .github/scripts/install_sgx_sdk.sh /opt/intel
       - run: source /opt/intel/sgxsdk/environment && make -B
       - run: source /opt/intel/sgxsdk/environment && make test

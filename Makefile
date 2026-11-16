@@ -124,8 +124,19 @@ $(Signed_RustEnclave_Name): enclave
 # the enclave needs no .cargo/config.toml of its own.
 Enclave_Target_Spec := $(CURDIR)/enclave/x86_64-unknown-unknown-sgx.json
 
+# cargo sgx build needs the cargo-sgx subcommand and rust-src (for build-std).
+# They are installed here rather than by each CI so that every caller gets them,
+# including the Azure integration test whose image ships with neither.
+CARGO_SGX_TAG := v0.1.0
+
+.PHONY: enclave-tools
+enclave-tools:
+	@rustup component add rust-src
+	@command -v cargo-sgx >/dev/null 2>&1 || \
+		cargo install --git https://github.com/datachainlab/sgx-sdk-rs --tag $(CARGO_SGX_TAG) cargo-sgx --locked
+
 .PHONY: enclave
-enclave:
+enclave: enclave-tools
 	@cd enclave && SGX_SDK=$(SGX_SDK) SGX_MODE=$(SGX_MODE) \
 		CARGO_UNSTABLE_BUILD_STD=core,alloc \
 		cargo sgx build --target $(Enclave_Target_Spec) $(CARGO_TARGET)
