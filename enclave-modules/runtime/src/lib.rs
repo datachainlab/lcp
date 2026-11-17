@@ -1,18 +1,7 @@
 #![no_std]
-#![allow(internal_features)]
-#![feature(rustc_private)]
-// The items using these are all `cfg(not(test))`, so declaring them
-// unconditionally leaves them unused in a test build.
-#![cfg_attr(not(test), feature(lang_items))]
-#![cfg_attr(not(test), feature(alloc_error_handler))]
 
 extern crate alloc;
-
-use core::sync::atomic::{AtomicPtr, Ordering};
-use core::{mem, ptr};
-
-pub use alloc::alloc::*;
-pub use sgx_alloc::System;
+extern crate sgx_ert;
 
 pub use ecalls::{ecall_execute_command, set_environment};
 pub use enclave_environment::{Environment, MapLightClientRegistry};
@@ -23,15 +12,7 @@ pub use sgx_types;
 mod ecalls;
 mod errors;
 
-/// global allocator and panic handler for enclave
-///
-/// This is a fork of the `sgx_no_tstd` crate, with the following change:
-/// - The `begin_panic_handler` function is added to logging the panic message before aborting.
-
-#[cfg(not(test))]
-#[global_allocator]
-static ALLOC: sgx_alloc::System = sgx_alloc::System;
-
+/// `sgx-ert`'s own panic handler is off so this one can log through the host first.
 #[cfg(not(test))]
 #[allow(unused_variables)]
 #[panic_handler]
@@ -43,68 +24,7 @@ fn begin_panic_handler(info: &core::panic::PanicInfo<'_>) -> ! {
     let _ = host_api::api::execute_command(host_api::ocall_commands::Command::Log(
         host_api::ocall_commands::LogCommand { msg },
     ));
-    sgx_abort();
-}
-
-#[cfg(not(test))]
-#[lang = "eh_personality"]
-unsafe extern "C" fn rust_eh_personality() {}
-
-static HOOK: AtomicPtr<()> = AtomicPtr::new(ptr::null_mut());
-
-/// Registers a custom allocation error hook, replacing any that was previously registered.
-///
-/// The allocation error hook is invoked when an infallible memory allocation fails, before
-/// the runtime aborts. The default hook prints a message to standard error,
-/// but this behavior can be customized with the [`set_alloc_error_hook`] and
-/// [`take_alloc_error_hook`] functions.
-///
-/// The hook is provided with a `Layout` struct which contains information
-/// about the allocation that failed.
-///
-/// The allocation error hook is a global resource.
-pub fn set_alloc_error_hook(hook: fn(Layout)) {
-    HOOK.store(hook as *mut (), Ordering::SeqCst);
-}
-
-/// Unregisters the current allocation error hook, returning it.
-///
-/// *See also the function [`set_alloc_error_hook`].*
-///
-/// If no custom hook is registered, the default hook will be returned.
-pub fn take_alloc_error_hook() -> fn(Layout) {
-    let hook = HOOK.swap(ptr::null_mut(), Ordering::SeqCst);
-    if hook.is_null() {
-        default_alloc_error_hook
-    } else {
-        unsafe { mem::transmute::<*mut (), fn(Layout)>(hook) }
-    }
-}
-
-fn default_alloc_error_hook(_layout: Layout) {}
-
-#[cfg(not(test))]
-#[alloc_error_handler]
-pub fn rust_oom(layout: Layout) -> ! {
-    let hook = HOOK.load(Ordering::SeqCst);
-    let hook: fn(Layout) = if hook.is_null() {
-        default_alloc_error_hook
-    } else {
-        unsafe { mem::transmute(hook) }
-    };
-    hook(layout);
-    sgx_abort();
-}
-
-#[cfg(not(test))]
-#[link(name = "sgx_trts")]
-extern "C" {
-    pub fn abort() -> !;
-}
-
-#[cfg(not(test))]
-fn sgx_abort() -> ! {
-    unsafe { abort() }
+    unsafe { sgx_types::abort() }
 }
 
 #[allow(unused_imports)]

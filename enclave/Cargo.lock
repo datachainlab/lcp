@@ -285,7 +285,7 @@ dependencies = [
  "lcp-types",
  "prost",
  "serde",
- "sha2 0.10.8",
+ "sha2 0.10.9",
 ]
 
 [[package]]
@@ -548,6 +548,7 @@ name = "enclave"
 version = "0.1.0"
 dependencies = [
  "enclave-runtime",
+ "sgx-build",
  "tendermint-lc",
 ]
 
@@ -573,7 +574,7 @@ dependencies = [
  "host-api",
  "log",
  "once_cell",
- "sgx-alloc",
+ "sgx-ert",
  "sgx-trts",
  "sgx-types",
 ]
@@ -799,7 +800,7 @@ dependencies = [
  "serde",
  "serde_derive",
  "serde_json",
- "sha2 0.10.8",
+ "sha2 0.10.9",
  "subtle-encoding",
  "tendermint",
  "tendermint-light-client-verifier",
@@ -838,7 +839,7 @@ dependencies = [
  "hex",
  "prost",
  "ripemd",
- "sha2 0.10.8",
+ "sha2 0.10.9",
  "sha3",
 ]
 
@@ -1503,9 +1504,27 @@ version = "0.1.0"
 source = "git+https://github.com/datachainlab/sgx-sdk-rs?tag=v0.1.0#1e42009f6ae6f5964c1728fb142de7318d50a647"
 
 [[package]]
+name = "sgx-build"
+version = "0.1.0"
+source = "git+https://github.com/datachainlab/sgx-sdk-rs?tag=v0.1.0#1e42009f6ae6f5964c1728fb142de7318d50a647"
+dependencies = [
+ "cc",
+ "sgx-build-env",
+]
+
+[[package]]
 name = "sgx-build-env"
 version = "0.1.0"
 source = "git+https://github.com/datachainlab/sgx-sdk-rs?tag=v0.1.0#1e42009f6ae6f5964c1728fb142de7318d50a647"
+
+[[package]]
+name = "sgx-ert"
+version = "0.1.0"
+source = "git+https://github.com/datachainlab/sgx-sdk-rs?tag=v0.1.0#1e42009f6ae6f5964c1728fb142de7318d50a647"
+dependencies = [
+ "sgx-alloc",
+ "sgx-types",
+]
 
 [[package]]
 name = "sgx-tcrypto"
@@ -1553,7 +1572,8 @@ dependencies = [
 [[package]]
 name = "sha2"
 version = "0.9.9"
-source = "git+https://github.com/bluele/hashes?branch=0.9.9-sha256-hwa-disabled#2119233e1f4a24e1bd3d815055d452951c5881ac"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4d58a1e1bf39749807d89cf2d98ac2dfa0ff1cb3faa38fbb64dd88ac8013d800"
 dependencies = [
  "block-buffer 0.9.0",
  "cfg-if",
@@ -1564,8 +1584,9 @@ dependencies = [
 
 [[package]]
 name = "sha2"
-version = "0.10.8"
-source = "git+https://github.com/bluele/hashes?branch=0.10.8-sha256-hwa-disabled#64b5261e4e44d0e990564f959e982279a60187db"
+version = "0.10.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a7507d819769d01a365ab707794a4084392c824f54a7a6a7862f8c3d0892b283"
 dependencies = [
  "cfg-if",
  "cpufeatures",
@@ -1708,7 +1729,7 @@ dependencies = [
  "serde_bytes",
  "serde_json",
  "serde_repr",
- "sha2 0.10.8",
+ "sha2 0.10.9",
  "signature",
  "subtle",
  "subtle-encoding",

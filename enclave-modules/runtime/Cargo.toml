@@ -6,7 +6,7 @@ edition = "2021"
 [dependencies]
 sgx-types = { tag = "v0.1.0", git = "https://github.com/datachainlab/sgx-sdk-rs" }
 sgx-trts = { tag = "v0.1.0", git = "https://github.com/datachainlab/sgx-sdk-rs" }
-sgx-alloc = { tag = "v0.1.0", git = "https://github.com/datachainlab/sgx-sdk-rs" }
+sgx-ert = { tag = "v0.1.0", git = "https://github.com/datachainlab/sgx-sdk-rs", default-features = false }
 log = { version = "0.4.8", default-features = false }
 bincode = { version = "2.0.0-rc.3", default-features = false, features = ["serde", "alloc"] }
 flex-error = { version = "0.4.4", default-features = false }

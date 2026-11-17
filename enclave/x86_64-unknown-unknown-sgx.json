@@ -1,0 +1,57 @@
+{
+    "arch": "x86_64",
+    "cpu": "x86-64",
+    "data-layout": "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128",
+    "env": "sgx",
+    "vendor": "unknown",
+    "os": "none",
+    "features": "+rdrnd,+rdseed,+avx2",
+
+    "llvm-target": "x86_64-unknown-unknown",
+    "llvm-args": [],
+  
+    "crt-objects-fallback": "false",
+    "max-atomic-width": 64,
+    "target-c-int-width": 32,
+    "target-pointer-width": 64,
+  
+    "position-independent-executables": true,
+    "plt-by-default": false,
+
+    "linker-flavor": "gnu-lld",
+    "linker": "rust-lld",
+    "pre-link-args": {
+        "gnu": [
+            "-static",
+            "--gc-sections",
+            "-z", "text",
+            "-z", "relro", "-z", "now",
+            "-z", "noexecstack",
+            "--no-undefined",
+            "--error-unresolved-symbols",
+            "-m", "elf_x86_64"
+        ],
+        "gnu-lld": [
+            "-static",
+            "--gc-sections",
+            "-z", "text",
+            "-z", "relro", "-z", "now",
+            "-z", "noexecstack",
+            "--no-undefined",
+            "--error-unresolved-symbols",
+            "-m", "elf_x86_64"
+        ]
+    },
+
+    "relro-level": "full",
+    "relax-elf-relocations": true,
+    "disable-redzone": true,
+    "stack-probes": {
+      "kind": "inline-or-call",
+      "min-llvm-version-for-inline": [11, 0, 1]
+    },
+    "panic-strategy": "abort",
+    "no-default-libraries": true,
+    "relocation-model": "pic",
+    "code-model": "small"
+}

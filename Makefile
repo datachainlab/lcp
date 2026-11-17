@@ -9,34 +9,23 @@ SGX_DEBUG          ?= 0
 SGX_ENCLAVE_CONFIG ?= "enclave/Enclave.config.xml"
 SGX_SIGN_KEY       ?= "enclave/Enclave_private.pem"
 
-SGX_COMMON_CFLAGS  := -m64
-SGX_LIBRARY_PATH   := $(SGX_SDK)/lib64
 SGX_ENCLAVE_SIGNER := $(SGX_SDK)/bin/x64/sgx_sign
-SGX_EDGER8R        := $(SGX_SDK)/bin/x64/sgx_edger8r
 
 include buildenv.mk
 
 ifeq ($(SGX_DEBUG), 1)
-	SGX_COMMON_CFLAGS += -O0 -g -ggdb
 	# debug build
 	CARGO_TARGET      :=
 	OUTPUT_PATH       := debug
 else
-	SGX_COMMON_CFLAGS += -O2
 	CARGO_TARGET      := --release
 	OUTPUT_PATH       := release
 endif
-
-SGX_COMMON_CFLAGS += -fstack-protector
 
 ######## CUSTOM Settings ########
 
 CUSTOM_LIBRARY_PATH := ./lib
 CUSTOM_BIN_PATH := ./bin
-
-######## EDL Settings ########
-
-Enclave_EDL_Files := enclave/Enclave_t.c enclave/Enclave_t.h app/Enclave_u.c app/Enclave_u.h
 
 ######## APP Settings ########
 
@@ -51,40 +40,14 @@ endif
 
 App_Rust_Flags := $(CARGO_TARGET) $(APP_CARGO_FEATURES) $(APP_CARGO_FLAGS)
 App_SRC_Files := $(shell find app/ -type f -name '*.rs') $(shell find app/ -type f -name 'Cargo.toml')
-App_Include_Paths := -I ./app -I./include -I$(SGX_SDK)/include
-App_C_Flags := $(SGX_COMMON_CFLAGS) -fPIC -Wno-attributes $(App_Include_Paths)
 
 App_Rust_Path := ./target/$(OUTPUT_PATH)
-App_Enclave_u_Object := $(CUSTOM_LIBRARY_PATH)/libEnclave_u.a
 App_Name := lcp
 App_Path := $(CUSTOM_BIN_PATH)/$(App_Name)
 
 ######## Enclave Settings ########
 
-ifneq ($(SGX_MODE), HW)
-	Trts_Library_Name := sgx_trts_sim
-	Service_Library_Name := sgx_tservice_sim
-else
-	Trts_Library_Name := sgx_trts
-	Service_Library_Name := sgx_tservice
-endif
-Crypto_Library_Name := sgx_tcrypto
-ProtectedFs_Library_Name := sgx_tprotected_fs
-
-RustEnclave_C_Files := $(wildcard ./enclave/*.c)
-RustEnclave_C_Objects := $(RustEnclave_C_Files:.c=.o)
-RustEnclave_Include_Paths := -I$(SGX_SDK)/include -I$(SGX_SDK)/include/tlibc -I$(SGX_SDK)/include/stlport -I$(SGX_SDK)/include/epid -I ./enclave -I./include
-
-RustEnclave_Link_Libs := -L$(CUSTOM_LIBRARY_PATH) -lenclave
-RustEnclave_Compile_Flags := $(SGX_COMMON_CFLAGS) $(ENCLAVE_CFLAGS) $(RustEnclave_Include_Paths)
-RustEnclave_Link_Flags := -Wl,--no-undefined -nostdlib -nodefaultlibs -nostartfiles -L$(SGX_LIBRARY_PATH) \
-	-Wl,--whole-archive -l$(Trts_Library_Name) -l${ProtectedFs_Library_Name} -Wl,--no-whole-archive \
-	-Wl,--start-group -lsgx_tcxx -lsgx_tstdc -l$(Service_Library_Name) -l$(Crypto_Library_Name) $(RustEnclave_Link_Libs) -Wl,--end-group \
-	-Wl,--version-script=enclave/Enclave.lds \
-	$(ENCLAVE_LDFLAGS)
-
-RustEnclave_RUSTFLAGS :="-C target-feature=+avx2"
-RustEnclave_Name := enclave/enclave.so
+RustEnclave_Name := enclave/target/x86_64-unknown-unknown-sgx/$(OUTPUT_PATH)/enclave.so
 Signed_RustEnclave_Name := bin/enclave.signed.so
 
 ######## Targets ########
@@ -99,23 +62,9 @@ clean:
 	@cd enclave && cargo clean
 	@cd enclave-modules && cargo clean
 
-######## EDL Objects ########
-
-$(Enclave_EDL_Files): $(SGX_EDGER8R) enclave/Enclave.edl
-	@$(SGX_EDGER8R) --trusted enclave/Enclave.edl --search-path $(SGX_SDK)/include --trusted-dir enclave
-	@$(SGX_EDGER8R) --untrusted enclave/Enclave.edl --search-path $(SGX_SDK)/include --untrusted-dir app
-	@echo "GEN  =>  $(Enclave_EDL_Files)"
-
 ######## App Objects ########
 
-app/Enclave_u.o: $(Enclave_EDL_Files)
-	@$(CC) $(App_C_Flags) -c app/Enclave_u.c -o $@
-	@echo "CC   <=  $<"
-
-$(App_Enclave_u_Object): app/Enclave_u.o
-	$(AR) rcsD $@ $^
-
-$(App_Path): $(App_Enclave_u_Object) $(App_SRC_Files)
+$(App_Path): $(App_SRC_Files)
 	@cd app && SGX_SDK=$(SGX_SDK) SGX_MODE=$(SGX_MODE) cargo build $(App_Rust_Flags)
 	@echo "Cargo  =>  $@"
 	mkdir -p bin
@@ -123,23 +72,26 @@ $(App_Path): $(App_Enclave_u_Object) $(App_SRC_Files)
 
 ######## Enclave Objects ########
 
-enclave/Enclave_t.o: $(Enclave_EDL_Files)
-	@$(CC) $(RustEnclave_Compile_Flags) -c enclave/Enclave_t.c -o $@
-	@echo "CC   <=  $<"
-
-$(RustEnclave_Name): enclave enclave/Enclave_t.o
-	@$(CXX) enclave/Enclave_t.o -o $@ $(RustEnclave_Link_Flags)
-	@echo "LINK =>  $@"
-
-$(Signed_RustEnclave_Name): $(RustEnclave_Name)
+$(Signed_RustEnclave_Name): enclave
 	mkdir -p bin
 	@$(SGX_ENCLAVE_SIGNER) sign -key enclave/Enclave_private.pem -enclave $(RustEnclave_Name) -out $@ -config $(SGX_ENCLAVE_CONFIG)
 	@echo "SIGN =>  $@"
 
+Enclave_Target_Spec := $(CURDIR)/enclave/x86_64-unknown-unknown-sgx.json
+
+CARGO_SGX_TAG := v0.1.0
+
+.PHONY: enclave-tools
+enclave-tools:
+	@rustup component add rust-src
+	@command -v cargo-sgx >/dev/null 2>&1 || \
+		cargo install --git https://github.com/datachainlab/sgx-sdk-rs --tag $(CARGO_SGX_TAG) cargo-sgx --locked
+
 .PHONY: enclave
-enclave:
-	@cd enclave && RUSTFLAGS=$(RustEnclave_RUSTFLAGS) cargo build $(CARGO_TARGET)
-	@cp enclave/target/$(OUTPUT_PATH)/libproxy_enclave.a ./lib/libenclave.a
+enclave: enclave-tools
+	@cd enclave && SGX_SDK=$(SGX_SDK) SGX_MODE=$(SGX_MODE) \
+		CARGO_UNSTABLE_BUILD_STD=core,alloc \
+		cargo sgx build --target $(Enclave_Target_Spec) $(CARGO_TARGET)
 
 ######## Code generator ########
 
